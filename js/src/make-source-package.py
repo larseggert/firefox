@@ -129,7 +129,7 @@ rsync_filter_list = """
 # Additional libraries (optionally) used by SpiderMonkey
 
 + /mfbt/**
-+ /nsprpub/**
++ /nspr/**
 
 + /intl/bidi/**
 

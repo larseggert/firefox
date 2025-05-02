@@ -32,7 +32,6 @@
 #include "nssrwlk.h"
 #include "prthread.h"
 #include "prclist.h"
-#include "private/pprthred.h"
 
 #include "sslt.h" /* for some formerly private types, now public */
 

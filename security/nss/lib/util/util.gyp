@@ -38,7 +38,11 @@
         'templates.c',
         'utf8.c',
         'utilmod.c',
-        'utilpars.c'
+        'utilpars.c',
+        # FIXME: Not the best place for these, but easiest for now:
+        'plgetopt.c',
+        'plhash.c',
+        'prlog2.c'
       ],
       'dependencies': [
         '<(DEPTH)/exports.gyp:nss_exports'

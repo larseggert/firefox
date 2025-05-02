@@ -32,7 +32,6 @@
 #include "nsThreadManager.h"
 #include "nsThreadUtils.h"
 #include "prthread.h"
-#include "private/pprthred.h"
 #include "nsTArray.h"
 #include "prio.h"
 #include "ManifestParser.h"

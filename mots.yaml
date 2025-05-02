@@ -2434,7 +2434,7 @@ modules:
   - name: 'Core: NSPR'
     description: Netscape Portable Runtime
     includes:
-      - nsprpub/**/*
+      - nspr/**/*
     meta:
       owners_emeritus:
         - Wan-Teh Chang

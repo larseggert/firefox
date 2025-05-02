@@ -232,7 +232,7 @@ dependencies = [
  "libc",
  "log",
  "mach",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -260,7 +260,7 @@ dependencies = [
  "serde_bytes",
  "serde_derive",
  "slab",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -929,6 +929,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "concurrent-queue"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
+dependencies = [
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "cookie"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1098,7 +1107,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "rust_minidump_writer_linux",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1110,7 +1119,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "thiserror 2.0.9",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1137,7 +1146,7 @@ dependencies = [
  "rust_minidump_writer_linux",
  "thiserror 2.0.9",
  "uuid",
- "windows-sys",
+ "windows-sys 0.52.0",
  "yaml-rust",
 ]
 
@@ -1180,7 +1189,7 @@ dependencies = [
  "unic-langid",
  "uuid",
  "warp",
- "windows-sys",
+ "windows-sys 0.52.0",
  "yaml-rust",
  "zip",
 ]
@@ -1828,7 +1837,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a258e46cdc063eb8519c00b9fc845fc47bcfca4130e2f08e88665ceda8474245"
 dependencies = [
  "libc",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2550,6 +2559,7 @@ dependencies = [
  "neqo_glue",
  "netwerk_helper",
  "nserror",
+ "nspr",
  "nsstring",
  "oblivious_http",
  "origin-trials-ffi",
@@ -2929,6 +2939,12 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 [[package]]
 name = "hermit-abi"
 version = "0.3.999"
+
+[[package]]
+name = "hermit-abi"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fbf6a919d6cf397374f7dfeeea91d974c7c0a7221d0d0f4f20d859d329e53fcc"
 
 [[package]]
 name = "hex"
@@ -3770,9 +3786,9 @@ dependencies = [
 
 [[package]]
 name = "lock_api"
-version = "0.4.9"
+version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "435011366fe56583b16cf956f9df0095b405b82d76425bc8981c0e22e60ec4df"
+checksum = "07af8b9cdd281b7915f413fa73f29ebd5d55d0d3f0155584dade1ff18cea1b17"
 dependencies = [
  "autocfg",
  "scopeguard",
@@ -4055,7 +4071,7 @@ dependencies = [
  "minidump",
  "minidump-unwind",
  "serde_json",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4148,11 +4164,11 @@ version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4569e456d394deccd22ce1c1913e6ea0e54519f577285001215d33557431afe4"
 dependencies = [
- "hermit-abi",
+ "hermit-abi 0.3.999",
  "libc",
  "log",
  "wasi 0.11.999",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4470,7 +4486,7 @@ dependencies = [
  "uuid",
  "winapi",
  "windows",
- "windows-sys",
+ "windows-sys 0.52.0",
  "xml-rs",
  "yoke",
  "zerocopy",
@@ -4531,7 +4547,7 @@ dependencies = [
  "serde",
  "serde_json",
  "uuid",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4612,7 +4628,6 @@ dependencies = [
 [[package]]
 name = "neqo-bin"
 version = "0.13.1"
-source = "git+https://github.com/mozilla/neqo?tag=v0.13.1#0a356afeb45631036df6b3028951a02d16fa8d27"
 dependencies = [
  "clap",
  "clap-verbosity-flag",
@@ -4634,7 +4649,6 @@ dependencies = [
 [[package]]
 name = "neqo-common"
 version = "0.13.1"
-source = "git+https://github.com/mozilla/neqo?tag=v0.13.1#0a356afeb45631036df6b3028951a02d16fa8d27"
 dependencies = [
  "enum-map",
  "env_logger",
@@ -4647,7 +4661,6 @@ dependencies = [
 [[package]]
 name = "neqo-crypto"
 version = "0.13.1"
-source = "git+https://github.com/mozilla/neqo?tag=v0.13.1#0a356afeb45631036df6b3028951a02d16fa8d27"
 dependencies = [
  "bindgen 0.69.4",
  "enum-map",
@@ -4664,7 +4677,6 @@ dependencies = [
 [[package]]
 name = "neqo-http3"
 version = "0.13.1"
-source = "git+https://github.com/mozilla/neqo?tag=v0.13.1#0a356afeb45631036df6b3028951a02d16fa8d27"
 dependencies = [
  "enumset",
  "log",
@@ -4681,7 +4693,6 @@ dependencies = [
 [[package]]
 name = "neqo-qpack"
 version = "0.13.1"
-source = "git+https://github.com/mozilla/neqo?tag=v0.13.1#0a356afeb45631036df6b3028951a02d16fa8d27"
 dependencies = [
  "log",
  "neqo-common",
@@ -4693,7 +4704,6 @@ dependencies = [
 [[package]]
 name = "neqo-transport"
 version = "0.13.1"
-source = "git+https://github.com/mozilla/neqo?tag=v0.13.1#0a356afeb45631036df6b3028951a02d16fa8d27"
 dependencies = [
  "enum-map",
  "enumset",
@@ -4711,7 +4721,6 @@ dependencies = [
 [[package]]
 name = "neqo-udp"
 version = "0.13.1"
-source = "git+https://github.com/mozilla/neqo?tag=v0.13.1#0a356afeb45631036df6b3028951a02d16fa8d27"
 dependencies = [
  "cfg_aliases",
  "log",
@@ -4810,6 +4819,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nspr"
+version = "5.0.0"
+dependencies = [
+ "libc",
+ "log",
+ "memmap2",
+ "parking_lot",
+ "polling",
+ "static_assertions",
+]
+
+[[package]]
 name = "nss-gk-api"
 version = "0.3.0"
 source = "git+https://github.com/beurdouche/nss-gk-api?rev=e48a946811ffd64abc78de3ee284957d8d1c0d63#e48a946811ffd64abc78de3ee284957d8d1c0d63"
@@ -4882,7 +4903,7 @@ version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4161fcb6d602d4d2081af7c3a45852d875a03dd337a6bfdd6e06407b61342a43"
 dependencies = [
- "hermit-abi",
+ "hermit-abi 0.3.999",
  "libc",
 ]
 
@@ -5218,6 +5239,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "polling"
+version = "3.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a604568c3202727d1507653cb121dbd627a58684eb09a820fd746bee38b4442f"
+dependencies = [
+ "cfg-if",
+ "concurrent-queue",
+ "hermit-abi 0.4.0",
+ "pin-project-lite",
+ "rustix",
+ "tracing",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5280,7 +5316,7 @@ dependencies = [
  "mozilla-central-workspace-hack",
  "scroll",
  "thiserror 2.0.9",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5407,7 +5443,7 @@ dependencies = [
  "log",
  "once_cell",
  "socket2 0.5.7",
- "windows-sys",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -5841,7 +5877,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6182,7 +6218,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce305eb0b4296696835b71df73eb912e0f1ffd2556a501fcede6e0c50349191c"
 dependencies = [
  "libc",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6538,7 +6574,7 @@ dependencies = [
  "getrandom 0.3.1",
  "once_cell",
  "rustix",
- "windows-sys",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -6701,7 +6737,7 @@ dependencies = [
  "pin-project-lite",
  "socket2 0.5.7",
  "tokio-macros",
- "windows-sys",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -7771,6 +7807,15 @@ name = "windows-sys"
 version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
+dependencies = [
+ "windows-targets",
+]
+
+[[package]]
+name = "windows-sys"
+version = "0.59.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
 dependencies = [
  "windows-targets",
 ]

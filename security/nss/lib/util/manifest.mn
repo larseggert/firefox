@@ -81,6 +81,10 @@ CSRCS = \
 	utilmod.c \
 	utilpars.c \
 	pkcs11uri.c \
+        # FIXME: Not the best place for these, but easiest for now:
+        plgetopt.c \
+        plhash.c \
+        prlog2.c \
 	$(NULL)
 
 MODULE = nss

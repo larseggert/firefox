@@ -361,16 +361,11 @@ netwerk/cookie
 Permissions backend for cookies, images, etc., as well as the user
 interface to these permissions and other cookie features.
 
-nsprpub
+nspr
 -------
 
 Netscape Portable Runtime. Used as an abstraction layer to things like
 threads, file I/O, and socket I/O. See :ref:`NSPR`.
-
-nsprpub/lib
------------
-
-Mostly unused; might be used on Mac?
 
 other-licenses
 --------------

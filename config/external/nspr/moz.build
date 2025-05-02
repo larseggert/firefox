@@ -4,25 +4,60 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-Library("nspr")
-
 if CONFIG["MOZ_BUILD_NSPR"]:
-    DIRS += [
-        "pr",
-        "ds",
-        "libc",
-    ]
     if CONFIG["MOZ_FOLD_LIBS"]:
+        Library("nspr")
         # When folding libraries, nspr is actually in the nss library.
-        USE_LIBS += [
-            "nss",
-        ]
+        #USE_LIBS += [
+        #    "nss",
+        #]
+        OS_LIBS += CONFIG["NSPR_LIBS"]
     else:
-        USE_LIBS += [
-            "nspr4",
-            "plc4",
-            "plds4",
-        ]
-    EXPORTS.nspr += ["prcpucfg.h"]
+        SharedLibrary("nspr")
+        #USE_LIBS += [
+        #    "nspr4",
+        #]
 else:
     OS_LIBS += CONFIG["NSPR_LIBS"]
+
+if CONFIG['COMPILE_ENVIRONMENT']:
+    CbindgenHeader('nspr/include/nspr-bindings.h',
+                   inputs=['/nspr'])
+
+    EXPORTS.nspr += [
+        "!nspr/include/nspr-bindings.h",
+        "/nspr/include/nspr.h",
+        "/nspr/include/plarena.h",
+        "/nspr/include/plarenas.h",
+        "/nspr/include/plbase64.h",
+        "/nspr/include/plstr.h",
+        "/nspr/include/pratom.h",
+        "/nspr/include/prclist.h",
+        "/nspr/include/prcmon.h",
+        "/nspr/include/prcpucfg.h",
+        "/nspr/include/prcvar.h",
+        "/nspr/include/prdtoa.h",
+        "/nspr/include/prenv.h",
+        "/nspr/include/prerr.h",
+        "/nspr/include/prerror.h",
+        "/nspr/include/prinit.h",
+        "/nspr/include/prinrval.h",
+        "/nspr/include/prio.h",
+        "/nspr/include/prlink.h",
+        "/nspr/include/prlock.h",
+        "/nspr/include/prlog.h",
+        "/nspr/include/prmem.h",
+        "/nspr/include/prmon.h",
+        "/nspr/include/prnetdb.h",
+        "/nspr/include/prprf.h",
+        "/nspr/include/prrwlock.h",
+        "/nspr/include/prsystem.h",
+        "/nspr/include/prthread.h",
+        "/nspr/include/prtime.h",
+        "/nspr/include/prtpool.h",
+        "/nspr/include/prtypes.h",
+    ]
+    EXPORTS.nspr.private += [
+        "/nspr/include/private/pprio.h",
+    ]
+

@@ -18,6 +18,5 @@ set_config("MOZ_FOLD_LIBS", fold_libs)
 
 
 include("../../build/moz.configure/rust.configure")
-include("../../build/moz.configure/nspr.configure")
 include("../../build/moz.configure/nss.configure")
 include("../../build/moz.configure/update-programs.configure")

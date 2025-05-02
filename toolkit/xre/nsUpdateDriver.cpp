@@ -15,7 +15,6 @@
 #include "nsVariant.h"
 #include "nsCOMPtr.h"
 #include "nsString.h"
-#include "prproces.h"
 #include "mozilla/Logging.h"
 #include "prenv.h"
 #include "nsVersionComparator.h"

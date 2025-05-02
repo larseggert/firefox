@@ -22,9 +22,6 @@ class nsIFile;
 typedef HANDLE ProcessType;
 #elif defined(XP_UNIX)
 typedef pid_t ProcessType;
-#else
-#  include "prproces.h"
-typedef PRProcess* ProcessType;
 #endif
 
 #ifdef XP_WIN

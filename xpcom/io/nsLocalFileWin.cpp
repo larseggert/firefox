@@ -41,7 +41,6 @@
 #include <stdlib.h>
 #include <mbstring.h>
 
-#include "prproces.h"
 #include "prlink.h"
 
 #include "mozilla/FilePreferences.h"

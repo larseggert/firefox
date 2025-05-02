@@ -226,7 +226,6 @@
 #include "nsHTMLDocument.h"
 #include "nsWrapperCacheInlines.h"
 #include "mozilla/DOMEventTargetHelper.h"
-#include "prrng.h"
 #include "nsSandboxFlags.h"
 #include "nsXULControllers.h"
 #include "mozilla/dom/AudioContext.h"

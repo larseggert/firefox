@@ -93,14 +93,15 @@ set_config("PKGCONF_REQUIRES_PRIVATE", pkgconf_requires_private)
 
 
 # pkg_check_modules takes care of NSPR_CFLAGS and NSPR_LIBS when using --with-system-nspr.
-@depends(build_environment, c_compiler, fold_libs, when=build_nspr)
-def nspr_config(build_env, c_compiler, fold_libs):
-    libs = ["nspr4", "plc4", "plds4"]
+@depends(build_environment, c_compiler, fold_libs, rust_target_triple, debug_rust, when=build_nspr)
+def nspr_config(build_env, c_compiler, fold_libs, rust_target_triple, debug_rust):
+    libs = ["nspr"]
+    build_type = "debug" if debug_rust else "release"
     if c_compiler.type == "clang-cl":
-        lib_dir = os.path.join(build_env.dist, "lib")
+        lib_dir = os.path.join(build_env.topobjdir, rust_target_triple, build_type, "deps")
         libs = [os.path.join(lib_dir, "%s.lib" % lib) for lib in libs]
     else:
-        lib_dir = os.path.join(build_env.dist, "lib" if fold_libs else "bin")
+        lib_dir = os.path.join(build_env.topobjdir, rust_target_triple, build_type, "deps" if fold_libs else "bin")
         libs = ["-L%s" % lib_dir] + ["-l%s" % lib for lib in libs]
 
     include_dir = os.path.join(build_env.dist, "include", "nspr")

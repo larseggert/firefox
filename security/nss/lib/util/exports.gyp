@@ -50,7 +50,12 @@
             'utilmodt.h',
             'utilpars.h',
             'utilparst.h',
-            'utilrename.h'
+            'utilrename.h',
+            # FIXME: Not the best place for these, but easiest for now:
+            'prbit.h',
+            'prlong.h',
+            'plgetopt.h',
+            'plhash.h'
           ],
           'destination': '<(nss_public_dist_dir)/<(module)'
         },

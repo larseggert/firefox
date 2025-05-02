@@ -17,9 +17,6 @@
 #include "nsIObserver.h"
 #include "nsMaybeWeakPtr.h"
 #include "nsString.h"
-#ifndef XP_UNIX
-#  include "prproces.h"
-#endif
 #if defined(PROCESSMODEL_WINAPI)
 #  include <windows.h>
 #  include <shellapi.h>

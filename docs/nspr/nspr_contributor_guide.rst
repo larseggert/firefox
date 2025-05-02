@@ -131,7 +131,7 @@ library. These libraries exist, for the most part, as "legacy" code from
 NSPR 1.0. [Note that the current NSPR module owners do not now nor never
 have been involved with NSPR 1.0.]. Such is life. That said: There are
 some libraries that implement functions intended for use with
-applications using NSPR, such as ``...nsprpub/lib/libc/plgetopt.*.``
+applications using NSPR.
 
 -  generally useful
 -  platform abstractions

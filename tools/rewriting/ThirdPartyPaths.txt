@@ -152,7 +152,7 @@ mozglue/tests/glibc_printf_tests/
 netwerk/dns/nsIDNKitInterface.h
 netwerk/sctp/src/
 netwerk/srtp/src/
-nsprpub/
+nspr/
 other-licenses/
 parser/expat/
 remote/cdp/test/browser/chrome-remote-interface.js

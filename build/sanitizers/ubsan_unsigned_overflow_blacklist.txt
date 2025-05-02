@@ -228,7 +228,6 @@ src:*/netwerk/cache2/CacheHashUtils.cpp
 src:*/netwerk/sctp/src/netinet/sctp_sha1.c
 src:*/netwerk/srtp/src/crypto/hash/sha1.c
 src:*/netwerk/sctp/src/netinet/sctp_sha1.c
-src:*/nsprpub/lib/ds/plhash.c
 src:*/security/manager/ssl/md4.c
 src:*/security/nss/lib/dbm/src/h_func.c
 src:*/security/nss/lib/freebl/sha512.c

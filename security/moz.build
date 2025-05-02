@@ -31,11 +31,9 @@ if CONFIG["MOZ_FOLD_LIBS"]:
     SHARED_LIBRARY_NAME = "nss3"
 
     USE_LIBS += [
-        "nspr4",
+        "nspr",
         "nss3_static",
         "nssutil",
-        "plc4",
-        "plds4",
         "smime3_static",
         "ssl",
     ]

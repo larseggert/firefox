@@ -16,7 +16,6 @@
 #include <gio/gio.h>
 #include "nsIObserverService.h"
 #include "WidgetUtilsGtk.h"
-#include "prproces.h"
 #include "mozilla/XREAppData.h"
 #include "nsPrintfCString.h"
 
