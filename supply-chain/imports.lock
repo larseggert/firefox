@@ -278,13 +278,6 @@ user-id = 48
 user-login = "badboy"
 user-name = "Jan-Erik Rediger"
 
-[[publisher.glean-core]]
-version = "64.4.0"
-when = "2025-05-30"
-user-id = 48
-user-login = "badboy"
-user-name = "Jan-Erik Rediger"
-
 [[publisher.glslopt]]
 version = "0.1.11"
 when = "2024-08-30"

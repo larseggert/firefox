@@ -151,9 +151,6 @@ base64_13 = { package = "base64", path = "build/rust/base64_13" }
 # Patch base64 0.21 to 0.22
 base64_21 = { package = "base64", path = "build/rust/base64" }
 
-# Patch wasi 0.10 to 0.14
-wasi_0_10 = { package = "wasi", path = "build/rust/wasi-0.10" }
-
 # Patch wasi 0.11 to 0.14
 wasi_0_11 = { package = "wasi", path = "build/rust/wasi" }
 
@@ -267,3 +264,5 @@ viaduct = { git = "https://github.com/mozilla/application-services", rev = "9b46
 webext-storage = { git = "https://github.com/mozilla/application-services", rev = "9b46be5beedb6a1d859014a71bac58e2d722f954" }
 
 allocator-api2 = { path = "third_party/rust/allocator-api2" }
+
+glean-core = { path = "../../glean/glean-core" }
