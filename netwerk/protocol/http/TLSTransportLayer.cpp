@@ -147,13 +147,10 @@ TLSTransportLayer::InputStreamWrapper::AsyncWait(
     return mSocketIn->AsyncWait(nullptr, 0, 0, nullptr);
   }
 
-  PRPollDesc pd;
-  pd.fd = mTransport->mFD;
-  pd.in_flags = PR_POLL_READ | PR_POLL_EXCEPT;
-  // Only run PR_Poll on the socket thread. Also, make sure this lives at least
+  // Only run this on the socket thread. Also, make sure this lives at least
   // as long as that operation.
-  auto DoPoll = [self = RefPtr{this}, pd(pd)]() mutable {
-    int32_t rv = PR_Poll(&pd, 1, PR_INTERVAL_NO_TIMEOUT);
+  auto DoPoll = [self = RefPtr{this}]() mutable {
+    int32_t rv = nsSocketTransportService::PollSingleFD(self->mTransport->mFD, true, false);
     LOG(("TLSTransportLayer::InputStreamWrapper::AsyncWait rv=%d", rv));
   };
   if (OnSocketThread()) {
@@ -303,10 +300,7 @@ TLSTransportLayer::OutputStreamWrapper::AsyncWait(
     return mSocketOut->AsyncWait(nullptr, 0, 0, nullptr);
   }
 
-  PRPollDesc pd;
-  pd.fd = mTransport->mFD;
-  pd.in_flags = PR_POLL_WRITE | PR_POLL_EXCEPT;
-  int32_t rv = PR_Poll(&pd, 1, PR_INTERVAL_NO_TIMEOUT);
+  int32_t rv = nsSocketTransportService::PollSingleFD(mTransport->mFD, false, true);
   LOG(("TLSTransportLayer::OutputStreamWrapper::AsyncWait rv=%d", rv));
   return NS_OK;
 }

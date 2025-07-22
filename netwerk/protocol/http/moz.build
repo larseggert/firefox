@@ -222,6 +222,7 @@ LOCAL_INCLUDES += [
     "/netwerk/dns",
     "/netwerk/ipc",
     "/netwerk/socket/neqo_glue",
+    "/netwerk/socket/polling",
     "/netwerk/url-classifier",
 ]
 

@@ -16,6 +16,7 @@
 
 #include "mozilla/UniquePtr.h"
 #include "mozilla/net/DashboardTypes.h"
+#include "mozilla/net/polling.h"
 #include "nsCOMPtr.h"
 #include "nsASocketHandler.h"
 #include "nsIDirectTaskDispatcher.h"
@@ -135,6 +136,9 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   // correctly formed.
   bool UpdatePortRemapPreference(nsACString const& aPortMappingPref);
 
+  // Helper function for one-shot polling of a single file descriptor
+  static int32_t PollSingleFD(PRFileDesc* fd, bool readable, bool writable);
+
  protected:
   ~nsSocketTransportService();
 
@@ -184,12 +188,7 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   //-------------------------------------------------------------------------
   // socket lists (socket thread only)
   //
-  // only "active" sockets are on the poll list.  the active list is kept
-  // in sync with the poll list such that:
-  //
-  //   mActiveList[k].mFD == mPollList[k+1].fd
-  //
-  // where k=0,1,2,...
+  // only "active" sockets are registered with mPoll
   //-------------------------------------------------------------------------
 
   class SocketContext {
@@ -246,14 +245,12 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   // Total bytes number transfered through all the sockets except active ones
   uint64_t mSentBytesCount{0};
   uint64_t mReceivedBytesCount{0};
+
   //-------------------------------------------------------------------------
   // poll list (socket thread only)
-  //
-  // first element of the poll list is mPollableEvent (or null if the pollable
-  // event cannot be created).
   //-------------------------------------------------------------------------
-
-  nsTArray<PRPollDesc> mPollList;
+  Poll* mPoll;
+  nsTArray<PollEvent> mPolledEvents;
 
   PRIntervalTime PollTimeout(
       PRIntervalTime now);  // computes ideal poll timeout

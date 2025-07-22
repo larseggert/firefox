@@ -2620,6 +2620,7 @@ dependencies = [
  "osclientcerts",
  "oxilangtag",
  "oxilangtag-ffi",
+ "polling",
  "prefs_parser",
  "processtools",
  "profiler_helper",
@@ -5306,6 +5307,14 @@ dependencies = [
  "quick-xml",
  "serde",
  "time",
+]
+
+[[package]]
+name = "polling"
+version = "0.1.0"
+dependencies = [
+ "mio",
+ "thin-vec",
 ]
 
 [[package]]

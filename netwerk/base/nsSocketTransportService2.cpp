@@ -123,21 +123,18 @@ void nsSocketTransportService::SocketContext::MaybeResetEpoch() {
 // ctor/dtor (called on the main/UI thread by the service manager)
 
 nsSocketTransportService::nsSocketTransportService()
-    : mPollableEventTimeout(TimeDuration::FromSeconds(6)),
+    : mPoll(poll_new()),
+      mPollableEventTimeout(TimeDuration::FromSeconds(6)),
       mMaxTimeForPrClosePref(PR_SecondsToInterval(5)),
       mNetworkLinkChangeBusyWaitPeriod(PR_SecondsToInterval(50)),
       mNetworkLinkChangeBusyWaitTimeout(PR_SecondsToInterval(7)) {
+  MOZ_RELEASE_ASSERT(mPoll);
   NS_ASSERTION(NS_IsMainThread(), "wrong thread");
 
   PR_CallOnce(&gMaxCountInitOnce, DiscoverMaxCount);
 
   NS_ASSERTION(!gSocketTransportService, "must not instantiate twice");
   gSocketTransportService = this;
-
-  // The Poll list always has an entry at [0].   The rest of the
-  // list is a duplicate of the Active list's PRFileDesc file descriptors.
-  PRPollDesc entry = {nullptr, PR_POLL_READ | PR_POLL_EXCEPT, 0};
-  mPollList.InsertElementAt(0, entry);
 }
 
 void nsSocketTransportService::ApplyPortRemap(uint16_t* aPort) {
@@ -259,6 +256,7 @@ nsSocketTransportService::~nsSocketTransportService() {
   NS_ASSERTION(NS_IsMainThread(), "wrong thread");
   NS_ASSERTION(!mInitialized, "not shutdown properly");
 
+  poll_destroy(mPoll);
   gSocketTransportService = nullptr;
 }
 
@@ -512,22 +510,21 @@ void nsSocketTransportService::AddToPollList(SocketContext* sock) {
               sock->mHandler.get()));
 
   sock->EnsureTimeout(PR_IntervalNow());
-  PRPollDesc poll;
-  poll.fd = sock->mFD;
-  poll.in_flags = sock->mHandler->mPollFlags;
-  poll.out_flags = 0;
+  PollEvent event =
+      poll_event_new(sock, (sock->mHandler->mPollFlags & PR_POLL_READ) != 0,
+                     (sock->mHandler->mPollFlags & PR_POLL_WRITE) != 0);
   if (ChaosMode::isActive(ChaosFeature::NetworkScheduling)) {
     auto newSocketIndex = mActiveList.Length();
     newSocketIndex = ChaosMode::randomUint32LessThan(newSocketIndex + 1);
     mActiveList.InsertElementAt(newSocketIndex, *sock);
-    // mPollList is offset by 1
-    mPollList.InsertElementAt(newSocketIndex + 1, poll);
   } else {
     // Avoid refcount bump/decrease
     mActiveList.EmplaceBack(sock->mFD, sock->mHandler.forget(),
                             sock->mPollStartEpoch);
-    mPollList.AppendElement(poll);
   }
+  PollResult result =
+      poll_add(mPoll, PR_FileDesc2NativeHandle(sock->mFD), event);
+  MOZ_RELEASE_ASSERT(result == PollResult::Ok);
 
   SOCKET_LOG(
       ("  active=%zu idle=%zu\n", mActiveList.Length(), mIdleList.Length()));
@@ -537,14 +534,19 @@ void nsSocketTransportService::RemoveFromPollList(SocketContext* sock) {
   SOCKET_LOG(("nsSocketTransportService::RemoveFromPollList %p [handler=%p]\n",
               sock, sock->mHandler.get()));
 
+  int fd = PR_FileDesc2NativeHandle(sock->mFD);
+  // TODO: Why can fd be -1?
+  if (fd > 0) {
+    PollResult result = poll_delete(mPoll, fd);
+    MOZ_RELEASE_ASSERT(result == PollResult::Ok);
+  }
+
   auto index = SockIndex(mActiveList, sock);
   MOZ_RELEASE_ASSERT(index != -1, "invalid index");
 
   SOCKET_LOG(("  index=%" PRId64 " mActiveList.Length()=%zu\n", index,
               mActiveList.Length()));
   mActiveList.UnorderedRemoveElementAt(index);
-  // mPollList is offset by 1
-  mPollList.UnorderedRemoveElementAt(index + 1);
 
   SOCKET_LOG(
       ("  active=%zu idle=%zu\n", mActiveList.Length(), mIdleList.Length()));
@@ -628,8 +630,6 @@ PRIntervalTime nsSocketTransportService::PollTimeout(PRIntervalTime now) {
 
 int32_t nsSocketTransportService::Poll(PRIntervalTime ts) {
   MOZ_ASSERT(IsOnCurrentThread());
-  PRPollDesc* firstPollEntry;
-  uint32_t pollCount;
   PRIntervalTime pollTimeout;
 
   // If there are pending events for this thread then
@@ -637,21 +637,15 @@ int32_t nsSocketTransportService::Poll(PRIntervalTime ts) {
   bool pendingEvents = false;
   mRawThread->HasPendingEvents(&pendingEvents);
 
-  if (mPollList[0].fd) {
-    mPollList[0].out_flags = 0;
-    firstPollEntry = &mPollList[0];
-    pollCount = mPollList.Length();
-    pollTimeout = pendingEvents ? PR_INTERVAL_NO_WAIT : PollTimeout(ts);
-  } else {
-    // no pollable event, so busy wait...
-    pollCount = mActiveList.Length();
-    if (pollCount) {
-      firstPollEntry = &mPollList[1];
+  {
+    MutexAutoLock lock(mLock);
+    if (mPollableEvent) {
+      pollTimeout = pendingEvents ? PR_INTERVAL_NO_WAIT : PollTimeout(ts);
     } else {
-      firstPollEntry = nullptr;
+      // no pollable event, so busy wait...
+      pollTimeout =
+          pendingEvents ? PR_INTERVAL_NO_WAIT : PR_MillisecondsToInterval(25);
     }
-    pollTimeout =
-        pendingEvents ? PR_INTERVAL_NO_WAIT : PR_MillisecondsToInterval(25);
   }
 
   if ((ts - mLastNetworkLinkChangeTime) < mNetworkLinkChangeBusyWaitPeriod) {
@@ -671,6 +665,14 @@ int32_t nsSocketTransportService::Poll(PRIntervalTime ts) {
 
   SOCKET_LOG(("    timeout = %i milliseconds\n",
               PR_IntervalToMilliseconds(pollTimeout)));
+  int64_t timeout_ms;
+  if (pollTimeout == PR_INTERVAL_NO_TIMEOUT) {
+    timeout_ms = -1;  // Infinite timeout
+  } else if (pollTimeout == PR_INTERVAL_NO_WAIT) {
+    timeout_ms = 0;  // Non-blocking
+  } else {
+    timeout_ms = PR_IntervalToMilliseconds(pollTimeout);
+  }
 
   int32_t n;
   {
@@ -683,7 +685,7 @@ int32_t nsSocketTransportService::Poll(PRIntervalTime ts) {
     }
 #endif
 
-    n = PR_Poll(firstPollEntry, pollCount, pollTimeout);
+    n = poll_wait(mPoll, &mPolledEvents, timeout_ms);
 
 #ifdef MOZ_GECKO_PROFILER
     if (pollTimeout != PR_INTERVAL_NO_WAIT) {
@@ -694,12 +696,10 @@ int32_t nsSocketTransportService::Poll(PRIntervalTime ts) {
           "SocketTransportService::Poll", NETWORK,
           MarkerTiming::IntervalUntilNowFrom(startTime),
           pollTimeout == PR_INTERVAL_NO_TIMEOUT
-              ? nsPrintfCString("Poll count: %u, Poll timeout: NO_TIMEOUT",
-                                pollCount)
+              ? nsPrintfCString("Poll count: %u, Poll timeout: NO_TIMEOUT", n)
           : pollTimeout == PR_INTERVAL_NO_WAIT
-              ? nsPrintfCString("Poll count: %u, Poll timeout: NO_WAIT",
-                                pollCount)
-              : nsPrintfCString("Poll count: %u, Poll timeout: %ums", pollCount,
+              ? nsPrintfCString("Poll count: %u, Poll timeout: NO_WAIT", n)
+              : nsPrintfCString("Poll count: %u, Poll timeout: %ums", n,
                                 PR_IntervalToMilliseconds(pollTimeout)));
     }
 #endif
@@ -709,6 +709,24 @@ int32_t nsSocketTransportService::Poll(PRIntervalTime ts) {
               PR_IntervalToMilliseconds(PR_IntervalNow() - ts)));
 
   return n;
+}
+
+// Helper function for one-shot polling of a single file descriptor
+int32_t nsSocketTransportService::PollSingleFD(PRFileDesc* fd, bool readable,
+                                               bool writable) {
+  MOZ_RELEASE_ASSERT(fd);
+  struct Poll* poll = poll_new();
+  MOZ_RELEASE_ASSERT(poll);
+
+  int32_t result = -1;
+  if (poll_add(poll, PR_FileDesc2NativeHandle(fd),
+               poll_event_new_readable(nullptr)) == PollResult::Ok) {
+    nsTArray<PollEvent> events;
+    result = poll_wait(poll, &events, -1);
+  }
+
+  poll_destroy(poll);
+  return result;
 }
 
 //-----------------------------------------------------------------------------
@@ -1130,10 +1148,13 @@ nsSocketTransportService::Run() {
       SOCKET_LOG(("running socket transport thread without a pollable event"));
     }
 
-    PRPollDesc entry = {mPollableEvent ? mPollableEvent->PollableFD() : nullptr,
-                        PR_POLL_READ | PR_POLL_EXCEPT, 0};
     SOCKET_LOG(("Setting entry 0"));
-    mPollList[0] = entry;
+    if (mPollableEvent) {
+      poll_add(mPoll, PR_FileDesc2NativeHandle(mPollableEvent->PollableFD()),
+               poll_event_new_readable(nullptr));
+    } else {
+      poll_add(mPoll, 0, poll_event_new_readable(nullptr));
+    }
   }
 
   mRawThread = NS_GetCurrentThread();
@@ -1249,7 +1270,6 @@ nsSocketTransportService::Run() {
   NS_ProcessPendingEvents(mRawThread);
 
   SOCKET_LOG(("STS thread exit\n"));
-  MOZ_ASSERT(mPollList.Length() == 1);
   MOZ_ASSERT(mActiveList.IsEmpty());
   MOZ_ASSERT(mIdleList.IsEmpty());
 
@@ -1309,12 +1329,13 @@ nsresult nsSocketTransportService::DoPollIteration() {
       DetachSocket(mActiveList, &mActiveList[i]);
     } else {
       uint16_t in_flags = mActiveList[i].mHandler->mPollFlags;
-      if (in_flags == 0) {
+      if ((in_flags & (PR_POLL_READ | PR_POLL_WRITE)) == 0) {
         MoveToIdleList(&mActiveList[i]);
       } else {
-        // update poll flags
-        mPollList[i + 1].in_flags = in_flags;
-        mPollList[i + 1].out_flags = 0;
+        poll_modify(
+            mPoll, PR_FileDesc2NativeHandle(mActiveList[i].mFD),
+            poll_event_new(&mActiveList[i], (in_flags & PR_POLL_READ) != 0,
+                           (in_flags & PR_POLL_WRITE) != 0));
         mActiveList[i].EnsureTimeout(now);
       }
     }
@@ -1378,21 +1399,33 @@ nsresult nsSocketTransportService::DoPollIteration() {
     SOCKET_LOG(("  PR_Poll error [%d] os error [%d]\n", PR_GetError(),
                 PR_GetOSError()));
   } else {
+    int16_t pollable_out_flags = 0;
     //
     // service "active" sockets...
     //
-    for (i = 0; i < int32_t(mActiveList.Length()); ++i) {
-      PRPollDesc& desc = mPollList[i + 1];
-      SocketContext& s = mActiveList[i];
-      if (n > 0 && desc.out_flags != 0) {
-        s.DisengageTimeout();
-        s.mHandler->OnSocketReady(desc.fd, desc.out_flags);
-      } else if (s.IsTimedOut(now)) {
-        SOCKET_LOG(("socket %p timed out", s.mHandler.get()));
-        s.DisengageTimeout();
-        s.mHandler->OnSocketReady(desc.fd, -1);
+    for (const PollEvent& event : mPolledEvents) {
+      SocketContext* s = reinterpret_cast<SocketContext*>(event.token);
+      // Convert PollEvent to PR_POLL flags
+      int16_t out_flags = (event.readable ? PR_POLL_READ : 0) |
+                          (event.writable ? PR_POLL_WRITE : 0) |
+                          (event.priority ? PR_POLL_EXCEPT : 0) |
+                          (event.error ? PR_POLL_ERR : 0);
+      if (s) {
+        if (out_flags != 0) {
+          s->DisengageTimeout();
+          if (s->mHandler) {
+            s->mHandler->OnSocketReady(s->mFD, out_flags);
+          }
+        } else if (s->IsTimedOut(now)) {
+          SOCKET_LOG(("socket %p timed out", s->mHandler.get()));
+          s->DisengageTimeout();
+          s->mHandler->OnSocketReady(s->mFD, -1);
+        } else {
+          s->MaybeResetEpoch();
+        }
       } else {
-        s.MaybeResetEpoch();
+        // This is the pollable event.
+        pollable_out_flags = out_flags;
       }
     }
     //
@@ -1408,11 +1441,9 @@ nsresult nsSocketTransportService::DoPollIteration() {
     {
       MutexAutoLock lock(mLock);
       // acknowledge pollable event (should not block)
-      if (n != 0 &&
-          (mPollList[0].out_flags & (PR_POLL_READ | PR_POLL_EXCEPT)) &&
+      if (n != 0 && (pollable_out_flags & (PR_POLL_READ | PR_POLL_EXCEPT)) &&
           mPollableEvent &&
-          ((mPollList[0].out_flags & PR_POLL_EXCEPT) ||
-           !mPollableEvent->Clear())) {
+          ((pollable_out_flags & PR_POLL_EXCEPT) || !mPollableEvent->Clear())) {
         // On Windows, the TCP loopback connection in the
         // pollable event may become broken when a laptop
         // switches between wired and wireless networks or
@@ -1869,9 +1900,13 @@ void nsSocketTransportService::TryRepairPollableEvent() MOZ_REQUIRES(mLock) {
       ("running socket transport thread without "
        "a pollable event now valid=%d",
        !!mPollableEvent));
-  mPollList[0].fd = mPollableEvent ? mPollableEvent->PollableFD() : nullptr;
-  mPollList[0].in_flags = PR_POLL_READ | PR_POLL_EXCEPT;
-  mPollList[0].out_flags = 0;
+
+  PollResult result = poll_modify(
+      mPoll,
+      mPollableEvent ? PR_FileDesc2NativeHandle(mPollableEvent->PollableFD())
+                     : 0,
+      poll_event_new_readable(nullptr));
+  MOZ_RELEASE_ASSERT(result == PollResult::Ok);
 }
 
 NS_IMETHODIMP
