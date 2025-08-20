@@ -16,7 +16,7 @@
 
 #include "mozilla/UniquePtr.h"
 #include "mozilla/net/DashboardTypes.h"
-#include "mozilla/net/polling.h"
+#include "mozilla/net/poll.h"
 #include "nsCOMPtr.h"
 #include "nsASocketHandler.h"
 #include "nsIDirectTaskDispatcher.h"

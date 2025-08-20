@@ -1358,6 +1358,12 @@ memory and layout, but there is no particular processing of untrusted input
 here.
 """
 
+[[audits.concurrent-queue]]
+who = "Lars Eggert <lars@eggert.org>"
+criteria = "safe-to-deploy"
+version = "2.5.0"
+notes = "FIXME actually do an audit"
+
 [[audits.cookie]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
 criteria = "safe-to-run"
@@ -4543,6 +4549,12 @@ who = "Lars Eggert <lars@eggert.org>"
 criteria = "safe-to-run"
 delta = "1.7.0 -> 1.7.2"
 
+[[audits.polling]]
+who = "Lars Eggert <lars@eggert.org>"
+criteria = "safe-to-deploy"
+version = "3.7.1"
+notes = "FIXME actually do an audit"
+
 [[audits.powerfmt]]
 who = "Alex Franchuk <afranchuk@mozilla.com>"
 criteria = "safe-to-deploy"
@@ -7140,7 +7152,7 @@ end = "2024-07-17"
 criteria = "safe-to-deploy"
 user-id = 6825 # Dan Gohman (sunfishcode)
 start = "2023-08-29"
-end = "2025-01-11"
+end = "2026-08-20"
 
 [[trusted.flate2]]
 criteria = "safe-to-deploy"
