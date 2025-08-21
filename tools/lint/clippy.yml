@@ -18,6 +18,7 @@ clippy:
         - netwerk/base/rust-helper/
         - netwerk/test/http3server/
         - netwerk/socket/neqo_glue/
+        - netwerk/socket/poll/
         - security/manager/ssl/data_storage/
         - servo/components/selectors/
         - servo/components/servo_arc/

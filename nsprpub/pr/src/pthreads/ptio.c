@@ -3829,7 +3829,7 @@ static PRInt32 _pr_poll_with_poll(PRPollDesc* pds, PRIntn npds,
 
 
 PR_IMPLEMENT(PRInt32)
-PR_Poll(PRPollDesc* pds, PRIntn npds, PRIntervalTime timeout) {
+PR_Poll_impl(PRPollDesc* pds, PRIntn npds, PRIntervalTime timeout) {
   return (_pr_poll_with_poll(pds, npds, timeout));
 }
 

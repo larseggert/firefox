@@ -979,6 +979,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "concurrent-queue"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
+dependencies = [
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "context_id"
 version = "0.1.0"
 source = "git+https://github.com/mozilla/application-services?rev=0376c542e4a31cde8d33dd0e8da17dcfbc6c58b2#0376c542e4a31cde8d33dd0e8da17dcfbc6c58b2"
@@ -2661,6 +2670,7 @@ dependencies = [
  "osclientcerts",
  "oxilangtag",
  "oxilangtag-ffi",
+ "poll",
  "prefs_parser",
  "processtools",
  "profiler_helper",
@@ -5553,6 +5563,29 @@ name = "pollster"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22686f4785f02a4fcc856d3b3bb19bf6c8160d103f7a99cc258bddd0251dc7f2"
+
+[[package]]
+name = "poll"
+version = "0.1.0"
+dependencies = [
+ "polling",
+ "thin-vec",
+]
+
+[[package]]
+name = "polling"
+version = "3.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e6a007746f34ed64099e88783b0ae369eaa3da6392868ba262e2af9b8fbaea1"
+dependencies = [
+ "cfg-if",
+ "concurrent-queue",
+ "hermit-abi",
+ "pin-project-lite",
+ "rustix",
+ "tracing",
+ "windows-sys",
+]
 
 [[package]]
 name = "potential_utf"

@@ -16,6 +16,7 @@
 
 #include "mozilla/UniquePtr.h"
 #include "mozilla/net/DashboardTypes.h"
+#include "mozilla/net/poll.h"
 #include "nsCOMPtr.h"
 #include "nsASocketHandler.h"
 #include "nsIDirectTaskDispatcher.h"
@@ -26,6 +27,7 @@
 #include "nsPISocketTransportService.h"
 #include "prinit.h"
 #include "prinrval.h"
+#include "private/pprio.h"
 
 struct PRPollDesc;
 class nsIPrefBranch;
@@ -184,23 +186,24 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   //-------------------------------------------------------------------------
   // socket lists (socket thread only)
   //
-  // only "active" sockets are on the poll list.  the active list is kept
-  // in sync with the poll list such that:
-  //
-  //   mActiveList[k].mFD == mPollList[k+1].fd
-  //
-  // where k=0,1,2,...
+  // only "active" sockets are registered with mPoller
   //-------------------------------------------------------------------------
 
   class SocketContext {
    public:
     SocketContext(PRFileDesc* aFD,
                   already_AddRefed<nsASocketHandler>&& aHandler,
-                  PRIntervalTime aPollStartEpoch)
-        : mFD(aFD), mHandler(aHandler), mPollStartEpoch(aPollStartEpoch) {}
+                  PRIntervalTime aPollStartEpoch, bool aBeingPolled)
+        : mFD(aFD),
+          mHandler(aHandler),
+          mPollStartEpoch(aPollStartEpoch),
+          mBeingPolled(aBeingPolled) {}
     SocketContext(PRFileDesc* aFD, nsASocketHandler* aHandler,
-                  PRIntervalTime aPollStartEpoch)
-        : mFD(aFD), mHandler(aHandler), mPollStartEpoch(aPollStartEpoch) {}
+                  PRIntervalTime aPollStartEpoch, bool aBeingPolled)
+        : mFD(aFD),
+          mHandler(aHandler),
+          mPollStartEpoch(aPollStartEpoch),
+          mBeingPolled(aBeingPolled) {}
     ~SocketContext() = default;
 
     // Returns true iff the socket has not been signalled longer than
@@ -225,10 +228,13 @@ class nsSocketTransportService final : public nsPISocketTransportService,
     PRFileDesc* mFD;
     RefPtr<nsASocketHandler> mHandler;
     PRIntervalTime mPollStartEpoch;  // time we started to poll this socket
+    bool mBeingPolled;
   };
 
   using SocketContextList = AutoTArray<SocketContext, SOCKET_LIMIT_MIN>;
   int64_t SockIndex(SocketContextList& aList, SocketContext* aSock);
+  nsSocketTransportService::SocketContext* GetSocketContext(
+      SocketContextList& aList, PROsfd aFd);
 
   SocketContextList mActiveList;
   SocketContextList mIdleList;
@@ -246,21 +252,19 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   // Total bytes number transfered through all the sockets except active ones
   uint64_t mSentBytesCount{0};
   uint64_t mReceivedBytesCount{0};
+
   //-------------------------------------------------------------------------
   // poll list (socket thread only)
-  //
-  // first element of the poll list is mPollableEvent (or null if the pollable
-  // event cannot be created).
   //-------------------------------------------------------------------------
-
-  nsTArray<PRPollDesc> mPollList;
+  Poller* mPoller;
+  nsTArray<PollEvent> mPolledEvents;
 
   PRIntervalTime PollTimeout(
       PRIntervalTime now);  // computes ideal poll timeout
   nsresult DoPollIteration();
   // perfoms a single poll iteration
   int32_t Poll(PRIntervalTime ts);
-  // calls PR_Poll.
+  // calls poll_wait.
 
   //-------------------------------------------------------------------------
   // pending socket queue - see NotifyWhenCanAttachSocket

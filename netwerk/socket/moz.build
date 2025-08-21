@@ -6,6 +6,7 @@
 
 DIRS += [
     "neqo_glue",
+    "poll",
 ]
 
 XPIDL_SOURCES += [

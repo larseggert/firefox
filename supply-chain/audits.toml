@@ -1426,6 +1426,12 @@ memory and layout, but there is no particular processing of untrusted input
 here.
 """
 
+[[audits.concurrent-queue]]
+who = "Lars Eggert <lars@eggert.org>"
+criteria = "safe-to-deploy"
+version = "2.5.0"
+notes = "FIXME: Actually vet"
+
 [[audits.cookie]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
 criteria = "safe-to-run"
@@ -3080,6 +3086,12 @@ notes = "Trivial crate, no unsafe code."
 who = "Mike Hommey <mh+mozilla@glandium.org>"
 criteria = "safe-to-deploy"
 delta = "0.4.0 -> 0.4.1"
+
+[[audits.hermit-abi]]
+who = "Lars Eggert <lars@eggert.org>"
+criteria = "safe-to-deploy"
+version = "0.4.0"
+notes = "FIXME: Actually vet"
 
 [[audits.hermit-abi]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
@@ -4870,6 +4882,12 @@ who = "Ben Dean-Kawamura <bdk@mozilla.com>"
 criteria = "safe-to-deploy"
 version = "0.3.0"
 notes = "Tiny crate with only 130 lines of code.  No unsafe code or IO."
+
+[[audits.polling]]
+who = "Lars Eggert <lars@eggert.org>"
+criteria = "safe-to-deploy"
+version = "3.7.1"
+notes = "FIXME: Actually vet"
 
 [[audits.powerfmt]]
 who = "Alex Franchuk <afranchuk@mozilla.com>"

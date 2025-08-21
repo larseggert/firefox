@@ -3437,5 +3437,15 @@ nsSocketTransport::GetStatus(nsresult* aStatus) {
   return NS_OK;
 }
 
+int64_t PollTimeoutToMilliseconds(PRIntervalTime pollTimeout) {
+  if (pollTimeout == PR_INTERVAL_NO_TIMEOUT) {
+    return -1;  // Infinite timeout
+  }
+  if (pollTimeout == PR_INTERVAL_NO_WAIT) {
+    return 0;  // Non-blocking
+  }
+  return PR_IntervalToMilliseconds(pollTimeout);
+}
+
 }  // namespace net
 }  // namespace mozilla

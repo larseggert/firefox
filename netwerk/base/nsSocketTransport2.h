@@ -36,7 +36,7 @@ class nsIInterfaceRequestor;
 
 //-----------------------------------------------------------------------------
 
-// after this short interval, we will return to PR_Poll
+// after this short interval, we will return
 #define NS_SOCKET_CONNECT_TIMEOUT PR_MillisecondsToInterval(20)
 
 //-----------------------------------------------------------------------------
@@ -505,6 +505,8 @@ class nsSocketOutputStream : public nsIAsyncOutputStream {
   uint32_t mCallbackFlags MOZ_GUARDED_BY(mTransport->mLock){0};
   uint64_t mByteCount MOZ_GUARDED_BY(mTransport->mLock){0};
 };
+
+int64_t PollTimeoutToMilliseconds(PRIntervalTime pollTimeout);
 
 }  // namespace net
 }  // namespace mozilla
