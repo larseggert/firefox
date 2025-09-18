@@ -526,7 +526,7 @@ void nsSocketTransportService::AddToPollList(SocketContext* sock) {
   } else {
     // Avoid refcount bump/decrease
     mActiveList.EmplaceBack(sock->mFD, sock->mHandler.forget(),
-                            sock->mPollStartEpoch, sock->mBeingPolled);
+                            sock->mPollStartEpoch, true);
     index = mActiveList.Length() - 1;
   }
   PROsfd fd = PR_FileDesc2NativeHandle(mActiveList[index].mFD);
@@ -536,7 +536,6 @@ void nsSocketTransportService::AddToPollList(SocketContext* sock) {
       poll_add(mPoller, poll_event_new(fd, (pollFlags & PR_POLL_READ) != 0,
                                        (pollFlags & PR_POLL_WRITE) != 0));
   MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_add failed");
-  mActiveList[index].mBeingPolled = true;
 
   SOCKET_LOG(
       ("  active=%zu idle=%zu\n", mActiveList.Length(), mIdleList.Length()));
@@ -573,7 +572,7 @@ void nsSocketTransportService::AddToIdleList(SocketContext* sock) {
 
   // Avoid refcount bump/decrease
   mIdleList.EmplaceBack(sock->mFD, sock->mHandler.forget(),
-                        sock->mPollStartEpoch, sock->mBeingPolled);
+                        sock->mPollStartEpoch, false);
 
   SOCKET_LOG(
       ("  active=%zu idle=%zu\n", mActiveList.Length(), mIdleList.Length()));
