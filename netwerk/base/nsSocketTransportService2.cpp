@@ -1149,6 +1149,7 @@ nsSocketTransportService::Run() {
     MOZ_RELEASE_ASSERT(mPollableEvent->Valid(), "invalid pollable event");
     SOCKET_LOG(("Setting mPollableEvent entry"));
     PROsfd fd = PR_FileDesc2NativeHandle(mPollableEvent->PollableFD());
+    fprintf(stderr, "poll_add pollable fd: %d\n", fd);
     MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd");
     PollResult result = poll_add(mPoller, poll_event_new_readable(fd));
     MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_add failed");
@@ -1925,14 +1926,14 @@ nsSocketTransportService::RemoveShutdownObserver(
 
 NS_IMETHODIMP
 nsSocketTransportService::ChangeFileDescNativeHandleWithPoller(
-    PRFileDesc* oldFd, PRFileDesc* newFd) {
-  MOZ_RELEASE_ASSERT(oldFd && newFd, "null file descriptor swap");
+    PRFileDesc* fd1, PRFileDesc* fd2) {
+  MOZ_RELEASE_ASSERT(fd1 && fd2, "null file descriptor swap");
 
   // Get the native handles before swapping
-  PROsfd old_fd = PR_FileDesc2NativeHandle(oldFd);
-  PROsfd new_fd = PR_FileDesc2NativeHandle(newFd);
+  PROsfd osfd1 = PR_FileDesc2NativeHandle(fd1);
+  PROsfd osfd2 = PR_FileDesc2NativeHandle(fd2);
 
-  MOZ_RELEASE_ASSERT(old_fd >= 0 && new_fd >= 0,
+  MOZ_RELEASE_ASSERT(osfd1 >= 0 && osfd2 >= 0,
                      "invalid native file descriptor");
 
   // Check if the old file descriptor is registered with the poller
@@ -1940,12 +1941,14 @@ nsSocketTransportService::ChangeFileDescNativeHandleWithPoller(
 
   // Find the socket context to get the event information
   for (auto& sock : mActiveList) {
-    if (sock.mFD == oldFd) {
+    PROsfd sockfd = PR_FileDesc2NativeHandle(sock.mFD);
+    MOZ_RELEASE_ASSERT(sockfd >= 0, "invalid fd");
+    if (sockfd == osfd1) {
       // Get the current poll flags
       pollFlags = sock.mHandler->mPollFlags;
 
       // Remove from poller before swapping handles
-      PollResult result = poll_delete(mPoller, old_fd);
+      PollResult result = poll_delete(mPoller, osfd1);
       MOZ_RELEASE_ASSERT(result == PollResult::Ok,
                          "poll_delete failed for fd swap");
       break;
@@ -1953,14 +1956,14 @@ nsSocketTransportService::ChangeFileDescNativeHandleWithPoller(
   }
 
   // Perform the handle swap
-  PR_ChangeFileDescNativeHandle(oldFd, new_fd);
-  PR_ChangeFileDescNativeHandle(newFd, old_fd);
+  PR_ChangeFileDescNativeHandle(fd1, osfd2);
+  PR_ChangeFileDescNativeHandle(fd2, osfd1);
 
   // Re-register with the new handle if it was previously registered
   if (pollFlags) {
-    PollResult result = poll_add(
-        mPoller, poll_event_new(new_fd, (pollFlags & PR_POLL_READ) != 0,
-                                (pollFlags & PR_POLL_WRITE) != 0));
+    PollResult result =
+        poll_add(mPoller, poll_event_new(osfd2, (pollFlags & PR_POLL_READ) != 0,
+                                         (pollFlags & PR_POLL_WRITE) != 0));
     MOZ_RELEASE_ASSERT(result == PollResult::Ok,
                        "poll_add failed after fd swap");
   }
