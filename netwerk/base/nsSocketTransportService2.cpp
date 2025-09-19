@@ -1957,10 +1957,13 @@ nsSocketTransportService::ChangeFileDescNativeHandleWithPoller(
   PR_ChangeFileDescNativeHandle(newFd, old_fd);
 
   // Re-register with the new handle if it was previously registered
-  PollResult result =
-      poll_add(mPoller, poll_event_new(new_fd, (pollFlags & PR_POLL_READ) != 0,
-                                       (pollFlags & PR_POLL_WRITE) != 0));
-  MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_add failed after fd swap");
+  if (pollFlags) {
+    PollResult result = poll_add(
+        mPoller, poll_event_new(new_fd, (pollFlags & PR_POLL_READ) != 0,
+                                (pollFlags & PR_POLL_WRITE) != 0));
+    MOZ_RELEASE_ASSERT(result == PollResult::Ok,
+                       "poll_add failed after fd swap");
+  }
   return NS_OK;
 }
 
