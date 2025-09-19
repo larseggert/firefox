@@ -525,9 +525,11 @@ void nsSocketTransportService::AddToPollList(SocketContext* sock) {
     index = newSocketIndex;
   } else {
     // Avoid refcount bump/decrease
+    sock->mBeingPolled = true;
     mActiveList.EmplaceBack(sock->mFD, sock->mHandler.forget(),
-                            sock->mPollStartEpoch, true);
+                            sock->mPollStartEpoch, sock->mBeingPolled);
     index = mActiveList.Length() - 1;
+    MOZ_RELEASE_ASSERT(mActiveList[index].mFD == sock->mFD, "index incorrect");
   }
   PROsfd fd = PR_FileDesc2NativeHandle(mActiveList[index].mFD);
   MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd");
@@ -571,8 +573,9 @@ void nsSocketTransportService::AddToIdleList(SocketContext* sock) {
               sock->mHandler.get()));
 
   // Avoid refcount bump/decrease
+  sock->mBeingPolled = false;
   mIdleList.EmplaceBack(sock->mFD, sock->mHandler.forget(),
-                        sock->mPollStartEpoch, false);
+                        sock->mPollStartEpoch, sock->mBeingPolled);
 
   SOCKET_LOG(
       ("  active=%zu idle=%zu\n", mActiveList.Length(), mIdleList.Length()));
