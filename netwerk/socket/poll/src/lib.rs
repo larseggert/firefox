@@ -173,13 +173,7 @@ pub unsafe extern "C" fn poll_add(poll: *mut Poller, event: PollEvent) -> PollRe
     }
     // eprintln!("poll_add: {fd:?} event: {event:?}");
 
-    let fd = event.fd;
     let mut poll = unsafe { Box::from_raw(poll) };
-    assert!(
-        !poll.set.contains(&fd),
-        "poll_add: {fd:?} already registered"
-    );
-
     let res = do_poll_add(&mut poll, event);
     _ = Box::into_raw(poll);
     res
@@ -201,6 +195,7 @@ pub unsafe extern "C" fn poll_modify(poll: *mut Poller, event: PollEvent) -> Pol
     // );
     let res = if poll.set.contains(&fd) {
         let Ok(event) = event.try_into() else {
+            _ = Box::into_raw(poll);
             return PollResult::ErrorInvalidArg;
         };
         #[cfg(not(windows))]

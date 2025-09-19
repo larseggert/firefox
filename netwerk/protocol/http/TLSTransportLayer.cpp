@@ -158,7 +158,7 @@ TLSTransportLayer::InputStreamWrapper::AsyncWait(
   // layers, but none of those will be PR_NSPR_IO_LAYER, so
   // PR_FileDesc2NativeHandle will return -1
   if (fd < 0) {
-    PR_Sleep(PR_INTERVAL_NO_TIMEOUT);
+    // PR_Sleep(PR_INTERVAL_NO_TIMEOUT);
     return NS_OK;
   }
   // Only run poll on the socket thread. Also, make sure this lives at least
@@ -333,7 +333,7 @@ TLSTransportLayer::OutputStreamWrapper::AsyncWait(
   // layers, but none of those will be PR_NSPR_IO_LAYER, so
   // PR_FileDesc2NativeHandle will return -1
   if (fd < 0) {
-    PR_Sleep(PR_INTERVAL_NO_TIMEOUT);
+    // PR_Sleep(PR_INTERVAL_NO_TIMEOUT);
     return NS_OK;
   }
   Poller* poller = poll_new();
