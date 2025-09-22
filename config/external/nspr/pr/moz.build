@@ -106,6 +106,7 @@ else:
 LOCAL_INCLUDES += [
     "/config/external/nspr",
     "/nsprpub/pr/include",
+    "/nsprpub/pr/include/obsolete",
     "/nsprpub/pr/include/private",
 ]
 
@@ -244,18 +245,30 @@ EXPORTS.nspr += [
     "/nsprpub/pr/include/prvrsion.h",
 ]
 
+EXPORTS.nspr.obsolete += [
+    "/nsprpub/pr/include/obsolete/probslet.h",
+]
+
 EXPORTS.nspr.md += [
     "/nsprpub/pr/include/md/_darwin.cfg",
+    "/nsprpub/pr/include/md/_darwin.h",
     "/nsprpub/pr/include/md/_freebsd.cfg",
     "/nsprpub/pr/include/md/_linux.cfg",
+    "/nsprpub/pr/include/md/_linux.h",
     "/nsprpub/pr/include/md/_netbsd.cfg",
     "/nsprpub/pr/include/md/_openbsd.cfg",
+    "/nsprpub/pr/include/md/_pcos.h",
+    "/nsprpub/pr/include/md/_pth.h",
     "/nsprpub/pr/include/md/_solaris.cfg",
+    "/nsprpub/pr/include/md/_unix_errors.h",
+    "/nsprpub/pr/include/md/_unixos.h",
     "/nsprpub/pr/include/md/_win95.cfg",
+    "/nsprpub/pr/include/md/prosdep.h",
 ]
 
 EXPORTS.nspr.private += [
     "/nsprpub/pr/include/private/pprio.h",
     "/nsprpub/pr/include/private/pprthred.h",
+    "/nsprpub/pr/include/private/primpl.h",
     "/nsprpub/pr/include/private/prpriv.h",
 ]

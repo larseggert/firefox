@@ -4,6 +4,32 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+# We are pulling in some of the NSPR plumbing in Polling.cpp, which needs
+# platform defines to be set.
+if CONFIG["OS_ARCH"] == "Linux":
+    DEFINES["LINUX"] = True
+    DEFINES["_PR_PTHREADS"] = True
+elif CONFIG["OS_TARGET"] in ("FreeBSD", "OpenBSD", "NetBSD"):
+    DEFINES["_PR_PTHREADS"] = True
+elif CONFIG["OS_TARGET"] == "Darwin":
+    DEFINES["DARWIN"] = True
+    DEFINES["_PR_PTHREADS"] = True
+elif CONFIG["OS_TARGET"] == "SunOS":
+    DEFINES["SOLARIS"] = True
+    DEFINES["_PR_PTHREADS"] = True
+elif CONFIG["OS_TARGET"] == "WINNT":
+    DEFINES["WIN32"] = True
+    # For historical reasons we use the WIN95 NSPR target instead of
+    # WINNT.
+    DEFINES["WIN95"] = True
+    DEFINES["WINNT"] = False
+else:
+    # FIXME: This is the wrong error message.
+    error(
+        'Not a supported OS_TARGET for NSPR in moz.build: "%s". Use --with-system-nspr'
+        % CONFIG["OS_TARGET"]
+    )
+
 XPIDL_SOURCES += [
     "mozIThirdPartyUtil.idl",
     "nsIAndroidContentInputStream.idl",
@@ -169,6 +195,7 @@ EXPORTS.mozilla.net += [
     "InterceptionInfo.h",
     "IPv4Parser.h",
     "NetworkConnectivityService.h",
+    "Polling.h",
     "Predictor.h",
     "PrivateBrowsingChannel.h",
     "ProtocolHandlerInfo.h",
@@ -241,6 +268,7 @@ UNIFIED_SOURCES += [
     "nsTransportUtils.cpp",
     "nsUDPSocket.cpp",
     "PollableEvent.cpp",
+    "Polling.cpp",
     "Predictor.cpp",
     "ProtocolHandlerInfo.cpp",
     "ProxyAutoConfig.cpp",
