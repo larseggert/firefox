@@ -13,6 +13,7 @@
 #include "prerror.h"
 #include "prio.h"
 #include "private/pprio.h"
+#include "private/primpl.h"
 #include "prnetdb.h"
 
 #ifdef XP_WIN
@@ -21,34 +22,6 @@
 #  include <fcntl.h>
 #  define USEPIPE 1
 #endif
-
-// PRFilePrivate is defined in a private header of NSPR (primpl.h) we can't
-// include. We need this to be able to set nonblocking=true which PR_CreatePipe
-// fails to do. We can remove this after bug 1993248 is fixed.
-// Note that nsLocalFileWin.cpp also redefines this in order to change the
-// appendMode.
-//-----------------------------------------------------------------------------
-typedef enum {
-  _PR_TRI_TRUE = 1,
-  _PR_TRI_FALSE = 0,
-  _PR_TRI_UNKNOWN = -1
-} _PRTriStateBool;
-
-struct _MDFileDesc {
-  PROsfd osfd;
-};
-
-struct PRFilePrivate {
-  int32_t state;
-  bool nonblocking;
-  _PRTriStateBool inheritable;
-  PRFileDesc* next;
-  int lockCount; /*   0: not locked
-                  *  -1: a native lockfile call is in progress
-                  * > 0: # times the file is locked */
-  bool appendMode;
-  _MDFileDesc md;
-};
 
 namespace mozilla {
 namespace net {

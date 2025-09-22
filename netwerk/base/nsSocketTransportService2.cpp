@@ -33,6 +33,7 @@
 #include "nsThreadUtils.h"
 #include "prerror.h"
 #include "prnetdb.h"
+#include "Polling.h"
 #ifdef XP_UNIX
 #  include "private/pprio.h"
 #endif
@@ -679,7 +680,7 @@ int32_t nsSocketTransportService::Poll(PRIntervalTime ts) {
     }
 #endif
 
-    n = PR_Poll(firstPollEntry, pollCount, pollTimeout);
+    n = Pollx(firstPollEntry, pollCount, pollTimeout);
 
 #ifdef MOZ_GECKO_PROFILER
     if (pollTimeout != PR_INTERVAL_NO_WAIT) {

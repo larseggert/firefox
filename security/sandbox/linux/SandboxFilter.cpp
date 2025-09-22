@@ -2323,6 +2323,17 @@ class SocketProcessSandboxPolicy final : public SandboxPolicyCommon {
       }
 #endif  // DESKTOP
 
+      // Bug 1640612
+      case __NR_uname:
+        return Allow();
+
+      // For netwerk/socket/poll
+      case __NR_timerfd_create:
+      case __NR_timerfd_settime:
+      // case __NR_eventfd:
+      case __NR_eventfd2:
+        return Allow();
+
       default:
         return SandboxPolicyCommon::EvaluateSyscall(sysno);
     }

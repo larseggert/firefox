@@ -14,6 +14,7 @@
 #include "nsQueryObject.h"
 #include "nsSocketProviderService.h"
 #include "nsSocketTransport2.h"
+#include "Polling.h"
 
 namespace mozilla::net {
 
@@ -155,7 +156,7 @@ TLSTransportLayer::InputStreamWrapper::AsyncWait(
   // Only run PR_Poll on the socket thread. Also, make sure this lives at least
   // as long as that operation.
   auto DoPoll = [self = RefPtr{this}, pd(pd)]() mutable {
-    int32_t rv = PR_Poll(&pd, 1, PR_INTERVAL_NO_TIMEOUT);
+    int32_t rv = Pollx(&pd, 1, PR_INTERVAL_NO_TIMEOUT);
     LOG(("TLSTransportLayer::InputStreamWrapper::AsyncWait rv=%d", rv));
   };
   if (OnSocketThread()) {
@@ -311,7 +312,7 @@ TLSTransportLayer::OutputStreamWrapper::AsyncWait(
   PRPollDesc pd;
   pd.fd = mTransport->mFD;
   pd.in_flags = PR_POLL_WRITE | PR_POLL_EXCEPT;
-  int32_t rv = PR_Poll(&pd, 1, PR_INTERVAL_NO_TIMEOUT);
+  int32_t rv = Pollx(&pd, 1, PR_INTERVAL_NO_TIMEOUT);
   LOG(("TLSTransportLayer::OutputStreamWrapper::AsyncWait rv=%d", rv));
   return NS_OK;
 }
