@@ -46,11 +46,10 @@ pub enum PollResult {
 #[repr(C)]
 #[derive(Debug)]
 pub struct PollEvent {
-    fd: Fd,
+    key: usize,
     readable: bool,
     writable: bool,
     priority: bool,
-    interrupt: bool,
     error: bool,
 }
 
@@ -59,11 +58,10 @@ impl TryFrom<Event> for PollEvent {
 
     fn try_from(value: Event) -> Result<Self, Self::Error> {
         Ok(Self {
-            fd: Fd(value.key.try_into()?),
+            key: value.key,
             readable: value.readable,
             writable: value.writable,
             priority: value.is_priority(),
-            interrupt: value.is_interrupt(),
             error: value.is_err().unwrap_or(false),
         })
     }
@@ -73,13 +71,8 @@ impl TryFrom<PollEvent> for Event {
     type Error = TryFromIntError;
 
     fn try_from(value: PollEvent) -> Result<Self, Self::Error> {
-        let e = Self::new(usize::try_from(value.fd.0)?, value.readable, value.writable);
+        let e = Self::new(value.key, value.readable, value.writable);
         let e = if value.priority { e.with_priority() } else { e };
-        let e = if value.interrupt {
-            e.with_interrupt()
-        } else {
-            e
-        };
         Ok(e)
     }
 }
@@ -87,43 +80,39 @@ impl TryFrom<PollEvent> for Event {
 impl PollEvent {
     #[no_mangle]
     #[must_use]
-    pub const extern "C" fn poll_event_new(fd: Fd, readable: bool, writable: bool) -> Self {
+    pub const extern "C" fn poll_event_new(key: usize, readable: bool, writable: bool) -> Self {
         Self {
-            fd,
+            key,
             readable,
             writable,
             priority: false,
-            interrupt: false,
             error: false,
         }
     }
 
     #[no_mangle]
     #[must_use]
-    pub const extern "C" fn poll_event_new_readable(fd: Fd) -> Self {
-        Self::poll_event_new(fd, true, false)
+    pub const extern "C" fn poll_event_new_readable(key: usize) -> Self {
+        Self::poll_event_new(key, true, false)
     }
 
     #[no_mangle]
     #[must_use]
-    pub const extern "C" fn poll_event_new_writable(fd: Fd) -> Self {
-        Self::poll_event_new(fd, false, true)
+    pub const extern "C" fn poll_event_new_writable(key: usize) -> Self {
+        Self::poll_event_new(key, false, true)
     }
 }
 
 // Create a new poll instance
 #[no_mangle]
 pub extern "C" fn poll_new() -> *mut Poller {
-    polling::Poller::new().map_or(ptr::null_mut(), |poll| {
-        assert!(
-            poll.supports_level(),
-            "Level-triggered polling not supported"
-        );
-        Box::into_raw(Box::new(Poller {
+    match polling::Poller::new() {
+        Ok(poll) => Box::into_raw(Box::new(Poller {
             poll,
             set: HashSet::default(),
-        }))
-    })
+        })),
+        Err(_) => ptr::null_mut(),
+    }
 }
 
 // Free a poll instance
@@ -137,86 +126,71 @@ pub unsafe extern "C" fn poll_free(poll: *mut Poller) {
     }
 }
 
-fn do_poll_add(poll: &mut Poller, event: PollEvent) -> PollResult {
-    let fd = event.fd;
+fn do_poll_add(fd: Fd, poll: &mut Poller, readable: bool, writable: bool) -> PollResult {
     assert!(
         !poll.set.contains(&fd),
         "poll_add: {fd:?} already registered"
     );
 
+    let event = Event::new(fd.0 as usize, readable, writable);
     match unsafe {
-        let Ok(event) = event.try_into() else {
-            return PollResult::ErrorInvalidArg;
-        };
         #[cfg(not(windows))]
         let source = BorrowedFd::borrow_raw(fd.0);
         #[cfg(windows)]
         let source = BorrowedSocket::borrow_raw(fd.0);
-        poll.poll.add_with_mode(&source, event, PollMode::Level)
+        poll.poll.add_with_mode(&source, event, PollMode::Oneshot)
     } {
         Ok(()) => {
             poll.set.insert(fd);
             PollResult::Ok
         }
-        Err(e) => {
-            eprintln!("poll_add {fd:?} error: {e}");
-            PollResult::ErrorIo
-        }
+        Err(_) => PollResult::ErrorIo,
     }
 }
 
 // Add a file descriptor to the poller.
 #[no_mangle]
-pub unsafe extern "C" fn poll_add(poll: *mut Poller, event: PollEvent) -> PollResult {
+pub unsafe extern "C" fn poll_add(
+    poll: *mut Poller,
+    fd: Fd,
+    readable: bool,
+    writable: bool,
+) -> PollResult {
     if poll.is_null() {
         return PollResult::ErrorInvalidArg;
     }
-    // eprintln!("poll_add: {fd:?} event: {event:?}");
 
     let mut poll = unsafe { Box::from_raw(poll) };
-    let res = do_poll_add(&mut poll, event);
+    let res = do_poll_add(fd, &mut poll, readable, writable);
     _ = Box::into_raw(poll);
     res
 }
 
 // Modify an existing file descriptor in the poll
 #[no_mangle]
-pub unsafe extern "C" fn poll_modify(poll: *mut Poller, event: PollEvent) -> PollResult {
+pub unsafe extern "C" fn poll_modify(
+    poll: *mut Poller,
+    fd: Fd,
+    readable: bool,
+    writable: bool,
+) -> PollResult {
     if poll.is_null() {
         return PollResult::ErrorInvalidArg;
     }
 
-    let fd = event.fd;
     let mut poll = unsafe { Box::from_raw(poll) };
-    // assert!(
-    //     poll.set.contains(&fd),
-    //     "poll_modify: {fd:?} not registered, have {:?}",
-    //     poll.set
-    // );
     let res = if poll.set.contains(&fd) {
-        let Ok(event) = event.try_into() else {
-            _ = Box::into_raw(poll);
-            return PollResult::ErrorInvalidArg;
-        };
+        let event = Event::new(fd.0 as usize, readable, writable);
         #[cfg(not(windows))]
         let source = BorrowedFd::borrow_raw(fd.0);
         #[cfg(windows)]
         let source = BorrowedSocket::borrow_raw(fd.0);
-        match poll.poll.modify_with_mode(source, event, PollMode::Level) {
+        match poll.poll.modify_with_mode(source, event, PollMode::Oneshot) {
             Ok(()) => PollResult::Ok,
-            Err(e) => {
-                eprintln!("poll_modify {fd:?} error: {e}");
-                PollResult::ErrorIo
-            }
+            Err(_) => PollResult::ErrorIo,
         }
     } else {
-        eprintln!(
-            "poll_modify: {fd:?} not registered, have {:?}, adding",
-            poll.set
-        );
-        let res = do_poll_add(&mut poll, event);
-        eprintln!("poll_modify: now have {:?}", poll.set);
-        res
+        do_poll_add(fd, &mut poll, readable, writable)
     };
     _ = Box::into_raw(poll);
     res
@@ -228,7 +202,6 @@ pub unsafe extern "C" fn poll_delete(poll: *mut Poller, fd: Fd) -> PollResult {
     if poll.is_null() {
         return PollResult::ErrorInvalidArg;
     }
-    // eprintln!("poll_delete: {fd:?}");
 
     let mut poll = unsafe { Box::from_raw(poll) };
     assert!(poll.set.contains(&fd), "poll_delete: {fd:?} not registered");
@@ -241,10 +214,7 @@ pub unsafe extern "C" fn poll_delete(poll: *mut Poller, fd: Fd) -> PollResult {
             poll.set.remove(&fd);
             PollResult::Ok
         }
-        Err(e) => {
-            eprintln!("poll_delete {fd:?} error: {e}");
-            PollResult::ErrorIo
-        }
+        Err(_) => PollResult::ErrorIo,
     };
     _ = Box::into_raw(poll);
     res
@@ -262,14 +232,12 @@ pub unsafe extern "C" fn poll_wait(
     if poll.is_null() || events_out.is_null() {
         return -1;
     }
-    // eprintln!("poll_wait: timeout_ms={timeout_ms}");
 
     let events_out = unsafe { &mut *events_out };
     events_out.clear();
 
     let poll = unsafe { Box::from_raw(poll) };
     let Some(capacity) = NonZeroUsize::new(poll.set.len()) else {
-        // Cannot wait on a poller with zero fds.
         _ = Box::into_raw(poll);
         return -1;
     };

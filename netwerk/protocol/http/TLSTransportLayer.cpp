@@ -13,7 +13,6 @@
 #include "nsQueryObject.h"
 #include "nsSocketProviderService.h"
 #include "nsSocketTransport2.h"
-#include "private/pprio.h"
 
 namespace mozilla::net {
 
@@ -143,42 +142,44 @@ TLSTransportLayer::InputStreamWrapper::AsyncWait(
        "callback=%p]\n",
        this, callback));
   mTransport->mInputCallback = callback;
-  // Don't bother to poll when |callback| is NULL. We call |AsyncWait|
-  // directly to null out the underlying callback.
   if (!callback) {
+    // Cancel any pending async wait when callback is null.
     return mSocketIn->AsyncWait(nullptr, 0, 0, nullptr);
   }
 
-  PROsfd fd = PR_FileDesc2NativeHandle(mTransport->mFD);
-  // From Valentin:
-  // Ah, so... regarding MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd"); ... for the
-  // proxy tunnels, we sometimes create transport via
-  // mozilla::net::nsHttpConnection::SetupSecondaryTLS that does't actually have
-  // any actual socket backing it - so we'll have a  PR_File with several
-  // layers, but none of those will be PR_NSPR_IO_LAYER, so
-  // PR_FileDesc2NativeHandle will return -1
-  if (fd < 0) {
-    // PR_Sleep(PR_INTERVAL_NO_TIMEOUT);
-    return NS_OK;
-  }
-  // Only run poll on the socket thread. Also, make sure this lives at least
-  // as long as that operation.
-  auto DoPoll = [self = RefPtr{this}, fd(fd)]() mutable {
-    Poller* poller = poll_new();
-    MOZ_RELEASE_ASSERT(poller);
-    PollResult result = poll_add(poller, poll_event_new_readable(fd));
-    MOZ_RELEASE_ASSERT(result == PollResult::Ok);
-    nsTArray<PollEvent> polledEvents;
-    int32_t rv = poll_wait(poller, &polledEvents,
-                           PollTimeoutToMilliseconds(PR_INTERVAL_NO_TIMEOUT));
-    LOG(("TLSTransportLayer::InputStreamWrapper::AsyncWait rv=%d", rv));
-    poll_free(poller);
+  // Check if NSS has buffered data. If so, the TLS layer is ready even if
+  // the underlying socket has no new data. Dispatch callback immediately.
+  // HasDataToRecv must be called on socket thread, so dispatch if needed.
+  RefPtr<InputStreamWrapper> self = this;
+  RefPtr<TLSTransportLayer> transport = mTransport;
+  auto doAsyncWait = [self, transport]() {
+    if (transport->HasDataToRecv()) {
+      LOG(
+          ("TLSTransportLayer::InputStreamWrapper::AsyncWait [this=%p] "
+           "TLS has buffered data, dispatching callback immediately\n",
+           self.get()));
+      // Use the same pattern as OnInputStreamReady: check mInputCallback at
+      // dispatch time. If AsyncWait(nullptr) is called to cancel before this
+      // runs, mInputCallback will be null and we'll do nothing.
+      nsCOMPtr<nsIInputStreamCallback> cb =
+          std::move(transport->mInputCallback);
+      if (cb) {
+        cb->OnInputStreamReady(self);
+      }
+      return;
+    }
+    // No buffered data in TLS layer, wait on underlying socket.
+    // Use 0, 0, nullptr to match original behavior via TLSTransportLayer::Poll.
+    self->mSocketIn->AsyncWait(transport, 0, 0, nullptr);
   };
+
   if (OnSocketThread()) {
-    DoPoll();
+    doAsyncWait();
   } else {
-    gSocketTransportService->Dispatch(NS_NewRunnableFunction(
-        "TLSTransportLayer::InputStreamWrapper::AsyncWait", DoPoll));
+    gSocketTransportService->Dispatch(
+        NS_NewRunnableFunction(
+            "TLSTransportLayer::InputStreamWrapper::AsyncWait", doAsyncWait),
+        NS_DISPATCH_NORMAL);
   }
   return NS_OK;
 }
@@ -318,33 +319,15 @@ TLSTransportLayer::OutputStreamWrapper::AsyncWait(
        "callback=%p]\n",
        this, mTransport->mOutputCallback.get(), callback));
   mTransport->mOutputCallback = callback;
-  // Don't bother to call PR_POLL when |callback| is NULL. We call |AsyncWait|
-  // directly to null out the underlying callback.
-  if (!callback) {
-    return mSocketOut->AsyncWait(nullptr, 0, 0, nullptr);
+  // Use the underlying socket's async notification mechanism. When the socket
+  // is ready, TLSTransportLayer::OnOutputStreamReady will be called, which
+  // invokes the registered callback. This integrates with the socket transport
+  // service's polling and avoids blocking the socket thread.
+  if (callback) {
+    return mSocketOut->AsyncWait(mTransport, flags, amount, target);
   }
-
-  PROsfd fd = PR_FileDesc2NativeHandle(mTransport->mFD);
-  // From Valentin:
-  // Ah, so... regarding MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd"); ... for the
-  // proxy tunnels, we sometimes create transport via
-  // mozilla::net::nsHttpConnection::SetupSecondaryTLS that does't actually have
-  // any actual socket backing it - so we'll have a  PR_File with several
-  // layers, but none of those will be PR_NSPR_IO_LAYER, so
-  // PR_FileDesc2NativeHandle will return -1
-  if (fd < 0) {
-    // PR_Sleep(PR_INTERVAL_NO_TIMEOUT);
-    return NS_OK;
-  }
-  Poller* poller = poll_new();
-  MOZ_RELEASE_ASSERT(poller);
-  PollResult result = poll_add(poller, poll_event_new_writable(fd));
-  MOZ_RELEASE_ASSERT(result == PollResult::Ok);
-  nsTArray<PollEvent> polledEvents;
-  int32_t rv = poll_wait(poller, &polledEvents, PR_INTERVAL_NO_TIMEOUT);
-  LOG(("TLSTransportLayer::OutputStreamWrapper::AsyncWait rv=%d", rv));
-  poll_free(poller);
-  return NS_OK;
+  // Cancel any pending async wait when callback is null.
+  return mSocketOut->AsyncWait(nullptr, 0, 0, nullptr);
 }
 
 //-----------------------------------------------------------------------------

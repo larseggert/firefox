@@ -534,9 +534,8 @@ void nsSocketTransportService::AddToPollList(SocketContext* sock) {
   PROsfd fd = PR_FileDesc2NativeHandle(mActiveList[index].mFD);
   MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd");
   auto pollFlags = mActiveList[index].mHandler->mPollFlags;
-  PollResult result =
-      poll_add(mPoller, poll_event_new(fd, (pollFlags & PR_POLL_READ) != 0,
-                                       (pollFlags & PR_POLL_WRITE) != 0));
+  PollResult result = poll_add(mPoller, fd, (pollFlags & PR_POLL_READ) != 0,
+                               (pollFlags & PR_POLL_WRITE) != 0);
   MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_add failed");
 
   SOCKET_LOG(
@@ -572,10 +571,12 @@ void nsSocketTransportService::AddToIdleList(SocketContext* sock) {
   SOCKET_LOG(("nsSocketTransportService::AddToIdleList %p [handler=%p]\n", sock,
               sock->mHandler.get()));
 
-  // Avoid refcount bump/decrease
-  sock->mBeingPolled = false;
+  // Avoid refcount bump/decrease. We pass false for mBeingPolled since idle
+  // sockets are not registered with the poller. Note: Don't modify
+  // sock->mBeingPolled here - RemoveFromPollList needs to check it to know
+  // whether to call poll_delete.
   mIdleList.EmplaceBack(sock->mFD, sock->mHandler.forget(),
-                        sock->mPollStartEpoch, sock->mBeingPolled);
+                        sock->mPollStartEpoch, false);
 
   SOCKET_LOG(
       ("  active=%zu idle=%zu\n", mActiveList.Length(), mIdleList.Length()));
@@ -1149,9 +1150,8 @@ nsSocketTransportService::Run() {
     MOZ_RELEASE_ASSERT(mPollableEvent->Valid(), "invalid pollable event");
     SOCKET_LOG(("Setting mPollableEvent entry"));
     PROsfd fd = PR_FileDesc2NativeHandle(mPollableEvent->PollableFD());
-    fprintf(stderr, "poll_add pollable fd: %d\n", fd);
     MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd");
-    PollResult result = poll_add(mPoller, poll_event_new_readable(fd));
+    PollResult result = poll_add(mPoller, fd, true, false);
     MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_add failed");
   }
 
@@ -1331,11 +1331,17 @@ nsresult nsSocketTransportService::DoPollIteration() {
       if (in_flags == 0) {
         MoveToIdleList(&mActiveList[i]);
       } else {
-        PROsfd fd = PR_FileDesc2NativeHandle(mActiveList[i].mFD);
+        // Call the PRFileDesc layer's Poll method to set up AsyncWait callbacks.
+        // This is essential for TLS layers that need to register for I/O events.
+        PRFileDesc* prfd = mActiveList[i].mFD;
+        int16_t out_flags = 0;
+        prfd->methods->poll(prfd, in_flags, &out_flags);
+
+        PROsfd fd = PR_FileDesc2NativeHandle(prfd);
         MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd");
-        PollResult result = poll_modify(
-            mPoller, poll_event_new(fd, (in_flags & PR_POLL_READ) != 0,
-                                    (in_flags & PR_POLL_WRITE) != 0));
+        PollResult result = poll_modify(mPoller, fd,
+                                        (in_flags & PR_POLL_READ) != 0,
+                                        (in_flags & PR_POLL_WRITE) != 0);
         MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_modify failed");
         MOZ_RELEASE_ASSERT(mActiveList[i].mBeingPolled, "not being polled");
         mActiveList[i].EnsureTimeout(now);
@@ -1360,6 +1366,11 @@ nsresult nsSocketTransportService::DoPollIteration() {
   {
     MutexAutoLock lock(mLock);
     if (mPollableEvent) {
+      // Re-arm the pollable event fd for oneshot polling mode.
+      PROsfd fd = PR_FileDesc2NativeHandle(mPollableEvent->PollableFD());
+      PollResult result = poll_modify(mPoller, fd, true, false);
+      MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_modify pollable failed");
+
       // we want to make sure the timeout is measured from the time
       // we enter poll().  This method resets the timestamp to 'now',
       // if we were first signalled between leaving poll() and here.
@@ -1406,16 +1417,13 @@ nsresult nsSocketTransportService::DoPollIteration() {
     // service "active" sockets...
     //
     for (const PollEvent& event : mPolledEvents) {
-      SocketContext* s = GetSocketContext(mActiveList, event.fd);
+      SocketContext* s = GetSocketContext(mActiveList, event.key);
       // Convert PollEvent to PR_POLL flags
       int16_t out_flags = (event.readable ? PR_POLL_READ : 0) |
                           (event.writable ? PR_POLL_WRITE : 0) |
                           (event.priority ? PR_POLL_EXCEPT : 0) |
-                          (event.interrupt ? PR_POLL_HUP : 0) |
                           (event.error ? PR_POLL_ERR : 0);
       if (s) {
-        PROsfd fd = PR_FileDesc2NativeHandle(s->mFD);
-        MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd");
         if (n > 0 && out_flags != 0) {
           s->DisengageTimeout();
           s->mHandler->OnSocketReady(s->mFD, out_flags);
@@ -1887,16 +1895,29 @@ void nsSocketTransportService::TryRepairPollableEvent() MOZ_REQUIRES(mLock) {
   MOZ_RELEASE_ASSERT(0, "TryRepairPollableEvent");
   mLock.AssertCurrentThreadOwns();
 
+  // Get the old fd before destroying the old PollableEvent
+  PROsfd oldFd = -1;
+  if (mPollableEvent) {
+    oldFd = PR_FileDesc2NativeHandle(mPollableEvent->PollableFD());
+  }
+
   PollableEvent* pollable = nullptr;
   {
     // Bug 1719046: In certain cases PollableEvent constructor can hang
-    // when callign PR_NewTCPSocketPair.
+    // when calling PR_NewTCPSocketPair.
     // We unlock the mutex to prevent main thread hangs acquiring the lock.
     MutexAutoUnlock unlock(mLock);
     pollable = new PollableEvent();
   }
 
   NS_WARNING("Trying to repair mPollableEvent");
+
+  // Remove old fd from poller before destroying the old PollableEvent
+  if (oldFd >= 0) {
+    PollResult result = poll_delete(mPoller, oldFd);
+    MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_delete failed");
+  }
+
   mPollableEvent.reset(pollable);
   MOZ_RELEASE_ASSERT(mPollableEvent->Valid(), "invalid pollable event");
   SOCKET_LOG(
@@ -1904,10 +1925,11 @@ void nsSocketTransportService::TryRepairPollableEvent() MOZ_REQUIRES(mLock) {
        "a pollable event now valid=%d",
        !!mPollableEvent));
 
-  PROsfd fd = PR_FileDesc2NativeHandle(mPollableEvent->PollableFD());
-  MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd");
-  PollResult result = poll_modify(mPoller, poll_event_new_readable(fd));
-  MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_modify failed");
+  // Add new fd to poller
+  PROsfd newFd = PR_FileDesc2NativeHandle(mPollableEvent->PollableFD());
+  MOZ_RELEASE_ASSERT(newFd >= 0, "invalid fd");
+  PollResult result = poll_add(mPoller, newFd, true, false);
+  MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_add failed");
 }
 
 NS_IMETHODIMP
@@ -1961,9 +1983,9 @@ nsSocketTransportService::ChangeFileDescNativeHandleWithPoller(
 
   // Re-register with the new handle if it was previously registered
   if (pollFlags) {
-    PollResult result =
-        poll_add(mPoller, poll_event_new(osfd2, (pollFlags & PR_POLL_READ) != 0,
-                                         (pollFlags & PR_POLL_WRITE) != 0));
+    PollResult result = poll_add(mPoller, osfd2,
+                                 (pollFlags & PR_POLL_READ) != 0,
+                                 (pollFlags & PR_POLL_WRITE) != 0);
     MOZ_RELEASE_ASSERT(result == PollResult::Ok,
                        "poll_add failed after fd swap");
   }

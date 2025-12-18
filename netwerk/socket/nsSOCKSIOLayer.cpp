@@ -23,7 +23,6 @@
 #include "mozilla/Components.h"
 #include "mozilla/Logging.h"
 #include "mozilla/net/DNS.h"
-#include "mozilla/Unused.h"
 #include "nsPISocketTransportService.h"
 
 using mozilla::LogLevel;
