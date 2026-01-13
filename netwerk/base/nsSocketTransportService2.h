@@ -229,6 +229,8 @@ class nsSocketTransportService final : public nsPISocketTransportService,
     RefPtr<nsASocketHandler> mHandler;
     PRIntervalTime mPollStartEpoch;  // time we started to poll this socket
     bool mBeingPolled;
+    bool mLayerReady = false;    // true if layer's Poll indicated data ready
+    int16_t mLayerOutFlags = 0;  // out_flags from layer's Poll method
   };
 
   using SocketContextList = AutoTArray<SocketContext, SOCKET_LIMIT_MIN>;

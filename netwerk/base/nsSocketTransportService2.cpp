@@ -531,12 +531,33 @@ void nsSocketTransportService::AddToPollList(SocketContext* sock) {
     index = mActiveList.Length() - 1;
     MOZ_RELEASE_ASSERT(mActiveList[index].mFD == sock->mFD, "index incorrect");
   }
-  PROsfd fd = PR_FileDesc2NativeHandle(mActiveList[index].mFD);
+
+  // Call the PRFileDesc layer's Poll method to set up AsyncWait callbacks
+  // and determine what system-level events to poll for. Like PR_Poll, we
+  // make separate calls for read and write because layers may translate
+  // read requests to write operations (e.g., TLS handshake) or vice versa.
+  PRFileDesc* prfd = mActiveList[index].mFD;
+  auto in_flags = mActiveList[index].mHandler->mPollFlags;
+  int16_t poll_flags_for_read = 0, poll_flags_for_write = 0;
+
+  if (in_flags & PR_POLL_READ) {
+    int16_t out_flags = 0;
+    poll_flags_for_read =
+        prfd->methods->poll(prfd, in_flags & ~PR_POLL_WRITE, &out_flags);
+  }
+  if (in_flags & PR_POLL_WRITE) {
+    int16_t out_flags = 0;
+    poll_flags_for_write =
+        prfd->methods->poll(prfd, in_flags & ~PR_POLL_READ, &out_flags);
+  }
+
+  PROsfd fd = PR_FileDesc2NativeHandle(prfd);
   MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd");
-  auto pollFlags = mActiveList[index].mHandler->mPollFlags;
-  PollResult result = poll_add(mPoller, fd, (pollFlags & PR_POLL_READ) != 0,
-                               (pollFlags & PR_POLL_WRITE) != 0);
-  MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_add failed");
+  PollResult result = poll_modify(mPoller, fd, (in_flags & PR_POLL_READ) != 0,
+                                  (in_flags & PR_POLL_WRITE) != 0,
+                                  (in_flags & PR_POLL_EXCEPT) != 0,
+                                  poll_flags_for_read, poll_flags_for_write);
+  MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_modify failed");
 
   SOCKET_LOG(
       ("  active=%zu idle=%zu\n", mActiveList.Length(), mIdleList.Length()));
@@ -1151,8 +1172,9 @@ nsSocketTransportService::Run() {
     SOCKET_LOG(("Setting mPollableEvent entry"));
     PROsfd fd = PR_FileDesc2NativeHandle(mPollableEvent->PollableFD());
     MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd");
-    PollResult result = poll_add(mPoller, fd, true, false);
-    MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_add failed");
+    PollResult result =
+        poll_modify(mPoller, fd, true, false, false, PR_POLL_READ, 0);
+    MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_modify failed");
   }
 
   mRawThread = NS_GetCurrentThread();
@@ -1316,6 +1338,7 @@ nsresult nsSocketTransportService::DoPollIteration() {
   // were idle to begin with ;-)
   //
   count = mIdleList.Length();
+  bool anyLayerReady = false;
   for (i = mActiveList.Length() - 1; i >= 0; --i) {
     //---
     SOCKET_LOG(("  active [%u] { handler=%p condition=%" PRIx32
@@ -1331,20 +1354,68 @@ nsresult nsSocketTransportService::DoPollIteration() {
       if (in_flags == 0) {
         MoveToIdleList(&mActiveList[i]);
       } else {
-        // Call the PRFileDesc layer's Poll method to set up AsyncWait callbacks.
-        // This is essential for TLS layers that need to register for I/O events.
+        // Call the PRFileDesc layer's Poll method to set up AsyncWait callbacks
+        // and determine what system-level events to poll for. This is essential
+        // for TLS layers and SOCKS proxies that may need different I/O events
+        // than what the application requested.
+        //
+        // Like PR_Poll, we call the layer's poll method with the full in_flags.
+        // The layer returns what system-level events to actually poll for, and
+        // may set out_flags if data is immediately ready.
+        //
+        // We also call separately for READ and WRITE to understand the event
+        // translation mapping (e.g., if READ maps to WRITE at the OS level).
         PRFileDesc* prfd = mActiveList[i].mFD;
-        int16_t out_flags = 0;
-        prfd->methods->poll(prfd, in_flags, &out_flags);
+        int16_t poll_flags_for_read = 0, poll_flags_for_write = 0;
+        int16_t out_flags_read = 0, out_flags_write = 0;
 
-        PROsfd fd = PR_FileDesc2NativeHandle(prfd);
-        MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd");
-        PollResult result = poll_modify(mPoller, fd,
-                                        (in_flags & PR_POLL_READ) != 0,
-                                        (in_flags & PR_POLL_WRITE) != 0);
-        MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_modify failed");
-        MOZ_RELEASE_ASSERT(mActiveList[i].mBeingPolled, "not being polled");
-        mActiveList[i].EnsureTimeout(now);
+        // Call poll for each direction the app requested to learn the mapping.
+        if (in_flags & PR_POLL_READ) {
+          poll_flags_for_read = prfd->methods->poll(
+              prfd, PR_POLL_READ | (in_flags & PR_POLL_EXCEPT),
+              &out_flags_read);
+        }
+        if (in_flags & PR_POLL_WRITE) {
+          poll_flags_for_write = prfd->methods->poll(
+              prfd, PR_POLL_WRITE | (in_flags & PR_POLL_EXCEPT),
+              &out_flags_write);
+        }
+        // Even if neither READ nor WRITE is requested, call poll with EXCEPT
+        // so that layers can perform internal bookkeeping (e.g., ssl_Poll
+        // calling MaybeSelectClientAuthCertificate).
+        if (!(in_flags & (PR_POLL_READ | PR_POLL_WRITE)) &&
+            (in_flags & PR_POLL_EXCEPT)) {
+          int16_t out_flags_except = 0;
+          (void)prfd->methods->poll(prfd, PR_POLL_EXCEPT, &out_flags_except);
+        }
+
+        int16_t out_flags = out_flags_read | out_flags_write;
+
+        // Check if the layer indicates data is already ready. This matches
+        // PR_Poll's semantics: if out_flags is non-zero, the layer has data
+        // available now without needing to poll.
+        if (out_flags != 0) {
+          mActiveList[i].mLayerReady = true;
+          mActiveList[i].mLayerOutFlags = out_flags;
+          anyLayerReady = true;
+        } else {
+          mActiveList[i].mLayerReady = false;
+          mActiveList[i].mLayerOutFlags = 0;
+        }
+
+        // Only register with poller if the layer doesn't indicate data is
+        // ready.
+        if (!mActiveList[i].mLayerReady) {
+          PROsfd fd = PR_FileDesc2NativeHandle(prfd);
+          MOZ_RELEASE_ASSERT(fd >= 0, "invalid fd");
+          PollResult result = poll_modify(
+              mPoller, fd, (in_flags & PR_POLL_READ) != 0,
+              (in_flags & PR_POLL_WRITE) != 0, (in_flags & PR_POLL_EXCEPT) != 0,
+              poll_flags_for_read, poll_flags_for_write);
+          MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_modify failed");
+          MOZ_RELEASE_ASSERT(mActiveList[i].mBeingPolled, "not being polled");
+          mActiveList[i].EnsureTimeout(now);
+        }
       }
     }
   }
@@ -1363,32 +1434,16 @@ nsresult nsSocketTransportService::DoPollIteration() {
     }
   }
 
-  {
-    MutexAutoLock lock(mLock);
-    if (mPollableEvent) {
-      // Re-arm the pollable event fd for oneshot polling mode.
-      PROsfd fd = PR_FileDesc2NativeHandle(mPollableEvent->PollableFD());
-      PollResult result = poll_modify(mPoller, fd, true, false);
-      MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_modify pollable failed");
-
-      // we want to make sure the timeout is measured from the time
-      // we enter poll().  This method resets the timestamp to 'now',
-      // if we were first signalled between leaving poll() and here.
-      // If we didn't do this and processing events took longer than
-      // the allowed signal timeout, we would detect it as a
-      // false-positive.  AdjustFirstSignalTimestamp is then a no-op
-      // until mPollableEvent->Clear() is called.
-      mPollableEvent->AdjustFirstSignalTimestamp();
-    }
-  }
-
-  SOCKET_LOG(("  calling Poll [active=%zu idle=%zu]\n", mActiveList.Length(),
-              mIdleList.Length()));
-
   // Measures seconds spent while blocked on Poll
   int32_t n = 0;
 
-  if (!gIOService->IsNetTearingDown()) {
+  // If any layer indicates data is already ready, skip poll_wait and
+  // immediately service them. This matches PR_Poll's behavior where it
+  // returns without calling native poll if any descriptor is immediately ready.
+  if (anyLayerReady) {
+    // Clear polled events since we're not calling poll_wait
+    mPolledEvents.Clear();
+  } else if (!gIOService->IsNetTearingDown()) {
     // Let's not do polling during shutdown.
 #if defined(XP_WIN)
     StartPolling();
@@ -1416,6 +1471,8 @@ nsresult nsSocketTransportService::DoPollIteration() {
     //
     // service "active" sockets...
     //
+    // Process socket events first, defer pollable event to last.
+    // This prevents the pollable event from starving socket events.
     for (const PollEvent& event : mPolledEvents) {
       SocketContext* s = GetSocketContext(mActiveList, event.key);
       // Convert PollEvent to PR_POLL flags
@@ -1426,19 +1483,36 @@ nsresult nsSocketTransportService::DoPollIteration() {
       if (s) {
         if (n > 0 && out_flags != 0) {
           s->DisengageTimeout();
+          s->mLayerReady = false;  // Clear layer-ready since we're servicing
           s->mHandler->OnSocketReady(s->mFD, out_flags);
         } else if (s->IsTimedOut(now)) {
           SOCKET_LOG(("socket %p timed out", s->mHandler.get()));
           s->DisengageTimeout();
+          s->mLayerReady = false;
           s->mHandler->OnSocketReady(s->mFD, -1);
         } else {
           s->MaybeResetEpoch();
         }
       } else {
-        // This is the pollable event.
+        // This is the pollable event - record it for later processing.
         MOZ_RELEASE_ASSERT(pollable_out_flags == 0,
                            "multiple pollable events signalled");
         pollable_out_flags = out_flags;
+      }
+    }
+
+    // Service sockets where the layer indicated data is already ready
+    // (e.g., buffered TLS data). This handles the case where the layer's
+    // Poll method returned out_flags indicating data availability, but the
+    // raw socket fd has no events (data is buffered in the layer, not socket).
+    for (i = mActiveList.Length() - 1; i >= 0; --i) {
+      SocketContext& s = mActiveList[i];
+      if (s.mLayerReady && !NS_FAILED(s.mHandler->mCondition)) {
+        s.DisengageTimeout();
+        int16_t layerFlags = s.mLayerOutFlags;
+        s.mLayerReady = false;
+        s.mLayerOutFlags = 0;
+        s.mHandler->OnSocketReady(s.mFD, layerFlags);
       }
     }
     //
@@ -1470,6 +1544,18 @@ nsresult nsSocketTransportService::DoPollIteration() {
           !mPollableEvent->IsSignallingAlive(mPollableEventTimeout)) {
         SOCKET_LOG(("Pollable event signalling failed/timed out"));
         TryRepairPollableEvent();
+      }
+
+      // Re-arm the pollable event fd for oneshot polling mode AFTER clearing.
+      // This ensures we don't immediately wake up from poll_wait due to stale
+      // data in the pollable event pipe/eventfd.
+      if (mPollableEvent) {
+        PROsfd fd = PR_FileDesc2NativeHandle(mPollableEvent->PollableFD());
+        PollResult result =
+            poll_modify(mPoller, fd, true, false, false, PR_POLL_READ, 0);
+        MOZ_RELEASE_ASSERT(result == PollResult::Ok,
+                           "poll_modify pollable failed");
+        mPollableEvent->AdjustFirstSignalTimestamp();
       }
     }
   }
@@ -1928,8 +2014,9 @@ void nsSocketTransportService::TryRepairPollableEvent() MOZ_REQUIRES(mLock) {
   // Add new fd to poller
   PROsfd newFd = PR_FileDesc2NativeHandle(mPollableEvent->PollableFD());
   MOZ_RELEASE_ASSERT(newFd >= 0, "invalid fd");
-  PollResult result = poll_add(mPoller, newFd, true, false);
-  MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_add failed");
+  PollResult result =
+      poll_modify(mPoller, newFd, true, false, false, PR_POLL_READ, 0);
+  MOZ_RELEASE_ASSERT(result == PollResult::Ok, "poll_modify failed");
 }
 
 NS_IMETHODIMP
@@ -1960,6 +2047,7 @@ nsSocketTransportService::ChangeFileDescNativeHandleWithPoller(
 
   // Check if the old file descriptor is registered with the poller
   uint16_t pollFlags = 0;
+  SocketContext* foundSock = nullptr;
 
   // Find the socket context to get the event information
   for (auto& sock : mActiveList) {
@@ -1968,6 +2056,7 @@ nsSocketTransportService::ChangeFileDescNativeHandleWithPoller(
     if (sockfd == osfd1) {
       // Get the current poll flags
       pollFlags = sock.mHandler->mPollFlags;
+      foundSock = &sock;
 
       // Remove from poller before swapping handles
       PollResult result = poll_delete(mPoller, osfd1);
@@ -1982,12 +2071,31 @@ nsSocketTransportService::ChangeFileDescNativeHandleWithPoller(
   PR_ChangeFileDescNativeHandle(fd2, osfd1);
 
   // Re-register with the new handle if it was previously registered
-  if (pollFlags) {
-    PollResult result = poll_add(mPoller, osfd2,
-                                 (pollFlags & PR_POLL_READ) != 0,
-                                 (pollFlags & PR_POLL_WRITE) != 0);
+  if (pollFlags && foundSock) {
+    // Call the PRFileDesc layer's Poll method to set up AsyncWait callbacks
+    // and determine what system-level events to poll for. Like PR_Poll, we
+    // make separate calls for read and write because layers may translate
+    // read requests to write operations (e.g., TLS handshake) or vice versa.
+    PRFileDesc* prfd = foundSock->mFD;
+    int16_t poll_flags_for_read = 0, poll_flags_for_write = 0;
+
+    if (pollFlags & PR_POLL_READ) {
+      int16_t out_flags = 0;
+      poll_flags_for_read =
+          prfd->methods->poll(prfd, pollFlags & ~PR_POLL_WRITE, &out_flags);
+    }
+    if (pollFlags & PR_POLL_WRITE) {
+      int16_t out_flags = 0;
+      poll_flags_for_write =
+          prfd->methods->poll(prfd, pollFlags & ~PR_POLL_READ, &out_flags);
+    }
+
+    PollResult result = poll_modify(
+        mPoller, osfd2, (pollFlags & PR_POLL_READ) != 0,
+        (pollFlags & PR_POLL_WRITE) != 0, (pollFlags & PR_POLL_EXCEPT) != 0,
+        poll_flags_for_read, poll_flags_for_write);
     MOZ_RELEASE_ASSERT(result == PollResult::Ok,
-                       "poll_add failed after fd swap");
+                       "poll_modify failed after fd swap");
   }
   return NS_OK;
 }

@@ -539,8 +539,10 @@ PRStatus nsSOCKSSocketInfo::ConnectToProxy(PRFileDesc* fd) {
   return WriteV5AuthRequest();
 }
 
-// Helper function to change file descriptor native handles while updating the poller
-static nsresult ChangeFileDescNativeHandleWithPoller(PRFileDesc* fd1, PRFileDesc* fd2) {
+// Helper function to change file descriptor native handles while updating the
+// poller
+static nsresult ChangeFileDescNativeHandleWithPoller(PRFileDesc* fd1,
+                                                     PRFileDesc* fd2) {
   nsCOMPtr<nsPISocketTransportService> sts =
       mozilla::components::SocketTransport::Service();
   MOZ_RELEASE_ASSERT(sts);

@@ -452,6 +452,14 @@ bool TLSTransportLayer::Init(const char* aTLSHost, int32_t aTLSPort) {
 
 NS_IMETHODIMP
 TLSTransportLayer::OnInputStreamReady(nsIAsyncInputStream* in) {
+  // Call poll on the TLS layer to give it a chance to do async operations
+  // like client certificate selection. Without this, ssl_Poll would never
+  // be called for the inner TLS connection in HTTPS proxy scenarios.
+  if (mFD) {
+    int16_t out_flags = 0;
+    mFD->methods->poll(mFD, PR_POLL_READ, &out_flags);
+  }
+
   nsCOMPtr<nsIInputStreamCallback> callback = std::move(mInputCallback);
   if (callback) {
     return callback->OnInputStreamReady(&mSocketInWrapper);
@@ -461,6 +469,14 @@ TLSTransportLayer::OnInputStreamReady(nsIAsyncInputStream* in) {
 
 NS_IMETHODIMP
 TLSTransportLayer::OnOutputStreamReady(nsIAsyncOutputStream* out) {
+  // Call poll on the TLS layer to give it a chance to do async operations
+  // like client certificate selection. Without this, ssl_Poll would never
+  // be called for the inner TLS connection in HTTPS proxy scenarios.
+  if (mFD) {
+    int16_t out_flags = 0;
+    mFD->methods->poll(mFD, PR_POLL_WRITE, &out_flags);
+  }
+
   nsCOMPtr<nsIOutputStreamCallback> callback = std::move(mOutputCallback);
   nsresult rv = NS_OK;
   if (callback) {
