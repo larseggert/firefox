@@ -1954,15 +1954,8 @@ struct PRPollDesc {
 **                              calling PR_GetError().
 **************************************************************************
 */
-
-#define PR_Poll(...)                                                \
-  __extension__({                                                   \
-    fprintf(stderr, "%s:%d calling PR_Poll\n", __FILE__, __LINE__); \
-    PR_Poll_impl(__VA_ARGS__);                                      \
-  })
-
-NSPR_API(PRInt32)
-PR_Poll_impl(PRPollDesc* pds, PRIntn npds, PRIntervalTime timeout);
+NSPR_API(PRInt32) PR_Poll(
+    PRPollDesc *pds, PRIntn npds, PRIntervalTime timeout);
 
 /*
 **************************************************************************
@@ -2014,4 +2007,5 @@ NSPR_API(PRStatus) PR_SetPollableEvent(PRFileDesc *event);
 NSPR_API(PRStatus) PR_WaitForPollableEvent(PRFileDesc *event);
 
 PR_END_EXTERN_C
+
 #endif /* prio_h___ */

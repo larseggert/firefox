@@ -3398,7 +3398,7 @@ ssl_Poll(PRFileDesc *fd, PRInt16 how_flags, PRInt16 *p_out_flags)
     sslSocket *ss;
     PRInt16 new_flags = how_flags; /* should select on these flags. */
     PRNetAddr addr;
-    fprintf(stderr, "ssl_Poll called with how_flags %x\n", how_flags);
+
     *p_out_flags = 0;
     ss = ssl_GetPrivate(fd);
     if (!ss) {
@@ -3493,7 +3493,6 @@ ssl_Poll(PRFileDesc *fd, PRInt16 how_flags, PRInt16 *p_out_flags)
                  SSL_GETPID(), fd, how_flags, new_flags));
 
     if (new_flags && (fd->lower->methods->poll != NULL)) {
-        fprintf(stderr, "ssl_Poll w/identity %d calling lower w/identity %d\n", fd->identity, fd->lower->identity);
         PRInt16 lower_out_flags = 0;
         PRInt16 lower_new_flags;
         lower_new_flags = fd->lower->methods->poll(fd->lower, new_flags,

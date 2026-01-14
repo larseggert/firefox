@@ -208,7 +208,7 @@ void CheckOverlappedPendingSocketsAreDone() {
 ** Wait for some i/o to finish on one or more more poll descriptors.
 */
 PR_IMPLEMENT(PRInt32)
-PR_Poll_impl(PRPollDesc* pds, PRIntn npds, PRIntervalTime timeout) {
+PR_Poll(PRPollDesc* pds, PRIntn npds, PRIntervalTime timeout) {
 #if defined(_WIN64) && defined(WIN95)
   // For each iteration check if TFO overlapped IOs are down.
   CheckOverlappedPendingSocketsAreDone();
