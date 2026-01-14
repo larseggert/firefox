@@ -166,7 +166,7 @@ fn do_poll_add(
         let source = BorrowedFd::borrow_raw(fd.0);
         #[cfg(windows)]
         let source = BorrowedSocket::borrow_raw(fd.0);
-        poll.poll.add_with_mode(&source, event, PollMode::Oneshot)
+        poll.poll.add_with_mode(&source, event, PollMode::Level)
     } {
         Ok(()) => {
             poll.set.insert(fd);
@@ -271,7 +271,7 @@ pub unsafe extern "C" fn poll_modify(
         let source = BorrowedFd::borrow_raw(fd.0);
         #[cfg(windows)]
         let source = BorrowedSocket::borrow_raw(fd.0);
-        match poll.poll.modify_with_mode(source, event, PollMode::Oneshot) {
+        match poll.poll.modify_with_mode(source, event, PollMode::Level) {
             Ok(()) => PollResult::Ok,
             Err(_) => PollResult::ErrorIo,
         }
