@@ -91,6 +91,7 @@ nrappkit copyright:
 #include <sys/types.h>
 
 #include "mozilla/ProfilerBandwidthCounter.h"
+#include "mozilla/StaticPrefs_media.h"
 #include "mozilla/SyncRunnable.h"
 #include "mozilla/net/DNS.h"
 #include "nsASocketHandler.h"
@@ -109,6 +110,7 @@ nrappkit copyright:
 #include "nspr.h"
 #include "prerror.h"
 #include "prio.h"
+#include "private/pprio.h"
 #include "prnetdb.h"
 #include "runnable_utils.h"
 
@@ -660,6 +662,36 @@ int NrSocket::create(nr_transport_addr* addr) {
     ABORT(R_INTERNAL);
   }
 
+  // Initialize optimized UDP I/O via neqo-udp unless the pref forces NSPR.
+  if (addr->protocol == IPPROTO_UDP &&
+      !mozilla::StaticPrefs::media_webrtc_udp_use_nspr_for_io()) {
+    PROsfd native_fd = PR_FileDesc2NativeHandle(fd_);
+    uint16_t family;
+    const uint8_t* addr_bytes;
+    uint16_t port;
+    uint8_t v4[4];
+    uint8_t v6[16];
+
+    if (my_addr_.ip_version == NR_IPV4) {
+      family = AF_INET;
+      memcpy(v4, &my_addr_.u.addr4.sin_addr, 4);
+      addr_bytes = v4;
+      port = ntohs(my_addr_.u.addr4.sin_port);
+    } else {
+      family = AF_INET6;
+      memcpy(v6, &my_addr_.u.addr6.sin6_addr, 16);
+      addr_bytes = v6;
+      port = ntohs(my_addr_.u.addr6.sin6_port);
+    }
+
+    webrtc_udp_ = webrtc_udp_socket_new(static_cast<int64_t>(native_fd), family,
+                                        addr_bytes, port);
+    if (webrtc_udp_) {
+      r_log(LOG_GENERIC, LOG_DEBUG, "Initialized neqo-udp socket for %s",
+            my_addr_.as_string);
+    }
+  }
+
   // Remember our thread.
   ststhread_ = do_QueryInterface(stservice, &rv);
   if (!NS_SUCCEEDED(rv)) ABORT(R_INTERNAL);
@@ -746,6 +778,43 @@ int NrSocket::sendto(const void* msg, size_t len, int flags,
     ABORT(R_WOULDBLOCK);
   }
 
+  if (webrtc_udp_) {
+    uint16_t family;
+    const uint8_t* addr_bytes;
+    uint16_t port;
+    uint8_t v4[4];
+    uint8_t v6[16];
+
+    if (to->ip_version == NR_IPV4) {
+      family = AF_INET;
+      memcpy(v4, &to->u.addr4.sin_addr, 4);
+      addr_bytes = v4;
+      port = ntohs(to->u.addr4.sin_port);
+    } else {
+      family = AF_INET6;
+      memcpy(v6, &to->u.addr6.sin6_addr, 16);
+      addr_bytes = v6;
+      port = ntohs(to->u.addr6.sin6_port);
+    }
+
+    int rv = webrtc_udp_send_batch_add(
+        webrtc_udp_, static_cast<const uint8_t*>(msg), len,
+        family, addr_bytes, port);
+    if (rv == 1 /* R_NEEDS_FLUSH_POST */) {
+      RefPtr<NrSocket> prevent_prevent(this);
+      WebrtcUdpSocket* udpSock = webrtc_udp_;
+      NS_DispatchToCurrentThread(NS_NewRunnableFunction(
+          "NrSocket::BatchFlush", [prevent_prevent, udpSock]() {
+            webrtc_udp_send_batch_flush(udpSock);
+          }));
+      rv = 0;
+    }
+    if (rv == 0) {
+      mozilla::profiler_count_bandwidth_written_bytes(len);
+    }
+    return rv;
+  }
+
   // TODO: Convert flags?
   status = PR_SendTo(fd_, msg, len, flags, &naddr, PR_INTERVAL_NO_WAIT);
   if (status < 0 || (size_t)status != len) {
@@ -768,6 +837,45 @@ int NrSocket::recvfrom(void* buf, size_t maxlen, size_t* len, int flags,
   int r, _status;
   PRNetAddr nfrom;
   int32_t status;
+
+  if (webrtc_udp_) {
+    uint16_t from_family = 0;
+    uint8_t from_addr_bytes[16] = {};
+    uint16_t from_port = 0;
+    size_t recv_len = 0;
+
+    int rv =
+        webrtc_udp_recv(webrtc_udp_, static_cast<uint8_t*>(buf), maxlen,
+                        &recv_len, &from_family, from_addr_bytes, &from_port);
+    if (rv != 0) {
+      return rv;
+    }
+
+    // Convert the flat address back to sockaddr and then to nr_transport_addr.
+    struct sockaddr_storage ss;
+    memset(&ss, 0, sizeof(ss));
+    if (from_family == AF_INET) {
+      auto* sin = reinterpret_cast<struct sockaddr_in*>(&ss);
+      sin->sin_family = AF_INET;
+      sin->sin_port = htons(from_port);
+      memcpy(&sin->sin_addr, from_addr_bytes, 4);
+    } else {
+      auto* sin6 = reinterpret_cast<struct sockaddr_in6*>(&ss);
+      sin6->sin6_family = AF_INET6;
+      sin6->sin6_port = htons(from_port);
+      memcpy(&sin6->sin6_addr, from_addr_bytes, 16);
+    }
+
+    if ((r = nr_sockaddr_to_transport_addr(
+             reinterpret_cast<struct sockaddr*>(&ss), my_addr_.protocol, 0,
+             from)))
+      ABORT(r);
+
+    *len = recv_len;
+    mozilla::profiler_count_bandwidth_read_bytes(recv_len);
+
+    return 0;
+  }
 
   status = PR_RecvFrom(fd_, buf, maxlen, flags, &nfrom, PR_INTERVAL_NO_WAIT);
   if (status <= 0) {

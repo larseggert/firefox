@@ -1501,3 +1501,114 @@ webrtc:
       - webrtc-telemetry-alerts@mozilla.com
     expires: never
     telemetry_mirror: h#WEBRTC_GMP_INIT_SUCCESS
+
+webrtc.udp:
+  segment_size_sent:
+    type: memory_distribution
+    memory_unit: byte
+    description: >
+      WebRTC UDP datagram segment size sent.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=XXXXXX
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=XXXXXX
+    data_sensitivity:
+      - technical
+    notification_emails:
+      - necko@mozilla.com
+      - webrtc-telemetry-alerts@mozilla.com
+    expires: never
+
+  segment_size_received:
+    type: memory_distribution
+    memory_unit: byte
+    description: >
+      WebRTC UDP datagram segment size received.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=XXXXXX
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=XXXXXX
+    data_sensitivity:
+      - technical
+    notification_emails:
+      - necko@mozilla.com
+      - webrtc-telemetry-alerts@mozilla.com
+    expires: never
+
+  size_sent:
+    type: memory_distribution
+    memory_unit: byte
+    description: >
+      WebRTC UDP datagram size sent.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=XXXXXX
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=XXXXXX
+    data_sensitivity:
+      - technical
+    notification_emails:
+      - necko@mozilla.com
+      - webrtc-telemetry-alerts@mozilla.com
+    expires: never
+
+  size_received:
+    type: memory_distribution
+    memory_unit: byte
+    description: >
+      WebRTC UDP datagram size received.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=XXXXXX
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=XXXXXX
+    data_sensitivity:
+      - technical
+    notification_emails:
+      - necko@mozilla.com
+      - webrtc-telemetry-alerts@mozilla.com
+    expires: never
+
+  segments_sent:
+    type: custom_distribution
+    unit: integer
+    range_min: 0
+    # Maximum number of UDP segments per datagram.
+    #
+    # See e.g. Linux https://github.com/torvalds/linux/blob/20371ba120635d9ab7fc7670497105af8f33eb08/include/linux/udp.h#L111.
+    range_max: 128
+    bucket_count: 100
+    histogram_type: exponential
+    description: >
+      WebRTC UDP number of segments per datagram sent.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=XXXXXX
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=XXXXXX
+    data_sensitivity:
+      - technical
+    notification_emails:
+      - necko@mozilla.com
+      - webrtc-telemetry-alerts@mozilla.com
+    expires: never
+
+  segments_received:
+    type: custom_distribution
+    unit: integer
+    range_min: 0
+    # Maximum number of UDP segments per datagram.
+    #
+    # See e.g. Linux https://github.com/torvalds/linux/blob/20371ba120635d9ab7fc7670497105af8f33eb08/include/linux/udp.h#L111.
+    range_max: 128
+    bucket_count: 100
+    histogram_type: exponential
+    description: >
+      WebRTC UDP number of segments per datagram received.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=XXXXXX
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=XXXXXX
+    data_sensitivity:
+      - technical
+    notification_emails:
+      - necko@mozilla.com
+      - webrtc-telemetry-alerts@mozilla.com
+    expires: never

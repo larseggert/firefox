@@ -12428,6 +12428,18 @@
   value: true
   mirror: always
 
+# Receive buffer size (SO_RCVBUF) for WebRTC UDP sockets using neqo-udp.
+- name: media.webrtc.udp.recvBufferSize
+  type: RelaxedAtomicInt32
+  value: 1048576
+  mirror: always
+
+# Use NSPR for WebRTC UDP I/O instead of the optimized neqo-udp path.
+- name: media.webrtc.udp.use_nspr_for_io
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
 # This pref controls whether dispatch testing-only events.
 - name: media.webvtt.testing.events
   type: bool
@@ -12870,6 +12882,7 @@
   type: RelaxedAtomicBool
   value: true
   mirror: always
+
 
 #ifdef MOZ_WEBRTC
   # Use MediaDataDecoder API for VP8/VP9 in WebRTC. This includes hardware
@@ -15218,6 +15231,7 @@
   type: RelaxedAtomicBool
   value: true
   mirror: always
+
 
 # Whether to use the rust implemented DefaultURI for unknown scheme types
 - name: network.url.useDefaultURI

@@ -13,6 +13,10 @@
 #include "nsASocketHandler.h"
 #include "nsCycleCollectionParticipant.h"
 
+#ifdef MOZ_WEBRTC
+#  include "webrtc_udp_glue_ffi_generated.h"
+#endif
+
 //-----------------------------------------------------------------------------
 
 namespace mozilla {
@@ -69,6 +73,10 @@ class nsUDPSocket final : public nsASocketHandler, public nsIUDPSocket {
 
   uint64_t mByteReadCount{0};
   uint64_t mByteWriteCount{0};
+
+#ifdef MOZ_WEBRTC
+  WebrtcUdpSocket* mWebrtcUdp{nullptr};
+#endif
 };
 
 //-----------------------------------------------------------------------------

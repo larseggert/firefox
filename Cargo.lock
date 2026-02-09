@@ -2705,6 +2705,7 @@ dependencies = [
  "viaduct-necko",
  "webext-storage",
  "webrender_bindings",
+ "webrtc_udp_glue",
  "wgpu_bindings",
  "widget_windows",
  "wpf-gpu-raster",
@@ -4773,7 +4774,6 @@ dependencies = [
 [[package]]
 name = "mtu"
 version = "0.3.0"
-source = "git+https://github.com/mozilla/neqo?tag=v0.22.2#71889dfc61f8e61cc2cc37be78f0ec6b7ff39c0d"
 dependencies = [
  "bindgen 0.72.0",
  "cfg_aliases",
@@ -4843,7 +4843,6 @@ dependencies = [
 [[package]]
 name = "neqo-common"
 version = "0.22.2"
-source = "git+https://github.com/mozilla/neqo?tag=v0.22.2#71889dfc61f8e61cc2cc37be78f0ec6b7ff39c0d"
 dependencies = [
  "enum-map",
  "env_logger",
@@ -4857,7 +4856,6 @@ dependencies = [
 [[package]]
 name = "neqo-crypto"
 version = "0.22.2"
-source = "git+https://github.com/mozilla/neqo?tag=v0.22.2#71889dfc61f8e61cc2cc37be78f0ec6b7ff39c0d"
 dependencies = [
  "bindgen 0.72.0",
  "enum-map",
@@ -4876,7 +4874,6 @@ dependencies = [
 [[package]]
 name = "neqo-http3"
 version = "0.22.2"
-source = "git+https://github.com/mozilla/neqo?tag=v0.22.2#71889dfc61f8e61cc2cc37be78f0ec6b7ff39c0d"
 dependencies = [
  "enumset",
  "http",
@@ -4895,7 +4892,6 @@ dependencies = [
 [[package]]
 name = "neqo-qpack"
 version = "0.22.2"
-source = "git+https://github.com/mozilla/neqo?tag=v0.22.2#71889dfc61f8e61cc2cc37be78f0ec6b7ff39c0d"
 dependencies = [
  "log",
  "neqo-common",
@@ -4909,7 +4905,6 @@ dependencies = [
 [[package]]
 name = "neqo-transport"
 version = "0.22.2"
-source = "git+https://github.com/mozilla/neqo?tag=v0.22.2#71889dfc61f8e61cc2cc37be78f0ec6b7ff39c0d"
 dependencies = [
  "enum-map",
  "enumset",
@@ -4929,7 +4924,6 @@ dependencies = [
 [[package]]
 name = "neqo-udp"
 version = "0.22.2"
-source = "git+https://github.com/mozilla/neqo?tag=v0.22.2#71889dfc61f8e61cc2cc37be78f0ec6b7ff39c0d"
 dependencies = [
  "cfg_aliases",
  "libc",
@@ -8079,6 +8073,17 @@ checksum = "a87d58624aae43577604ea137de9dcaf92793eccc4d816efad482001c2e055ca"
 dependencies = [
  "log",
  "url",
+]
+
+[[package]]
+name = "webrtc_udp_glue"
+version = "0.1.0"
+dependencies = [
+ "firefox-on-glean",
+ "log",
+ "neqo-common",
+ "neqo-udp",
+ "winapi",
 ]
 
 [[package]]

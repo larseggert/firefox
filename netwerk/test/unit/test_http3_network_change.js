@@ -22,6 +22,7 @@ function setup() {
   Assert.notEqual(h3Port, null);
   Assert.notEqual(h3Port, "");
   Services.prefs.setBoolPref("network.socket.attach_mock_network_layer", true);
+  Services.prefs.setBoolPref("media.webrtc.udp.use_nspr_for_io", true);
 }
 
 setup();
@@ -42,6 +43,7 @@ registerCleanupFunction(async () => {
   );
   Services.prefs.clearUserPref("network.dns.localDomains");
   Services.prefs.clearUserPref("network.http.http3.use_nspr_for_io");
+  Services.prefs.clearUserPref("media.webrtc.udp.use_nspr_for_io");
   Services.prefs.clearUserPref("network.dns.preferIPv6");
   Services.prefs.clearUserPref(
     "network.http.move_to_pending_list_after_network_change"

@@ -63,6 +63,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "nsXPCOM.h"
 #include "nspr.h"
 #include "prio.h"
+#include "webrtc_udp_glue_ffi_generated.h"
 
 // nICEr includes
 extern "C" {
@@ -186,12 +187,14 @@ class NrSocket : public NrSocketBase, public nsASocketHandler {
 
  protected:
   virtual ~NrSocket() {
+    if (webrtc_udp_) webrtc_udp_socket_destroy(webrtc_udp_);
     if (fd_) PR_Close(fd_);
   }
 
   DISALLOW_COPY_ASSIGN(NrSocket);
 
   PRFileDesc* fd_;
+  WebrtcUdpSocket* webrtc_udp_ = nullptr;
   nsCOMPtr<nsIEventTarget> ststhread_;
 };
 

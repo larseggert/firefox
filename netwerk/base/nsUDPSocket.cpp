@@ -33,6 +33,7 @@
 #include "nsWrapperCacheInlines.h"
 #include "HttpConnectionUDP.h"
 #include "mozilla/ProfilerBandwidthCounter.h"
+#include "mozilla/StaticPrefs_media.h"
 #include "mozilla/StaticPrefs_network.h"
 
 #if defined(FUZZING)
@@ -44,6 +45,26 @@ namespace mozilla {
 namespace net {
 
 static const uint32_t UDP_PACKET_CHUNK_SIZE = 1400;
+
+#ifdef MOZ_WEBRTC
+// Flat address representation for passing to webrtc_udp FFI functions.
+struct FlatNetAddr {
+  uint16_t family;
+  uint8_t bytes[16];
+  uint16_t port;
+
+  explicit FlatNetAddr(const NetAddr& aAddr) : bytes{} {
+    if (aAddr.raw.family == AF_INET) {
+      family = AF_INET;
+      memcpy(bytes, &aAddr.inet.ip, 4);
+    } else {
+      family = AF_INET6;
+      memcpy(bytes, &aAddr.inet6.ip.u8, 16);
+    }
+    [[maybe_unused]] nsresult rv = aAddr.GetPort(&port);
+  }
+};
+#endif
 
 //-----------------------------------------------------------------------------
 
@@ -424,11 +445,92 @@ void nsUDPSocket::OnSocketReady(PRFileDesc* fd, int16_t outFlags) {
     return;
   }
 
+  // Bug 1252755 - use 9216 bytes to align with nICEr and transportlayer to
+  // support the maximum size of jumbo frames.
+  char buff[9216];
+
+#ifdef MOZ_WEBRTC
+  // TODO: The pipe/UDPOutputStream/UDPMessageProxy allocation per packet is
+  // heavyweight. Consider a lighter-weight notification path for batched
+  // receives.
+  // TODO: Batch multiple received packets into a single IPC message to amortize
+  // cross-process dispatch overhead.
+  if (mWebrtcUdp) {
+    for (;;) {
+      uint16_t fromFamily = 0;
+      uint8_t fromAddrBytes[16] = {};
+      uint16_t fromPort = 0;
+      size_t recvLen = 0;
+
+      int rv = webrtc_udp_recv(mWebrtcUdp, reinterpret_cast<uint8_t*>(buff),
+                               sizeof(buff), &recvLen, &fromFamily,
+                               fromAddrBytes, &fromPort);
+      if (rv == 8 /* R_WOULDBLOCK */) {
+        break;
+      }
+      if (rv != 0) {
+        UDPSOCKET_LOG(
+            ("nsUDPSocket::OnSocketReady: webrtc_udp_recv failed rv=%d "
+             "[this=%p]\n",
+             rv, this));
+        break;
+      }
+
+      this->AddInputBytes(recvLen);
+
+      FallibleTArray<uint8_t> data;
+      if (!data.AppendElements(buff, recvLen, fallible)) {
+        UDPSOCKET_LOG(
+            ("nsUDPSocket::OnSocketReady: AppendElements FAILED "
+             "[this=%p]\n",
+             this));
+        mCondition = NS_ERROR_UNEXPECTED;
+        return;
+      }
+
+      // Reconstruct PRNetAddr from the flat address.
+      PRNetAddr prClientAddr;
+      memset(&prClientAddr, 0, sizeof(prClientAddr));
+      if (fromFamily == AF_INET) {
+        prClientAddr.inet.family = AF_INET;
+        prClientAddr.inet.port = htons(fromPort);
+        memcpy(&prClientAddr.inet.ip, fromAddrBytes, 4);
+      } else {
+        prClientAddr.ipv6.family = AF_INET6;
+        prClientAddr.ipv6.port = htons(fromPort);
+        memcpy(&prClientAddr.ipv6.ip, fromAddrBytes, 16);
+      }
+
+      nsCOMPtr<nsIAsyncInputStream> pipeIn;
+      nsCOMPtr<nsIAsyncOutputStream> pipeOut;
+
+      uint32_t segsize = UDP_PACKET_CHUNK_SIZE;
+      uint32_t segcount = 0;
+      net_ResolveSegmentParams(segsize, segcount);
+      NS_NewPipe2(getter_AddRefs(pipeIn), getter_AddRefs(pipeOut), true, true,
+                  segsize, segcount);
+
+      RefPtr<nsUDPOutputStream> os =
+          new nsUDPOutputStream(this, mFD, prClientAddr);
+      nsresult asyncRv =
+          NS_AsyncCopy(pipeIn, os, mSts, NS_ASYNCCOPY_VIA_READSEGMENTS,
+                       UDP_PACKET_CHUNK_SIZE);
+
+      if (NS_FAILED(asyncRv)) {
+        continue;
+      }
+
+      NetAddr netAddr(&prClientAddr);
+      nsCOMPtr<nsIUDPMessage> message =
+          new UDPMessageProxy(&netAddr, pipeOut, std::move(data));
+      mListener->OnPacketReceived(this, message);
+    }
+    return;
+  }
+#endif
+
   PRNetAddr prClientAddr;
   int32_t count;
-  // Bug 1252755 - use 9216 bytes to allign with nICEr and transportlayer to
-  // support the maximum size of jumbo frames
-  char buff[9216];
   count = PR_RecvFrom(mFD, buff, sizeof(buff), 0, &prClientAddr,
                       PR_INTERVAL_NO_WAIT);
   if (count < 0) {
@@ -748,6 +850,12 @@ nsUDPSocket::GetLocalAddr(nsINetAddr** aResult) {
 }
 
 void nsUDPSocket::CloseSocket() {
+#ifdef MOZ_WEBRTC
+  if (mWebrtcUdp) {
+    webrtc_udp_socket_destroy(mWebrtcUdp);
+    mWebrtcUdp = nullptr;
+  }
+#endif
   if (mFD) {
     if (gIOService->IsNetTearingDown() &&
         ((PR_IntervalNow() - gIOService->NetTearingDownStarted()) >
@@ -1109,6 +1217,24 @@ nsUDPSocket::AsyncListen(nsIUDPSocketListener* aListener) {
     } else {
       // PBackground usage from dom/media/webrtc/transport
       mListener = new SocketListenerProxyBackground(aListener);
+
+#ifdef MOZ_WEBRTC
+      // Initialize neqo-udp for WebRTC sockets only (PBackground callers).
+      // General-purpose and HTTP/3 sockets use NSPR to preserve compatibility
+      // with NSPR I/O layers such as the mock network layer.
+      if (!StaticPrefs::media_webrtc_udp_use_nspr_for_io() && !mWebrtcUdp) {
+        FlatNetAddr flat(mAddr);
+        mWebrtcUdp = webrtc_udp_socket_new(PR_FileDesc2NativeHandle(mFD),
+                                           flat.family, flat.bytes, flat.port);
+        if (mWebrtcUdp) {
+          SetRecvBufferSize(
+              StaticPrefs::media_webrtc_udp_recvBufferSize());
+          UDPSOCKET_LOG(
+              ("nsUDPSocket::AsyncListen: initialized neqo-udp [this=%p]\n",
+               this));
+        }
+      }
+#endif
     }
   }
   return PostEvent(this, &nsUDPSocket::OnMsgAttach);
@@ -1184,6 +1310,33 @@ nsUDPSocket::SendWithAddress(const NetAddr* aAddr, const uint8_t* aData,
       // socket is not initialized or has been closed
       return NS_ERROR_FAILURE;
     }
+
+#ifdef MOZ_WEBRTC
+    if (mWebrtcUdp) {
+      FlatNetAddr flat(*aAddr);
+      int rv = webrtc_udp_send_batch_add(mWebrtcUdp, aData, aLength,
+                                         flat.family, flat.bytes, flat.port);
+      if (rv == 1 /* R_NEEDS_FLUSH_POST */) {
+        RefPtr<nsUDPSocket> prevent_prevent(this);
+        WebrtcUdpSocket* udpSock = mWebrtcUdp;
+        NS_DispatchToCurrentThread(NS_NewRunnableFunction(
+            "nsUDPSocket::BatchFlush", [prevent_prevent, udpSock]() {
+              webrtc_udp_send_batch_flush(udpSock);
+            }));
+        rv = 0;
+      }
+      if (rv == 0) {
+        this->AddOutputBytes(aLength);
+        *_retval = aLength;
+        return NS_OK;
+      }
+      if (rv == 8 /* R_WOULDBLOCK */) {
+        return NS_BASE_STREAM_WOULD_BLOCK;
+      }
+      return NS_ERROR_FAILURE;
+    }
+#endif
+
     int32_t count =
         PR_SendTo(mFD, aData, aLength, 0, &prAddr, PR_INTERVAL_NO_WAIT);
     if (count < 0) {

@@ -47,6 +47,7 @@ buildid_reader_ffi = { path = "../../buildid_reader/ffi" }
 chardetng_c = "0.1.1"
 audio_thread_priority = { version = "0.34", default-features = false }
 mdns_service = { path="../../../../dom/media/webrtc/transport/mdns_service", optional = true }
+webrtc_udp_glue = { path="../../../../dom/media/webrtc/transport/webrtc_udp_glue", optional = true }
 neqo_glue = { path = "../../../../netwerk/socket/neqo_glue" }
 wgpu_bindings = { path = "../../../../gfx/wgpu_bindings" }
 mapped_hyph = { git = "https://github.com/jfkthame/mapped_hyph.git", rev = "eff105f6ad7ec9b79816cfc1985a28e5340ad14b" }
@@ -148,7 +149,7 @@ spidermonkey_rust = []
 gecko_profiler = ["gecko-profiler/enabled", "profiler_helper"]
 gecko_profiler_parse_elf = ["profiler_helper/parse_elf"]
 libfuzzer = ["authrs_bridge/fuzzing"]
-webrtc = ["mdns_service"]
+webrtc = ["mdns_service", "webrtc_udp_glue"]
 glean_disable_upload = ["fog_control/disable_upload"]
 glean_with_gecko = ["fog_control/with_gecko", "jog/with_gecko"]
 oxidized_breakpad = ["rust_minidump_writer_linux"]
