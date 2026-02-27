@@ -22,8 +22,8 @@
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-terser": "^0.4.4",
-    "rollup": "^4.9.6",
-    "webpack": "^4.28.4",
+    "rollup": "^4.59.0",
+    "webpack": "^5.105.3",
     "webpack-cli": "^3.2.1"
   }
 }
