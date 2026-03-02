@@ -32,7 +32,6 @@ UNIFIED_SOURCES += [
     "TestMozURL.cpp",
     "TestPACMan.cpp",
     "TestParseHeaders.cpp",
-    "TestPollableEvent.cpp",
     "TestProtocolProxyService.cpp",
     "TestReadStreamToString.cpp",
     "TestServerTimingHeader.cpp",

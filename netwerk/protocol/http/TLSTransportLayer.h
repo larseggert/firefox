@@ -126,6 +126,7 @@ class TLSTransportLayer final : public nsISocketTransport,
 
   virtual ~TLSTransportLayer();
   bool DispatchRelease();
+  void DriveTLSHandshake(int16_t aPollFlags);
 
   nsISocketTransport* Transport() { return mSocketTransport; }
 

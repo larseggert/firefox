@@ -148,21 +148,7 @@ TLSTransportLayer::InputStreamWrapper::AsyncWait(
     return mSocketIn->AsyncWait(nullptr, 0, 0, nullptr);
   }
 
-  PRPollDesc pd;
-  pd.fd = mTransport->mFD;
-  pd.in_flags = PR_POLL_READ | PR_POLL_EXCEPT;
-  // Only run PR_Poll on the socket thread. Also, make sure this lives at least
-  // as long as that operation.
-  auto DoPoll = [self = RefPtr{this}, pd(pd)]() mutable {
-    int32_t rv = PR_Poll(&pd, 1, PR_INTERVAL_NO_TIMEOUT);
-    LOG(("TLSTransportLayer::InputStreamWrapper::AsyncWait rv=%d", rv));
-  };
-  if (OnSocketThread()) {
-    DoPoll();
-  } else {
-    gSocketTransportService->Dispatch(NS_NewRunnableFunction(
-        "TLSTransportLayer::InputStreamWrapper::AsyncWait", DoPoll));
-  }
+  mTransport->DriveTLSHandshake(PR_POLL_READ);
   return NS_OK;
 }
 
@@ -307,11 +293,7 @@ TLSTransportLayer::OutputStreamWrapper::AsyncWait(
     return mSocketOut->AsyncWait(nullptr, 0, 0, nullptr);
   }
 
-  PRPollDesc pd;
-  pd.fd = mTransport->mFD;
-  pd.in_flags = PR_POLL_WRITE | PR_POLL_EXCEPT;
-  int32_t rv = PR_Poll(&pd, 1, PR_INTERVAL_NO_TIMEOUT);
-  LOG(("TLSTransportLayer::OutputStreamWrapper::AsyncWait rv=%d", rv));
+  mTransport->DriveTLSHandshake(PR_POLL_WRITE);
   return NS_OK;
 }
 
@@ -334,6 +316,18 @@ bool TLSTransportLayer::DispatchRelease() {
       NS_DISPATCH_NORMAL);
 
   return true;
+}
+
+void TLSTransportLayer::DriveTLSHandshake(int16_t aPollFlags) {
+  MOZ_ASSERT(OnSocketThread(), "not on socket thread");
+  // Call the layer's poll method to drive the TLS handshake. This calls
+  // ssl_Poll which handles TLS state, then TLSTransportLayer::Poll which
+  // registers AsyncWait on the underlying socket.
+  int16_t out_flags = 0;
+  mFD->methods->poll(mFD, static_cast<int16_t>(aPollFlags | PR_POLL_EXCEPT),
+                     &out_flags);
+  LOG(("TLSTransportLayer::DriveTLSHandshake in=%d out=%d", aPollFlags,
+       out_flags));
 }
 
 NS_IMPL_ADDREF(TLSTransportLayer)

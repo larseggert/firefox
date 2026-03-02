@@ -2713,6 +2713,7 @@ dependencies = [
  "mozglue-static",
  "mozurl",
  "mp4parse_capi",
+ "necko_poll",
  "neqo_glue",
  "netwerk_helper",
  "nserror",
@@ -4861,6 +4862,19 @@ dependencies = [
  "spirv",
  "thiserror 2.0.12",
  "unicode-ident",
+]
+
+[[package]]
+name = "necko_poll"
+version = "0.1.0"
+dependencies = [
+ "cfg_aliases",
+ "libc",
+ "mach2",
+ "rustc-hash 2.1.1",
+ "rustix",
+ "thin-vec",
+ "windows-sys",
 ]
 
 [[package]]

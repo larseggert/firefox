@@ -37,6 +37,7 @@ clippy:
         - netwerk/protocol/http/binary_http/
         - netwerk/protocol/http/oblivious_http/
         - netwerk/socket/neqo_glue/
+        - netwerk/socket/necko_poll/
         - netwerk/test/http3server/
         - security/certverifier/signature_cache/
         - security/manager/ssl/abridged_certs/

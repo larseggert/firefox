@@ -237,7 +237,6 @@ UNIFIED_SOURCES += [
     "nsSyncStreamListener.cpp",
     "nsTransportUtils.cpp",
     "nsUDPSocket.cpp",
-    "PollableEvent.cpp",
     "ProtocolHandlerInfo.cpp",
     "ProxyAutoConfig.cpp",
     "RedirectChannelRegistrar.cpp",

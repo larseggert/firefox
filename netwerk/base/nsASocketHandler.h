@@ -26,8 +26,7 @@ class nsASocketHandler : public nsISupports {
 
   //
   // these flags can only be modified on the socket transport thread.
-  // the socket transport service will check these flags before calling
-  // PR_Poll.
+  // the socket transport service will check these flags before polling.
   //
   uint16_t mPollFlags{0};
 
@@ -50,7 +49,7 @@ class nsASocketHandler : public nsISupports {
   // params:
   //   socketRef - socket identifier
   //   fd        - socket file descriptor
-  //   outFlags  - value of PR_PollDesc::out_flags after PR_Poll returns
+  //   outFlags  - translated PR_POLL flags from poll_wait
   //               or -1 if a timeout occurred
   //
   virtual void OnSocketReady(PRFileDesc* fd, int16_t outFlags) = 0;
