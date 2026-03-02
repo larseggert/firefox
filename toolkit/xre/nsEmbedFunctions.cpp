@@ -21,6 +21,8 @@
 #  include <shobjidl.h>
 #  include "mozilla/ipc/WindowsMessageLoop.h"
 #  ifdef MOZ_SANDBOX
+#    include "mozilla/GeckoArgs.h"
+#    include "mozilla/net/necko_poll.h"
 #  endif
 #  include "mozilla/ScopeExit.h"
 #  include "mozilla/WinDllServices.h"
@@ -558,6 +560,15 @@ nsresult XRE_InitChildProcess(int aArgc, char* aArgv[],
           MOZ_CRASH("Unknown main thread class");
       }
 
+#if defined(XP_WIN) && defined(MOZ_SANDBOX)
+      auto r = geckoargs::sNeckoNotifyRead.Get(aArgc, aArgv);
+      auto w = geckoargs::sNeckoNotifyWrite.Get(aArgc, aArgv);
+      if (r.isSome() && w.isSome()) {
+        necko_poll_set_pre_notify_pair(
+            static_cast<uintptr_t>(static_cast<std::intptr_t>(r->release())),
+            static_cast<uintptr_t>(static_cast<std::intptr_t>(w->release())));
+      }
+#endif
       if (!process->Init(aArgc, aArgv)) {
         return NS_ERROR_FAILURE;
       }

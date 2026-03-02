@@ -36,7 +36,7 @@ class nsIInterfaceRequestor;
 
 //-----------------------------------------------------------------------------
 
-// after this short interval, we will return to PR_Poll
+// after this short interval, we will return to the poll loop
 #define NS_SOCKET_CONNECT_TIMEOUT PR_MillisecondsToInterval(20)
 
 //-----------------------------------------------------------------------------

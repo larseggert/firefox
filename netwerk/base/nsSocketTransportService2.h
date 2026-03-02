@@ -6,7 +6,6 @@
 #ifndef nsSocketTransportService2_h_
 #define nsSocketTransportService2_h_
 
-#include "PollableEvent.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/LinkedList.h"
 #include "mozilla/Logging.h"
@@ -16,8 +15,8 @@
 #include "mozilla/TimeStamp.h"
 #include "mozilla/Queue.h"
 
-#include "mozilla/UniquePtr.h"
 #include "mozilla/net/DashboardTypes.h"
+#include "mozilla/net/necko_poll.h"
 #include "nsCOMPtr.h"
 #include "nsASocketHandler.h"
 #include "nsIDirectTaskDispatcher.h"
@@ -28,14 +27,18 @@
 #include "nsPISocketTransportService.h"
 #include "prinit.h"
 #include "prinrval.h"
+#include "private/pprio.h"
 
-struct PRPollDesc;
 class nsIPrefBranch;
 
 //-----------------------------------------------------------------------------
 
 namespace mozilla {
 namespace net {
+
+// TODO: The remaining PRIntervalTime usage in these classes (timestamps and
+// durations) could be migrated to TimeStamp/TimeDuration for consistency,
+// now that PR_Poll has been replaced.
 
 //
 // set MOZ_LOG=nsSocketTransport:5
@@ -180,7 +183,6 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   // We store a pointer to mThread as a direct task dispatcher to avoid having
   // to do do_QueryInterface whenever we need to access the interface.
   nsCOMPtr<nsIDirectTaskDispatcher> mDirectTaskDispatcher MOZ_GUARDED_BY(mLock);
-  UniquePtr<PollableEvent> mPollableEvent MOZ_GUARDED_BY(mLock);
   bool mOffline MOZ_GUARDED_BY(mLock) = false;
   bool mGoingOffline MOZ_GUARDED_BY(mLock) = false;
 
@@ -192,12 +194,7 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   //-------------------------------------------------------------------------
   // socket lists (socket thread only)
   //
-  // only "active" sockets are on the poll list.  the active list is kept
-  // in sync with the poll list such that:
-  //
-  //   mActiveList[k].mFD == mPollList[k+1].fd
-  //
-  // where k=0,1,2,...
+  // only "active" sockets are registered with mPoller
   //-------------------------------------------------------------------------
 
   class SocketContext {
@@ -205,10 +202,20 @@ class nsSocketTransportService final : public nsPISocketTransportService,
     SocketContext(PRFileDesc* aFD,
                   already_AddRefed<nsASocketHandler>&& aHandler,
                   PRIntervalTime aPollStartEpoch)
-        : mFD(aFD), mHandler(aHandler), mPollStartEpoch(aPollStartEpoch) {}
+        : mFD(aFD),
+          mNativeFD(PR_FileDesc2NativeHandle(aFD)),
+          mHandler(aHandler),
+          mPollStartEpoch(aPollStartEpoch) {
+      MOZ_ASSERT(mNativeFD >= 0, "invalid native fd");
+    }
     SocketContext(PRFileDesc* aFD, nsASocketHandler* aHandler,
                   PRIntervalTime aPollStartEpoch)
-        : mFD(aFD), mHandler(aHandler), mPollStartEpoch(aPollStartEpoch) {}
+        : mFD(aFD),
+          mNativeFD(PR_FileDesc2NativeHandle(aFD)),
+          mHandler(aHandler),
+          mPollStartEpoch(aPollStartEpoch) {
+      MOZ_ASSERT(mNativeFD >= 0, "invalid native fd");
+    }
     ~SocketContext() = default;
 
     // Returns true iff the socket has not been signalled longer than
@@ -216,7 +223,7 @@ class nsSocketTransportService final : public nsPISocketTransportService,
     bool IsTimedOut(PRIntervalTime now) const;
     // Engages the timeout by marking the epoch we start polling this socket.
     // If epoch is already marked this does nothing, hence, this method can be
-    // called everytime we put this socket to poll() list with in-flags set.
+    // called every time we register this socket with the poller.
     void EnsureTimeout(PRIntervalTime now);
     // Called after an event on a socket has been signalled to turn of the
     // timeout calculation.
@@ -231,11 +238,24 @@ class nsSocketTransportService final : public nsPISocketTransportService,
     void MaybeResetEpoch();
 
     PRFileDesc* mFD;
+    PROsfd mNativeFD;
     RefPtr<nsASocketHandler> mHandler;
     PRIntervalTime mPollStartEpoch;  // time we started to poll this socket
+    bool mLayerReady = false;    // true if layer's Poll indicated data ready
+    int16_t mLayerOutFlags = 0;  // out_flags from layer's Poll method
+    int16_t mPollOutFlags = 0;   // out_flags from necko_poll_wait
+
+    // Cached arguments from the last necko_poll_register call, used to skip
+    // the FFI call when layer poll results haven't changed.
+    int16_t mLastPollFlags = 0;
+    int16_t mLastPollFlagsForRead = 0;
+    int16_t mLastPollFlagsForWrite = 0;
+
+    // True if this socket is registered with mPoller.
+    bool mIsRegisteredWithPoller = false;
   };
 
-  using SocketContextList = AutoTArray<SocketContext, SOCKET_LIMIT_MIN>;
+  using SocketContextList = nsTArray<SocketContext>;
   int64_t SockIndex(SocketContextList& aList, SocketContext* aSock);
 
   SocketContextList mActiveList;
@@ -248,27 +268,36 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   void RemoveFromPollList(SocketContext* sock);
   void MoveToIdleList(SocketContext* sock);
   void MoveToPollList(SocketContext* sock);
+  int64_t SwapRemoveElementAt(SocketContextList& aList, int64_t aIndex);
 
   void InitMaxCount();
 
   // Total bytes number transfered through all the sockets except active ones
   uint64_t mSentBytesCount{0};
   uint64_t mReceivedBytesCount{0};
+
   //-------------------------------------------------------------------------
   // poll list (socket thread only)
-  //
-  // first element of the poll list is mPollableEvent (or null if the pollable
-  // event cannot be created).
   //-------------------------------------------------------------------------
+  struct PollerDelete {
+    void operator()(Poller* p) const { necko_poll_free(p); }
+  };
+  UniquePtr<Poller, PollerDelete> mPoller;
+  nsTArray<PollEvent> mPolledEvents;
 
-  nsTArray<PRPollDesc> mPollList;
-
-  PRIntervalTime PollTimeout(
-      PRIntervalTime now);  // computes ideal poll timeout
   nsresult DoPollIteration();
-  // perfoms a single poll iteration
-  int32_t Poll(PRIntervalTime ts);
-  // calls PR_Poll.
+  // Performs a single poll iteration, using the precomputed socket timeout.
+  int32_t Poll(PRIntervalTime ts, PRIntervalTime aSocketTimeout);
+
+  void PollDelete(PROsfd aFD);
+
+  // Calls the PRFileDesc layer's poll methods to set up AsyncWait callbacks
+  // and determine system-level events, then registers with the poller via
+  // necko_poll_register. If aOutFlags is non-null, returns the combined
+  // out_flags from layer polls (non-zero indicates data is immediately
+  // available).
+  void PollLayersAndRegister(SocketContext* aContext, int16_t aPollFlags,
+                             int16_t* aOutFlags);
 
   //-------------------------------------------------------------------------
   // pending socket queue - see NotifyWhenCanAttachSocket
@@ -294,8 +323,6 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   int32_t mKeepaliveProbeCount{kDefaultTCPKeepCount};
   // True if TCP keepalive is enabled globally.
   bool mKeepaliveEnabledPref{false};
-  // Timeout of pollable event signalling.
-  TimeDuration mPollableEventTimeout MOZ_GUARDED_BY(mLock);
 
   Atomic<bool> mServingPendingQueue{false};
   Atomic<int32_t, Relaxed> mMaxTimePerPollIter{100};
@@ -306,11 +333,11 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   // Preference for how long we do busy wait after network link
   // change has been detected.
   Atomic<PRIntervalTime, Relaxed> mNetworkLinkChangeBusyWaitPeriod;
-  // Preference for the value of timeout for poll() we use during
+  // Preference for the value of timeout for necko_poll_wait we use during
   // the network link change event period.
   Atomic<PRIntervalTime, Relaxed> mNetworkLinkChangeBusyWaitTimeout;
 
-  // Between a computer going to sleep and waking up the PR_*** telemetry
+  // Between a computer going to sleep and waking up the poll telemetry
   // will be corrupted - so do not record it.
   Atomic<bool, Relaxed> mSleepPhase{false};
   nsCOMPtr<nsITimer> mAfterWakeUpTimer;
@@ -341,17 +368,6 @@ class nsSocketTransportService final : public nsPISocketTransportService,
                              int32_t index);
 
   void MarkTheLastElementOfPendingQueue();
-
-#if defined(XP_WIN)
-  Atomic<bool> mPolling{false};
-  nsCOMPtr<nsITimer> mPollRepairTimer;
-  void StartPollWatchdog();
-  void DoPollRepair();
-  void StartPolling();
-  void EndPolling();
-#endif
-
-  void TryRepairPollableEvent();
 
   CopyableTArray<nsCOMPtr<nsISTSShutdownObserver>> mShutdownObservers;
 };

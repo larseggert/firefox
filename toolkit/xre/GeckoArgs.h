@@ -266,6 +266,10 @@ static CommandLineArg<UniqueFileHandle> sCrashHelper{"-crashHelper",
 #  if defined(MOZ_SANDBOX)
 static CommandLineArg<bool> sWin32kLockedDown{"-win32kLockedDown",
                                               "win32klockeddown"};
+static CommandLineArg<UniqueFileHandle> sNeckoNotifyRead{"-neckoNotifyRead",
+                                                         "neckonotifyread"};
+static CommandLineArg<UniqueFileHandle> sNeckoNotifyWrite{"-neckoNotifyWrite",
+                                                          "neckonotifywrite"};
 #  endif  // defined(MOZ_SANDBOX)
 static CommandLineArg<bool> sDisableDynamicDllBlocklist{
     "-disableDynamicBlocklist", "disabledynamicblocklist"};

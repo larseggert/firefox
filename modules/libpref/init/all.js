@@ -1320,12 +1320,6 @@ pref("network.sts.poll_busy_wait_period_timeout", 7);
 // let sockets just leak.
 pref("network.sts.max_time_for_pr_close_during_shutdown", 5000);
 
-// When the polling socket pair we use to wake poll() up on demand doesn't
-// get signalled (is not readable) within this timeout, we try to repair it.
-// This timeout can be disabled by setting this pref to 0.
-// The value is expected in seconds.
-pref("network.sts.pollable_event_timeout", 6);
-
 // 2147483647 == PR_INT32_MAX == ~2 GB
 pref("network.websocket.max-message-size", 2147483647);
 

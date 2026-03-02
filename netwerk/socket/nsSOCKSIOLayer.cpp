@@ -23,6 +23,7 @@
 #include "mozilla/Components.h"
 #include "mozilla/Logging.h"
 #include "mozilla/net/DNS.h"
+#include "nsPISocketTransportService.h"
 
 using mozilla::LogLevel;
 using namespace mozilla::net;
@@ -538,6 +539,16 @@ PRStatus nsSOCKSSocketInfo::ConnectToProxy(PRFileDesc* fd) {
   return WriteV5AuthRequest();
 }
 
+// Helper function to change file descriptor native handles while updating the
+// poller
+static nsresult ChangeFileDescNativeHandleWithPoller(PRFileDesc* fd1,
+                                                     PRFileDesc* fd2) {
+  nsCOMPtr<nsPISocketTransportService> sts =
+      mozilla::components::SocketTransport::Service();
+  MOZ_ASSERT(sts);
+  return sts->ChangeFileDescNativeHandleWithPoller(fd1, fd2);
+}
+
 void nsSOCKSSocketInfo::FixupAddressFamily(PRFileDesc* fd, NetAddr* proxy) {
   int32_t proxyFamily = mInternalProxyAddr.raw.family;
   // Do nothing if the address family is already matched
@@ -588,8 +599,9 @@ void nsSOCKSSocketInfo::FixupAddressFamily(PRFileDesc* fd, NetAddr* proxy) {
   fd = PR_GetIdentitiesLayer(fd, PR_NSPR_IO_LAYER);
   MOZ_ASSERT(fd);
   // Swap OS native handles
-  PR_ChangeFileDescNativeHandle(fd, newsd);
-  PR_ChangeFileDescNativeHandle(tmpfd, osfd);
+  [[maybe_unused]] nsresult rv =
+      ChangeFileDescNativeHandleWithPoller(fd, tmpfd);
+  MOZ_ASSERT(NS_SUCCEEDED(rv));
   // Close temporary FileDesc which is now associated with
   // old OS native handle
   PR_Close(tmpfd);

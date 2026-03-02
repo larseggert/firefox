@@ -38,6 +38,10 @@
 #  include "mozilla/SandboxSettings.h"
 #  include "nsAppDirectoryServiceDefs.h"
 #endif
+#if defined(XP_WIN) && defined(MOZ_SANDBOX)
+#  include "mozilla/net/necko_poll.h"
+#  include "nsDebug.h"
+#endif
 
 #include "ProtocolUtils.h"
 #include "mozilla/LinkedList.h"
@@ -680,6 +684,15 @@ bool GeckoChildProcessHost::PrepareLaunch(
   mEnableSandboxLogging =
       mEnableSandboxLogging || !!PR_GetEnv("MOZ_SANDBOX_LOGGING");
 
+  uintptr_t notifyRead = 0, notifyWrite = 0;
+  if (necko_poll_create_notify_pair_for_child(&notifyRead, &notifyWrite)) {
+    geckoargs::sNeckoNotifyRead.Put(
+        UniqueFileHandle(reinterpret_cast<HANDLE>(notifyRead)), aExtraOpts);
+    geckoargs::sNeckoNotifyWrite.Put(
+        UniqueFileHandle(reinterpret_cast<HANDLE>(notifyWrite)), aExtraOpts);
+  } else {
+    NS_WARNING("necko_poll_create_notify_pair_for_child failed");
+  }
 #  endif
 #elif defined(XP_MACOSX)
 #  if defined(MOZ_SANDBOX)

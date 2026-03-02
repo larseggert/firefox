@@ -64,6 +64,7 @@ extern crate webext_storage;
 
 #[cfg(feature = "webrtc")]
 extern crate mdns_service;
+extern crate necko_poll;
 extern crate neqo_glue;
 extern crate wgpu_bindings;
 
