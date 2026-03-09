@@ -6,6 +6,7 @@
 #define HttpTransactionParent_h_
 
 #include "mozilla/Atomics.h"
+#include "mozilla/ipc/BigBuffer.h"
 #include "mozilla/Mutex.h"
 #include "mozilla/net/HttpTransactionShell.h"
 #include "mozilla/net/NeckoChannelParams.h"
@@ -59,7 +60,7 @@ class HttpTransactionParent final : public PHttpTransactionParent,
       const int64_t& aProgressMax,
       Maybe<NetworkAddressArg>&& aNetworkAddressArg);
   mozilla::ipc::IPCResult RecvOnDataAvailable(
-      const nsCString& aData, const uint64_t& aOffset,
+      mozilla::ipc::BigBuffer&& aData, const uint64_t& aOffset,
       const TimeStamp& aOnDataAvailableStartTime);
   mozilla::ipc::IPCResult RecvOnStopRequest(
       const nsresult& aStatus, const bool& aResponseIsComplete,
@@ -113,7 +114,8 @@ class HttpTransactionParent final : public PHttpTransactionParent,
       const uint32_t& aCaps, const TimeStamp& aOnStartRequestStartTime,
       nsHttpConnectionInfo* aConnInfo,
       const nsILoadInfo::IPAddressSpace& aTargetIPAddressSpace);
-  void DoOnDataAvailable(const nsCString& aData, const uint64_t& aOffset,
+  void DoOnDataAvailable(mozilla::ipc::BigBuffer&& aData,
+                         const uint64_t& aOffset,
                          const TimeStamp& aOnDataAvailableStartTime);
   void DoOnStopRequest(
       const nsresult& aStatus, const bool& aResponseIsComplete,

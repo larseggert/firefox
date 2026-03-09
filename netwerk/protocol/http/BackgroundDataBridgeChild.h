@@ -7,6 +7,7 @@
 
 #include "mozilla/net/PBackgroundDataBridgeChild.h"
 #include "mozilla/ipc/BackgroundChild.h"
+#include "mozilla/ipc/BigBuffer.h"
 
 namespace mozilla {
 namespace net {
@@ -26,7 +27,7 @@ class BackgroundDataBridgeChild final : public PBackgroundDataBridgeChild {
 
  public:
   mozilla::ipc::IPCResult RecvOnTransportAndData(
-      const uint64_t& offset, const nsACString& data,
+      const uint64_t& offset, mozilla::ipc::BigBuffer&& data,
       const TimeStamp& aOnDataAvailableStartTime);
   mozilla::ipc::IPCResult RecvOnStopRequest(
       nsresult aStatus, const ResourceTimingStructArgs& aTiming,

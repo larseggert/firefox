@@ -290,32 +290,6 @@ nsCString ConvertRequestHeadToString(nsHttpRequestHead& aRequestHead,
                                      bool aRequestBodyHasHeaders,
                                      bool aUsingConnect);
 
-template <typename T>
-using SendFunc = std::function<bool(const T&, uint64_t, uint32_t)>;
-
-template <typename T>
-bool SendDataInChunks(const nsCString& aData, uint64_t aOffset, uint32_t aCount,
-                      const SendFunc<T>& aSendFunc) {
-  static uint32_t const kCopyChunkSize = 128 * 1024;
-  uint32_t toRead = std::min<uint32_t>(aCount, kCopyChunkSize);
-
-  uint32_t start = 0;
-  while (aCount) {
-    T data(Substring(aData, start, toRead));
-
-    if (!aSendFunc(data, aOffset, toRead)) {
-      return false;
-    }
-
-    aOffset += toRead;
-    start += toRead;
-    aCount -= toRead;
-    toRead = std::min<uint32_t>(aCount, kCopyChunkSize);
-  }
-
-  return true;
-}
-
 }  // namespace nsHttp
 
 struct nsHttpAtomLiteral;

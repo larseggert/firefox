@@ -85,6 +85,12 @@ class BigBuffer {
   Span<uint8_t> AsSpan() { return Span{Data(), Size()}; }
   Span<const uint8_t> AsSpan() const { return Span{Data(), Size()}; }
 
+  // Reduce the reported size without freeing the backing storage.
+  void Truncate(size_t aNewSize) {
+    MOZ_ASSERT(aNewSize <= mSize);
+    mSize = aNewSize;
+  }
+
   // If the BigBuffer is backed by shared memory, returns a pointer to the
   // backing SharedMemory region.
   // This is only meant to be used in tests.

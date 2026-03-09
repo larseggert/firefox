@@ -6,6 +6,7 @@
 #define mozilla_net_HttpBackgroundChannelChild_h
 
 #include "mozilla/net/PHttpBackgroundChannelChild.h"
+#include "mozilla/ipc/BigBuffer.h"
 #include "mozilla/ipc/Endpoint.h"
 #include "nsIRunnable.h"
 #include "nsTArray.h"
@@ -60,7 +61,7 @@ class HttpBackgroundChannelChild final : public PHttpBackgroundChannelChild {
   IPCResult RecvOnTransportAndData(const nsresult& aChannelStatus,
                                    const nsresult& aTransportStatus,
                                    const uint64_t& aOffset,
-                                   const nsACString& aData,
+                                   mozilla::ipc::BigBuffer&& aData,
                                    const bool& aDataFromSocketProcess,
                                    const TimeStamp& aOnDataAvailableStart);
 

@@ -6,6 +6,7 @@ include HttpChannelParams;
 include NeckoChannelParams;
 
 using class mozilla::net::nsHttpHeaderArray from "nsHttpHeaderArray.h";
+[MoveOnly] using class mozilla::ipc::BigBuffer from "mozilla/ipc/BigBuffer.h";
 
 namespace mozilla {
 namespace net {
@@ -16,7 +17,7 @@ async protocol PBackgroundDataBridge
 {
 child:
   async OnTransportAndData(uint64_t  offset,
-                           nsCString data,
+                           BigBuffer data,
                            TimeStamp onDataAvailableStart);
 
   async OnStopRequest(nsresult aStatus,

@@ -10,6 +10,7 @@ include PURLClassifierInfo;
 
 include "mozilla/net/NeckoMessageUtils.h";
 using class mozilla::net::nsHttpHeaderArray from "nsHttpHeaderArray.h";
+[MoveOnly] using class mozilla::ipc::BigBuffer from "mozilla/ipc/BigBuffer.h";
 
 namespace mozilla {
 namespace net {
@@ -29,10 +30,10 @@ child:
 
   // Combines a single OnDataAvailable and its associated OnProgress &
   // OnStatus calls into one IPDL message
-  async OnTransportAndData(nsresult  channelStatus,
-                           nsresult  transportStatus,
-                           uint64_t  offset,
-                           nsCString data,
+  async OnTransportAndData(nsresult   channelStatus,
+                           nsresult   transportStatus,
+                           uint64_t   offset,
+                           BigBuffer  data,
                            bool dataFromSocketProcess,
                            TimeStamp onDataAvailableStart);
 

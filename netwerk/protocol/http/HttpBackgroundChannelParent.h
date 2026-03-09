@@ -7,6 +7,7 @@
 
 #include "mozilla/net/PHttpBackgroundChannelParent.h"
 #include "mozilla/Atomics.h"
+#include "mozilla/ipc/BigBuffer.h"
 #include "mozilla/Mutex.h"
 #include "nsID.h"
 #include "nsISupportsImpl.h"
@@ -47,8 +48,8 @@ class HttpBackgroundChannelParent final : public PHttpBackgroundChannelParent {
   // To send OnTransportAndData message over background channel.
   bool OnTransportAndData(const nsresult& aChannelStatus,
                           const nsresult& aTransportStatus,
-                          const uint64_t& aOffset, const uint32_t& aCount,
-                          const nsCString& aData,
+                          const uint64_t& aOffset,
+                          mozilla::ipc::BigBuffer&& aData,
                           TimeStamp aOnDataAvailableStart);
 
   // To send OnStopRequest message over background channel.

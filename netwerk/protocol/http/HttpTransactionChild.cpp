@@ -7,6 +7,7 @@
 
 #include "HttpTransactionChild.h"
 
+#include "mozilla/ipc/BigBuffer.h"
 #include "mozilla/ipc/IPCStreamUtils.h"
 #include "mozilla/net/BackgroundDataBridgeParent.h"
 #include "mozilla/net/ChannelEventQueue.h"
@@ -235,28 +236,25 @@ HttpTransactionChild::OnDataAvailable(nsIRequest* aRequest,
     return mStatus;
   }
 
-  // TODO: send string data in chunks and handle errors. Bug 1600129.
-  nsCString data;
-  nsresult rv = NS_ReadInputStreamToString(aInputStream, data, aCount);
+  mozilla::ipc::BigBuffer buf(aCount);
+  void* dest = buf.Data();
+  uint64_t written = 0;
+  nsresult rv =
+      NS_ReadInputStreamToBuffer(aInputStream, &dest, aCount, &written);
   if (NS_FAILED(rv)) {
     return rv;
   }
+  buf.Truncate(static_cast<size_t>(written));
 
-  mLogicalOffset += aCount;
+  mLogicalOffset += written;
 
   if (NS_IsMainThread()) {
     if (!CanSend()) {
       return NS_ERROR_FAILURE;
     }
 
-    nsHttp::SendFunc<nsCString> sendFunc =
-        [self = UnsafePtr<HttpTransactionChild>(this)](
-            const nsCString& aData, uint64_t aOffset, uint32_t aCount) {
-          return self->SendOnDataAvailable(aData, aOffset, TimeStamp::Now());
-        };
-
     LOG(("  ODA to parent process"));
-    if (!nsHttp::SendDataInChunks(data, aOffset, aCount, sendFunc)) {
+    if (!SendOnDataAvailable(std::move(buf), aOffset, TimeStamp::Now())) {
       return NS_ERROR_FAILURE;
     }
     return NS_OK;
@@ -268,41 +266,30 @@ HttpTransactionChild::OnDataAvailable(nsIRequest* aRequest,
     return NS_ERROR_FAILURE;
   }
 
-  nsHttp::SendFunc<nsDependentCSubstring> sendFunc =
-      [self = UnsafePtr<HttpTransactionChild>(this)](
-          const nsDependentCSubstring& aData, uint64_t aOffset,
-          uint32_t aCount) {
-        return self->mDataBridgeParent->SendOnTransportAndData(
-            aOffset, aData, TimeStamp::Now());
-      };
+  // We still need to send ODA to parent process so data can be saved in cache.
+  // Note that we set dataSentToChildProcess to true, so this ODA will not be
+  // sent to child process.
+  mozilla::ipc::BigBuffer bufForCache(buf.AsSpan());
+  RefPtr<HttpTransactionChild> self = this;
+  rv = NS_DispatchToMainThread(
+      NS_NewRunnableFunction("HttpTransactionChild::OnDataAvailable",
+                             [self, offset = aOffset,
+                              cacheData = std::move(bufForCache)]() mutable {
+                               if (!self->SendOnDataAvailable(
+                                       std::move(cacheData), offset,
+                                       TimeStamp::Now())) {
+                                 self->CancelInternal(NS_ERROR_FAILURE);
+                               }
+                             }),
+      NS_DISPATCH_NORMAL);
+  MOZ_ASSERT(NS_SUCCEEDED(rv));
 
   LOG(("  ODA to content process"));
-  if (!nsHttp::SendDataInChunks(data, aOffset, aCount, sendFunc)) {
+  if (!mDataBridgeParent->SendOnTransportAndData(aOffset, std::move(buf),
+                                                 TimeStamp::Now())) {
     MOZ_ASSERT(false, "Send ODA to content process failed");
     return NS_ERROR_FAILURE;
   }
-
-  // We still need to send ODA to parent process, because the data needs to be
-  // saved in cache. Note that we set dataSentToChildProcess to true, so this
-  // ODA will not be sent to child process.
-  RefPtr<HttpTransactionChild> self = this;
-  rv = NS_DispatchToMainThread(
-      NS_NewRunnableFunction(
-          "HttpTransactionChild::OnDataAvailable",
-          [self, offset(aOffset), count(aCount), data(data)]() {
-            nsHttp::SendFunc<nsCString> sendFunc =
-                [self](const nsCString& aData, uint64_t aOffset,
-                       uint32_t aCount) {
-                  return self->SendOnDataAvailable(aData, aOffset,
-                                                   TimeStamp::Now());
-                };
-
-            if (!nsHttp::SendDataInChunks(data, offset, count, sendFunc)) {
-              self->CancelInternal(NS_ERROR_FAILURE);
-            }
-          }),
-      NS_DISPATCH_NORMAL);
-  MOZ_ASSERT(NS_SUCCEEDED(rv));
 
   return NS_OK;
 }

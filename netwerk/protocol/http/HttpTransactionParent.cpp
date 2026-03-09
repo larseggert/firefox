@@ -8,6 +8,8 @@
 #include "HttpTransactionParent.h"
 
 #include "HttpTrafficAnalyzer.h"
+#include "mozilla/ipc/BigBuffer.h"
+#include "mozilla/ipc/BigBufferSource.h"
 #include "mozilla/ipc/IPCStreamUtils.h"
 #include "mozilla/net/ChannelEventQueue.h"
 #include "mozilla/net/InputChannelThrottleQueueParent.h"
@@ -539,16 +541,20 @@ mozilla::ipc::IPCResult HttpTransactionParent::RecvOnTransportStatus(
 }
 
 mozilla::ipc::IPCResult HttpTransactionParent::RecvOnDataAvailable(
-    const nsCString& aData, const uint64_t& aOffset,
+    mozilla::ipc::BigBuffer&& aData, const uint64_t& aOffset,
     const TimeStamp& aOnDataAvailableStartTime) {
   LOG(("HttpTransactionParent::RecvOnDataAvailable [this=%p, aOffset= %" PRIu64
        " aCount=%zu",
-       this, aOffset, aData.Length()));
+       this, aOffset, aData.Size()));
+
+  if (aData.Size() > UINT32_MAX) {
+    return IPC_FAIL(this, "Data size exceeds uint32_t range");
+  }
 
   // The final transfer size is updated in OnStopRequest ipc message, but in the
   // case that the socket process is crashed or something went wrong, we might
   // not get the OnStopRequest. So, let's update the transfer size here.
-  mTransferSize += aData.Length();
+  mTransferSize += static_cast<int64_t>(aData.Size());
 
   if (mCanceled) {
     return IPC_OK();
@@ -558,25 +564,26 @@ mozilla::ipc::IPCResult HttpTransactionParent::RecvOnDataAvailable(
       [self = UnsafePtr<HttpTransactionParent>(this)]() {
         return self->GetODATarget();
       },
-      [self = UnsafePtr<HttpTransactionParent>(this), aData, aOffset,
-       aOnDataAvailableStartTime]() {
-        self->DoOnDataAvailable(aData, aOffset, aOnDataAvailableStartTime);
+      [self = UnsafePtr<HttpTransactionParent>(this), data = std::move(aData),
+       aOffset, aOnDataAvailableStartTime]() mutable {
+        self->DoOnDataAvailable(std::move(data), aOffset,
+                                aOnDataAvailableStartTime);
       }));
   return IPC_OK();
 }
 
 void HttpTransactionParent::DoOnDataAvailable(
-    const nsCString& aData, const uint64_t& aOffset,
+    mozilla::ipc::BigBuffer&& aData, const uint64_t& aOffset,
     const TimeStamp& aOnDataAvailableStartTime) {
   LOG(("HttpTransactionParent::DoOnDataAvailable [this=%p]\n", this));
   if (mCanceled) {
     return;
   }
 
+  uint32_t dataSize = static_cast<uint32_t>(aData.Size());
+  auto source = MakeRefPtr<mozilla::ipc::BigBufferSource>(std::move(aData));
   nsCOMPtr<nsIInputStream> stringStream;
-  nsresult rv = NS_NewByteInputStream(getter_AddRefs(stringStream),
-                                      Span(aData.get(), aData.Length()),
-                                      NS_ASSIGNMENT_DEPEND);
+  nsresult rv = NS_NewByteInputStream(getter_AddRefs(stringStream), source);
 
   if (NS_FAILED(rv)) {
     CancelOnMainThread(rv);
@@ -585,7 +592,7 @@ void HttpTransactionParent::DoOnDataAvailable(
 
   mOnDataAvailableStartTime = aOnDataAvailableStartTime;
   AutoEventEnqueuer ensureSerialDispatch(mEventQ);
-  rv = mChannel->OnDataAvailable(this, stringStream, aOffset, aData.Length());
+  rv = mChannel->OnDataAvailable(this, stringStream, aOffset, dataSize);
   if (NS_FAILED(rv)) {
     CancelOnMainThread(rv);
   }

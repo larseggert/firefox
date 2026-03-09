@@ -21,6 +21,7 @@ using mozilla::net::TRRSkippedReason from "nsITRRSkipReason.h";
 using nsIRequest::TRRMode from "nsIRequest.h";
 using nsILoadInfo::IPAddressSpace from "nsILoadInfo.h";
 using struct mozilla::net::LNAPerms from "mozilla/net/HttpTransactionShell.h";
+[MoveOnly] using class mozilla::ipc::BigBuffer from "mozilla/ipc/BigBuffer.h";
 
 namespace mozilla {
 namespace net {
@@ -60,9 +61,9 @@ parent:
                           int64_t progress,
                           int64_t progressMax,
                           NetworkAddressArg? networkAddressArg);
-  async OnDataAvailable(nsCString data,
-                        uint64_t  offset,
-                        TimeStamp onDataAvailableStart);
+  async OnDataAvailable(BigBuffer  data,
+                        uint64_t   offset,
+                        TimeStamp  onDataAvailableStart);
   async OnStopRequest(nsresult status,
                       bool responseIsComplete,
                       int64_t transferSize,

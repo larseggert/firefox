@@ -10,6 +10,7 @@
 #include "nsThreadUtils.h"
 #include "nsXULAppAPI.h"
 #include "mozilla/DebugOnly.h"
+#include "mozilla/MoveOnlyFunction.h"
 #include "mozilla/Mutex.h"
 #include "mozilla/RecursiveMutex.h"
 #include "mozilla/UniquePtr.h"
@@ -44,8 +45,9 @@ class MainThreadChannelEvent : public ChannelEvent {
 class ChannelFunctionEvent : public ChannelEvent {
  public:
   ChannelFunctionEvent(
-      std::function<already_AddRefed<nsIEventTarget>()>&& aGetEventTarget,
-      std::function<void()>&& aCallback)
+      mozilla::MoveOnlyFunction<already_AddRefed<nsIEventTarget>()>&&
+          aGetEventTarget,
+      mozilla::MoveOnlyFunction<void()>&& aCallback)
       : mGetEventTarget(std::move(aGetEventTarget)),
         mCallback(std::move(aCallback)) {}
 
@@ -55,8 +57,8 @@ class ChannelFunctionEvent : public ChannelEvent {
   }
 
  private:
-  const std::function<already_AddRefed<nsIEventTarget>()> mGetEventTarget;
-  const std::function<void()> mCallback;
+  mozilla::MoveOnlyFunction<already_AddRefed<nsIEventTarget>()> mGetEventTarget;
+  mozilla::MoveOnlyFunction<void()> mCallback;
 };
 
 // UnsafePtr is a work-around our static analyzer that requires all
@@ -84,7 +86,8 @@ class UnsafePtr {
 class NeckoTargetChannelFunctionEvent : public ChannelFunctionEvent {
  public:
   template <typename T>
-  NeckoTargetChannelFunctionEvent(T* aChild, std::function<void()>&& aCallback)
+  NeckoTargetChannelFunctionEvent(T* aChild,
+                                  mozilla::MoveOnlyFunction<void()>&& aCallback)
       : ChannelFunctionEvent(
             [child = UnsafePtr<T>(aChild)]() {
               MOZ_ASSERT(child);

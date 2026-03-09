@@ -40,6 +40,7 @@
 #include "mozilla/net/BackgroundChannelRegistrar.h"
 #include "nsSerializationHelper.h"
 #include "nsISerializable.h"
+#include "mozilla/ipc/BigBuffer.h"
 #include "mozilla/ipc/InputStreamUtils.h"
 #include "mozilla/ipc/URIUtils.h"
 #include "SerializedLoadContext.h"
@@ -1514,19 +1515,23 @@ HttpChannelParent::OnDataAvailable(nsIRequest* aRequest,
     onDataAvailableStart = httpChannelImpl->GetDataAvailableStartTime();
   }
 
-  nsCString data;
-  nsresult rv = NS_ReadInputStreamToString(aInputStream, data, aCount);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
   // Either IPC channel is closed or background channel
   // is ready to send OnTransportAndData.
   MOZ_ASSERT(mIPCClosed || mBgParent);
 
+  mozilla::ipc::BigBuffer buf(aCount);
+  void* dest = buf.Data();
+  uint64_t written = 0;
+  nsresult rv =
+      NS_ReadInputStreamToBuffer(aInputStream, &dest, aCount, &written);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+  buf.Truncate(static_cast<size_t>(written));
+
   if (mIPCClosed || !mBgParent ||
       !mBgParent->OnTransportAndData(channelStatus, transportStatus, aOffset,
-                                     aCount, data, onDataAvailableStart)) {
+                                     std::move(buf), onDataAvailableStart)) {
     return NS_ERROR_UNEXPECTED;
   }
 

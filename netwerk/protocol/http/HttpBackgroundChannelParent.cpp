@@ -194,7 +194,7 @@ bool HttpBackgroundChannelParent::OnStartRequest(
 
 bool HttpBackgroundChannelParent::OnTransportAndData(
     const nsresult& aChannelStatus, const nsresult& aTransportStatus,
-    const uint64_t& aOffset, const uint32_t& aCount, const nsCString& aData,
+    const uint64_t& aOffset, mozilla::ipc::BigBuffer&& aData,
     TimeStamp aOnDataAvailableStart) {
   LOG(("HttpBackgroundChannelParent::OnTransportAndData [this=%p]\n", this));
   AssertIsInMainProcess();
@@ -206,11 +206,14 @@ bool HttpBackgroundChannelParent::OnTransportAndData(
   if (!IsOnBackgroundThread()) {
     MutexAutoLock lock(mBgThreadMutex);
     nsresult rv = mBackgroundThread->Dispatch(
-        NewRunnableMethod<const nsresult, const nsresult, const uint64_t,
-                          const uint32_t, const nsCString, TimeStamp>(
-            "net::HttpBackgroundChannelParent::OnTransportAndData", this,
-            &HttpBackgroundChannelParent::OnTransportAndData, aChannelStatus,
-            aTransportStatus, aOffset, aCount, aData, aOnDataAvailableStart),
+        NS_NewRunnableFunction(
+            "net::HttpBackgroundChannelParent::OnTransportAndData",
+            [self = RefPtr{this}, aChannelStatus, aTransportStatus, aOffset,
+             data = std::move(aData), aOnDataAvailableStart]() mutable {
+              self->OnTransportAndData(aChannelStatus, aTransportStatus,
+                                       aOffset, std::move(data),
+                                       aOnDataAvailableStart);
+            }),
         NS_DISPATCH_NORMAL);
 
     MOZ_DIAGNOSTIC_ASSERT(NS_SUCCEEDED(rv));
@@ -218,17 +221,8 @@ bool HttpBackgroundChannelParent::OnTransportAndData(
     return NS_SUCCEEDED(rv);
   }
 
-  nsHttp::SendFunc<nsDependentCSubstring> sendFunc =
-      [self = UnsafePtr<HttpBackgroundChannelParent>(this), aChannelStatus,
-       aTransportStatus,
-       aOnDataAvailableStart](const nsDependentCSubstring& aData,
-                              uint64_t aOffset, uint32_t aCount) {
-        return self->SendOnTransportAndData(aChannelStatus, aTransportStatus,
-                                            aOffset, aData, false,
-                                            aOnDataAvailableStart);
-      };
-
-  return nsHttp::SendDataInChunks(aData, aOffset, aCount, sendFunc);
+  return SendOnTransportAndData(aChannelStatus, aTransportStatus, aOffset,
+                                std::move(aData), false, aOnDataAvailableStart);
 }
 
 bool HttpBackgroundChannelParent::OnStopRequest(

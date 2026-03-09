@@ -15,6 +15,7 @@ EXPORTS.mozilla.ipc += [
     "BackgroundStarterParent.h",
     "BackgroundUtils.h",
     "BigBuffer.h",
+    "BigBufferSource.h",
     "ByteBuf.h",
     "ByteBufUtils.h",
     "CrashReporterClient.h",

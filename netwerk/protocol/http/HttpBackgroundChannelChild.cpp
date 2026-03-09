@@ -208,56 +208,55 @@ IPCResult HttpBackgroundChannelChild::RecvOnStartRequest(
 
 IPCResult HttpBackgroundChannelChild::RecvOnTransportAndData(
     const nsresult& aChannelStatus, const nsresult& aTransportStatus,
-    const uint64_t& aOffset, const nsACString& aData,
+    const uint64_t& aOffset, mozilla::ipc::BigBuffer&& aData,
     const bool& aDataFromSocketProcess,
     const TimeStamp& aOnDataAvailableStart) {
-  RefPtr<HttpBackgroundChannelChild> self = this;
-  std::function<void()> callProcessOnTransportAndData =
-      [self, aChannelStatus, aTransportStatus, aOffset, data = nsCString(aData),
-       aDataFromSocketProcess, aOnDataAvailableStart]() {
-        LOG(
-            ("HttpBackgroundChannelChild::RecvOnTransportAndData [this=%p, "
-             "aDataFromSocketProcess=%d, mFirstODASource=%d]\n",
-             self.get(), aDataFromSocketProcess, self->mFirstODASource));
-        MOZ_ASSERT(OnSocketThread());
+  size_t dataSize = aData.Size();
+  auto processData = [self = RefPtr{this}, aChannelStatus, aTransportStatus,
+                      aOffset, data = std::move(aData), aDataFromSocketProcess,
+                      aOnDataAvailableStart]() mutable {
+    LOG(
+        ("HttpBackgroundChannelChild::RecvOnTransportAndData [this=%p, "
+         "aDataFromSocketProcess=%d, mFirstODASource=%d]\n",
+         self.get(), aDataFromSocketProcess, self->mFirstODASource));
+    MOZ_ASSERT(OnSocketThread());
 
-        if (NS_WARN_IF(!self->mChannelChild)) {
-          return;
-        }
+    if (NS_WARN_IF(!self->mChannelChild)) {
+      return;
+    }
 
-        if (((self->mFirstODASource == ODA_FROM_SOCKET) &&
-             !aDataFromSocketProcess) ||
-            ((self->mFirstODASource == ODA_FROM_PARENT) &&
-             aDataFromSocketProcess)) {
-          return;
-        }
+    if (((self->mFirstODASource == ODA_FROM_SOCKET) &&
+         !aDataFromSocketProcess) ||
+        ((self->mFirstODASource == ODA_FROM_PARENT) &&
+         aDataFromSocketProcess)) {
+      return;
+    }
 
-        // The HttpTransactionChild in socket process may not know that this
-        // request is cancelled or failed due to the IPC delay. In this case, we
-        // should not forward ODA to HttpChannelChild.
-        nsresult channelStatus;
-        self->mChannelChild->GetStatus(&channelStatus);
-        if (NS_FAILED(channelStatus)) {
-          return;
-        }
+    // The HttpTransactionChild in socket process may not know that this
+    // request is cancelled or failed due to the IPC delay. In this case,
+    // we should not forward ODA to HttpChannelChild.
+    nsresult channelStatus;
+    self->mChannelChild->GetStatus(&channelStatus);
+    if (NS_FAILED(channelStatus)) {
+      return;
+    }
 
-        self->mChannelChild->ProcessOnTransportAndData(
-            aChannelStatus, aTransportStatus, aOffset, data,
-            aOnDataAvailableStart);
-      };
+    self->mChannelChild->ProcessOnTransportAndData(
+        aChannelStatus, aTransportStatus, aOffset, std::move(data),
+        aOnDataAvailableStart);
+  };
 
   // Bug 1641336: Race only happens if the data is from socket process.
   if (IsWaitingOnStartRequest()) {
     LOG(("  > pending until OnStartRequest [offset=%" PRIu64 " count=%zu]\n",
-         aOffset, aData.Length()));
-
+         aOffset, dataSize));
     mQueuedRunnables.AppendElement(NS_NewRunnableFunction(
         "HttpBackgroundChannelChild::RecvOnTransportAndData",
-        std::move(callProcessOnTransportAndData)));
+        std::move(processData)));
     return IPC_OK();
   }
 
-  callProcessOnTransportAndData();
+  processData();
   return IPC_OK();
 }
 

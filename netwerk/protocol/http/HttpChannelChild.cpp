@@ -17,6 +17,8 @@
 #include "mozilla/dom/LinkStyle.h"
 #include "mozilla/dom/ReferrerInfo.h"
 #include "mozilla/extensions/StreamFilterParent.h"
+#include "mozilla/ipc/BigBuffer.h"
+#include "mozilla/ipc/BigBufferSource.h"
 #include "mozilla/ipc/IPCStreamUtils.h"
 #include "mozilla/net/NeckoChild.h"
 #include "mozilla/net/HttpChannelChild.h"
@@ -627,7 +629,7 @@ void HttpChannelChild::DoOnStartRequest(nsIRequest* aRequest) {
 
 void HttpChannelChild::ProcessOnTransportAndData(
     const nsresult& aChannelStatus, const nsresult& aTransportStatus,
-    const uint64_t& aOffset, const nsACString& aData,
+    const uint64_t& aOffset, mozilla::ipc::BigBuffer&& aData,
     const TimeStamp& aOnDataAvailableStartTime) {
   LOG(("HttpChannelChild::ProcessOnTransportAndData [this=%p]\n", this));
   MOZ_ASSERT(OnSocketThread());
@@ -636,18 +638,18 @@ void HttpChannelChild::ProcessOnTransportAndData(
         return self->GetODATarget();
       },
       [self = UnsafePtr<HttpChannelChild>(this), aChannelStatus,
-       aTransportStatus, aOffset, aData = nsCString(aData),
-       aOnDataAvailableStartTime]() {
+       aTransportStatus, aOffset, data = std::move(aData),
+       aOnDataAvailableStartTime]() mutable {
         self->mOnDataAvailableStartTime = aOnDataAvailableStartTime;
         self->OnTransportAndData(aChannelStatus, aTransportStatus, aOffset,
-                                 aData);
+                                 std::move(data));
       }));
 }
 
 void HttpChannelChild::OnTransportAndData(const nsresult& aChannelStatus,
                                           const nsresult& aTransportStatus,
                                           const uint64_t& aOffset,
-                                          const nsACString& aData) {
+                                          mozilla::ipc::BigBuffer&& aData) {
   LOG(("HttpChannelChild::OnTransportAndData [this=%p]\n", this));
 
   if (!mCanceled && NS_SUCCEEDED(mStatus)) {
@@ -672,7 +674,13 @@ void HttpChannelChild::OnTransportAndData(const nsresult& aChannelStatus,
     progressMax = -1;
   }
 
-  const int64_t progress = aOffset + aData.Length();
+  if (aData.Size() > UINT32_MAX) {
+    CancelWithReason(NS_ERROR_UNEXPECTED,
+                     "HttpChannelChild data size exceeds uint32_t range"_ns);
+    return;
+  }
+  const uint32_t dataSize = static_cast<uint32_t>(aData.Size());
+  const int64_t progress = static_cast<int64_t>(aOffset + dataSize);
 
   // OnTransportAndData will be run on retargeted thread if applicable, however
   // OnStatus/OnProgress event can only be fired on main thread. We need to
@@ -699,26 +707,21 @@ void HttpChannelChild::OnTransportAndData(const nsresult& aChannelStatus,
 
   // OnDataAvailable
   //
-  // NOTE: the OnDataAvailable contract requires the client to read all the data
-  // in the inputstream.  This code relies on that ('data' will go away after
-  // this function).  Apparently the previous, non-e10s behavior was to actually
-  // support only reading part of the data, allowing later calls to read the
-  // rest.
+  auto source = MakeRefPtr<mozilla::ipc::BigBufferSource>(std::move(aData));
   nsCOMPtr<nsIInputStream> stringStream;
-  nsresult rv = NS_NewByteInputStream(getter_AddRefs(stringStream), Span(aData),
-                                      NS_ASSIGNMENT_DEPEND);
+  nsresult rv = NS_NewByteInputStream(getter_AddRefs(stringStream), source);
   if (NS_FAILED(rv)) {
     CancelWithReason(rv, "HttpChannelChild NS_NewByteInputStream failed"_ns);
     return;
   }
 
-  DoOnDataAvailable(this, stringStream, aOffset, aData.Length());
+  DoOnDataAvailable(this, stringStream, aOffset, dataSize);
   stringStream->Close();
 
   // TODO: Bug 1523916 backpressure needs to take into account if the data is
   // coming from the main process or from the socket process via PBackground.
   if (NeedToReportBytesRead()) {
-    mUnreportBytesRead += aData.Length();
+    mUnreportBytesRead += static_cast<int32_t>(dataSize);
     if (mUnreportBytesRead >= gHttpHandler->SendWindowSize() >> 2) {
       if (NS_IsMainThread()) {
         (void)SendBytesRead(mUnreportBytesRead);
@@ -3335,32 +3338,6 @@ mozilla::ipc::IPCResult HttpChannelChild::RecvSetPriority(
   return IPC_OK();
 }
 
-// We don't have a copyable Endpoint and NeckoTargetChannelFunctionEvent takes
-// std::function<void()>.  It's not possible to avoid the copy from the type of
-// lambda to std::function, so does the capture list. Hence, we're forced to
-// use the old-fashioned channel event inheritance.
-class AttachStreamFilterEvent : public ChannelEvent {
- public:
-  AttachStreamFilterEvent(HttpChannelChild* aChild,
-                          already_AddRefed<nsIEventTarget> aTarget,
-                          Endpoint<extensions::PStreamFilterParent>&& aEndpoint)
-      : mChild(aChild), mTarget(aTarget), mEndpoint(std::move(aEndpoint)) {}
-
-  already_AddRefed<nsIEventTarget> GetEventTarget() override {
-    nsCOMPtr<nsIEventTarget> target = mTarget;
-    return target.forget();
-  }
-
-  void Run() override {
-    extensions::StreamFilterParent::Attach(mChild, std::move(mEndpoint));
-  }
-
- private:
-  HttpChannelChild* mChild;
-  nsCOMPtr<nsIEventTarget> mTarget;
-  Endpoint<extensions::PStreamFilterParent> mEndpoint;
-};
-
 void HttpChannelChild::RegisterStreamFilter(
     RefPtr<extensions::StreamFilterParent>& aStreamFilter) {
   MOZ_ASSERT(NS_IsMainThread());
@@ -3372,8 +3349,11 @@ void HttpChannelChild::ProcessAttachStreamFilter(
   LOG(("HttpChannelChild::ProcessAttachStreamFilter [this=%p]\n", this));
   MOZ_ASSERT(OnSocketThread());
 
-  mEventQ->RunOrEnqueue(new AttachStreamFilterEvent(this, GetNeckoTarget(),
-                                                    std::move(aEndpoint)));
+  mEventQ->RunOrEnqueue(new NeckoTargetChannelFunctionEvent(
+      this, [self = UnsafePtr<HttpChannelChild>(this),
+             endpoint = std::move(aEndpoint)]() mutable {
+        extensions::StreamFilterParent::Attach(self, std::move(endpoint));
+      }));
 }
 
 void HttpChannelChild::OnDetachStreamFilters() {
