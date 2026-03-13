@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-//! Windows backend using `select()` with a UDP loopback socket for
+//! Windows backend using `select()` with an AF_UNIX socket pair for
 //! cross-thread notification.
 //!
 //! This uses the same `select()` syscall that `PR_Poll` used on Windows (via
@@ -15,12 +15,16 @@
 //! `WinFdSet` with a 1024-entry capacity rather than the default `FD_SETSIZE`
 //! of 64, matching NSPR's historical limit.
 //!
-//! Notification uses a self-connected UDP loopback socket bound to
-//! `127.0.0.1` on an ephemeral port. This avoids filesystem access and works
-//! in sandboxed child processes. See [`create_udp_notify_socket`] for the
-//! rationale and alternatives evaluated.
+//! Notification uses a connected AF_UNIX `SOCK_STREAM` socket pair. For
+//! sandboxed child processes the parent creates the pair before launch and
+//! passes the handles via geckoargs; the child stores them via
+//! [`set_pre_notify_pair`] before [`Poller::new`] runs. For the parent process
+//! the pair is created directly in [`Poller::new`].
 
-use std::{io, ptr};
+use std::{
+    io, ptr,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 use rustc_hash::{FxBuildHasher, FxHashMap};
 use thin_vec::ThinVec;
@@ -79,70 +83,127 @@ fn wsa_result(ret: i32) -> io::Result<()> {
     }
 }
 
-/// Creates a self-connected UDP loopback socket for cross-thread notification.
+/// `INVALID_SOCKET` as a `usize` sentinel for the pre-created pair atomics.
+const INVALID: usize = wsa::INVALID_SOCKET;
+
+/// Pre-created AF_UNIX notify pair, set by [`set_pre_notify_pair`] after
+/// inheriting handles from the parent process, and consumed once by [`Poller::new`].
+static PRE_NOTIFY_READ: AtomicUsize = AtomicUsize::new(INVALID);
+static PRE_NOTIFY_WRITE: AtomicUsize = AtomicUsize::new(INVALID);
+
+/// Creates a connected AF_UNIX `SOCK_STREAM` socket pair by emulating
+/// `socketpair(2)`: binds a temporary listener, connects a client, accepts
+/// the connection, then unlinks the temporary file.
 ///
-/// Binds a `SOCK_DGRAM` socket to `127.0.0.1:0`, lets the OS assign an
-/// ephemeral port, then `connect()`s the socket to its own address. The
-/// resulting non-blocking socket acts as a wake-up channel: `send()` enqueues
-/// a datagram that makes the socket readable for `select()`, and
-/// `recv()` drains it.
-///
-/// ## Why not AF_UNIX?
-///
-/// Every available AF_UNIX mechanism has a blocking issue on Windows:
-///
-/// - **Filesystem-path sockets**: `bind()` creates an NTFS reparse point,
-///   which requires token privileges that Firefox's sandbox (`USER_LIMITED`
-///   with `SetLockdownDefaultDacl`) strips. `bind()` returns `WSAEACCES`
-///   (10013) before the sandbox's `AllowFileAccess` rules are even consulted,
-///   because the denial originates inside the Winsock AF_UNIX provider itself.
-///
-/// - **Abstract sockets** (null-byte `sun_path` prefix): documented as
-///   supported by Microsoft but `connect()` returns `WSAEINVAL` (10022).
-///   <https://github.com/microsoft/WSL/issues/4240>
-///
-/// - **Unnamed sockets**: Windows does not implement `socketpair()` and
-///   autobind is unsupported, so there is no way to create a connected pair
-///   without a named listener.
-///   <https://devblogs.microsoft.com/commandline/af_unix-comes-to-windows/>
-///
-/// - **Named pipes** (`\\.\pipe\...`): not sockets; cannot participate in
-///   `select()`.
-fn create_udp_notify_socket() -> io::Result<SOCKET> {
+/// Windows has no `socketpair()` and no autobind, so the listen/connect/accept
+/// sequence is used instead.
+pub(crate) fn create_af_unix_notify_pair() -> io::Result<(SOCKET, SOCKET)> {
+    // WSAStartup may not have been called yet (we run before NSPR/networking
+    // initialization). It is reference-counted and safe to call multiple times.
+    let mut wsa_data: wsa::WSADATA = unsafe { std::mem::zeroed() };
+    let rc = unsafe { wsa::WSAStartup(0x0202, &mut wsa_data) };
+    if rc != 0 {
+        return Err(io::Error::from_raw_os_error(rc));
+    }
+
+    static PATH_IDX: AtomicUsize = AtomicUsize::new(0);
+    let idx = PATH_IDX.fetch_add(1, Ordering::Relaxed);
+
+    let mut path = std::env::temp_dir();
+    path.push(format!("necko-{}-{idx}.sock", std::process::id()));
+
+    let path_str = path
+        .to_str()
+        .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidInput))?;
+    let path_bytes = path_str.as_bytes();
+
+    let mut addr: wsa::SOCKADDR_UN = unsafe { std::mem::zeroed() };
+    addr.sun_family = wsa::AF_UNIX;
+
+    // sun_path must hold path_bytes plus a null terminator.
+    if path_bytes.len() + 1 > addr.sun_path.len() {
+        return Err(io::Error::from(io::ErrorKind::InvalidInput));
+    }
+    addr.sun_path[..path_bytes.len()].copy_from_slice(path_bytes);
+
+    // Use the exact address length (not the full struct), matching what the
+    // Windows AF_UNIX provider expects: sun_family + path bytes + null byte.
+    let addr_len = (std::mem::offset_of!(wsa::SOCKADDR_UN, sun_path) + path_bytes.len() + 1) as i32;
+
     unsafe {
-        let sock = wsa::socket(wsa::AF_INET as i32, wsa::SOCK_DGRAM, 0);
-        if sock == wsa::INVALID_SOCKET {
+        let listener = wsa::socket(wsa::AF_UNIX as i32, wsa::SOCK_STREAM, 0);
+        if listener == wsa::INVALID_SOCKET {
             return Err(io::Error::last_os_error());
         }
 
-        let result = (|| -> io::Result<()> {
-            let mut addr: wsa::SOCKADDR_IN = std::mem::zeroed();
-            addr.sin_family = wsa::AF_INET;
-            addr.sin_addr.S_un.S_addr = u32::from_ne_bytes([127, 0, 0, 1]);
-            let addr_len = size_of::<wsa::SOCKADDR_IN>() as i32;
+        let result = (|| -> io::Result<(SOCKET, SOCKET)> {
+            wsa_result(wsa::bind(listener, ptr::from_ref(&addr).cast(), addr_len))?;
+            wsa_result(wsa::listen(listener, 1))?;
 
-            wsa_result(wsa::bind(sock, ptr::from_ref(&addr).cast(), addr_len))?;
+            let client = wsa::socket(wsa::AF_UNIX as i32, wsa::SOCK_STREAM, 0);
+            if client == wsa::INVALID_SOCKET {
+                return Err(io::Error::last_os_error());
+            }
 
-            let mut bound_len = addr_len;
-            wsa_result(wsa::getsockname(
-                sock,
-                ptr::from_mut(&mut addr).cast(),
-                &mut bound_len,
-            ))?;
+            let inner = (|| -> io::Result<(SOCKET, SOCKET)> {
+                wsa_result(wsa::connect(client, ptr::from_ref(&addr).cast(), addr_len))?;
+                let server = wsa::accept(listener, ptr::null_mut(), ptr::null_mut());
+                if server == wsa::INVALID_SOCKET {
+                    return Err(io::Error::last_os_error());
+                }
+                // The file is only needed for the initial rendezvous; delete it
+                // immediately so no temp file persists after process exit.
+                let _ = std::fs::remove_file(&path);
 
-            wsa_result(wsa::connect(sock, ptr::from_ref(&addr).cast(), addr_len))?;
+                let nb_result = (|| -> io::Result<()> {
+                    let mut nb: u32 = 1;
+                    wsa_result(wsa::ioctlsocket(server, wsa::FIONBIO, &mut nb))?;
+                    let mut nb: u32 = 1;
+                    wsa_result(wsa::ioctlsocket(client, wsa::FIONBIO, &mut nb))
+                })();
 
-            let mut nb: u32 = 1;
-            wsa_result(wsa::ioctlsocket(sock, wsa::FIONBIO, &mut nb))
+                match nb_result {
+                    Ok(()) => Ok((server, client)),
+                    Err(e) => {
+                        wsa::closesocket(server);
+                        Err(e)
+                    }
+                }
+            })();
+
+            if inner.is_err() {
+                wsa::closesocket(client);
+            }
+            inner
         })();
 
-        if let Err(e) = result {
-            wsa::closesocket(sock);
-            return Err(e);
-        }
-
-        Ok(sock)
+        wsa::closesocket(listener);
+        result
     }
+}
+
+/// Stores a pre-created AF_UNIX notify pair for later use by [`Poller::new`].
+pub(crate) fn set_pre_notify_pair(read: SOCKET, write: SOCKET) {
+    PRE_NOTIFY_READ.store(read, Ordering::Release);
+    PRE_NOTIFY_WRITE.store(write, Ordering::Release);
+}
+
+fn take_pre_created_pair() -> Option<(SOCKET, SOCKET)> {
+    let read = PRE_NOTIFY_READ.swap(INVALID, Ordering::AcqRel);
+    let write = PRE_NOTIFY_WRITE.swap(INVALID, Ordering::AcqRel);
+    if read == INVALID || write == INVALID {
+        // Partially set state shouldn't happen; close any stray socket.
+        unsafe {
+            if read != INVALID {
+                wsa::closesocket(read);
+            }
+            if write != INVALID {
+                wsa::closesocket(write);
+            }
+        }
+        return None;
+    }
+    Some((read, write))
 }
 
 fn drain_notify(socket: SOCKET) {
@@ -159,7 +220,10 @@ fn drain_notify(socket: SOCKET) {
 
 pub struct Poller {
     fd_state: FxHashMap<Fd, FdState>,
-    notify_socket: SOCKET,
+    /// Read end of the cross-thread notification socket pair.
+    notify_read: SOCKET,
+    /// Write end of the cross-thread notification socket pair.
+    notify_write: SOCKET,
     read_set: WinFdSet,
     write_set: WinFdSet,
     except_set: WinFdSet,
@@ -175,17 +239,13 @@ impl Backend for Poller {
     }
 
     fn new() -> Option<Self> {
-        let notify_socket = match create_udp_notify_socket() {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("necko_poll: create_udp_notify_socket failed: {e}");
-                return None;
-            }
-        };
+        let (notify_read, notify_write) =
+            take_pre_created_pair().or_else(|| create_af_unix_notify_pair().ok())?;
 
         Some(Self {
             fd_state: FxHashMap::with_capacity_and_hasher(32, FxBuildHasher),
-            notify_socket,
+            notify_read,
+            notify_write,
             read_set: WinFdSet::new(),
             write_set: WinFdSet::new(),
             except_set: WinFdSet::new(),
@@ -201,7 +261,7 @@ impl Backend for Poller {
         self.write_set.clear();
         self.except_set.clear();
 
-        self.read_set.add(self.notify_socket);
+        self.read_set.add(self.notify_read);
 
         for (&fd, state) in &self.fd_state {
             if state.readable {
@@ -270,18 +330,19 @@ impl Backend for Poller {
     }
 
     fn drain_notification(&self) {
-        drain_notify(self.notify_socket);
+        drain_notify(self.notify_read);
     }
 
     fn send_notify(&self) -> io::Result<()> {
-        wsa_result(unsafe { wsa::send(self.notify_socket, [1u8].as_ptr().cast(), 1, 0) })
+        wsa_result(unsafe { wsa::send(self.notify_write, [1u8].as_ptr().cast(), 1, 0) })
     }
 }
 
 impl Drop for Poller {
     fn drop(&mut self) {
         unsafe {
-            wsa::closesocket(self.notify_socket);
+            wsa::closesocket(self.notify_read);
+            wsa::closesocket(self.notify_write);
         }
     }
 }

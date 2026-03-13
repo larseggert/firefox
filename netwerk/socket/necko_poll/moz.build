@@ -9,4 +9,5 @@ if CONFIG["COMPILE_ENVIRONMENT"]:
 
     EXPORTS.mozilla.net += [
         "!necko_poll.h",
+        "NeckoPollGeckoArgs.h",
     ]

@@ -8,6 +8,7 @@
 #include "mozilla/GeckoArgs.h"
 
 #if defined(XP_WIN) && defined(MOZ_SANDBOX)
+#  include "mozilla/net/NeckoPollGeckoArgs.h"
 #  include "mozilla/sandboxTarget.h"
 #elif defined(__OpenBSD__) && defined(MOZ_SANDBOX)
 #  include "mozilla/SandboxSettings.h"
@@ -26,6 +27,7 @@ bool RDDProcessImpl::Init(int aArgc, char* aArgv[]) {
   // to restrict further dll loads.
   LoadLibraryW(L"mozavcodec.dll");
   LoadLibraryW(L"mozavutil.dll");
+  mozilla::net::NeckoPollConsumeHandles(aArgc, aArgv);
   mozilla::SandboxTarget::Instance()->StartSandbox();
 #elif defined(__OpenBSD__) && defined(MOZ_SANDBOX)
   PR_LoadLibrary("libmozavcodec.so");

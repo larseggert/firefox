@@ -38,7 +38,7 @@
 //!
 //! All backends provide a `notify()` method that wakes a blocked `wait()` from
 //! another thread, used by `nsSocketTransportService::OnDispatchedEvent`. The
-//! mechanism is platform-specific (eventfd, `EVFILT_USER`, pipe, or loopback UDP),
+//! mechanism is platform-specific (eventfd, `EVFILT_USER`, pipe, or AF_UNIX pair),
 //! but all share `AtomicBool` coalescing so that at most one wake syscall occurs
 //! between consecutive `wait()` calls regardless of how many threads call `notify()`.
 //!
@@ -50,7 +50,7 @@
 //! | iOS, FreeBSD, `DragonFly` BSD | kqueue + `EVFILT_USER` | 1 `kevent()` |
 //! | OpenBSD, NetBSD | kqueue + pipe | 1 `kevent()` |
 //! | Linux, Android | epoll with native timeout | 1 `epoll_wait()` |
-//! | Windows | `select()` | 1 syscall |
+//! | Windows | `select()` + AF_UNIX pair | 1 syscall |
 //! | Solaris, other Unix | POSIX `poll()` | 1 `poll()` |
 //!
 //! # Safety
@@ -445,11 +445,55 @@ pub unsafe extern "C" fn necko_poll_len(poll: *const Poller) -> usize {
 /// Wakes the socket thread if it is blocked in `wait()`.
 ///
 /// # Safety
-/// `poll` must be a valid, non-null pointer returned from `poll_new`.
+/// `poll` must be a valid, non-null pointer returned from `poll_new`, or null.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn necko_poll_notify(poll: *const Poller) {
+    if poll.is_null() {
+        return;
+    }
     let poll = unsafe { &*poll };
     _ = poll.notify();
+}
+
+/// Creates an AF_UNIX notify socket pair for passing to a child process.
+///
+/// Called by the parent process before launching the socket process child.
+/// Returns `true` on success; the raw socket handles are written to `read_out`
+/// and `write_out`. The caller is responsible for passing these handles to the
+/// child and closing them after launch.
+///
+/// # Safety
+/// `read_out` and `write_out` must be valid non-null pointers.
+#[cfg_attr(not(windows), allow(unused_variables))]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn necko_poll_create_notify_pair_for_child(
+    read_out: *mut usize,
+    write_out: *mut usize,
+) -> bool {
+    #[cfg(windows)]
+    match windows::create_af_unix_notify_pair() {
+        Ok((read, write)) => {
+            unsafe {
+                *read_out = read;
+                *write_out = write;
+            }
+            true
+        }
+        Err(_) => false,
+    }
+    #[cfg(not(windows))]
+    false
+}
+
+/// Stores an inherited AF_UNIX notify pair for use by [`necko_poll_new`].
+///
+/// Called in the socket process child after inheriting the socket handles
+/// passed by the parent via [`necko_poll_create_notify_pair_for_child`].
+#[cfg_attr(not(windows), allow(unused_variables))]
+#[unsafe(no_mangle)]
+pub extern "C" fn necko_poll_set_pre_notify_pair(read: usize, write: usize) {
+    #[cfg(windows)]
+    windows::set_pre_notify_pair(read, write);
 }
 
 /// Checks and clears the cross-thread notification flag.

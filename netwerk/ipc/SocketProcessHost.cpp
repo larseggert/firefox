@@ -29,6 +29,9 @@
 
 #if defined(XP_WIN)
 #  include "mozilla/WinDllServices.h"
+#  if defined(MOZ_SANDBOX)
+#    include "mozilla/net/NeckoPollGeckoArgs.h"
+#  endif
 #endif
 
 using namespace mozilla::ipc;
@@ -67,6 +70,12 @@ bool SocketProcessHost::Launch() {
 
   geckoargs::ChildProcessArgs extraArgs;
   ProcessChild::AddPlatformBuildID(extraArgs);
+
+#if defined(XP_WIN) && defined(MOZ_SANDBOX)
+  if (!NeckoPollPutHandlesToArgs(extraArgs)) {
+    return false;
+  }
+#endif
 
   SharedPreferenceSerializer prefSerializer;
   if (!prefSerializer.SerializeToSharedMemory(GeckoProcessType_VR,

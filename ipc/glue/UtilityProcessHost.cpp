@@ -26,6 +26,9 @@
 
 #if defined(XP_WIN)
 #  include "mozilla/WinDllServices.h"
+#  if defined(MOZ_SANDBOX)
+#    include "mozilla/net/NeckoPollGeckoArgs.h"
+#  endif
 #endif  // defined(XP_WIN)
 
 #if defined(MOZ_WMF_CDM) && defined(MOZ_SANDBOX) && !defined(MOZ_ASAN)
@@ -95,6 +98,13 @@ bool UtilityProcessHost::Launch(geckoargs::ChildProcessArgs aExtraOpts) {
 
 #ifdef MOZ_WMF_CDM_LPAC_SANDBOX
   EnsureWidevineL1PathForSandbox(aExtraOpts);
+#endif
+
+#if defined(XP_WIN) && defined(MOZ_SANDBOX)
+  if (!mozilla::net::NeckoPollPutHandlesToArgs(aExtraOpts)) {
+    mPrefSerializer = nullptr;
+    return false;
+  }
 #endif
 
   mLaunchPhase = LaunchPhase::Waiting;

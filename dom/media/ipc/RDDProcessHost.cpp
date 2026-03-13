@@ -16,6 +16,10 @@
 #  include "mozilla/Sandbox.h"
 #endif
 
+#if defined(XP_WIN) && defined(MOZ_SANDBOX)
+#  include "mozilla/net/NeckoPollGeckoArgs.h"
+#endif
+
 namespace mozilla {
 
 using namespace ipc;
@@ -52,6 +56,13 @@ bool RDDProcessHost::Launch(geckoargs::ChildProcessArgs aExtraOpts) {
     return false;
   }
   mPrefSerializer->AddSharedPrefCmdLineArgs(*this, aExtraOpts);
+
+#if defined(XP_WIN) && defined(MOZ_SANDBOX)
+  if (!mozilla::net::NeckoPollPutHandlesToArgs(aExtraOpts)) {
+    mPrefSerializer = nullptr;
+    return false;
+  }
+#endif
 
   mLaunchPhase = LaunchPhase::Waiting;
   mLaunchTime = TimeStamp::Now();

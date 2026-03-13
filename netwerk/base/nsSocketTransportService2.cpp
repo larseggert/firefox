@@ -127,7 +127,7 @@ nsSocketTransportService::nsSocketTransportService()
       mMaxTimeForPrClosePref(PR_SecondsToInterval(5)),
       mNetworkLinkChangeBusyWaitPeriod(PR_SecondsToInterval(50)),
       mNetworkLinkChangeBusyWaitTimeout(PR_SecondsToInterval(7)) {
-  MOZ_ASSERT(mPoller, "necko_poll_new failed");
+  MOZ_ASSERT(mPoller || XRE_IsContentProcess(), "necko_poll_new failed");
   NS_ASSERTION(NS_IsMainThread(), "wrong thread");
 
   PR_CallOnce(&gMaxCountInitOnce, DiscoverMaxCount);

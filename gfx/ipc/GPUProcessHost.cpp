@@ -22,6 +22,10 @@
 #  include "mozilla/SandboxSettings.h"
 #endif
 
+#if defined(XP_WIN) && defined(MOZ_SANDBOX)
+#  include "mozilla/net/NeckoPollGeckoArgs.h"
+#endif
+
 namespace mozilla {
 namespace gfx {
 
@@ -65,6 +69,9 @@ bool GPUProcessHost::Launch(geckoargs::ChildProcessArgs aExtraOpts) {
 
 #if defined(XP_WIN) && defined(MOZ_SANDBOX)
   mSandboxLevel = Preferences::GetInt("security.sandbox.gpu.level");
+  if (!mozilla::net::NeckoPollPutHandlesToArgs(aExtraOpts)) {
+    return false;
+  }
 #endif
 
   mLaunchPhase = LaunchPhase::Waiting;

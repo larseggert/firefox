@@ -13,6 +13,7 @@
 #endif
 
 #if defined(XP_WIN) && defined(MOZ_SANDBOX)
+#  include "mozilla/net/NeckoPollGeckoArgs.h"
 #  include "mozilla/sandboxTarget.h"
 #  include "WMF.h"
 #  include "WMFDecoderModule.h"
@@ -106,6 +107,8 @@ bool UtilityProcessImpl::Init(int aArgc, char* aArgv[]) {
   ) {
     UtilityMediaServiceParent::WMFPreloadForSandbox();
   }
+
+  mozilla::net::NeckoPollConsumeHandles(aArgc, aArgv);
 
   // Go for it
   mozilla::SandboxTarget::Instance()->StartSandbox();
