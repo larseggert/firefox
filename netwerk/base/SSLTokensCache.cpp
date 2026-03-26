@@ -312,7 +312,7 @@ nsresult SSLTokensCache::Put(const nsACString& aKey, const uint8_t* aToken,
     }
   }
 
-  auto makeUniqueRecord = [&]() {
+  auto makeUniqueRecord = [&]() MOZ_REQUIRES(sLock) {
     auto rec = MakeUnique<TokenCacheRecord>();
     rec->mKey = aKey;
     rec->mExpirationTime = aExpirationTime;
@@ -335,24 +335,29 @@ nsresult SSLTokensCache::Put(const nsACString& aKey, const uint8_t* aToken,
     return rec;
   };
 
+  // MOZ_NO_THREAD_SAFETY_ANALYSIS: WithEntryHandle is a generic template with
+  // no lock annotations; MOZ_REQUIRES(sLock) on the callback would propagate
+  // the lock requirement to the template's internal call site, which has no
+  // knowledge of sLock and fails to compile. sLock is held by Put().
   TokenCacheEntry* const cacheEntry =
-      gInstance->mTokenCacheRecords.WithEntryHandle(aKey, [&](auto&& entry) {
-        if (!entry) {
-          auto rec = makeUniqueRecord();
-          auto cacheEntry = MakeUnique<TokenCacheEntry>();
-          cacheEntry->AddRecord(std::move(rec), gInstance->mExpirationArray);
-          entry.Insert(std::move(cacheEntry));
-        } else {
-          // To make sure the cache size is synced, we take away the size of
-          // whole entry and add it back later.
-          gInstance->mCacheSize -= entry.Data()->Size();
-          entry.Data()->AddRecord(makeUniqueRecord(),
-                                  gInstance->mExpirationArray);
-        }
+      gInstance->mTokenCacheRecords.WithEntryHandle(
+          aKey, [&](auto&& entry) MOZ_NO_THREAD_SAFETY_ANALYSIS {
+            if (!entry) {
+              auto rec = makeUniqueRecord();
+              auto cacheEntry = MakeUnique<TokenCacheEntry>();
+              cacheEntry->AddRecord(std::move(rec),
+                                    gInstance->mExpirationArray);
+              entry.Insert(std::move(cacheEntry));
+            } else {
+              // To make sure the cache size is synced, we take away the size of
+              // whole entry and add it back later.
+              gInstance->mCacheSize -= entry.Data()->Size();
+              entry.Data()->AddRecord(makeUniqueRecord(),
+                                      gInstance->mExpirationArray);
+            }
 
-        return entry->get();
-      });
-
+            return entry->get();
+          });
   gInstance->mCacheSize += cacheEntry->Size();
 
   gInstance->LogStats();

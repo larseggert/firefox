@@ -41,7 +41,7 @@ class nsServerSocket : public nsASocketHandler, public nsIServerSocket {
  protected:
   virtual ~nsServerSocket();
   PRFileDesc* mFD{nullptr};
-  nsCOMPtr<nsIServerSocketListener> mListener;
+  nsCOMPtr<nsIServerSocketListener> mListener MOZ_GUARDED_BY(mLock);
 
  private:
   void OnMsgClose();
@@ -53,12 +53,29 @@ class nsServerSocket : public nsASocketHandler, public nsIServerSocket {
   nsresult InitWithAddressInternal(const PRNetAddr* aAddr, int32_t aBackLog,
                                    bool aDualStack = false);
 
-  // lock protects access to mListener; so it is not cleared while being used.
-  mozilla::Mutex mLock MOZ_UNANNOTATED{"nsServerSocket.mLock"};
+ protected:
+  // Returns NS_ERROR_IN_PROGRESS if AsyncListen() has already been called.
+  // Subclasses should call this before modifying options that must be set
+  // before listening begins.
+  nsresult FailIfListening() {
+    MutexAutoLock lock(mLock);
+    return mListener ? NS_ERROR_IN_PROGRESS : NS_OK;
+  }
+
+  // Atomically copies and returns the current listener.
+  already_AddRefed<nsIServerSocketListener> CopyListener() {
+    MutexAutoLock lock(mLock);
+    return do_AddRef(mListener.get());
+  }
+
   PRNetAddr mAddr = {.raw = {0, {0}}};
   nsCOMPtr<nsIEventTarget> mListenerTarget;
   bool mAttached{false};
   bool mKeepWhenOffline{false};
+
+ private:
+  // lock protects access to mListener; so it is not cleared while being used.
+  mozilla::Mutex mLock{"nsServerSocket.mLock"};
 };
 
 }  // namespace net

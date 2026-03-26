@@ -95,9 +95,9 @@ class WebSocketChannelChild final : public BaseWebSocketChannel,
   nsCString mReceivedMsgBuffer;
 
   // This variable is protected by mutex.
-  enum { Opened, Closing, Closed } mIPCState;
+  enum { Opened, Closing, Closed } mIPCState MOZ_GUARDED_BY(mMutex);
 
-  mozilla::Mutex mMutex MOZ_UNANNOTATED;
+  mozilla::Mutex mMutex;
 
   friend class StartEvent;
   friend class StopEvent;

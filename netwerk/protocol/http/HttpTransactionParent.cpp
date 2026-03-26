@@ -100,7 +100,10 @@ nsresult HttpTransactionParent::Init(
   }
 
   mEventsink = eventsink;
-  mTargetThread = GetCurrentSerialEventTarget();
+  {
+    MutexAutoLock lock(mEventTargetMutex);
+    mTargetThread = GetCurrentSerialEventTarget();
+  }
   mChannelId = channelId;
   mTransactionObserver = std::move(transactionObserver);
   mCaps = caps;
@@ -228,7 +231,6 @@ NS_IMETHODIMP HttpTransactionParent::RetargetDeliveryTo(
        aEventTarget));
 
   MOZ_ASSERT(NS_IsMainThread(), "Should be called on main thread only");
-  MOZ_ASSERT(!mODATarget);
   NS_ENSURE_ARG(aEventTarget);
 
   if (aEventTarget->IsOnCurrentThread()) {
@@ -252,6 +254,7 @@ NS_IMETHODIMP HttpTransactionParent::RetargetDeliveryTo(
 
   {
     MutexAutoLock lock(mEventTargetMutex);
+    MOZ_ASSERT(!mODATarget);
     mODATarget = aEventTarget;
   }
 

@@ -140,8 +140,11 @@ nsresult nsHttpConnection::Init(
 
   // See explanation for non-strictness of this operation in
   // SetSecurityCallbacks.
-  mCallbacks = new nsMainThreadPtrHolder<nsIInterfaceRequestor>(
-      "nsHttpConnection::mCallbacks", callbacks, false);
+  {
+    MutexAutoLock lock(mCallbacksLock);
+    mCallbacks = new nsMainThreadPtrHolder<nsIInterfaceRequestor>(
+        "nsHttpConnection::mCallbacks", callbacks, false);
+  }
 
   mErrorBeforeConnect = status;
   if (NS_SUCCEEDED(mErrorBeforeConnect)) {
@@ -686,7 +689,12 @@ nsresult nsHttpConnection::AddTransaction(nsAHttpTransaction* httpTransaction,
        mSpdySession ? "SPDY" : "QUIC", needTunnel ? " over tunnel" : ""));
 
   if (mSpdySession) {
-    if (!mSpdySession->AddStream(httpTransaction, priority, mCallbacks)) {
+    nsCOMPtr<nsIInterfaceRequestor> callbacks;
+    {
+      MutexAutoLock lock(mCallbacksLock);
+      callbacks = mCallbacks;
+    }
+    if (!mSpdySession->AddStream(httpTransaction, priority, callbacks)) {
       MOZ_ASSERT(false);  // this cannot happen!
       httpTransaction->Close(NS_ERROR_ABORT);
       return NS_ERROR_FAILURE;
@@ -704,7 +712,12 @@ nsresult nsHttpConnection::CreateTunnelStream(
     return NS_ERROR_UNEXPECTED;
   }
 
-  auto result = mSpdySession->CreateTunnelStream(httpTransaction, mCallbacks,
+  nsCOMPtr<nsIInterfaceRequestor> callbacks;
+  {
+    MutexAutoLock lock(mCallbacksLock);
+    callbacks = mCallbacks;
+  }
+  auto result = mSpdySession->CreateTunnelStream(httpTransaction, callbacks,
                                                  mRtt, aIsExtendedCONNECT);
   if (result.isErr()) {
     return result.unwrapErr();

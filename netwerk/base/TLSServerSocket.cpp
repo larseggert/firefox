@@ -87,7 +87,10 @@ void TLSServerSocket::CreateClientTransport(PRFileDesc* aClientFD,
   // later when they are ready.
   nsCOMPtr<nsIServerSocket> serverSocket =
       do_QueryInterface(NS_ISUPPORTS_CAST(nsITLSServerSocket*, this));
-  mListener->OnSocketAccepted(serverSocket, trans);
+  nsCOMPtr<nsIServerSocketListener> listener = CopyListener();
+  if (listener) {
+    listener->OnSocketAccepted(serverSocket, trans);
+  }
 }
 
 nsresult TLSServerSocket::OnSocketListen() {
@@ -142,7 +145,7 @@ NS_IMETHODIMP
 TLSServerSocket::SetServerCert(nsIX509Cert* aCert) {
   // If AsyncListen was already called (and set mListener), it's too late to set
   // this.
-  if (NS_WARN_IF(mListener)) {
+  if (NS_WARN_IF(NS_FAILED(FailIfListening()))) {
     return NS_ERROR_IN_PROGRESS;
   }
   mServerCert = aCert;
@@ -153,7 +156,7 @@ NS_IMETHODIMP
 TLSServerSocket::SetSessionTickets(bool aEnabled) {
   // If AsyncListen was already called (and set mListener), it's too late to set
   // this.
-  if (NS_WARN_IF(mListener)) {
+  if (NS_WARN_IF(NS_FAILED(FailIfListening()))) {
     return NS_ERROR_IN_PROGRESS;
   }
   SSL_OptionSet(mFD, SSL_ENABLE_SESSION_TICKETS, aEnabled);
@@ -164,7 +167,7 @@ NS_IMETHODIMP
 TLSServerSocket::SetRequestClientCertificate(uint32_t aMode) {
   // If AsyncListen was already called (and set mListener), it's too late to set
   // this.
-  if (NS_WARN_IF(mListener)) {
+  if (NS_WARN_IF(NS_FAILED(FailIfListening()))) {
     return NS_ERROR_IN_PROGRESS;
   }
   SSL_OptionSet(mFD, SSL_REQUEST_CERTIFICATE, aMode != REQUEST_NEVER);
@@ -189,7 +192,7 @@ NS_IMETHODIMP
 TLSServerSocket::SetVersionRange(uint16_t aMinVersion, uint16_t aMaxVersion) {
   // If AsyncListen was already called (and set mListener), it's too late to set
   // this.
-  if (NS_WARN_IF(mListener)) {
+  if (NS_WARN_IF(NS_FAILED(FailIfListening()))) {
     return NS_ERROR_IN_PROGRESS;
   }
 

@@ -734,8 +734,13 @@ already_AddRefed<nsHostRecord> nsHostResolver::FromUnspecEntry(
 
       RefPtr<AddrHostRecord> addrUnspecRec = do_QueryObject(unspecRec);
       MOZ_ASSERT(addrUnspecRec);
-      MOZ_ASSERT(addrUnspecRec->addr_info || addrUnspecRec->negative,
-                 "Entry should be resolved or negative.");
+#ifdef DEBUG
+      {
+        MutexAutoLock assertLock(addrUnspecRec->addr_info_lock);
+        MOZ_ASSERT(addrUnspecRec->addr_info || addrUnspecRec->negative,
+                   "Entry should be resolved or negative.");
+      }
+#endif
 
       LOG(("  Trying AF_UNSPEC entry for host [%s] af: %s.\n",
            PromiseFlatCString(aHost).get(),
@@ -750,7 +755,7 @@ already_AddRefed<nsHostRecord> nsHostResolver::FromUnspecEntry(
       if (unspecRec->negative) {
         aRec->negative = unspecRec->negative;
         aRec->CopyExpirationTimesAndFlagsFrom(unspecRec);
-      } else if (addrUnspecRec->addr_info) {
+      } else {
         MutexAutoLock lock(addrUnspecRec->addr_info_lock);
         if (addrUnspecRec->addr_info) {
           // Search for any valid address in the AF_UNSPEC entry
@@ -1295,7 +1300,6 @@ bool nsHostResolver::GetHostToLookup(nsHostRecord** result) {
 
 void nsHostResolver::PrepareRecordExpirationAddrRecord(
     AddrHostRecord* rec) const {
-  // NOTE: rec->addr_info_lock is already held by parent
   MOZ_ASSERT(((bool)rec->addr_info) != rec->negative);
   mQueue.mLock.AssertCurrentThreadOwns();
   if (!rec->addr_info) {
@@ -1549,11 +1553,15 @@ nsHostResolver::LookupStatus nsHostResolver::CompleteLookupLocked(
   // previous lookup result expired and we're reresolving it or we get
   // a late second TRR response.
   if (!mShutdown) {
+    // Use a raw pointer so MOZ_REQUIRES(rec->addr_info_lock) on
+    // PrepareRecordExpirationAddrRecord can be verified by the analyzer.
+    auto* rawPtr = addrRec.get();
+    AddrHostRecord* addrRec = rawPtr;
     MutexAutoLock lock(addrRec->addr_info_lock);
     RefPtr<AddrInfo> old_addr_info;
     bool isDifferentRRSet = different_rrset(addrRec->addr_info, newRRSet);
     if (isDifferentRRSet) {
-      LOG(("nsHostResolver record %p new gencnt\n", addrRec.get()));
+      LOG(("nsHostResolver record %p new gencnt\n", addrRec));
       old_addr_info = addrRec->addr_info;
       addrRec->addr_info = std::move(newRRSet);
       addrRec->addr_info_gencnt++;
@@ -1856,7 +1864,11 @@ void nsHostResolver::ThreadFunc() {
       if (!mShutdown) {
         TimeDuration elapsed = TimeStamp::Now() - startTime;
         if (NS_SUCCEEDED(status)) {
+          // Safe: this is the resolver worker thread, the only thread
+          // modifying this record between GetAddrInfo() and CompleteLookup().
+          MOZ_PUSH_IGNORE_THREAD_SAFETY
           if (!addrRec->addr_info_gencnt) {
+            MOZ_POP_THREAD_SAFETY
             // Time for initial lookup.
             glean::networking::dns_lookup_time.AccumulateRawDuration(elapsed);
           } else if (!getTtl) {
@@ -1935,15 +1947,17 @@ void nsHostResolver::GetDNSCacheEntries(nsTArray<DNSCacheEntries>* args) {
                                  rec->pb, rec->mTrrServer.get());
 
     RefPtr<AddrHostRecord> addrRec = do_QueryObject(rec);
-    if (addrRec && addrRec->addr_info) {
+    if (addrRec) {
       MutexAutoLock lock(addrRec->addr_info_lock);
-      for (const auto& addr : addrRec->addr_info->Addresses()) {
-        char buf[kIPv6CStrBufSize];
-        if (addr.ToStringBuffer(buf, sizeof(buf))) {
-          info.hostaddr.AppendElement(buf);
+      if (addrRec->addr_info) {
+        for (const auto& addr : addrRec->addr_info->Addresses()) {
+          char buf[kIPv6CStrBufSize];
+          if (addr.ToStringBuffer(buf, sizeof(buf))) {
+            info.hostaddr.AppendElement(buf);
+          }
         }
+        info.TRR = addrRec->addr_info->IsTRR();
       }
-      info.TRR = addrRec->addr_info->IsTRR();
     }
 
     args->AppendElement(std::move(info));

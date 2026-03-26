@@ -287,10 +287,10 @@ class AddrHostRecord final : public nsHostRecord {
    * the other threads just read it.  therefore the resolver worker
    * thread doesn't need to lock when reading |addr_info|.
    */
-  Mutex addr_info_lock MOZ_UNANNOTATED{"AddrHostRecord.addr_info_lock"};
+  mutable Mutex addr_info_lock{"AddrHostRecord.addr_info_lock"};
   // generation count of |addr_info|
-  int addr_info_gencnt = 0;
-  RefPtr<mozilla::net::AddrInfo> addr_info;
+  int addr_info_gencnt MOZ_GUARDED_BY(addr_info_lock) = 0;
+  RefPtr<mozilla::net::AddrInfo> addr_info MOZ_GUARDED_BY(addr_info_lock);
   mozilla::UniquePtr<mozilla::net::NetAddr> addr;
 
   // hold addr_info_lock when calling the blocklist functions
@@ -315,10 +315,13 @@ class AddrHostRecord final : public nsHostRecord {
   explicit AddrHostRecord(const nsHostKey& key);
   ~AddrHostRecord();
 
-  // Checks if the record is usable (not expired and has a value)
-  bool HasUsableResultInternal(
-      const mozilla::TimeStamp& now,
-      nsIDNSService::DNSFlags queryFlags) const override;
+  // Checks if the record is usable (not expired and has a value).
+  // addr_info is only read as a pointer value (null check), never dereferenced,
+  // so the lockless read is safe. Callers that access addr_info contents must
+  // hold addr_info_lock.
+  bool HasUsableResultInternal(const mozilla::TimeStamp& now,
+                               nsIDNSService::DNSFlags queryFlags) const
+      MOZ_NO_THREAD_SAFETY_ANALYSIS override;
 
   bool RemoveOrRefresh(bool aTrrToo);  // Mark records currently being resolved
                                        // as needed to resolve again.
@@ -345,7 +348,7 @@ class AddrHostRecord final : public nsHostRecord {
   // a list of addresses associated with this record that have been reported
   // as unusable. the list is kept as a set of strings to make it independent
   // of gencnt.
-  nsTArray<nsCString> mUnusableItems;
+  nsTArray<nsCString> mUnusableItems MOZ_GUARDED_BY(addr_info_lock);
 };
 
 // 77b786a7-04be-44f2-987c-ab8aa96676e0

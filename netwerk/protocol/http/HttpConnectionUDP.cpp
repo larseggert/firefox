@@ -215,10 +215,11 @@ nsresult HttpConnectionUDP::Init(nsHttpConnectionInfo* info,
   mErrorBeforeConnect = status;
   mAlpnToken = mConnInfo->GetNPNToken();
   if (NS_FAILED(mErrorBeforeConnect)) {
-    // See explanation for non-strictness of this operation in
-    // SetSecurityCallbacks.
+    // No lock needed: caller holds the only reference during Init().
+    MOZ_PUSH_IGNORE_THREAD_SAFETY
     mCallbacks = new nsMainThreadPtrHolder<nsIInterfaceRequestor>(
         "HttpConnectionUDP::mCallbacks", callbacks, false);
+    MOZ_POP_THREAD_SAFETY
     SetCloseReason(ToCloseReason(mErrorBeforeConnect));
     return mErrorBeforeConnect;
   }
@@ -364,10 +365,11 @@ nsresult HttpConnectionUDP::InitCommon(nsIUDPSocket* aSocket,
   }
 
   ChangeConnectionState(ConnectionState::INITED);
-  // See explanation for non-strictness of this operation in
-  // SetSecurityCallbacks.
+  // No lock needed: caller holds the only reference during Init().
+  MOZ_PUSH_IGNORE_THREAD_SAFETY
   mCallbacks = new nsMainThreadPtrHolder<nsIInterfaceRequestor>(
       "HttpConnectionUDP::mCallbacks", callbacks, false);
+  MOZ_POP_THREAD_SAFETY
 
   // Call SyncListen at the end of this function. This call will actually
   // attach the sockte to SocketTransportService.
@@ -491,10 +493,17 @@ nsresult HttpConnectionUDP::Activate(nsAHttpTransaction* trans, uint32_t caps,
     return NS_OK;
   }
 
-  if (!mHttp3Session->AddStream(trans, pri, mCallbacks)) {
-    MOZ_ASSERT(false);  // this cannot happen!
-    trans->Close(NS_ERROR_ABORT);
-    return NS_ERROR_FAILURE;
+  {
+    nsCOMPtr<nsIInterfaceRequestor> callbacks;
+    {
+      MutexAutoLock lock(mCallbacksLock);
+      callbacks = mCallbacks;
+    }
+    if (!mHttp3Session->AddStream(trans, pri, callbacks)) {
+      MOZ_ASSERT(false);  // this cannot happen!
+      trans->Close(NS_ERROR_ABORT);
+      return NS_ERROR_FAILURE;
+    }
   }
 
   if (mHasFirstHttpTransaction && mExperienced) {
@@ -578,8 +587,13 @@ nsresult HttpConnectionUDP::CreateTunnelStream(
   if (!isHttp3) {
     RefPtr<Http3ConnectTransaction> trans = new Http3ConnectTransaction(
         httpTransaction->Caps(), httpTransaction->ConnectionInfo());
+    nsCOMPtr<nsIInterfaceRequestor> callbacks;
+    {
+      MutexAutoLock lock(mCallbacksLock);
+      callbacks = mCallbacks;
+    }
     RefPtr<nsHttpConnection> conn =
-        mHttp3Session->CreateTunnelStream(trans, mCallbacks, mRtt, false);
+        mHttp3Session->CreateTunnelStream(trans, callbacks, mRtt, false);
     RefPtr<ConnectionHandle> handle = new ConnectionHandle(conn);
     trans->SetConnection(handle);
 
@@ -595,8 +609,13 @@ nsresult HttpConnectionUDP::CreateTunnelStream(
 
   RefPtr<ConnectUDPTransaction> trans =
       new ConnectUDPTransaction(httpTransaction, proxyConnectStream);
+  nsCOMPtr<nsIInterfaceRequestor> callbacks2;
+  {
+    MutexAutoLock lock(mCallbacksLock);
+    callbacks2 = mCallbacks;
+  }
   RefPtr<HttpConnectionUDP> conn =
-      mHttp3Session->CreateTunnelStream(trans, mCallbacks);
+      mHttp3Session->CreateTunnelStream(trans, callbacks2);
   RefPtr<ConnectionHandle> handle = new ConnectionHandle(conn);
   trans->SetConnection(handle);
 
@@ -770,7 +789,12 @@ void HttpConnectionUDP::HandleTunnelResponse(
 
     for (const auto& trans : mQueuedConnectUdpTransaction) {
       LOG(("add trans=%p", trans.get()));
-      if (!mHttp3Session->AddStream(trans, trans->Priority(), mCallbacks)) {
+      nsCOMPtr<nsIInterfaceRequestor> callbacks;
+      {
+        MutexAutoLock lock(mCallbacksLock);
+        callbacks = mCallbacks;
+      }
+      if (!mHttp3Session->AddStream(trans, trans->Priority(), callbacks)) {
         MOZ_ASSERT(false);  // this cannot happen!
         trans->Close(NS_ERROR_ABORT);
       }

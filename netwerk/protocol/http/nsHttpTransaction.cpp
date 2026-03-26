@@ -240,16 +240,18 @@ nsresult nsHttpTransaction::Init(
   if (NS_FAILED(rv)) return rv;
 
   mConnInfo = cinfo;
+  // No lock needed: the transaction is initialized on the main thread only,
+  // so there is no possibility of a race at this point.
+  MOZ_PUSH_IGNORE_THREAD_SAFETY
   mFinalizedConnInfo = cinfo;
   mCallbacks = callbacks;
+  mEarlyHintObserver = do_QueryInterface(eventsink);
+  MOZ_POP_THREAD_SAFETY
   mConsumerTarget = target;
   mCaps = caps;
 
   mParentIPAddressSpace = aParentIpAddressSpace;
   mLnaPermissionStatus = aLnaPermissionStatus;
-  // eventsink is a nsHttpChannel when we expect "103 Early Hints" responses.
-  // We expect it in document requests and not e.g. in TRR requests.
-  mEarlyHintObserver = do_QueryInterface(eventsink);
 
   if (requestHead->IsHead()) {
     mNoContent = true;
@@ -383,7 +385,10 @@ nsresult nsHttpTransaction::Init(
     RefPtr<WebTransportSessionEventListener> listener =
         httpChannel->GetWebTransportSessionEventListener();
     if (listener) {
+      // No lock needed: initialized on the main thread only.
+      MOZ_PUSH_IGNORE_THREAD_SAFETY
       mWebTransportSessionEventListener = std::move(listener);
+      MOZ_POP_THREAD_SAFETY
     }
     nsCOMPtr<nsIURI> uri;
     if (NS_SUCCEEDED(httpChannel->GetURI(getter_AddRefs(uri)))) {
@@ -3394,8 +3399,13 @@ nsresult nsHttpTransaction::OnHTTPSRRAvailable(
   // fallback.
   bool needFastFallback = newInfo->IsHttp3() && !newInfo->GetWebTransport() &&
                           !newInfo->IsHttp3ProxyConnection();
-  bool foundInPendingQ = gHttpHandler->ConnMgr()->RemoveTransFromConnEntry(
-      this, mHashKeyOfConnectionEntry);
+  nsAutoCString hashKey;
+  {
+    MutexAutoLock lock(mLock);
+    hashKey = mHashKeyOfConnectionEntry;
+  }
+  bool foundInPendingQ =
+      gHttpHandler->ConnMgr()->RemoveTransFromConnEntry(this, hashKey);
 
   // Adopt the new connection info, so this transaction will be added into the
   // new connection entry.
@@ -3641,8 +3651,13 @@ void nsHttpTransaction::HandleFallback(
   LOG(("nsHttpTransaction %p HandleFallback to connInfo[%s]", this,
        aFallbackConnInfo->HashKey().get()));
 
-  bool foundInPendingQ = gHttpHandler->ConnMgr()->RemoveTransFromConnEntry(
-      this, mHashKeyOfConnectionEntry);
+  nsAutoCString hashKey;
+  {
+    MutexAutoLock lock(mLock);
+    hashKey = mHashKeyOfConnectionEntry;
+  }
+  bool foundInPendingQ =
+      gHttpHandler->ConnMgr()->RemoveTransFromConnEntry(this, hashKey);
   if (!foundInPendingQ) {
     MOZ_ASSERT(false, "transaction not in entry");
     return;
@@ -3686,13 +3701,18 @@ nsHttpTransaction::GetName(nsACString& aName) {
 bool nsHttpTransaction::GetSupportsHTTP3() { return mSupportsHTTP3; }
 
 void nsHttpTransaction::CollectTelemetryForUploads() {
+  TimingStruct timings;
+  {
+    MutexAutoLock lock(mLock);
+    timings = mTimings;
+  }
   if ((mRequestSize < TELEMETRY_REQUEST_SIZE_1M) ||
-      mTimings.requestStart.IsNull() || mTimings.responseStart.IsNull()) {
+      timings.requestStart.IsNull() || timings.responseStart.IsNull()) {
     return;
   }
 
   nsAutoCString protocolVersion(nsHttp::GetProtocolVersion(mHttpVersion));
-  TimeDuration sendTime = mTimings.responseStart - mTimings.requestStart;
+  TimeDuration sendTime = timings.responseStart - timings.requestStart;
   double megabits = static_cast<double>(mRequestSize) * 8.0 / 1000000.0;
   uint32_t mpbs = static_cast<uint32_t>(megabits / sendTime.ToSeconds());
 

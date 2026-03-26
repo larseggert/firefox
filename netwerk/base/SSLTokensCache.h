@@ -60,21 +60,24 @@ class SSLTokensCache : public nsIMemoryReporter {
   SSLTokensCache();
   virtual ~SSLTokensCache();
 
-  nsresult RemoveLocked(const nsACString& aKey, uint64_t aId);
-  nsresult RemovAllLocked(const nsACString& aKey);
+  nsresult RemoveLocked(const nsACString& aKey, uint64_t aId)
+      MOZ_REQUIRES(sLock);
+  nsresult RemovAllLocked(const nsACString& aKey) MOZ_REQUIRES(sLock);
   nsresult GetLocked(const nsACString& aKey, nsTArray<uint8_t>& aToken,
-                     SessionCacheInfo& aResult, uint64_t* aTokenId);
+                     SessionCacheInfo& aResult, uint64_t* aTokenId)
+      MOZ_REQUIRES(sLock);
 
-  void EvictIfNecessary();
-  void LogStats();
+  void EvictIfNecessary() MOZ_REQUIRES(sLock);
+  void LogStats() MOZ_REQUIRES(sLock);
 
-  size_t SizeOfIncludingThis(mozilla::MallocSizeOf mallocSizeOf) const;
+  size_t SizeOfIncludingThis(mozilla::MallocSizeOf mallocSizeOf) const
+      MOZ_REQUIRES(sLock);
 
-  static mozilla::StaticRefPtr<SSLTokensCache> gInstance;
-  static StaticMutex sLock MOZ_UNANNOTATED;
-  static uint64_t sRecordId;
+  static mozilla::StaticRefPtr<SSLTokensCache> gInstance MOZ_GUARDED_BY(sLock);
+  static StaticMutex sLock;
+  static uint64_t sRecordId MOZ_GUARDED_BY(sLock);
 
-  uint32_t mCacheSize{0};  // Actual cache size in bytes
+  uint32_t mCacheSize MOZ_GUARDED_BY(sLock){0};  // Actual cache size in bytes
 
   class TokenCacheRecord {
    public:
@@ -111,10 +114,11 @@ class SSLTokensCache : public nsIMemoryReporter {
     nsTArray<UniquePtr<TokenCacheRecord>> mRecords;
   };
 
-  void OnRecordDestroyed(TokenCacheRecord* aRec);
+  void OnRecordDestroyed(TokenCacheRecord* aRec) MOZ_REQUIRES(sLock);
 
-  nsClassHashtable<nsCStringHashKey, TokenCacheEntry> mTokenCacheRecords;
-  nsTArray<TokenCacheRecord*> mExpirationArray;
+  nsClassHashtable<nsCStringHashKey, TokenCacheEntry> mTokenCacheRecords
+      MOZ_GUARDED_BY(sLock);
+  nsTArray<TokenCacheRecord*> mExpirationArray MOZ_GUARDED_BY(sLock);
 };
 
 }  // namespace net

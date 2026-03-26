@@ -203,7 +203,12 @@ class nsGIOInputStream final : public nsIInputStream {
   bool mDirOpen{false};
   MountOperationResult mMountRes =
       MountOperationResult::MOUNT_OPERATION_SUCCESS;
-  mozilla::Monitor mMonitorMountInProgress MOZ_UNANNOTATED{
+  // MOZ_ANNOTATED: this monitor is a pure condition variable for signaling
+  // between MountVolume() and SetMountResult(); no fields are guarded by it
+  // (mMountRes and mMountErrorCode have complex pre/post-lock access patterns).
+  // With --enable-clang-plugin, MOZ_ANNOTATED suppresses the "unannotated
+  // mutex" diagnostic; it is a no-op otherwise.
+  mozilla::Monitor mMonitorMountInProgress MOZ_ANNOTATED{
       "GIOInputStream::MountFinished"};
   gint mMountErrorCode{};
 };
