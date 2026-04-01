@@ -58,6 +58,7 @@ pub fn current_thread_is_being_profiled_for_markers() -> bool {
     current_thread_is_being_profiled(ThreadProfilingFeatures::Markers)
         || is_etw_collecting_markers()
         || is_perfetto_tracing()
+        || is_usdt_enabled()
 }
 
 /// Returns the value of atomic `RacyFeatures::sActiveAndFeatures` from the C++ side.
@@ -97,6 +98,16 @@ fn is_perfetto_tracing() -> bool {
 
     let active_and_features = get_active_and_features();
     (active_and_features & detail::RacyFeatures_PerfettoTracingEnabled) != 0
+}
+
+/// This implementation must be kept in sync with
+/// `mozilla::profiler::detail::RacyFeatures::IsUSDTEnabled`.
+#[inline]
+fn is_usdt_enabled() -> bool {
+    use crate::gecko_bindings::structs::mozilla::profiler::detail;
+
+    let active_and_features = get_active_and_features();
+    (active_and_features & detail::RacyFeatures_USDTEnabled) != 0
 }
 
 /// This implementation must be kept in sync with

@@ -39,6 +39,7 @@
 #include "nsString.h"
 #include "nsFmtString.h"
 #include "ETWTools.h"
+#include "mozilla/USDTTools.h"
 
 class nsIDocShell;
 
@@ -165,6 +166,13 @@ mozilla::ProfileBufferBlockIndex profiler_add_marker_impl(
   if (profiler_is_perfetto_tracing()) {
     EmitPerfettoTrackEvent(aName, aCategory, aOptions, aMarkerType,
                            aPayloadArguments...);
+  }
+#endif
+
+#ifdef MOZ_USDT
+  if (profiler_is_usdt_enabled()) {
+    EmitUSDTMarkerProbe(aName, aCategory, aOptions, aMarkerType,
+                        aPayloadArguments...);
   }
 #endif
 

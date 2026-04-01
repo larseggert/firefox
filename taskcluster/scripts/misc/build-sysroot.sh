@@ -88,6 +88,7 @@ packages="
   libpango1.0-dev
   libpulse-dev
   libx11-xcb-dev
+  systemtap-sdt-dev
   libxt-dev
   valgrind
   $*

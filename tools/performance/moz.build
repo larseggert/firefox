@@ -8,6 +8,7 @@ EXPORTS.mozilla += [
     "PageloadEvent.h",
     "Perfetto.h",
     "PerfStats.h",
+    "USDTTools.h",
 ]
 
 DEFINES["MOZ_APP_VERSION_DISPLAY"] = CONFIG["MOZ_APP_VERSION_DISPLAY"]
@@ -17,5 +18,8 @@ include("/ipc/chromium/chromium-config.mozbuild")
 if CONFIG["MOZ_PERFETTO"]:
     UNIFIED_SOURCES += ["Perfetto.cpp"]
     DIRS += ["/third_party/perfetto/"]
+
+if CONFIG["MOZ_USDT"]:
+    UNIFIED_SOURCES += ["USDTTools.cpp"]
 
 FINAL_LIBRARY = "xul"

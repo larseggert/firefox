@@ -256,6 +256,9 @@ class RacyFeatures {
     sActiveAndFeatures &= ~PerfettoTracingEnabled;
   }
 
+  static void SetUSDTEnabled() { sActiveAndFeatures |= USDTEnabled; }
+  static void SetUSDTDisabled() { sActiveAndFeatures &= ~USDTEnabled; }
+
   static void SetInactive() { sActiveAndFeatures = 0; }
 
   static void SetPaused() { sActiveAndFeatures |= Paused; }
@@ -318,7 +321,7 @@ class RacyFeatures {
   [[nodiscard]] static bool IsCollectingMarkers() {
     uint32_t af = sActiveAndFeatures;  // copy it first
     return ((af & Active) && !(af & Paused)) || (af & ETWCollectionEnabled) ||
-           (af & PerfettoTracingEnabled);
+           (af & PerfettoTracingEnabled) || (af & USDTEnabled);
   }
 
   // This implementation must be kept in sync with
@@ -335,12 +338,20 @@ class RacyFeatures {
     return (af & PerfettoTracingEnabled);
   }
 
+  // This implementation must be kept in sync with
+  // `gecko_profiler::is_usdt_enabled` in the Profiler Rust API.
+  [[nodiscard]] static bool IsUSDTEnabled() {
+    uint32_t af = sActiveAndFeatures;  // copy it first
+    return (af & USDTEnabled);
+  }
+
  private:
   static constexpr uint32_t Active = 1u << 31;
   static constexpr uint32_t Paused = 1u << 30;
   static constexpr uint32_t SamplingPaused = 1u << 29;
   static constexpr uint32_t ETWCollectionEnabled = 1u << 28;
   static constexpr uint32_t PerfettoTracingEnabled = 1u << 27;
+  static constexpr uint32_t USDTEnabled = 1u << 26;
 
 // Ensure Active/Paused don't overlap with any of the feature bits.
 #define NO_OVERLAP(n_, str_, Name_, desc_)                \
@@ -401,6 +412,10 @@ class RacyFeatures {
 
 [[nodiscard]] inline bool profiler_is_perfetto_tracing() {
   return mozilla::profiler::detail::RacyFeatures::IsPerfettoTracing();
+}
+
+[[nodiscard]] inline bool profiler_is_usdt_enabled() {
+  return mozilla::profiler::detail::RacyFeatures::IsUSDTEnabled();
 }
 
 // Is the profiler active and paused? Returns false if the profiler is inactive.

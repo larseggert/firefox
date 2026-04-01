@@ -178,6 +178,18 @@ set_config("MOZ_FOLD_LIBS", fold_libs)
 set_config("MOZ_PERFETTO", True, when=target_is_android & milestone.is_nightly)
 set_define("MOZ_PERFETTO", True, when=target_is_android & milestone.is_nightly)
 
+# USDT probes for Linux eBPF tracing (bpftrace, bcc, perf).
+# Requires sys/sdt.h (systemtap-sdt-dev package).
+@depends(target)
+def target_is_desktop_linux(target):
+    if target.kernel == "Linux" and target.os == "GNU":
+        return True
+
+have_sdt_h = check_header("sys/sdt.h", when=target_is_desktop_linux)
+
+set_config("MOZ_USDT", True, when=have_sdt_h)
+set_define("MOZ_USDT", True, when=have_sdt_h)
+
 
 # Whether code to parse ELF binaries should be compiled for the Gecko profiler
 # (for symbol table dumping).

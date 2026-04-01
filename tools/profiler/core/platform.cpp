@@ -49,6 +49,7 @@
 #include "mozilla/Maybe.h"
 #include "mozilla/MozPromise.h"
 #include "mozilla/Perfetto.h"
+#include "mozilla/USDTTools.h"
 #include "nsID.h"
 #include "nsIDUtils.h"
 #include "nsString.h"
@@ -6029,6 +6030,7 @@ void profiler_init(void* aStackTop) {
   VTUNE_INIT();
   ETW::Init();
   InitPerfetto();
+  InitUSDT();
 #if defined(MOZ_REPLACE_MALLOC) && defined(MOZ_PROFILER_MEMORY)
   mozilla::profiler::memory_hooks_tls_init();
 #endif
