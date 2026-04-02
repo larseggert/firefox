@@ -26,6 +26,8 @@
 #include "nsNSSCertificate.h"
 #include "nsNSSComponent.h"
 #include "nsIOService.h"
+#include "mozilla/net/neqo_glue_ffi_generated.h"
+#include "nsSocketTransportService2.h"
 #include "nsHttpHandler.h"
 #include "nsHttpConnectionInfo.h"
 #include "secerr.h"
@@ -333,6 +335,25 @@ mozilla::ipc::IPCResult SocketProcessParent::RecvFOGData(ByteBuf&& aBuf) {
   glean::FOGData(std::move(aBuf));
   return IPC_OK();
 }
+
+#if defined(XP_MACOSX) || defined(XP_IOS)
+mozilla::ipc::IPCResult SocketProcessParent::RecvAppleFastDatapathProbeResult(
+    const bool& aAvailable) {
+  if (mHost) {
+    mHost->mAppleFastDatapathProbeResultReceived = true;
+  }
+  // When neqo runs in the parent (socket process not used for I/O), enable
+  // the fast path here so parent-side QUIC sockets benefit from it too.
+  if (aAvailable && !nsIOService::UseSocketProcess() &&
+      gSocketTransportService) {
+    gSocketTransportService->Dispatch(
+        NS_NewRunnableFunction("net::EnableAppleFastPath",
+                               []() { neqo_glue_enable_apple_fast_path(); }),
+        NS_DISPATCH_NORMAL);
+  }
+  return IPC_OK();
+}
+#endif
 
 mozilla::ipc::IPCResult SocketProcessParent::RecvGeckoTraceExport(
     ByteBuf&& aBuf) {
