@@ -14,4 +14,4 @@ generic-tests = []
 alloc = []
 
 [dependencies]
-rand = { version = "0.8", default-features = false }
+rand = { version = "0.10", default-features = false }
