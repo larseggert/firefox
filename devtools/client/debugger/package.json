@@ -33,7 +33,7 @@
   ],
   "author": "Jason Laster <jlaster@mozilla.com>",
   "devDependencies": {
-    "@babel/core": "^7.28.3",
+    "@babel/core": "^7.29.6",
     "@babel/parser": "^7.28.3",
     "@babel/types": "^7.28.2",
     "@babel/plugin-syntax-import-attributes": "^7.27.1",
