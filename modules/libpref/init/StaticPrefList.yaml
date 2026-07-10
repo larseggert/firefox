@@ -17148,6 +17148,13 @@
   value: @IS_NIGHTLY_BUILD@
   mirror: always
 
+# When true, the socket transport service uses legacy PR_Poll for polling.
+# When false, it uses an in-tree polling backend. Read once at startup.
+- name: network.sts.use_nspr_for_polling
+  type: bool
+  value: @IS_NOT_NIGHTLY_BUILD@
+  mirror: once
+
 #---------------------------------------------------------------------------
 # Prefs starting with "nglayout."
 #---------------------------------------------------------------------------

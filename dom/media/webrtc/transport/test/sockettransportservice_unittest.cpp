@@ -20,21 +20,21 @@
 using namespace mozilla;
 
 namespace {
+class SocketHandler;
+
 class SocketTransportServiceTest : public MtransportTest {
  public:
   SocketTransportServiceTest()
       : received_(0),
         readpipe_(nullptr),
         writepipe_(nullptr),
-        registered_(false) {}
+        registered_(false),
+        detached_(false) {}
 
-  ~SocketTransportServiceTest() {
-    if (readpipe_) PR_Close(readpipe_);
-    if (writepipe_) PR_Close(writepipe_);
-  }
-
-  void SetUp();
+  void SetUp() override;
+  void TearDown() override;
   void RegisterHandler();
+  void UnregisterHandler();
   void SendEvent();
   void SendPacket();
 
@@ -42,15 +42,29 @@ class SocketTransportServiceTest : public MtransportTest {
 
   void ReceiveEvent() { ++received_; }
 
+  // Called from SocketHandler::OnSocketDetached(), on the STS thread.
+  void NotifyDetached() { detached_ = true; }
+
   size_t Received() { return received_; }
 
  private:
   nsCOMPtr<nsISocketTransportService> stservice_;
   nsCOMPtr<nsIEventTarget> target_;
+  // Non-owning: AttachSocket() (nsASocketHandlerPtr, a raw-pointer IDL
+  // param) doesn't take ownership from the caller, and the STS's own
+  // internal reference is the only one that should exist -- SocketHandler
+  // uses plain (non-atomic, single-owning-thread-checked) NS_DECL_ISUPPORTS,
+  // so a second, test-fixture-owned RefPtr here would trip its owning-
+  // thread assertion when this fixture (and thus that RefPtr) is destroyed
+  // on the gtest runner thread rather than the STS thread. Only ever
+  // dereferenced from UnregisterHandler(), always before the STS's own
+  // reference is released.
+  SocketHandler* handler_ = nullptr;
   std::atomic<size_t> received_;
   PRFileDesc* readpipe_;
   PRFileDesc* writepipe_;
   std::atomic<bool> registered_;
+  std::atomic<bool> detached_;
 };
 
 // Received an event.
@@ -81,6 +95,20 @@ class RegisterEvent : public Runnable {
   SocketTransportServiceTest* test_;
 };
 
+// Unregister our listener from the socket.
+class UnregisterEvent : public Runnable {
+ public:
+  explicit UnregisterEvent(SocketTransportServiceTest* test)
+      : Runnable("UnregisterEvent"), test_(test) {}
+
+  NS_IMETHOD Run() override {
+    test_->UnregisterHandler();
+    return NS_OK;
+  }
+
+  SocketTransportServiceTest* test_;
+};
+
 class SocketHandler : public nsASocketHandler {
  public:
   explicit SocketHandler(SocketTransportServiceTest* test) : test_(test) {}
@@ -96,7 +124,15 @@ class SocketHandler : public nsASocketHandler {
     }
   }
 
-  void OnSocketDetached(PRFileDesc* fd) override {}
+  // Setting mCondition to a failure code causes the socket transport
+  // service's next poll iteration to detach us -- there is no direct public
+  // "detach" call. Used from UnregisterHandler() so the test's pipes are no
+  // longer registered by the time they're closed in TearDown(); leaving them
+  // registered would leak the registration, and the pipe fd numbers get
+  // reused by later tests' PR_CreatePipe() calls.
+  void RequestClose() { mCondition = NS_ERROR_ABORT; }
+
+  void OnSocketDetached(PRFileDesc* fd) override { test_->NotifyDetached(); }
 
   void IsLocal(bool* aIsLocal) override {
     // TODO(jesup): better check? Does it matter? (likely no)
@@ -141,13 +177,41 @@ void SocketTransportServiceTest::SetUp() {
   ASSERT_TRUE_WAIT(registered_, 10000);
 }
 
+void SocketTransportServiceTest::TearDown() {
+  // Unregister before closing the pipes below: leaving the read side
+  // registered with the socket transport service and then closing it out
+  // from under that registration would leak it there, and the fd number
+  // gets reused by later tests' PR_CreatePipe() calls, which will crash
+  // when the poller backend finds it still registered.
+  nsresult rv = target_->Dispatch(new UnregisterEvent(this), NS_DISPATCH_NORMAL);
+  ASSERT_TRUE(NS_SUCCEEDED(rv));
+  ASSERT_TRUE_WAIT(detached_, 10000);
+
+  if (readpipe_) PR_Close(readpipe_);
+  if (writepipe_) PR_Close(writepipe_);
+
+  MtransportTest::TearDown();
+}
+
 void SocketTransportServiceTest::RegisterHandler() {
   nsresult rv;
 
-  rv = stservice_->AttachSocket(readpipe_, new SocketHandler(this));
+  RefPtr<SocketHandler> handler = new SocketHandler(this);
+  rv = stservice_->AttachSocket(readpipe_, handler);
   ASSERT_TRUE(NS_SUCCEEDED(rv));
+  handler_ = handler.get();
 
   registered_ = true;
+}
+
+void SocketTransportServiceTest::UnregisterHandler() {
+  if (handler_) {
+    handler_->RequestClose();
+  } else {
+    // Never registered (SetUp() failed before getting here); nothing to
+    // detach.
+    detached_ = true;
+  }
 }
 
 void SocketTransportServiceTest::SendEvent() {

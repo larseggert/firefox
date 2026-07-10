@@ -6,6 +6,7 @@
 #define nsSocketTransportService2_h_
 
 #include "PollableEvent.h"
+#include "Poller.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/LinkedList.h"
 #include "mozilla/Logging.h"
@@ -258,14 +259,46 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   // event cannot be created).
   //-------------------------------------------------------------------------
 
+  // TODO: remove once network.sts.use_nspr_for_polling is retired.
   nsTArray<PRPollDesc> mPollList;
+
+  // New polling backend. Non-null when network.sts.use_nspr_for_polling is
+  // false (Nightly default). Null means the PR_Poll path is used.
+  // Set before the socket thread starts; read-only from the STS thread.
+  mozilla::UniquePtr<PollerBackend> mPollerBackend;
+  // Performance stats for the active backend, accumulated on the STS thread.
+  // Printed to stderr at Shutdown().
+  PollerStats mPollerStats;
+  // Native fd mPollableEvent is currently registered under with
+  // mPollerBackend, or -1 if not registered. Socket-thread-only; unlike
+  // mPollableEvent itself this needs no lock, since it is never read or
+  // written off the socket thread.
+  PollerFd mPollableEventNativeFd = -1;
+  // Per-iteration scratch for DoPollIterationWithBackend(), recording each
+  // mActiveList[i]'s WalkSocketLayers() direction-mapping so UnmapReadyFlags()
+  // can be applied once that socket's OS readiness is known. Never persisted
+  // across iterations. A member (not a local) purely to reuse its storage.
+  nsTArray<int16_t> mLayerWalkScratch;
 
   PRIntervalTime PollTimeout(
       PRIntervalTime now);  // computes ideal poll timeout
+  // TODO: remove once network.sts.use_nspr_for_polling is retired.
   nsresult DoPollIteration();
-  // perfoms a single poll iteration
+  // performs a single poll iteration using PR_Poll (mPollerBackend == null)
+  // TODO: remove once network.sts.use_nspr_for_polling is retired.
   int32_t Poll(PRIntervalTime ts);
-  // calls PR_Poll.
+  // calls PR_Poll; used only by DoPollIteration() above.
+
+  nsresult DoPollIterationWithBackend();
+  // performs a single poll iteration using mPollerBackend: walks each active
+  // socket's NSPR layer stack to resolve OS-level interest (see Poller.h),
+  // then delegates the actual kernel wait to mPollerBackend.
+  int32_t FindActiveIndexByNativeFD(PollerFd aFd) const;
+  // linear scan of mActiveList by native fd; used to map a
+  // PollerReadyEvent back to the socket it belongs to. O(active sockets)
+  // per ready event -- fine for the small active sets STS handles; a stable
+  // fd->index mapping is left to a later increment if this shows up in
+  // PollerStats.
 
   //-------------------------------------------------------------------------
   // pending socket queue - see NotifyWhenCanAttachSocket

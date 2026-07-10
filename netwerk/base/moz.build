@@ -240,6 +240,7 @@ UNIFIED_SOURCES += [
     "nsTransportUtils.cpp",
     "nsUDPSocket.cpp",
     "PollableEvent.cpp",
+    "Poller.cpp",
     "ProtocolHandlerInfo.cpp",
     "ProxyAutoConfig.cpp",
     "RedirectChannelRegistrar.cpp",

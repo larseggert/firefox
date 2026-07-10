@@ -42,4 +42,17 @@ interface nsPISocketTransportService : nsIRoutedSocketTransportService
    * Controls the default retransmission count for keepalive probes.
    */
   readonly attribute long keepaliveProbeCount;
+
+  /**
+   * Swaps the native OS handles underneath aFd1/aFd2 (like
+   * PR_ChangeFileDescNativeHandle, which this calls), while keeping any
+   * poller registration for either fd's *original* native handle in sync
+   * with the swap. Callers that mutate a PRFileDesc's native handle in place
+   * (e.g. nsSOCKSIOLayer's address-family fixup) while either fd may already
+   * be registered with the socket transport service's poller (i.e. its
+   * transport is already connecting/connected) must use this instead of
+   * calling PR_ChangeFileDescNativeHandle directly.
+   */
+  [noscript] void changeFileDescNativeHandleWithPoller(in PRFileDescPtr aFd1,
+                                                        in PRFileDescPtr aFd2);
 };

@@ -17,6 +17,8 @@
 #include "nsISocketProvider.h"
 #include "nsNamedPipeIOLayer.h"
 #include "nsNetCID.h"
+#include "nsPISocketTransportService.h"
+#include "nsServiceManagerUtils.h"
 #include "nsString.h"
 #include "nsThreadUtils.h"
 #include "nspr.h"
@@ -582,9 +584,22 @@ void nsSOCKSSocketInfo::FixupAddressFamily(PRFileDesc* fd, NetAddr* proxy) {
   // Must succeed because PR_FileDesc2NativeHandle succeeded
   fd = PR_GetIdentitiesLayer(fd, PR_NSPR_IO_LAYER);
   MOZ_ASSERT(fd);
-  // Swap OS native handles
-  PR_ChangeFileDescNativeHandle(fd, newsd);
-  PR_ChangeFileDescNativeHandle(tmpfd, osfd);
+  // Swap OS native handles. fd may already be registered with the socket
+  // transport service's poller (this connection may already be in
+  // progress), so this must go through the STS rather than calling
+  // PR_ChangeFileDescNativeHandle directly -- see
+  // nsPISocketTransportService::changeFileDescNativeHandleWithPoller. If the
+  // STS is unreachable (should not happen: this code only ever runs on the
+  // STS's own thread), give up on this fixup rather than risk desyncing the
+  // poller with an unsynchronized raw swap -- matching this function's other
+  // early-return-on-failure branches above.
+  nsCOMPtr<nsPISocketTransportService> sts =
+      do_GetService(NS_SOCKETTRANSPORTSERVICE_CONTRACTID);
+  if (!sts) {
+    PR_Close(tmpfd);
+    return;
+  }
+  sts->ChangeFileDescNativeHandleWithPoller(fd, tmpfd);
   // Close temporary FileDesc which is now associated with
   // old OS native handle
   PR_Close(tmpfd);

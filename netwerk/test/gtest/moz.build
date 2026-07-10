@@ -33,6 +33,7 @@ UNIFIED_SOURCES += [
     "TestPACMan.cpp",
     "TestParseHeaders.cpp",
     "TestPollableEvent.cpp",
+    "TestPoller.cpp",
     "TestProtocolProxyService.cpp",
     "TestReadStreamToString.cpp",
     "TestServerTimingHeader.cpp",
