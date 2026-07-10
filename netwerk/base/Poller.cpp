@@ -179,37 +179,29 @@ struct PollBuf {
   PollBuf& operator=(const PollBuf&) = delete;
 };
 
-int32_t PollPollerBackend::IndexOf(PollerFd aFd) const {
-  for (uint32_t i = 0; i < mRegistrations.Length(); ++i) {
-    if (mRegistrations[i].mFd == aFd) return static_cast<int32_t>(i);
-  }
-  return -1;
-}
-
 nsresult PollPollerBackend::Add(PollerFd aFd, int16_t aInterest, void* aKey) {
   // Enforced in all builds, not just debug: a double-Add() would otherwise
-  // silently leave an orphaned duplicate registration that Modify()/Remove()
-  // (both first-match-only) could never reach again.
-  MOZ_RELEASE_ASSERT(IndexOf(aFd) < 0, "fd already registered");
-  mRegistrations.AppendElement(Registration{aFd, aInterest, aKey});
+  // silently clobber the existing registration, which Remove() could then
+  // only ever unregister once (leaking the other logical registration's
+  // interest forever).
+  MOZ_RELEASE_ASSERT(!mRegistrations.Contains(aFd), "fd already registered");
+  mRegistrations.InsertOrUpdate(aFd, Registration{aInterest, aKey});
   return NS_OK;
 }
 
 nsresult PollPollerBackend::Modify(PollerFd aFd, int16_t aInterest) {
-  int32_t idx = IndexOf(aFd);
-  if (idx < 0) {
+  auto entry = mRegistrations.Lookup(aFd);
+  if (!entry) {
     return NS_ERROR_NOT_AVAILABLE;
   }
-  mRegistrations[idx].mInterest = aInterest;
+  entry.Data().mInterest = aInterest;
   return NS_OK;
 }
 
 nsresult PollPollerBackend::Remove(PollerFd aFd) {
-  int32_t idx = IndexOf(aFd);
-  if (idx < 0) {
+  if (!mRegistrations.Remove(aFd)) {
     return NS_ERROR_NOT_AVAILABLE;
   }
-  mRegistrations.UnorderedRemoveElementAt(idx);
   return NS_OK;
 }
 
@@ -225,7 +217,6 @@ int32_t PollPollerBackend::Wait(const TimeDuration& aTimeout,
                                 nsTArray<PollerReadyEvent>& aReady,
                                 PollerStats* aStats) {
   aReady.Clear();
-  uint32_t count = mRegistrations.Length();
 
   bool isForever = aTimeout == TimeDuration::Forever();
   int msecs = isForever ? -1 : static_cast<int>(aTimeout.ToMilliseconds());
@@ -234,6 +225,36 @@ int32_t PollPollerBackend::Wait(const TimeDuration& aTimeout,
   // retry loop, so this would be an unused variable (-Werror) on Windows.
   TimeStamp start = isForever ? TimeStamp() : TimeStamp::Now();
 #endif
+
+  // Callers (see nsSocketTransportService::AttachSocket()/MoveToIdleList())
+  // register a socket once for its whole attached lifetime and report
+  // idleness as zero interest rather than unregistering, so a stateful
+  // kernel backend (epoll/kqueue) never pays add/remove churn for a merely
+  // quiescent socket. poll(2)/WSAPoll are O(array size) regardless of
+  // interest, though, so unlike a stateful backend this one must still
+  // filter zero-interest registrations out of its own marshalled array to
+  // avoid paying O(total attached) instead of O(active) per call. PollBuf is
+  // sized to the worst case (all attached sockets active) so this filtering
+  // and the fill below are a single pass over mRegistrations; activeKeys
+  // records each filled pollBuf slot's caller-supplied key directly (no
+  // index to map back through -- mRegistrations is keyed by fd, not by
+  // position).
+  PollBuf pb(mRegistrations.Count());
+  PollFd* pollBuf = pb.data;
+  nsTArray<void*> activeKeys;
+  activeKeys.SetCapacity(mRegistrations.Count());
+  uint32_t count = 0;
+  for (auto iter = mRegistrations.ConstIter(); !iter.Done(); iter.Next()) {
+    const Registration& reg = iter.Data();
+    if (reg.mInterest == 0) continue;
+    pollBuf[count].fd = static_cast<decltype(pollBuf[count].fd)>(iter.Key());
+    pollBuf[count].events = 0;
+    pollBuf[count].revents = 0;
+    if (reg.mInterest & kPollerRead) pollBuf[count].events |= POLLIN;
+    if (reg.mInterest & kPollerWrite) pollBuf[count].events |= POLLOUT;
+    activeKeys.AppendElement(reg.mKey);
+    ++count;
+  }
 
   if (count == 0) {
     // Should not happen in practice -- the caller keeps at least a wakeup fd
@@ -249,18 +270,6 @@ int32_t PollPollerBackend::Wait(const TimeDuration& aTimeout,
         isForever ? kBusyWaitFallback
                   : std::chrono::milliseconds(std::max(msecs, 0)));
     return 0;
-  }
-
-  PollBuf pb(count);
-  PollFd* pollBuf = pb.data;
-  for (uint32_t i = 0; i < count; ++i) {
-    pollBuf[i].fd =
-        static_cast<decltype(pollBuf[i].fd)>(mRegistrations[i].mFd);
-    pollBuf[i].events = 0;
-    pollBuf[i].revents = 0;
-    int16_t interest = mRegistrations[i].mInterest;
-    if (interest & kPollerRead) pollBuf[i].events |= POLLIN;
-    if (interest & kPollerWrite) pollBuf[i].events |= POLLOUT;
   }
 
   if (aStats) aStats->fdCount.Add(count);
@@ -348,7 +357,7 @@ int32_t PollPollerBackend::Wait(const TimeDuration& aTimeout,
       }
       if (rev & POLLNVAL) outFlags |= kPollerInvalid;
       if (outFlags) {
-        aReady.AppendElement(PollerReadyEvent{mRegistrations[i].mKey, outFlags});
+        aReady.AppendElement(PollerReadyEvent{activeKeys[i], outFlags});
       }
     }
   }

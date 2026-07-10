@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include "PollerBackend.h"
+#include "nsTHashMap.h"
 #include "prio.h"
 
 namespace mozilla::net {
@@ -107,13 +108,19 @@ class PollPollerBackend final : public PollerBackend {
 
  private:
   struct Registration {
-    PollerFd mFd = -1;
     int16_t mInterest = 0;
     void* mKey = nullptr;
   };
-  int32_t IndexOf(PollerFd aFd) const;
 
-  nsTArray<Registration> mRegistrations;
+  // Keyed by the native fd itself -- already the only identifier
+  // Add()/Modify()/Remove()'s caller (nsSocketTransportService2.cpp) ever
+  // has, and already guaranteed unique while registered (see Add()'s
+  // MOZ_RELEASE_ASSERT below). Keying the registration store by it
+  // directly gives Modify()/Remove() O(1) lookup without a separate
+  // fd->index side table, which an nsTArray<Registration> would need and
+  // which UnorderedRemoveElementAt()'s last-element swap would otherwise
+  // silently invalidate for whichever entry got swapped.
+  nsTHashMap<intptr_t, Registration> mRegistrations;
 };
 
 }  // namespace mozilla::net

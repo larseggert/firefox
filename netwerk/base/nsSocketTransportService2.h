@@ -191,12 +191,28 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   //-------------------------------------------------------------------------
   // socket lists (socket thread only)
   //
-  // only "active" sockets are on the poll list.  the active list is kept
-  // in sync with the poll list such that:
+  // Legacy PR_Poll path (mPollerBackend == null): only "active" sockets are
+  // on the poll list.  the active list is kept in sync with the poll list
+  // such that:
   //
   //   mActiveList[k].mFD == mPollList[k+1].fd
   //
   // where k=0,1,2,...
+  //
+  // Backend path (mPollerBackend != null): mActiveList holds every attached
+  // socket regardless of whether it currently wants any I/O, and mIdleList
+  // is never populated. There is no separate idle list to migrate a socket
+  // into/out of -- DoPollIterationWithBackend() re-derives each socket's
+  // current interest fresh every iteration (see WalkSocketLayers()) rather
+  // than reacting to an explicit transition, so there's no need to
+  // physically separate "currently wants I/O" from "doesn't": a stateful
+  // kernel backend's Modify(fd, 0) for an idle socket costs nothing at wait
+  // time, and WalkSocketLayers() itself short-circuits immediately for a
+  // socket with no requested interest either. Every existing mActiveList +
+  // mIdleList consumer (Reset(), ClosePrivateConnections(),
+  // GetSocketConnections(), the keepalive-pref-change notifier) therefore
+  // keeps working unmodified in backend mode: its mIdleList loop is just a
+  // permanent no-op.
   //-------------------------------------------------------------------------
 
   class SocketContext {
@@ -236,10 +252,17 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   using SocketContextList = AutoTArray<SocketContext, SOCKET_LIMIT_MIN>;
   int64_t SockIndex(SocketContextList& aList, SocketContext* aSock);
 
+  // See the comment above SocketContext for what these mean in each of the
+  // two polling modes.
   SocketContextList mActiveList;
   SocketContextList mIdleList;
 
   nsresult DetachSocket(SocketContextList& listHead, SocketContext*);
+  // TODO: remove once network.sts.use_nspr_for_polling is retired.
+  // AddToIdleList/AddToPollList/RemoveFromIdleList/RemoveFromPollList/
+  // MoveToIdleList/MoveToPollList are legacy-path-only (mPollerBackend ==
+  // null); DetachSocket() itself stays, handling mActiveList directly for
+  // the backend path (see AttachSocket()).
   void AddToIdleList(SocketContext* sock);
   void AddToPollList(SocketContext* sock);
   void RemoveFromIdleList(SocketContext* sock);
@@ -290,9 +313,9 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   // calls PR_Poll; used only by DoPollIteration() above.
 
   nsresult DoPollIterationWithBackend();
-  // performs a single poll iteration using mPollerBackend: walks each active
-  // socket's NSPR layer stack to resolve OS-level interest (see Poller.h),
-  // then delegates the actual kernel wait to mPollerBackend.
+  // performs a single poll iteration using mPollerBackend: walks each
+  // socket in mActiveList's NSPR layer stack to resolve OS-level interest
+  // (see Poller.h), then delegates the actual kernel wait to mPollerBackend.
   int32_t FindActiveIndexByNativeFD(PollerFd aFd) const;
   // linear scan of mActiveList by native fd; used to map a
   // PollerReadyEvent back to the socket it belongs to. O(active sockets)

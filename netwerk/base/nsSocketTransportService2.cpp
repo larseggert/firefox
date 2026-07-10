@@ -448,7 +448,21 @@ nsSocketTransportService::AttachSocket(PRFileDesc* fd,
 
   SocketContext sock{fd, handler, 0};
 
-  AddToIdleList(&sock);
+  if (mPollerBackend) {
+    // Registered exactly once for the socket's whole attached lifetime
+    // (Remove() only in DetachSocket()); going idle and reactivating never
+    // re-registers it (mActiveList holds every attached socket in this
+    // mode -- there's no separate idle list to migrate into/out of at all),
+    // so a stateful backend never pays kernel add/remove churn for a
+    // socket that's merely quiescent.
+    PollerFd nativeFd = PR_FileDesc2NativeHandle(fd);
+    mPollerBackend->Add(nativeFd, 0, reinterpret_cast<void*>(nativeFd));
+    // Avoid refcount bump/decrease
+    mActiveList.EmplaceBack(sock.mFD, sock.mHandler.forget(),
+                            sock.mPollStartEpoch);
+  } else {
+    AddToIdleList(&sock);
+  }
   return NS_OK;
 }
 
@@ -470,17 +484,17 @@ nsSocketTransportService::ChangeFileDescNativeHandleWithPoller(
   // Symmetric: the IDL contract doesn't restrict aFd2 to being unregistered
   // (today's only caller happens to pass a fresh, unregistered fd here, but
   // nothing enforces that for future callers), so both sides are handled.
+  // Every attached socket -- active or idle -- is registered with
+  // mPollerBackend for its whole lifetime (see AttachSocket()), so asking
+  // the backend's own Remove() whether it found something is simpler and
+  // more trustworthy than re-deriving "is this registered" by scanning
+  // mActiveList/mIdleList ourselves in a second, separately-maintained copy
+  // of the same fact.
   bool fd1WasRegistered = false;
   bool fd2WasRegistered = false;
   if (mPollerBackend) {
-    fd1WasRegistered = FindActiveIndexByNativeFD(oldFd1) >= 0;
-    if (fd1WasRegistered) {
-      mPollerBackend->Remove(oldFd1);
-    }
-    fd2WasRegistered = FindActiveIndexByNativeFD(oldFd2) >= 0;
-    if (fd2WasRegistered) {
-      mPollerBackend->Remove(oldFd2);
-    }
+    fd1WasRegistered = NS_SUCCEEDED(mPollerBackend->Remove(oldFd1));
+    fd2WasRegistered = NS_SUCCEEDED(mPollerBackend->Remove(oldFd2));
   }
 
   PR_ChangeFileDescNativeHandle(aFd1, oldFd2);
@@ -505,6 +519,9 @@ nsSocketTransportService::ChangeFileDescNativeHandleWithPoller(
 
 bool nsSocketTransportService::CanAttachSocket() {
   MOZ_ASSERT(!mShuttingDown);
+  // Correct in both polling modes: in backend mode mIdleList is always
+  // empty (see AttachSocket()/DetachSocket()), so this is just
+  // mActiveList's length there.
   uint32_t total = mActiveList.Length() + mIdleList.Length();
   bool rv = total < gMaxCount;
 
@@ -530,13 +547,17 @@ nsresult nsSocketTransportService::DetachSocket(SocketContextList& listHead,
               sock->mHandler.get()));
   MOZ_ASSERT((&listHead == &mActiveList) || (&listHead == &mIdleList),
              "DetachSocket invalid head");
+  MOZ_ASSERT(!mPollerBackend || &listHead == &mActiveList,
+             "backend mode only ever attaches to mActiveList");
 
   // Capture the native fd before OnSocketDetached() below, which commonly
   // drops the last reference to sock->mFD and synchronously PR_Closes (and
   // thus frees) it -- reading sock->mFD afterwards would be a use-after-free.
-  PollerFd fd = (mPollerBackend && &listHead == &mActiveList)
-                    ? PR_FileDesc2NativeHandle(sock->mFD)
-                    : -1;
+  // mIdleList sockets are never backend-registered (mPollerBackend is only
+  // ever non-null when every attached socket lives in mActiveList; see
+  // AttachSocket()).
+  PollerFd fd =
+      mPollerBackend ? PR_FileDesc2NativeHandle(sock->mFD) : -1;
 
   {
     // inform the handler that this socket is going away
@@ -546,16 +567,23 @@ nsresult nsSocketTransportService::DetachSocket(SocketContextList& listHead,
   mReceivedBytesCount += sock->mHandler->ByteCountReceived();
 
   if (fd != -1) {
-    // RemoveFromPollList() below may swap a different socket into sock's
-    // slot, so it cannot do this itself. mIdleList sockets were never
-    // registered (see AddToPollList()).
+    // The removal below may swap a different socket into sock's slot, so
+    // it cannot do this itself.
     mPollerBackend->Remove(fd);
   }
 
   // cleanup
   sock->mFD = nullptr;
 
-  if (&listHead == &mActiveList) {
+  if (mPollerBackend) {
+    // mActiveList holds every attached socket in this mode; a plain
+    // removal, no mPollList/RemoveFromPollList() involved (see
+    // AddToPollList()'s TODO comment -- that legacy bookkeeping is never
+    // reached here).
+    auto index = SockIndex(mActiveList, sock);
+    MOZ_RELEASE_ASSERT(index != -1, "invalid index");
+    mActiveList.UnorderedRemoveElementAt(index);
+  } else if (&listHead == &mActiveList) {
     RemoveFromPollList(sock);
   } else {
     RemoveFromIdleList(sock);
@@ -595,7 +623,12 @@ int64_t nsSocketTransportService::SockIndex(SocketContextList& aList,
   return (int64_t)index;
 }
 
+// TODO: remove once network.sts.use_nspr_for_polling is retired.
+// Legacy PR_Poll path only -- never reached when mPollerBackend is set (see
+// AttachSocket()/DetachSocket(), which append to/remove from mActiveList
+// directly in that case).
 void nsSocketTransportService::AddToPollList(SocketContext* sock) {
+  MOZ_ASSERT(!mPollerBackend);
   MOZ_ASSERT(SockIndex(mActiveList, sock) == -1,
              "AddToPollList Socket Already Active");
 
@@ -604,49 +637,33 @@ void nsSocketTransportService::AddToPollList(SocketContext* sock) {
 
   sock->EnsureTimeout(PR_IntervalNow());
 
-  uint32_t newSocketIndex;
+  PRPollDesc poll;
+  poll.fd = sock->mFD;
+  poll.in_flags = sock->mHandler->mPollFlags;
+  poll.out_flags = 0;
   if (ChaosMode::isActive(ChaosFeature::NetworkScheduling)) {
-    newSocketIndex = mActiveList.Length();
+    auto newSocketIndex = mActiveList.Length();
     newSocketIndex = ChaosMode::randomUint32LessThan(newSocketIndex + 1);
     mActiveList.InsertElementAt(newSocketIndex, *sock);
+    // mPollList is offset by 1
+    mPollList.InsertElementAt(newSocketIndex + 1, poll);
   } else {
-    newSocketIndex = mActiveList.Length();
     // Avoid refcount bump/decrease
     mActiveList.EmplaceBack(sock->mFD, sock->mHandler.forget(),
                             sock->mPollStartEpoch);
-  }
-
-  if (mPollerBackend) {
-    // mPollList stays untouched here: nothing in the backend path reads it,
-    // so there's no reason to keep constructing/growing PRPollDesc entries
-    // nothing consumes. See DoPollIterationWithBackend().
-    PollerFd fd = PR_FileDesc2NativeHandle(mActiveList[newSocketIndex].mFD);
-    // Placeholder interest; the next DoPollIterationWithBackend() walk
-    // resolves and Modify()s the real value before any blocking Wait().
-    mPollerBackend->Add(fd, 0, reinterpret_cast<void*>(fd));
-  } else {
-    // TODO: remove once network.sts.use_nspr_for_polling is retired.
-    // PRPollDesc/mPollList only serve the PR_Poll fallback path.
-    PRPollDesc poll;
-    poll.fd = mActiveList[newSocketIndex].mFD;
-    poll.in_flags = mActiveList[newSocketIndex].mHandler->mPollFlags;
-    poll.out_flags = 0;
-    // mPollList is offset by 1
-    mPollList.InsertElementAt(newSocketIndex + 1, poll);
+    mPollList.AppendElement(poll);
   }
 
   SOCKET_LOG(
       ("  active=%zu idle=%zu\n", mActiveList.Length(), mIdleList.Length()));
 }
 
+// TODO: remove once network.sts.use_nspr_for_polling is retired.
+// Legacy PR_Poll path only -- never reached when mPollerBackend is set.
 void nsSocketTransportService::RemoveFromPollList(SocketContext* sock) {
+  MOZ_ASSERT(!mPollerBackend);
   SOCKET_LOG(("nsSocketTransportService::RemoveFromPollList %p [handler=%p]\n",
               sock, sock->mHandler.get()));
-
-  // Callers must have already unregistered sock's native fd from
-  // mPollerBackend (see DetachSocket()/MoveToIdleList()) -- by the time this
-  // runs, UnorderedRemoveElementAt() below may swap a *different* socket
-  // into sock's slot, so this function must not dereference sock->mFD.
 
   auto index = SockIndex(mActiveList, sock);
   MOZ_RELEASE_ASSERT(index != -1, "invalid index");
@@ -654,18 +671,18 @@ void nsSocketTransportService::RemoveFromPollList(SocketContext* sock) {
   SOCKET_LOG(("  index=%" PRId64 " mActiveList.Length()=%zu\n", index,
               mActiveList.Length()));
   mActiveList.UnorderedRemoveElementAt(index);
-  if (!mPollerBackend) {
-    // TODO: remove once network.sts.use_nspr_for_polling is retired.
-    // mPollList is offset by 1; untouched in the backend path, see
-    // AddToPollList().
-    mPollList.UnorderedRemoveElementAt(index + 1);
-  }
+  // mPollList is offset by 1
+  mPollList.UnorderedRemoveElementAt(index + 1);
 
   SOCKET_LOG(
       ("  active=%zu idle=%zu\n", mActiveList.Length(), mIdleList.Length()));
 }
 
+// TODO: remove once network.sts.use_nspr_for_polling is retired.
+// Legacy PR_Poll path only -- never reached when mPollerBackend is set (see
+// AttachSocket(), which appends to mActiveList directly in that case).
 void nsSocketTransportService::AddToIdleList(SocketContext* sock) {
+  MOZ_ASSERT(!mPollerBackend);
   MOZ_ASSERT(SockIndex(mIdleList, sock) == -1,
              "AddToIdleList Socket Already Idle");
 
@@ -680,7 +697,10 @@ void nsSocketTransportService::AddToIdleList(SocketContext* sock) {
       ("  active=%zu idle=%zu\n", mActiveList.Length(), mIdleList.Length()));
 }
 
+// TODO: remove once network.sts.use_nspr_for_polling is retired.
+// Legacy PR_Poll path only -- never reached when mPollerBackend is set.
 void nsSocketTransportService::RemoveFromIdleList(SocketContext* sock) {
+  MOZ_ASSERT(!mPollerBackend);
   SOCKET_LOG(("nsSocketTransportService::RemoveFromIdleList [handler=%p]\n",
               sock->mHandler.get()));
   auto index = SockIndex(mIdleList, sock);
@@ -691,21 +711,22 @@ void nsSocketTransportService::RemoveFromIdleList(SocketContext* sock) {
       ("  active=%zu idle=%zu\n", mActiveList.Length(), mIdleList.Length()));
 }
 
+// TODO: remove once network.sts.use_nspr_for_polling is retired.
+// Legacy PR_Poll path only -- never reached when mPollerBackend is set.
 void nsSocketTransportService::MoveToIdleList(SocketContext* sock) {
+  MOZ_ASSERT(!mPollerBackend);
   SOCKET_LOG(("nsSocketTransportService::MoveToIdleList %p [handler=%p]\n",
               sock, sock->mHandler.get()));
   MOZ_ASSERT(SockIndex(mIdleList, sock) == -1);
   MOZ_ASSERT(SockIndex(mActiveList, sock) != -1);
   AddToIdleList(sock);
-  if (mPollerBackend) {
-    // sock->mFD is still valid here; RemoveFromPollList() below may swap a
-    // different socket into sock's slot, so it cannot do this itself.
-    mPollerBackend->Remove(PR_FileDesc2NativeHandle(sock->mFD));
-  }
   RemoveFromPollList(sock);
 }
 
+// TODO: remove once network.sts.use_nspr_for_polling is retired.
+// Legacy PR_Poll path only -- never reached when mPollerBackend is set.
 void nsSocketTransportService::MoveToPollList(SocketContext* sock) {
+  MOZ_ASSERT(!mPollerBackend);
   SOCKET_LOG(("nsSocketTransportService::MoveToPollList %p [handler=%p]\n",
               sock, sock->mHandler.get()));
   MOZ_ASSERT(SockIndex(mIdleList, sock) != -1);
@@ -724,6 +745,12 @@ void nsSocketTransportService::ApplyPortRemapPreference(
   }
 }
 
+// Shared by both the legacy PR_Poll path and DoPollIterationWithBackend():
+// under mPollerBackend, mActiveList holds every attached socket (idle and
+// active alike), but DoPollIterationWithBackend() explicitly
+// DisengageTimeout()s every idle one each iteration, so an idle socket's
+// TimeoutIn() always returns the NS_SOCKET_POLL_TIMEOUT sentinel here and
+// contributes a no-op to the minimum computed below.
 PRIntervalTime nsSocketTransportService::PollTimeout(PRIntervalTime now) {
   if (mActiveList.IsEmpty()) {
     return NS_SOCKET_POLL_TIMEOUT;
@@ -1668,39 +1695,45 @@ int32_t nsSocketTransportService::FindActiveIndexByNativeFD(
 }
 
 // Same overall shape as DoPollIteration(), but delegates the kernel wait to
-// mPollerBackend instead of PR_Poll, and resolves each active socket's
-// NSPR-layer interest itself (WalkSocketLayers()) rather than relying on
-// PR_Poll to do it internally. See the design notes in Poller.h for why this
-// per-iteration walk exists and what removes it in a later increment.
+// mPollerBackend instead of PR_Poll, and resolves each socket's NSPR-layer
+// interest itself (WalkSocketLayers()) rather than relying on PR_Poll to do
+// it internally. See the design notes in Poller.h for why this per-iteration
+// walk exists and what removes it in a later increment.
 //
-// NOTE: this duplicates DoPollIteration()'s active/idle rebalancing and
-// dispatch bookkeeping rather than sharing it, to avoid touching the
-// well-tested NSPR path while this backend is new; a later increment that
-// collapses the active/idle list split is expected to unify the two.
+// Unlike DoPollIteration(), there is no separate idle list to rebalance:
+// mActiveList holds every attached socket regardless of current interest in
+// this mode, and WalkSocketLayers() is called for all of them every
+// iteration (it short-circuits immediately for a socket with no requested
+// interest, so this costs nothing extra for a quiescent one) -- see the
+// comment above SocketContext for why this backend doesn't need the
+// legacy idle/active split. PollTimeout() is still reused as-is despite
+// mActiveList now including quiescent sockets: TimeoutIn() returns the
+// NS_SOCKET_POLL_TIMEOUT sentinel for any socket whose timeout was never
+// engaged (mPollStartEpoch == 0). Unlike the legacy path -- where a socket
+// going idle is physically moved out of the timeout-checked set -- nothing
+// here removes a quiescent socket from mActiveList, so the detach/engage
+// pass below must explicitly DisengageTimeout() it; otherwise a socket that
+// was active (and had EnsureTimeout()'d a real epoch) before going idle
+// would carry that stale, still-ticking epoch and could be spuriously
+// reported as timed out once enough wall-clock time passes while idle.
 nsresult nsSocketTransportService::DoPollIterationWithBackend() {
   SOCKET_LOG(("STS poll iter (backend)\n"));
 
   PRIntervalTime now = PR_IntervalNow();
-  int32_t i, count;
+  int32_t i;
 
-  count = mIdleList.Length();
+  // Detach dead sockets; engage the timeout of ones with real interest and
+  // disengage it for ones without (see the function comment above for why
+  // the latter is necessary here but not in DoPollIteration()). Backward
+  // iteration for UnorderedRemoveElementAt safety, matching
+  // DoPollIteration()'s equivalent pass.
   for (i = mActiveList.Length() - 1; i >= 0; --i) {
     if (NS_FAILED(mActiveList[i].mHandler->mCondition)) {
       DetachSocket(mActiveList, &mActiveList[i]);
+    } else if (mActiveList[i].mHandler->mPollFlags != 0) {
+      mActiveList[i].EnsureTimeout(now);
     } else {
-      uint16_t in_flags = mActiveList[i].mHandler->mPollFlags;
-      if (in_flags == 0) {
-        MoveToIdleList(&mActiveList[i]);
-      } else {
-        mActiveList[i].EnsureTimeout(now);
-      }
-    }
-  }
-  for (i = count - 1; i >= 0; --i) {
-    if (NS_FAILED(mIdleList[i].mHandler->mCondition)) {
-      DetachSocket(mIdleList, &mIdleList[i]);
-    } else if (mIdleList[i].mHandler->mPollFlags != 0) {
-      MoveToPollList(&mIdleList[i]);
+      mActiveList[i].DisengageTimeout();
     }
   }
 
@@ -1711,8 +1744,7 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
     }
   }
 
-  SOCKET_LOG(("  backend poll [active=%zu idle=%zu]\n", mActiveList.Length(),
-              mIdleList.Length()));
+  SOCKET_LOG(("  backend poll [active=%zu]\n", mActiveList.Length()));
 
   uint32_t activeCount = mActiveList.Length();
   mLayerWalkScratch.SetLength(activeCount);
@@ -1766,11 +1798,11 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
     if (pendingEvents) {
       timeout = TimeDuration::FromSeconds(0);
     } else {
-      PRIntervalTime prTimeout = PollTimeout(now);
-      timeout = prTimeout == PR_INTERVAL_NO_TIMEOUT
+      PRIntervalTime minTimeout = PollTimeout(now);
+      timeout = minTimeout == NS_SOCKET_POLL_TIMEOUT
                     ? TimeDuration::Forever()
                     : TimeDuration::FromMilliseconds(
-                          PR_IntervalToMilliseconds(prTimeout));
+                          PR_IntervalToMilliseconds(minTimeout));
     }
 
     if ((now - mLastNetworkLinkChangeTime) <
@@ -1829,8 +1861,8 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
     // iteration, matching DoPollIteration(), in case a handler's
     // OnSocketReady() reentrantly detaches something and shrinks the list)
     // or activeCount (outFlags/mLayerWalkScratch's fixed size) is smaller.
-    // A socket reentrantly attached+promoted mid-loop is simply serviced on
-    // the next iteration instead of this one.
+    // A socket reentrantly attached mid-loop is simply serviced on the next
+    // iteration instead of this one.
     for (i = 0; i < int32_t(std::min<uint32_t>(mActiveList.Length(),
                                                activeCount));
          ++i) {
