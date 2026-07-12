@@ -16,6 +16,7 @@
 extern mozilla::LazyLogModule gPIPNSSLog;
 
 class SelectClientAuthCertificate;
+class nsPISocketTransportService;
 
 class NSSSocketControl final : public CommonSocketControl {
  public:
@@ -30,6 +31,20 @@ class NSSSocketControl final : public CommonSocketControl {
 
   nsresult GetFileDescPtr(PRFileDesc** aFilePtr);
   nsresult SetFileDescPtr(PRFileDesc* aFilePtr);
+
+  // Cached once, when SSL_SetReadinessCallback() is registered on this
+  // socket's fd, so the callback trampoline (OnSSLReadinessChanged() in
+  // nsNSSIOLayer.cpp) doesn't re-resolve the service on every firing --
+  // it can fire on every read/write.
+  nsPISocketTransportService* GetSocketTransportServiceForReadiness() {
+    COMMON_SOCKET_CONTROL_ASSERT_ON_OWNING_THREAD();
+    return mSocketTransportServiceForReadiness;
+  }
+  void SetSocketTransportServiceForReadiness(
+      nsPISocketTransportService* aSTS) {
+    COMMON_SOCKET_CONTROL_ASSERT_ON_OWNING_THREAD();
+    mSocketTransportServiceForReadiness = aSTS;
+  }
 
   bool IsHandshakePending() const {
     COMMON_SOCKET_CONTROL_ASSERT_ON_OWNING_THREAD();
@@ -292,6 +307,8 @@ class NSSSocketControl final : public CommonSocketControl {
   ~NSSSocketControl() = default;
 
   PRFileDesc* mFd;
+
+  nsCOMPtr<nsPISocketTransportService> mSocketTransportServiceForReadiness;
 
   CertVerificationState mCertVerificationState;
 

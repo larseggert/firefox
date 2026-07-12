@@ -511,6 +511,56 @@ nsSocketTransportService::ChangeFileDescNativeHandleWithPoller(
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsSocketTransportService::OnTLSReadinessChanged(
+    PRFileDesc* aFd, bool aReadWantsOsRead, bool aReadWantsOsWrite,
+    bool aWriteWantsOsRead, bool aWriteWantsOsWrite, bool aPlaintextReady) {
+  MOZ_ASSERT(OnSocketThread(), "not on socket thread");
+
+  // NSSSocketControl only registers this callback when the same
+  // network.sts.use_nspr_for_polling pref that decided mPollerBackend here
+  // indicates the new backend, so this should never fire under the legacy
+  // PR_Poll path; a mismatch means the two checks drifted out of sync.
+  MOZ_DIAGNOSTIC_ASSERT(mPollerBackend,
+                        "TLS readiness callback fired without a poller backend");
+  if (!mPollerBackend) {
+    return NS_OK;
+  }
+
+  PollerFd fd = PR_FileDesc2NativeHandle(aFd);
+  int32_t idx = FindActiveIndexByNativeFD(fd);
+  if (idx < 0) {
+    // Not attached (yet, or anymore); nothing to update.
+    return NS_OK;
+  }
+  SocketContext& sock = mActiveList[idx];
+
+  // From here on DoPollIterationWithBackend() must not also
+  // WalkSocketLayers()/Modify() this fd -- see mNSSReadinessManaged's
+  // comment on SocketContext.
+  sock.mNSSReadinessManaged = true;
+  sock.mReadWantsOsRead = aReadWantsOsRead;
+  sock.mReadWantsOsWrite = aReadWantsOsWrite;
+  sock.mWriteWantsOsRead = aWriteWantsOsRead;
+  sock.mWriteWantsOsWrite = aWriteWantsOsWrite;
+
+  int16_t interest = 0;
+  if (aReadWantsOsRead || aWriteWantsOsRead) interest |= kPollerRead;
+  if (aReadWantsOsWrite || aWriteWantsOsWrite) interest |= kPollerWrite;
+  DebugOnly<nsresult> rv = mPollerBackend->Modify(fd, interest);
+  MOZ_ASSERT(NS_SUCCEEDED(rv),
+             "NSS-readiness-managed socket not registered with mPollerBackend");
+
+  bool onReadyNowList = mReadyNowList.Contains(fd);
+  if (aPlaintextReady && !onReadyNowList) {
+    mReadyNowList.AppendElement(fd);
+  } else if (!aPlaintextReady && onReadyNowList) {
+    mReadyNowList.RemoveElement(fd);
+  }
+
+  return NS_OK;
+}
+
 // the number of sockets that can be attached at any given time is
 // limited.  this is done because some operating systems (e.g., Win9x)
 // limit the number of sockets that can be created by an application.
@@ -570,6 +620,10 @@ nsresult nsSocketTransportService::DetachSocket(SocketContextList& listHead,
     // The removal below may swap a different socket into sock's slot, so
     // it cannot do this itself.
     mPollerBackend->Remove(fd);
+    // Stale once detached -- NSS's OnTLSReadinessChanged() call that would
+    // otherwise remove it (plaintextReady turning false) can never fire
+    // again for this fd.
+    mReadyNowList.RemoveElement(fd);
   }
 
   // cleanup
@@ -1756,6 +1810,15 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
   int32_t shortCircuitCount = 0;
   for (i = 0; i < int32_t(activeCount); ++i) {
     SocketContext& s = mActiveList[i];
+    if (s.mNSSReadinessManaged) {
+      // NSS pushes this socket's interest via OnTLSReadinessChanged() from
+      // its own I/O choke points, independent of poll-loop cadence; walking
+      // it here too would race that push with a redundant pull. Its
+      // mLayerWalkScratch/outFlags entry is filled from the socket's own
+      // mReadWantsOsRead/etc. fields in the Wait()-result loop below instead.
+      mLayerWalkScratch[i] = 0;
+      continue;
+    }
     LayerWalkResult r = WalkSocketLayers(s.mFD, s.mHandler->mPollFlags);
     if (r.shortCircuited) {
       outFlags[i] = r.outFlags;
@@ -1772,6 +1835,21 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
   mPollerStats.layerWalkUs.Add(
       static_cast<uint64_t>((TimeStamp::Now() - layerWalkStart).ToMicroseconds()));
   mPollerStats.fdCount.Add(activeCount);
+
+  // Ready-now list (see OnTLSReadinessChanged()): decrypted plaintext is
+  // already buffered for these fds, so service them this iteration exactly
+  // like a WalkSocketLayers() short-circuit -- no OS-level event needed or
+  // waited for.
+  for (PollerFd fd : mReadyNowList) {
+    int32_t idx = FindActiveIndexByNativeFD(fd);
+    if (idx < 0) {
+      continue;  // stale; DetachSocket() already removes live entries
+    }
+    if (outFlags[idx] == 0) {
+      ++shortCircuitCount;
+    }
+    outFlags[idx] |= PR_POLL_READ;
+  }
 
   bool pollableEventReady = false;
   int16_t pollableEventOutFlagsPR = 0;
@@ -1841,7 +1919,18 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
         if (idx < 0) {
           continue;  // detached mid-flight; ignore
         }
-        outFlags[idx] = UnmapReadyFlags(ev.outFlags, mLayerWalkScratch[idx]);
+        const SocketContext& s = mActiveList[idx];
+        int16_t scratch = mLayerWalkScratch[idx];
+        if (s.mNSSReadinessManaged) {
+          // No WalkSocketLayers() scratch for this fd (skipped above); pack
+          // the equivalent mapping from NSS's own last-reported readiness.
+          scratch = 0;
+          if (s.mReadWantsOsRead) scratch |= kPollReadSysRead;
+          if (s.mReadWantsOsWrite) scratch |= kPollReadSysWrite;
+          if (s.mWriteWantsOsRead) scratch |= kPollWriteSysRead;
+          if (s.mWriteWantsOsWrite) scratch |= kPollWriteSysWrite;
+        }
+        outFlags[idx] = UnmapReadyFlags(ev.outFlags, scratch);
       }
     }
   }

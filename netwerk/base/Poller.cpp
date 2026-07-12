@@ -21,15 +21,10 @@ using PollFd = struct pollfd;
 
 namespace mozilla::net {
 
-// Scratch bits recording which PR_POLL_* direction(s) a kPollerRead/Write
-// interest bit was requested on behalf of. Match _PR_POLL_READ_SYS_READ etc.
-// in NSPR's private primpl.h -- WalkSocketLayers()/UnmapReadyFlags() are a
-// from-scratch reimplementation of that same read<->write direction-flip
-// bookkeeping, not a port of NSPR's internal representation.
-static constexpr int16_t kPollReadSysRead = 0x1;
-static constexpr int16_t kPollReadSysWrite = 0x2;
-static constexpr int16_t kPollWriteSysRead = 0x4;
-static constexpr int16_t kPollWriteSysWrite = 0x8;
+// kPollReadSysRead/kPollReadSysWrite/kPollWriteSysRead/kPollWriteSysWrite are
+// declared in Poller.h (shared with nsSocketTransportService::
+// OnTLSReadinessChanged(), which packs an equivalent scratch value from
+// NSS's SSLReadiness booleans to reuse UnmapReadyFlags() below).
 
 void Histogram::Add(uint64_t aValue) {
   ++mCount;

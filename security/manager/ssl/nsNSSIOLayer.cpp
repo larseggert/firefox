@@ -21,6 +21,7 @@
 #include "mozilla/Preferences.h"
 #include "mozilla/RandomNum.h"
 #include "mozilla/ScopeExit.h"
+#include "mozilla/StaticPrefs_network.h"
 #include "mozilla/StaticPrefs_security.h"
 #include "mozilla/glean/SecurityManagerSslMetrics.h"
 #include "mozilla/net/SSLTokensCache.h"
@@ -41,6 +42,8 @@
 #include "nsISocketProvider.h"
 #include "nsIWebProgressListener.h"
 #include "nsNSSComponent.h"
+#include "nsNetCID.h"
+#include "nsPISocketTransportService.h"
 #include "nsPrintfCString.h"
 #include "nsServiceManagerUtils.h"
 #include "prmem.h"
@@ -1743,6 +1746,35 @@ SECStatus StoreResumptionToken(PRFileDesc* fd, const PRUint8* resumptionToken,
   return SECSuccess;
 }
 
+// Trampoline for NSS's SSL_SetReadinessCallback(): maps its SSLReadiness
+// straight through to nsPISocketTransportService::OnTLSReadinessChanged(),
+// which registers this fd's interest with the poller backend directly (no
+// per-iteration layer walk needed for it from here on) and maintains its
+// ready-now-list membership. ctx is the NSSSocketControl this callback was
+// registered on; the socket transport service pointer is cached there at
+// registration time (see below) rather than re-resolved on every firing,
+// since this can fire on every read/write.
+void OnSSLReadinessChanged(void* ctx, const SSLReadiness* readiness) {
+  NSSSocketControl* infoObject = (NSSSocketControl*)ctx;
+  if (!infoObject) {
+    return;
+  }
+  PRFileDesc* fd = nullptr;
+  if (NS_FAILED(infoObject->GetFileDescPtr(&fd)) || !fd) {
+    return;
+  }
+  nsPISocketTransportService* sts =
+      infoObject->GetSocketTransportServiceForReadiness();
+  if (!sts) {
+    return;
+  }
+  sts->OnTLSReadinessChanged(fd, readiness->readWantsOsRead,
+                             readiness->readWantsOsWrite,
+                             readiness->writeWantsOsRead,
+                             readiness->writeWantsOsWrite,
+                             readiness->plaintextReady);
+}
+
 nsresult nsSSLIOLayerAddToSocket(int32_t family, const char* host, int32_t port,
                                  nsIProxyInfo* proxy,
                                  const OriginAttributes& originAttributes,
@@ -1864,6 +1896,18 @@ nsresult nsSSLIOLayerAddToSocket(int32_t family, const char* host, int32_t port,
   if (SSL_SetResumptionTokenCallback(sslSock, &StoreResumptionToken,
                                      infoObject) != SECSuccess) {
     return NS_ERROR_FAILURE;
+  }
+
+  if (!StaticPrefs::network_sts_use_nspr_for_polling_AtStartup()) {
+    nsCOMPtr<nsPISocketTransportService> sts =
+        do_GetService(NS_SOCKETTRANSPORTSERVICE_CONTRACTID);
+    if (sts) {
+      infoObject->SetSocketTransportServiceForReadiness(sts);
+      if (SSL_SetReadinessCallback(sslSock, &OnSSLReadinessChanged,
+                                   infoObject) != SECSuccess) {
+        return NS_ERROR_FAILURE;
+      }
+    }
   }
 
   MOZ_LOG(gPIPNSSLog, LogLevel::Debug, ("[%p] Socket set up", (void*)sslSock));

@@ -247,6 +247,25 @@ class nsSocketTransportService final : public nsPISocketTransportService,
     PRFileDesc* mFD;
     RefPtr<nsASocketHandler> mHandler;
     PRIntervalTime mPollStartEpoch;  // time we started to poll this socket
+
+    // True once NSS has registered a readiness callback for this fd (see
+    // nsSocketTransportService::OnTLSReadinessChanged()). From then on this
+    // socket's mPollerBackend interest and ready-now-list membership are
+    // maintained exclusively by that callback, firing from NSS's own I/O
+    // choke points -- DoPollIterationWithBackend() must not also
+    // WalkSocketLayers()/Modify() it, or the two would race to decide its
+    // registered interest. Always false for non-TLS sockets and for TLS
+    // sockets under the legacy PR_Poll path.
+    bool mNSSReadinessManaged = false;
+    // Last readiness NSS reported for this fd, kept distinct per direction
+    // (not collapsed into two OS-interest bits) so a kernel event can still
+    // be mapped back to the logical direction(s) it satisfies -- mirrors
+    // SSLReadiness's own field shape; see its comment in sslexp.h for why.
+    // Only meaningful when mNSSReadinessManaged is true.
+    bool mReadWantsOsRead = false;
+    bool mReadWantsOsWrite = false;
+    bool mWriteWantsOsRead = false;
+    bool mWriteWantsOsWrite = false;
   };
 
   using SocketContextList = AutoTArray<SocketContext, SOCKET_LIMIT_MIN>;
@@ -302,6 +321,15 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   // can be applied once that socket's OS readiness is known. Never persisted
   // across iterations. A member (not a local) purely to reuse its storage.
   nsTArray<int16_t> mLayerWalkScratch;
+  // Native fds NSS has reported as plaintextReady via OnTLSReadinessChanged():
+  // decrypted application data is already buffered and can be serviced
+  // without waiting for an OS-level event. Serviced with a PR_INTERVAL_NO_WAIT
+  // pass every iteration, ahead of the main kernel wait; removed when NSS
+  // next reports plaintextReady == false. Holds native fds, not pointers/
+  // indices into mActiveList, since DetachSocket()'s swap-remove invalidates
+  // those; re-resolved by FindActiveIndexByNativeFD() when serviced, matching
+  // how the Wait()-result-processing loop already resolves fds.
+  nsTArray<PollerFd> mReadyNowList;
 
   PRIntervalTime PollTimeout(
       PRIntervalTime now);  // computes ideal poll timeout
