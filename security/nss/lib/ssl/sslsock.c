@@ -3505,6 +3505,72 @@ ssl_Poll(PRFileDesc *fd, PRInt16 how_flags, PRInt16 *p_out_flags)
     return new_flags;
 }
 
+/* Recomputes this socket's readiness and, if it differs from the last
+ * reported value, invokes the callback installed via
+ * SSL_SetReadinessCallback(). Called from the natural choke points where
+ * ssl_Poll()'s decision for this socket could have changed: the return of
+ * ssl_SecureRecv()/ssl_SecureSend()/SSL_ForceHandshake(), and the
+ * SSL_AuthCertificateComplete()/SSL_ClientCertCallbackComplete() resume
+ * calls.
+ *
+ * Reuses ssl_Poll() itself as the read/write-direction decision engine,
+ * exactly as WalkSocketLayers() (netwerk/base/Poller.cpp, Gecko-side)
+ * already does via fd->methods->poll() -- calling it once for PR_POLL_READ
+ * and once for PR_POLL_WRITE gives the direction-specific adjusted interest
+ * (handshake role, false-start/0-RTT write gating, and the
+ * paused-on-async narrowing) without duplicating or risking drift from that
+ * logic. */
+void
+ssl_MaybeFireReadinessCallback(sslSocket *ss)
+{
+    SSLReadiness readiness = { PR_FALSE, PR_FALSE, PR_FALSE, PR_FALSE,
+                               PR_FALSE, PR_FALSE };
+    PRInt16 outR = 0, outW = 0;
+    PRInt16 inR, inW;
+
+    if (!ss->readinessCallback) {
+        return;
+    }
+
+    inR = ssl_Poll(ss->fd, PR_POLL_READ, &outR);
+    inW = ssl_Poll(ss->fd, PR_POLL_WRITE, &outW);
+
+    /* Kept distinct rather than OR'd into two OS-interest bits -- see the
+     * comment on SSLReadiness in sslexp.h for why collapsing this breaks
+     * cross-mapped (direction-inverted) sockets. */
+    readiness.readWantsOsRead = (inR & PR_POLL_READ) != 0;
+    readiness.readWantsOsWrite = (inR & PR_POLL_WRITE) != 0;
+    readiness.writeWantsOsRead = (inW & PR_POLL_READ) != 0;
+    readiness.writeWantsOsWrite = (inW & PR_POLL_WRITE) != 0;
+    readiness.plaintextReady = (SSL_DataPending(ss->fd) > 0);
+    readiness.pausedOnAsync = (ss->ssl3.hs.restartTarget != NULL);
+
+    if (ss->hasReportedReadiness &&
+        PORT_Memcmp(&readiness, &ss->lastReportedReadiness,
+                    sizeof(readiness)) == 0) {
+        return;
+    }
+    ss->lastReportedReadiness = readiness;
+    ss->hasReportedReadiness = PR_TRUE;
+    (*ss->readinessCallback)(ss->readinessCallbackArg, &readiness);
+}
+
+SECStatus
+SSLExp_SetReadinessCallback(PRFileDesc *fd, SSLReadinessCallback cb,
+                            void *arg)
+{
+    sslSocket *ss = ssl_FindSocket(fd);
+    if (!ss) {
+        SSL_DBG(("%d: SSL[%d]: bad socket in SSL_SetReadinessCallback",
+                 SSL_GETPID(), fd));
+        return SECFailure;
+    }
+    ss->readinessCallback = cb;
+    ss->readinessCallbackArg = arg;
+    ss->hasReportedReadiness = PR_FALSE;
+    return SECSuccess;
+}
+
 static PRInt32 PR_CALLBACK
 ssl_TransmitFile(PRFileDesc *sd, PRFileDesc *fd,
                  const void *headers, PRInt32 hlen,
@@ -4447,6 +4513,7 @@ struct {
     EXP(SetClientEchConfigs),
     EXP(SetDtls13VersionWorkaround),
     EXP(SetMaxEarlyDataSize),
+    EXP(SetReadinessCallback),
     EXP(SetResumptionTokenCallback),
     EXP(SetResumptionToken),
     EXP(SetServerEchConfigs),

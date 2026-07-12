@@ -372,27 +372,13 @@ SSL_RecommendedCanFalseStart(PRFileDesc *fd, PRBool *canFalseStart)
     return SECSuccess;
 }
 
-/* Try to make progress on an SSL handshake by attempting to read the
-** next handshake from the peer, and sending any responses.
-** For non-blocking sockets, returns PR_ERROR_WOULD_BLOCK  if it cannot
-** read the next handshake from the underlying socket.
-** Returns when handshake is complete, or application data has
-** arrived that must be taken by application before handshake can continue,
-** or a fatal error occurs.
-** Application should use handshake completion callback to tell which.
-*/
-SECStatus
-SSL_ForceHandshake(PRFileDesc *fd)
+/* Original body of SSL_ForceHandshake(), factored out so the wrapper below
+ * can fire the readiness callback once at every exit instead of once per
+ * internal return. */
+static SECStatus
+ssl_ForceHandshake(sslSocket *ss)
 {
-    sslSocket *ss;
     SECStatus rv = SECFailure;
-
-    ss = ssl_FindSocket(fd);
-    if (!ss) {
-        SSL_DBG(("%d: SSL[%d]: bad socket in ForceHandshake",
-                 SSL_GETPID(), fd));
-        return rv;
-    }
 
     /* Don't waste my time */
     if (!ss->opt.useSecurity)
@@ -435,6 +421,33 @@ SSL_ForceHandshake(PRFileDesc *fd)
 
     ssl_Release1stHandshakeLock(ss);
 
+    return rv;
+}
+
+/* Try to make progress on an SSL handshake by attempting to read the
+** next handshake from the peer, and sending any responses.
+** For non-blocking sockets, returns PR_ERROR_WOULD_BLOCK  if it cannot
+** read the next handshake from the underlying socket.
+** Returns when handshake is complete, or application data has
+** arrived that must be taken by application before handshake can continue,
+** or a fatal error occurs.
+** Application should use handshake completion callback to tell which.
+*/
+SECStatus
+SSL_ForceHandshake(PRFileDesc *fd)
+{
+    sslSocket *ss;
+    SECStatus rv;
+
+    ss = ssl_FindSocket(fd);
+    if (!ss) {
+        SSL_DBG(("%d: SSL[%d]: bad socket in ForceHandshake",
+                 SSL_GETPID(), fd));
+        return SECFailure;
+    }
+
+    rv = ssl_ForceHandshake(ss);
+    ssl_MaybeFireReadinessCallback(ss);
     return rv;
 }
 
@@ -833,8 +846,11 @@ tls13_CheckKeyUpdate(sslSocket *ss, SSLSecretDirection dir)
     return rv;
 }
 
-int
-ssl_SecureRecv(sslSocket *ss, unsigned char *buf, int len, int flags)
+/* Original body of ssl_SecureRecv(), with multiple internal return points --
+ * kept as a separate function so ssl_SecureRecv() can wrap every exit with a
+ * single ssl_MaybeFireReadinessCallback() call instead of one per return. */
+static int
+ssl_SecureRecvInner(sslSocket *ss, unsigned char *buf, int len, int flags)
 {
     int rv = 0;
 
@@ -892,6 +908,14 @@ ssl_SecureRecv(sslSocket *ss, unsigned char *buf, int len, int flags)
     rv = DoRecv(ss, (unsigned char *)buf, len, flags);
     SSL_TRC(2, ("%d: SSL[%d]: recving %d bytes securely (errno=%d)",
                 SSL_GETPID(), ss->fd, rv, PORT_GetError()));
+    return rv;
+}
+
+int
+ssl_SecureRecv(sslSocket *ss, unsigned char *buf, int len, int flags)
+{
+    int rv = ssl_SecureRecvInner(ss, buf, len, flags);
+    ssl_MaybeFireReadinessCallback(ss);
     return rv;
 }
 
@@ -1045,6 +1069,7 @@ done:
         SSL_TRC(2, ("%d: SSL[%d]: SecureSend: returning %d count",
                     SSL_GETPID(), ss->fd, rv));
     }
+    ssl_MaybeFireReadinessCallback(ss);
     return rv;
 }
 
@@ -1331,6 +1356,7 @@ SSL_AuthCertificateComplete(PRFileDesc *fd, PRErrorCode error)
     rv = ssl3_AuthCertificateComplete(ss, error);
     ssl_Release1stHandshakeLock(ss);
 
+    ssl_MaybeFireReadinessCallback(ss);
     return rv;
 }
 
@@ -1368,6 +1394,7 @@ cleanup:
     ssl_ReleaseRecvBufLock(ss);
     ssl_ReleaseSSL3HandshakeLock(ss);
     ssl_Release1stHandshakeLock(ss);
+    ssl_MaybeFireReadinessCallback(ss);
     return rv;
 }
 

@@ -1125,6 +1125,14 @@ struct sslSocketStr {
     void *secretCallbackArg;
     SSLRecordWriteCallback recordWriteCallback;
     void *recordWriteCallbackArg;
+    SSLReadinessCallback readinessCallback;
+    void *readinessCallbackArg;
+    /* Last value reported to readinessCallback, so ssl_MaybeFireReadinessCallback
+     * only calls out on an actual change, matching the "whenever the value
+     * ssl_Poll() would return changes" contract. Zeroed (all PR_FALSE) until
+     * the first report, which is itself a valid, reportable state. */
+    SSLReadiness lastReportedReadiness;
+    PRBool hasReportedReadiness;
 
     PRIntervalTime rTimeout; /* timeout for NSPR I/O */
     PRIntervalTime wTimeout; /* timeout for NSPR I/O */
@@ -1473,6 +1481,7 @@ extern SECStatus ssl3_DecodeError(sslSocket *ss);
 
 extern SECStatus ssl3_AuthCertificateComplete(sslSocket *ss, PRErrorCode error);
 extern SECStatus ssl3_ClientCertCallbackComplete(sslSocket *ss, SECStatus outcome, SECKEYPrivateKey *clientPrivateKey, CERTCertificate *clientCertificate);
+extern void ssl_MaybeFireReadinessCallback(sslSocket *ss);
 
 /*
  * for dealing with SSL 3.0 clients sending SSL 2.0 format hellos

@@ -1098,6 +1098,48 @@ typedef struct SSLMaskingContextStr {
                          (PRFileDesc * _fd, SECItemArray * *_out), \
                          (fd, out))
 
+/* SSL_SetReadinessCallback installs a callback that TLS calls whenever the
+ * value that ssl_Poll() would return for this socket changes: OS-level read
+ * or write interest, whether decrypted application data is already buffered
+ * and can be serviced without waiting on the OS socket, and whether the
+ * socket is paused on an asynchronous operation (e.g. cert auth, client cert
+ * selection) and therefore needs no OS-level interest at all. The callback
+ * is invoked on the thread that is using the socket, at the same points
+ * where ssl_Poll()'s decision would change: the return of the gather/write
+ * path, and the SSL_AuthCertificateComplete()/SSL_ClientCertCallbackComplete()
+ * resume calls.
+ *
+ * ssl_Poll() can cross-map a logical direction onto the other kernel
+ * direction (e.g. mid-handshake, a logical read may need to wait for the
+ * kernel socket to become writable instead). The four fields below keep
+ * that mapping distinct rather than collapsing it into two OS-interest
+ * bits, so a caller can still tell, once a kernel event fires, which
+ * logical direction(s) it satisfies -- collapsing this would make it
+ * impossible to tell a cross-mapped read from a genuine write once the
+ * single kernel-write event they'd share fires, silently dropping the
+ * read side. */
+typedef struct SSLReadinessStr {
+    /* A logical read currently needs the kernel socket to become
+     * readable / writable respectively (both may be true at once, e.g. a
+     * blocked read waiting out a still-pending write). */
+    PRBool readWantsOsRead;
+    PRBool readWantsOsWrite;
+    /* Same, for a logical write. */
+    PRBool writeWantsOsRead;
+    PRBool writeWantsOsWrite;
+    PRBool plaintextReady;
+    PRBool pausedOnAsync;
+} SSLReadiness;
+
+typedef void(PR_CALLBACK *SSLReadinessCallback)(void *arg,
+                                                const SSLReadiness *readiness);
+
+#define SSL_SetReadinessCallback(fd, cb, arg)                         \
+    SSL_EXPERIMENTAL_API("SSL_SetReadinessCallback",                  \
+                         (PRFileDesc * _fd, SSLReadinessCallback _cb, \
+                          void *_arg),                                \
+                         (fd, cb, arg))
+
 /* Deprecated experimental APIs */
 #define SSL_UseAltServerHelloType(fd, enable) SSL_DEPRECATED_EXPERIMENTAL_API
 #define SSL_SetupAntiReplay(a, b, c) SSL_DEPRECATED_EXPERIMENTAL_API
