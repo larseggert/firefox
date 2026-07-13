@@ -1856,6 +1856,37 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
       // mDirectionMaps/outFlags entry is filled from the socket's own
       // mReadiness in the Wait()-result loop below instead.
       mDirectionMaps[i] = 0;
+      if (PollerInterestFromReadiness(s.mReadiness) == 0) {
+        // Zero OS interest here means this fd's NSPR layer stack (e.g.
+        // nsSSLIOLayerPoll(), above NSS's own SSL layer) won't otherwise get
+        // polled at all while paused. Some pre-existing PSM layers rely on
+        // being incidentally re-polled every iteration for side effects
+        // unrelated to their returned interest (e.g. kicking off client
+        // certificate selection once it's pending, or nsSSLIOLayerPoll's own
+        // "certificate validation already failed" branch, which returns
+        // PR_POLL_EXCEPT directly to prompt an immediate read/write without
+        // ever consulting NSS's ssl_Poll) -- calling poll() here preserves
+        // that legacy behavior without reintroducing WalkSocketLayers()/
+        // Modify() for this fd. A non-zero result is exactly that kind of
+        // short-circuit signal, so feed it into outFlags like
+        // WalkSocketLayers()'s own shortCircuited path does; unlike that
+        // path there is no scratch/direction-map to go with it, since this
+        // isn't an OS-level event mapped back through UnmapReadyFlags(). A
+        // zero result costs nothing beyond this call chain: ssl_Poll() itself
+        // won't cascade to a real OS-level poll() while restartTarget is
+        // set, so this never reaches a syscall.
+        // TODO: revisit if this shows up in profiles -- could be made
+        // one-shot (e.g. only after this fd's next OnSocketReady()) instead
+        // of every iteration while paused.
+        int16_t compatOutFlags = 0;
+        s.mFD->methods->poll(s.mFD, s.mHandler->mPollFlags, &compatOutFlags);
+        if (compatOutFlags != 0) {
+          if (outFlags[i] == 0) {
+            ++shortCircuitCount;
+          }
+          outFlags[i] |= compatOutFlags;
+        }
+      }
       continue;
     }
     LayerWalkResult r = WalkSocketLayers(s.mFD, s.mHandler->mPollFlags);
