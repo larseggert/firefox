@@ -1894,7 +1894,16 @@ nsresult nsSSLIOLayerAddToSocket(int32_t family, const char* host, int32_t port,
     return NS_ERROR_FAILURE;
   }
 
-  if (!StaticPrefs::network_sts_use_nspr_for_polling_AtStartup()) {
+  // NO_NATIVE_HANDLE fds (e.g. TLSTransportLayer's "TLS-in-TLS" tunnel
+  // wrapper) have no OS-level socket of their own and are never attached to
+  // nsSocketTransportService's active list; pushing readiness for them
+  // would let a coincidentally-matching native handle misattribute this
+  // fd's interest to an unrelated real socket (see bug 1983245's proxy
+  // regression). Their own AsyncWait mechanism doesn't consume this
+  // callback's data anyway -- they wait on the real underlying stream
+  // directly.
+  if (!(providerFlags & nsISocketProvider::NO_NATIVE_HANDLE) &&
+      !StaticPrefs::network_sts_use_nspr_for_polling_AtStartup()) {
     nsCOMPtr<nsPISocketTransportService> sts =
         do_GetService(NS_SOCKETTRANSPORTSERVICE_CONTRACTID);
     if (sts) {

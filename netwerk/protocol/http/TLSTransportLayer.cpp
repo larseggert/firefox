@@ -428,8 +428,11 @@ bool TLSTransportLayer::Init(const char* aTLSHost, int32_t aTLSPort) {
 
   mFD->secret = reinterpret_cast<PRFilePrivate*>(this);
 
+  // mFD has no OS-level socket of its own -- see NO_NATIVE_HANDLE's comment
+  // in nsISocketProvider.idl.
   return NS_SUCCEEDED(provider->AddToSocket(
-      PR_AF_INET, aTLSHost, aTLSPort, nullptr, OriginAttributes(), 0, 0, mFD,
+      PR_AF_INET, aTLSHost, aTLSPort, nullptr, OriginAttributes(),
+      nsISocketProvider::NO_NATIVE_HANDLE, 0, mFD,
       getter_AddRefs(mTLSSocketControl)));
 }
 

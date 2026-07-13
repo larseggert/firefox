@@ -141,4 +141,15 @@ interface nsISocketProvider : nsISupports
      * set only when DoH is used via the TRR.
      */
     const unsigned long USED_PRIVATE_DNS = (1 << 12);
+
+    /**
+     * If set, indicates that aFileDesc has no native OS-level socket
+     * descriptor of its own (e.g. a synthetic PRFileDesc used to layer TLS
+     * over an already-established stream, such as TLSTransportLayer's
+     * "TLS-in-TLS" tunnel wrapper). Socket providers must not register any
+     * mechanism that identifies this fd by its native handle later on --
+     * that handle is meaningless (or, worse, coincidentally shared with an
+     * unrelated real socket) for a descriptor with no OS socket backing it.
+     */
+    const unsigned long NO_NATIVE_HANDLE = (1 << 13);
 };
