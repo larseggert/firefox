@@ -511,10 +511,38 @@ nsSocketTransportService::ChangeFileDescNativeHandleWithPoller(
   return NS_OK;
 }
 
+// Converts an SSLReadiness to the kPoller{Read,Write} bits to register with
+// mPollerBackend -- OR of both directions' OS-level interest, matching
+// WalkSocketLayers()'s r.osInterest. Gecko-side translation of NSS's data,
+// not an NSS concept -- kPollerRead/Write are this poller backend's own bit
+// layout.
+static int16_t PollerInterestFromReadiness(const SSLReadiness& aReadiness) {
+  int16_t interest = 0;
+  if (aReadiness.readWantsOsRead || aReadiness.writeWantsOsRead) {
+    interest |= kPollerRead;
+  }
+  if (aReadiness.readWantsOsWrite || aReadiness.writeWantsOsWrite) {
+    interest |= kPollerWrite;
+  }
+  return interest;
+}
+
+// Converts an SSLReadiness to the kPoll{Read,Write}Sys{Read,Write}
+// direction map for UnmapReadyFlags(), matching WalkSocketLayers()'s
+// r.directionMap. Gecko-side translation, not an NSS concept -- this
+// encoding is local to Poller.cpp/UnmapReadyFlags().
+static int16_t DirectionMapFromReadiness(const SSLReadiness& aReadiness) {
+  int16_t directionMap = 0;
+  if (aReadiness.readWantsOsRead) directionMap |= kPollReadSysRead;
+  if (aReadiness.readWantsOsWrite) directionMap |= kPollReadSysWrite;
+  if (aReadiness.writeWantsOsRead) directionMap |= kPollWriteSysRead;
+  if (aReadiness.writeWantsOsWrite) directionMap |= kPollWriteSysWrite;
+  return directionMap;
+}
+
 NS_IMETHODIMP
 nsSocketTransportService::OnTLSReadinessChanged(
-    PRFileDesc* aFd, bool aReadWantsOsRead, bool aReadWantsOsWrite,
-    bool aWriteWantsOsRead, bool aWriteWantsOsWrite, bool aPlaintextReady) {
+    PRFileDesc* aFd, const SSLReadiness& aReadiness) {
   MOZ_ASSERT(OnSocketThread(), "not on socket thread");
 
   // NSSSocketControl only registers this callback when the same
@@ -539,22 +567,17 @@ nsSocketTransportService::OnTLSReadinessChanged(
   // WalkSocketLayers()/Modify() this fd -- see mNSSReadinessManaged's
   // comment on SocketContext.
   sock.mNSSReadinessManaged = true;
-  sock.mReadWantsOsRead = aReadWantsOsRead;
-  sock.mReadWantsOsWrite = aReadWantsOsWrite;
-  sock.mWriteWantsOsRead = aWriteWantsOsRead;
-  sock.mWriteWantsOsWrite = aWriteWantsOsWrite;
+  sock.mReadiness = aReadiness;
 
-  int16_t interest = 0;
-  if (aReadWantsOsRead || aWriteWantsOsRead) interest |= kPollerRead;
-  if (aReadWantsOsWrite || aWriteWantsOsWrite) interest |= kPollerWrite;
+  int16_t interest = PollerInterestFromReadiness(aReadiness);
   DebugOnly<nsresult> rv = mPollerBackend->Modify(fd, interest);
   MOZ_ASSERT(NS_SUCCEEDED(rv),
              "NSS-readiness-managed socket not registered with mPollerBackend");
 
   bool onReadyNowList = mReadyNowList.Contains(fd);
-  if (aPlaintextReady && !onReadyNowList) {
+  if (aReadiness.plaintextReady && !onReadyNowList) {
     mReadyNowList.AppendElement(fd);
-  } else if (!aPlaintextReady && onReadyNowList) {
+  } else if (!aReadiness.plaintextReady && onReadyNowList) {
     mReadyNowList.RemoveElement(fd);
   }
 
@@ -1801,7 +1824,7 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
   SOCKET_LOG(("  backend poll [active=%zu]\n", mActiveList.Length()));
 
   uint32_t activeCount = mActiveList.Length();
-  mLayerWalkScratch.SetLength(activeCount);
+  mDirectionMaps.SetLength(activeCount);
   AutoTArray<int16_t, 64> outFlags;
   outFlags.SetLength(activeCount);
   for (auto& f : outFlags) f = 0;
@@ -1814,18 +1837,18 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
       // NSS pushes this socket's interest via OnTLSReadinessChanged() from
       // its own I/O choke points, independent of poll-loop cadence; walking
       // it here too would race that push with a redundant pull. Its
-      // mLayerWalkScratch/outFlags entry is filled from the socket's own
-      // mReadWantsOsRead/etc. fields in the Wait()-result loop below instead.
-      mLayerWalkScratch[i] = 0;
+      // mDirectionMaps/outFlags entry is filled from the socket's own
+      // mReadiness in the Wait()-result loop below instead.
+      mDirectionMaps[i] = 0;
       continue;
     }
     LayerWalkResult r = WalkSocketLayers(s.mFD, s.mHandler->mPollFlags);
     if (r.shortCircuited) {
       outFlags[i] = r.outFlags;
-      mLayerWalkScratch[i] = 0;
+      mDirectionMaps[i] = 0;
       ++shortCircuitCount;
     } else {
-      mLayerWalkScratch[i] = r.scratch;
+      mDirectionMaps[i] = r.directionMap;
       PollerFd fd = PR_FileDesc2NativeHandle(s.mFD);
       DebugOnly<nsresult> rv = mPollerBackend->Modify(fd, r.osInterest);
       MOZ_ASSERT(NS_SUCCEEDED(rv),
@@ -1920,17 +1943,14 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
           continue;  // detached mid-flight; ignore
         }
         const SocketContext& s = mActiveList[idx];
-        int16_t scratch = mLayerWalkScratch[idx];
+        int16_t directionMap = mDirectionMaps[idx];
         if (s.mNSSReadinessManaged) {
-          // No WalkSocketLayers() scratch for this fd (skipped above); pack
-          // the equivalent mapping from NSS's own last-reported readiness.
-          scratch = 0;
-          if (s.mReadWantsOsRead) scratch |= kPollReadSysRead;
-          if (s.mReadWantsOsWrite) scratch |= kPollReadSysWrite;
-          if (s.mWriteWantsOsRead) scratch |= kPollWriteSysRead;
-          if (s.mWriteWantsOsWrite) scratch |= kPollWriteSysWrite;
+          // No WalkSocketLayers() direction map for this fd (skipped
+          // above); pack the equivalent mapping from NSS's own
+          // last-reported readiness.
+          directionMap = DirectionMapFromReadiness(s.mReadiness);
         }
-        outFlags[idx] = UnmapReadyFlags(ev.outFlags, scratch);
+        outFlags[idx] = UnmapReadyFlags(ev.outFlags, directionMap);
       }
     }
   }
@@ -1949,7 +1969,7 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
     // Bound by whichever of mActiveList's live length (re-evaluated every
     // iteration, matching DoPollIteration(), in case a handler's
     // OnSocketReady() reentrantly detaches something and shrinks the list)
-    // or activeCount (outFlags/mLayerWalkScratch's fixed size) is smaller.
+    // or activeCount (outFlags/mDirectionMaps's fixed size) is smaller.
     // A socket reentrantly attached mid-loop is simply serviced on the next
     // iteration instead of this one.
     for (i = 0; i < int32_t(std::min<uint32_t>(mActiveList.Length(),

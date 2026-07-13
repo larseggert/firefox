@@ -27,6 +27,7 @@
 #include "nsPISocketTransportService.h"
 #include "prinit.h"
 #include "prinrval.h"
+#include "sslt.h"
 
 struct PRPollDesc;
 class nsIPrefBranch;
@@ -257,15 +258,9 @@ class nsSocketTransportService final : public nsPISocketTransportService,
     // registered interest. Always false for non-TLS sockets and for TLS
     // sockets under the legacy PR_Poll path.
     bool mNSSReadinessManaged = false;
-    // Last readiness NSS reported for this fd, kept distinct per direction
-    // (not collapsed into two OS-interest bits) so a kernel event can still
-    // be mapped back to the logical direction(s) it satisfies -- mirrors
-    // SSLReadiness's own field shape; see its comment in sslexp.h for why.
-    // Only meaningful when mNSSReadinessManaged is true.
-    bool mReadWantsOsRead = false;
-    bool mReadWantsOsWrite = false;
-    bool mWriteWantsOsRead = false;
-    bool mWriteWantsOsWrite = false;
+    // Last readiness NSS reported for this fd. Only meaningful when
+    // mNSSReadinessManaged is true.
+    SSLReadiness mReadiness{};
   };
 
   using SocketContextList = AutoTArray<SocketContext, SOCKET_LIMIT_MIN>;
@@ -316,11 +311,11 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   // mPollableEvent itself this needs no lock, since it is never read or
   // written off the socket thread.
   PollerFd mPollableEventNativeFd = -1;
-  // Per-iteration scratch for DoPollIterationWithBackend(), recording each
-  // mActiveList[i]'s WalkSocketLayers() direction-mapping so UnmapReadyFlags()
+  // Per-iteration buffer for DoPollIterationWithBackend(), recording each
+  // mActiveList[i]'s WalkSocketLayers() direction map so UnmapReadyFlags()
   // can be applied once that socket's OS readiness is known. Never persisted
   // across iterations. A member (not a local) purely to reuse its storage.
-  nsTArray<int16_t> mLayerWalkScratch;
+  nsTArray<int16_t> mDirectionMaps;
   // Native fds NSS has reported as plaintextReady via OnTLSReadinessChanged():
   // decrypted application data is already buffered and can be serviced
   // without waiting for an OS-level event. Serviced with a PR_INTERVAL_NO_WAIT

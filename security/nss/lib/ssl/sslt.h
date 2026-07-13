@@ -612,4 +612,36 @@ typedef struct SSLCertificateCompressionAlgorithmStr {
     SECStatus (*decode)(const SECItem* input, unsigned char* output, size_t outputLen, size_t* usedLen);
 } SSLCertificateCompressionAlgorithm;
 
+/* Reports the same information ssl_Poll() would use to decide a socket's
+ * OS-level read/write interest, plus whether decrypted application data is
+ * already buffered (needing no OS-level interest at all to be serviced) and
+ * whether the socket is paused on an asynchronous operation (e.g. cert
+ * auth, client cert selection). See SSL_SetReadinessCallback() in
+ * sslexp.h.
+ *
+ * ssl_Poll() can cross-map a logical direction onto the other kernel
+ * direction (e.g. mid-handshake, a logical read may need to wait for the
+ * kernel socket to become writable instead). The four fields below keep
+ * that mapping distinct rather than collapsing it into two OS-interest
+ * bits, so a caller can still tell, once a kernel event fires, which
+ * logical direction(s) it satisfies -- collapsing this would make it
+ * impossible to tell a cross-mapped read from a genuine write once the
+ * single kernel-write event they'd share fires, silently dropping the
+ * read side. */
+typedef struct SSLReadinessStr {
+    /* A logical read currently needs the kernel socket to become
+     * readable / writable respectively (both may be true at once, e.g. a
+     * blocked read waiting out a still-pending write). */
+    PRBool readWantsOsRead;
+    PRBool readWantsOsWrite;
+    /* Same, for a logical write. */
+    PRBool writeWantsOsRead;
+    PRBool writeWantsOsWrite;
+    PRBool plaintextReady;
+    PRBool pausedOnAsync;
+} SSLReadiness;
+
+typedef void(PR_CALLBACK *SSLReadinessCallback)(void *arg,
+                                                const SSLReadiness *readiness);
+
 #endif /* __sslt_h_ */

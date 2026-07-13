@@ -54,7 +54,8 @@ struct LayerWalkResult {
   // or an already-invalid fd) is already ready with no OS-level event
   // needed. When true, |outFlags| is valid and the caller should dispatch
   // immediately without registering interest with a PollerBackend this
-  // iteration; when false, |osInterest| and |scratch| are valid instead.
+  // iteration; when false, |osInterest| and |directionMap| are valid
+  // instead.
   bool shortCircuited = false;
 
   // Valid iff shortCircuited: PR_POLL_* bits the socket is ready for, to
@@ -69,10 +70,10 @@ struct LayerWalkResult {
   // PR_POLL_READ/WRITE request (aWantFlags) each OS-level interest bit
   // corresponds to -- an NSPR layer (e.g. mid-TLS-handshake) may need the
   // opposite OS direction from what the caller asked for. Feed the OS
-  // readiness this fd eventually reports, plus this scratch value, into
+  // readiness this fd eventually reports, plus this direction map, into
   // UnmapReadyFlags() to recover the PR_POLL_* flags the caller actually
   // asked about.
-  int16_t scratch = 0;
+  int16_t directionMap = 0;
 };
 
 // Walks aFd's NSPR I/O-layer stack (calling PRIOMethods::poll, e.g. NSS's
@@ -84,15 +85,16 @@ struct LayerWalkResult {
 // (nsprpub/pr/src/pthreads/ptio.c); see PR_Poll for the full contract.
 LayerWalkResult WalkSocketLayers(PRFileDesc* aFd, int16_t aWantFlags);
 
-// Scratch bits recording which PR_POLL_* direction(s) a kPollerRead/Write
-// interest bit was requested on behalf of. Match _PR_POLL_READ_SYS_READ etc.
-// in NSPR's private primpl.h -- WalkSocketLayers()/UnmapReadyFlags() are a
-// from-scratch reimplementation of that same read<->write direction-flip
-// bookkeeping, not a port of NSPR's internal representation. Exposed here
-// (not file-local to Poller.cpp) so a caller with an equivalent mapping from
-// a different source -- e.g. nsSocketTransportService::OnTLSReadinessChanged(),
-// packing NSS's SSLReadiness booleans -- can still call UnmapReadyFlags()
-// directly instead of duplicating its logic.
+// Direction-mapping bits recording which PR_POLL_* direction(s) a
+// kPollerRead/Write interest bit was requested on behalf of. Match
+// _PR_POLL_READ_SYS_READ etc. in NSPR's private primpl.h --
+// WalkSocketLayers()/UnmapReadyFlags() are a from-scratch reimplementation
+// of that same read<->write direction-flip bookkeeping, not a port of
+// NSPR's internal representation. Exposed here (not file-local to
+// Poller.cpp) so a caller with an equivalent mapping from a different
+// source -- e.g. nsSocketTransportService::OnTLSReadinessChanged(), packing
+// NSS's SSLReadiness booleans -- can still call UnmapReadyFlags() directly
+// instead of duplicating its logic.
 constexpr int16_t kPollReadSysRead = 0x1;
 constexpr int16_t kPollReadSysWrite = 0x2;
 constexpr int16_t kPollWriteSysRead = 0x4;
@@ -100,9 +102,9 @@ constexpr int16_t kPollWriteSysWrite = 0x8;
 
 // Un-maps aOsReadyFlags (kPoller* bits, as returned by a PollerBackend for
 // one fd) back to the PR_POLL_* flags the caller actually asked about, using
-// the direction-mapping scratch a WalkSocketLayers() call produced this same
+// the direction map a WalkSocketLayers() call produced this same
 // iteration for the same fd.
-int16_t UnmapReadyFlags(int16_t aOsReadyFlags, int16_t aScratch);
+int16_t UnmapReadyFlags(int16_t aOsReadyFlags, int16_t aDirectionMap);
 
 // Portable PollerBackend built on poll(2) / WSAPoll. Correct on every
 // platform; the backend used everywhere until a per-platform backend

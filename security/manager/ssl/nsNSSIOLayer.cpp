@@ -1768,11 +1768,7 @@ void OnSSLReadinessChanged(void* ctx, const SSLReadiness* readiness) {
   if (!sts) {
     return;
   }
-  sts->OnTLSReadinessChanged(fd, readiness->readWantsOsRead,
-                             readiness->readWantsOsWrite,
-                             readiness->writeWantsOsRead,
-                             readiness->writeWantsOsWrite,
-                             readiness->plaintextReady);
+  sts->OnTLSReadinessChanged(fd, *readiness);
 }
 
 nsresult nsSSLIOLayerAddToSocket(int32_t family, const char* host, int32_t port,

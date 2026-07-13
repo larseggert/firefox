@@ -23,7 +23,7 @@ namespace mozilla::net {
 
 // kPollReadSysRead/kPollReadSysWrite/kPollWriteSysRead/kPollWriteSysWrite are
 // declared in Poller.h (shared with nsSocketTransportService::
-// OnTLSReadinessChanged(), which packs an equivalent scratch value from
+// OnTLSReadinessChanged(), which packs an equivalent direction map from
 // NSS's SSLReadiness booleans to reuse UnmapReadyFlags() below).
 
 void Histogram::Add(uint64_t aValue) {
@@ -117,33 +117,33 @@ LayerWalkResult WalkSocketLayers(PRFileDesc* aFd, int16_t aWantFlags) {
   // it) still surfaces as an unrequested kPollerExcept and is passed through
   // by PollerBackend implementations regardless.
   if (inR & PR_POLL_READ) {
-    r.scratch |= kPollReadSysRead;
+    r.directionMap |= kPollReadSysRead;
     r.osInterest |= kPollerRead;
   }
   if (inR & PR_POLL_WRITE) {
-    r.scratch |= kPollReadSysWrite;
+    r.directionMap |= kPollReadSysWrite;
     r.osInterest |= kPollerWrite;
   }
   if (inW & PR_POLL_READ) {
-    r.scratch |= kPollWriteSysRead;
+    r.directionMap |= kPollWriteSysRead;
     r.osInterest |= kPollerRead;
   }
   if (inW & PR_POLL_WRITE) {
-    r.scratch |= kPollWriteSysWrite;
+    r.directionMap |= kPollWriteSysWrite;
     r.osInterest |= kPollerWrite;
   }
   return r;
 }
 
-int16_t UnmapReadyFlags(int16_t aOsReadyFlags, int16_t aScratch) {
+int16_t UnmapReadyFlags(int16_t aOsReadyFlags, int16_t aDirectionMap) {
   int16_t outFlags = 0;
   if (aOsReadyFlags & kPollerRead) {
-    if (aScratch & kPollReadSysRead) outFlags |= PR_POLL_READ;
-    if (aScratch & kPollWriteSysRead) outFlags |= PR_POLL_WRITE;
+    if (aDirectionMap & kPollReadSysRead) outFlags |= PR_POLL_READ;
+    if (aDirectionMap & kPollWriteSysRead) outFlags |= PR_POLL_WRITE;
   }
   if (aOsReadyFlags & kPollerWrite) {
-    if (aScratch & kPollReadSysWrite) outFlags |= PR_POLL_READ;
-    if (aScratch & kPollWriteSysWrite) outFlags |= PR_POLL_WRITE;
+    if (aDirectionMap & kPollReadSysWrite) outFlags |= PR_POLL_READ;
+    if (aDirectionMap & kPollWriteSysWrite) outFlags |= PR_POLL_WRITE;
   }
   // Except/error/hangup/invalid are not subject to direction remapping --
   // they describe the fd itself, not a read or write request on it.
@@ -345,7 +345,7 @@ int32_t PollPollerBackend::Wait(const TimeDuration& aTimeout,
         // and has no HUP concept at all -- there, any peer disconnect only
         // ever shows up as read-ready. Add kPollerRead too so a socket
         // registered for read (or write-flipped-to-read, via the
-        // scratch-bit direction-inversion in UnmapReadyFlags) still gets
+        // direction-map inversion in UnmapReadyFlags) still gets
         // woken on a full close, matching that behavior.
         outFlags |= kPollerRead;
 #endif

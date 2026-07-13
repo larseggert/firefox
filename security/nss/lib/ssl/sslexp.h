@@ -1117,23 +1117,9 @@ typedef struct SSLMaskingContextStr {
  * logical direction(s) it satisfies -- collapsing this would make it
  * impossible to tell a cross-mapped read from a genuine write once the
  * single kernel-write event they'd share fires, silently dropping the
- * read side. */
-typedef struct SSLReadinessStr {
-    /* A logical read currently needs the kernel socket to become
-     * readable / writable respectively (both may be true at once, e.g. a
-     * blocked read waiting out a still-pending write). */
-    PRBool readWantsOsRead;
-    PRBool readWantsOsWrite;
-    /* Same, for a logical write. */
-    PRBool writeWantsOsRead;
-    PRBool writeWantsOsWrite;
-    PRBool plaintextReady;
-    PRBool pausedOnAsync;
-} SSLReadiness;
-
-typedef void(PR_CALLBACK *SSLReadinessCallback)(void *arg,
-                                                const SSLReadiness *readiness);
-
+ * read side. SSLReadiness and SSLReadinessCallback themselves live in
+ * sslt.h, not here, so callers can get the type without pulling in the
+ * rest of this experimental-API header. */
 #define SSL_SetReadinessCallback(fd, cb, arg)                         \
     SSL_EXPERIMENTAL_API("SSL_SetReadinessCallback",                  \
                          (PRFileDesc * _fd, SSLReadinessCallback _cb, \

@@ -4,6 +4,12 @@
 
 #include "nsISocketTransportService.idl"
 
+%{C++
+#include "sslt.h"
+%}
+
+[ref] native SSLReadinessRef(const SSLReadiness);
+
 /**
  * This is a private interface used by the internals of the networking library.
  * It will never be frozen.  Do not use it in external code.
@@ -59,24 +65,20 @@ interface nsPISocketTransportService : nsIRoutedSocketTransportService
   /**
    * Called by NSSSocketControl (via NSS's SSL_SetReadinessCallback) whenever
    * a TLS socket's OS-level interest, buffered-plaintext readiness, or
-   * async-pause state changes. The aXWantsOsY parameters mirror NSS's
-   * SSLReadiness struct exactly -- kept as four distinct booleans rather
-   * than two OS-interest bits, since ssl_Poll() can cross-map a logical
-   * direction onto the other kernel direction (e.g. mid-handshake, a
-   * logical read may need to wait for the kernel socket to become
-   * writable instead), and collapsing this would make it impossible to
-   * tell, once the shared kernel event fires, which logical direction(s)
+   * async-pause state changes. aReadiness is NSS's own SSLReadiness struct,
+   * passed straight through -- kept as four distinct read/write-direction
+   * booleans rather than two OS-interest bits, since ssl_Poll() can
+   * cross-map a logical direction onto the other kernel direction (e.g.
+   * mid-handshake, a logical read may need to wait for the kernel socket to
+   * become writable instead), and collapsing this would make it impossible
+   * to tell, once the shared kernel event fires, which logical direction(s)
    * it satisfies. Registers aFd's poller-backend interest directly from
-   * these four booleans (no per-iteration layer walk needed for this fd
+   * those four booleans (no per-iteration layer walk needed for this fd
    * from here on) and adds/removes it from the ready-now list based on
-   * aPlaintextReady. A no-op if the legacy PR_Poll path is active (NSS
-   * should never register this callback in that mode) or if aFd is not
+   * aReadiness.plaintextReady. A no-op if the legacy PR_Poll path is active
+   * (NSS should never register this callback in that mode) or if aFd is not
    * currently attached.
    */
   [noscript] void onTLSReadinessChanged(in PRFileDescPtr aFd,
-                                        in boolean aReadWantsOsRead,
-                                        in boolean aReadWantsOsWrite,
-                                        in boolean aWriteWantsOsRead,
-                                        in boolean aWriteWantsOsWrite,
-                                        in boolean aPlaintextReady);
+                                        in SSLReadinessRef aReadiness);
 };

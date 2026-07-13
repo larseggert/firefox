@@ -96,7 +96,7 @@ static int32_t RunNewImpl(FdInterest* aEntries, uint32_t aCount,
   for (auto& ev : readyEvents) {
     uint32_t idx = static_cast<uint32_t>(reinterpret_cast<intptr_t>(ev.key));
     aEntries[idx].out_flags =
-        UnmapReadyFlags(ev.outFlags, results[idx].scratch);
+        UnmapReadyFlags(ev.outFlags, results[idx].directionMap);
   }
   return ready;
 }
