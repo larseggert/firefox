@@ -8289,7 +8289,6 @@ ssl3_BeginHandleCertificateRequest(sslSocket *ss,
     } else {
         rv = SECFailure; /* force it to send a no_certificate alert */
     }
-
     if (rv == SECWouldBlock) {
         /* getClientAuthData needs more time (e.g. for user interaction) */
 

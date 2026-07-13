@@ -639,6 +639,14 @@ typedef struct SSLReadinessStr {
     PRBool writeWantsOsWrite;
     PRBool plaintextReady;
     PRBool pausedOnAsync;
+    /* The connection has permanently failed (e.g. cert auth was rejected,
+     * whether during the initial handshake or a later post-handshake
+     * request) and nothing further will ever call back to change this
+     * socket's readiness again. Unlike a genuine pausedOnAsync wait, no
+     * OS-level interest will ever be needed nor reported for this socket
+     * again -- the caller must poll it as ready anyway so the failure can
+     * be discovered via the next read/write attempt. */
+    PRBool terminallyFailed;
 } SSLReadiness;
 
 typedef void(PR_CALLBACK *SSLReadinessCallback)(void *arg,

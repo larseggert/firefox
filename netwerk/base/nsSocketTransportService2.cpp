@@ -540,6 +540,16 @@ static int16_t DirectionMapFromReadiness(const SSLReadiness& aReadiness) {
   return directionMap;
 }
 
+// Whether an SSLReadiness-managed fd belongs on mReadyNowList -- i.e. needs
+// OnSocketReady() called this iteration despite reporting no OS-level
+// interest, because either decrypted plaintext is already buffered, or the
+// connection has permanently failed and nothing will ever arrive to ask for
+// OS interest again. mReadyNowList is Gecko's own concept; this is not an
+// NSS-defined predicate.
+static bool ShouldJoinReadyNowList(const SSLReadiness& aReadiness) {
+  return aReadiness.plaintextReady || aReadiness.terminallyFailed;
+}
+
 NS_IMETHODIMP
 nsSocketTransportService::OnTLSReadinessChanged(
     PRFileDesc* aFd, const SSLReadiness& aReadiness) {
@@ -574,10 +584,16 @@ nsSocketTransportService::OnTLSReadinessChanged(
   MOZ_ASSERT(NS_SUCCEEDED(rv),
              "NSS-readiness-managed socket not registered with mPollerBackend");
 
+  // aReadiness.terminallyFailed fds report zero OS interest just like a
+  // genuine async pause, but nothing will ever arrive to change that --
+  // keep them on the ready-now list too so OnSocketReady() still gets
+  // called and the failure can be discovered via the next read/write
+  // attempt.
+  bool wantsReadyNow = ShouldJoinReadyNowList(aReadiness);
   bool onReadyNowList = mReadyNowList.Contains(fd);
-  if (aReadiness.plaintextReady && !onReadyNowList) {
+  if (wantsReadyNow && !onReadyNowList) {
     mReadyNowList.AppendElement(fd);
-  } else if (!aReadiness.plaintextReady && onReadyNowList) {
+  } else if (!wantsReadyNow && onReadyNowList) {
     mReadyNowList.RemoveElement(fd);
   }
 
@@ -1860,10 +1876,12 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
   mPollerStats.fdCount.Add(activeCount);
 
   // Ready-now list (see OnTLSReadinessChanged()): decrypted plaintext is
-  // already buffered for these fds, so service them this iteration exactly
-  // like a WalkSocketLayers() short-circuit -- no OS-level event needed or
-  // waited for.
-  for (PollerFd fd : mReadyNowList) {
+  // already buffered, or the connection has permanently failed, for these
+  // fds, so service them this iteration exactly like a WalkSocketLayers()
+  // short-circuit -- no OS-level event needed or waited for. Backward
+  // iteration for the RemoveElementAt() below.
+  for (int32_t j = mReadyNowList.Length() - 1; j >= 0; --j) {
+    PollerFd fd = mReadyNowList[j];
     int32_t idx = FindActiveIndexByNativeFD(fd);
     if (idx < 0) {
       continue;  // stale; DetachSocket() already removes live entries
@@ -1872,6 +1890,15 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
       ++shortCircuitCount;
     }
     outFlags[idx] |= PR_POLL_READ;
+    // Unlike plaintextReady, terminallyFailed never clears via a fresh
+    // readiness event -- nothing will ever call the readiness callback
+    // again for a connection that's permanently done -- so it must be
+    // serviced at most once here, or this fd would short-circuit the
+    // kernel Wait() and spin the poll loop on it forever.
+    if (mActiveList[idx].mReadiness.terminallyFailed &&
+        !mActiveList[idx].mReadiness.plaintextReady) {
+      mReadyNowList.RemoveElementAt(j);
+    }
   }
 
   bool pollableEventReady = false;

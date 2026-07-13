@@ -3524,7 +3524,7 @@ void
 ssl_MaybeFireReadinessCallback(sslSocket *ss)
 {
     SSLReadiness readiness = { PR_FALSE, PR_FALSE, PR_FALSE, PR_FALSE,
-                               PR_FALSE, PR_FALSE };
+                               PR_FALSE, PR_FALSE, PR_FALSE };
     PRInt16 outR = 0, outW = 0;
     PRInt16 inR, inW;
 
@@ -3544,6 +3544,18 @@ ssl_MaybeFireReadinessCallback(sslSocket *ss)
     readiness.writeWantsOsWrite = (inW & PR_POLL_WRITE) != 0;
     readiness.plaintextReady = (SSL_DataPending(ss->fd) > 0);
     readiness.pausedOnAsync = (ss->ssl3.hs.restartTarget != NULL);
+    /* restartTarget is also left non-NULL forever once cert auth fails
+     * (ssl3_AuthCertificateComplete()'s ssl3_AlwaysFail sentinel) -- whether
+     * that failure was for the initial handshake or a later post-handshake
+     * request, permanently failing the connection either way. This looks
+     * identical to a genuine pending wait above. Tell them apart by
+     * whether anything is actually still pending to call back and change
+     * this: every real "waiting" restartTarget assignment is set alongside
+     * authCertificatePending or clientCertificatePending, so if neither is
+     * true, nothing will ever invoke or clear this restartTarget again. */
+    readiness.terminallyFailed = readiness.pausedOnAsync &&
+                                 !ss->ssl3.hs.authCertificatePending &&
+                                 !ss->ssl3.hs.clientCertificatePending;
 
     if (ss->hasReportedReadiness &&
         PORT_Memcmp(&readiness, &ss->lastReportedReadiness,

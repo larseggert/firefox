@@ -75,9 +75,16 @@ interface nsPISocketTransportService : nsIRoutedSocketTransportService
    * it satisfies. Registers aFd's poller-backend interest directly from
    * those four booleans (no per-iteration layer walk needed for this fd
    * from here on) and adds/removes it from the ready-now list based on
-   * aReadiness.plaintextReady. A no-op if the legacy PR_Poll path is active
-   * (NSS should never register this callback in that mode) or if aFd is not
-   * currently attached.
+   * aReadiness.plaintextReady or aReadiness.terminallyFailed. A no-op if
+   * the legacy PR_Poll path is active (NSS should never register this
+   * callback in that mode) or if aFd is not currently attached.
+   *
+   * terminallyFailed means the connection has permanently failed (e.g. cert
+   * auth was rejected) and NSS will never call back to change this fd's
+   * readiness again, even though it also reports no OS-level interest --
+   * unlike a genuine async pause, nothing will ever arrive to ask for more.
+   * The fd is kept on the ready-now list so its owner still gets a chance
+   * to discover the failure via the next read/write attempt.
    */
   [noscript] void onTLSReadinessChanged(in PRFileDescPtr aFd,
                                         in SSLReadinessRef aReadiness);
