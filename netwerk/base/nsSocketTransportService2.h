@@ -261,6 +261,11 @@ class nsSocketTransportService final : public nsPISocketTransportService,
     // Last readiness NSS reported for this fd. Only meaningful when
     // mNSSReadinessManaged is true.
     SSLReadiness mReadiness{};
+    // Mirrors this fd's current membership in mReadyNowList, kept in sync
+    // by every site that adds/removes it there, so OnTLSReadinessChanged()
+    // can check membership in O(1) instead of scanning mReadyNowList on
+    // every readiness push (which can fire on every read/write).
+    bool mOnReadyNowList = false;
   };
 
   using SocketContextList = AutoTArray<SocketContext, SOCKET_LIMIT_MIN>;

@@ -590,11 +590,12 @@ nsSocketTransportService::OnTLSReadinessChanged(
   // called and the failure can be discovered via the next read/write
   // attempt.
   bool wantsReadyNow = ShouldJoinReadyNowList(aReadiness);
-  bool onReadyNowList = mReadyNowList.Contains(fd);
-  if (wantsReadyNow && !onReadyNowList) {
+  if (wantsReadyNow && !sock.mOnReadyNowList) {
     mReadyNowList.AppendElement(fd);
-  } else if (!wantsReadyNow && onReadyNowList) {
+    sock.mOnReadyNowList = true;
+  } else if (!wantsReadyNow && sock.mOnReadyNowList) {
     mReadyNowList.RemoveElement(fd);
+    sock.mOnReadyNowList = false;
   }
 
   return NS_OK;
@@ -648,22 +649,28 @@ nsresult nsSocketTransportService::DetachSocket(SocketContextList& listHead,
   PollerFd fd =
       mPollerBackend ? PR_FileDesc2NativeHandle(sock->mFD) : -1;
 
-  {
-    // inform the handler that this socket is going away
-    sock->mHandler->OnSocketDetached(sock->mFD);
-  }
-  mSentBytesCount += sock->mHandler->ByteCountSent();
-  mReceivedBytesCount += sock->mHandler->ByteCountReceived();
-
   if (fd != -1) {
-    // The removal below may swap a different socket into sock's slot, so
-    // it cannot do this itself.
+    // Removed before OnSocketDetached() below, not after: that call
+    // commonly PR_Closes the native fd synchronously, and some handlers
+    // (e.g. nsUDPSocket with a sync listener) synchronously drive a
+    // reentrant AttachSocket() out of that same call. If the OS hands the
+    // just-freed fd number to that new socket before this Remove() ran,
+    // PollerBackend::Add() would find it still registered and
+    // MOZ_RELEASE_ASSERT. Removing first closes that window regardless of
+    // what OnSocketDetached() does.
     mPollerBackend->Remove(fd);
     // Stale once detached -- NSS's OnTLSReadinessChanged() call that would
     // otherwise remove it (plaintextReady turning false) can never fire
     // again for this fd.
     mReadyNowList.RemoveElement(fd);
   }
+
+  {
+    // inform the handler that this socket is going away
+    sock->mHandler->OnSocketDetached(sock->mFD);
+  }
+  mSentBytesCount += sock->mHandler->ByteCountSent();
+  mReceivedBytesCount += sock->mHandler->ByteCountReceived();
 
   // cleanup
   sock->mFD = nullptr;
@@ -1779,6 +1786,14 @@ nsresult nsSocketTransportService::DoPollIteration() {
 
 int32_t nsSocketTransportService::FindActiveIndexByNativeFD(
     PollerFd aFd) const {
+  // -1 is PR_FileDesc2NativeHandle()'s sentinel for a PRFileDesc with no
+  // real OS-backed native handle (e.g. a synthetic PR_CreateIOLayerStub fd
+  // that didn't opt out via NO_NATIVE_HANDLE). Never match on it: two
+  // distinct synthetic fds would otherwise collide with each other, or with
+  // whichever real socket a caller happens to check first.
+  if (aFd < 0) {
+    return -1;
+  }
   for (uint32_t i = 0; i < mActiveList.Length(); ++i) {
     if (PR_FileDesc2NativeHandle(mActiveList[i].mFD) == aFd) {
       return static_cast<int32_t>(i);
@@ -1878,13 +1893,25 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
         // TODO: revisit if this shows up in profiles -- could be made
         // one-shot (e.g. only after this fd's next OnSocketReady()) instead
         // of every iteration while paused.
-        int16_t compatOutFlags = 0;
-        s.mFD->methods->poll(s.mFD, s.mHandler->mPollFlags, &compatOutFlags);
-        if (compatOutFlags != 0) {
-          if (outFlags[i] == 0) {
-            ++shortCircuitCount;
+        //
+        // Skip entirely when mPollFlags == 0 (idle -- see the "make idle"
+        // assignments in nsSocketTransport2.cpp), matching WalkSocketLayers()'s
+        // own "!aWantFlags" early return just above and the prior Rust PoC's
+        // equivalent idle-list guard: nsSSLIOLayerPoll()'s cert-validation-
+        // failed/shutdown branch asserts in_flags has PR_POLL_EXCEPT, which a
+        // genuinely idle socket's mPollFlags (0) never has, and there is no
+        // direction for OnSocketReady() to deliver a result to anyway when
+        // idle -- its own mPollFlags-gated checks below reject it regardless
+        // of what compat-poll would have returned.
+        if (s.mHandler->mPollFlags != 0) {
+          int16_t compatOutFlags = 0;
+          s.mFD->methods->poll(s.mFD, s.mHandler->mPollFlags, &compatOutFlags);
+          if (compatOutFlags != 0) {
+            if (outFlags[i] == 0) {
+              ++shortCircuitCount;
+            }
+            outFlags[i] |= compatOutFlags;
           }
-          outFlags[i] |= compatOutFlags;
         }
       }
       continue;
@@ -1917,18 +1944,47 @@ nsresult nsSocketTransportService::DoPollIterationWithBackend() {
     if (idx < 0) {
       continue;  // stale; DetachSocket() already removes live entries
     }
-    if (outFlags[idx] == 0) {
-      ++shortCircuitCount;
+    const SSLReadiness& readiness = mActiveList[idx].mReadiness;
+    // Only report a direction the handler actually asked for. Forcing
+    // PR_POLL_READ regardless of mPollFlags left entries stuck here whenever
+    // the handler wasn't currently interested in reading: plaintextReady
+    // clears only via a fresh NSS callback, which requires real I/O activity
+    // that a handler not currently reading won't generate, yet outFlags was
+    // still forced non-zero here, tripping shortCircuitCount below every
+    // iteration -- an indefinite busy-spin skipping the kernel Wait() for a
+    // notification nsSocketTransport::OnSocketReady()'s own mPollFlags gate
+    // would just drop. terminallyFailed uses PR_POLL_EXCEPT, matching the
+    // legacy PSM failed-cert-validation short-circuit noted above, since
+    // that gate accepts it against either direction the handler is waiting
+    // on, not specifically read.
+    int16_t event = 0;
+    if (readiness.plaintextReady && (mActiveList[idx].mHandler->mPollFlags &
+                                      PR_POLL_READ)) {
+      event |= PR_POLL_READ;
     }
-    outFlags[idx] |= PR_POLL_READ;
+    if (readiness.terminallyFailed) {
+      event |= PR_POLL_EXCEPT;
+    }
+    if (event != 0) {
+      if (outFlags[idx] == 0) {
+        ++shortCircuitCount;
+      }
+      outFlags[idx] |= event;
+    }
     // Unlike plaintextReady, terminallyFailed never clears via a fresh
     // readiness event -- nothing will ever call the readiness callback
     // again for a connection that's permanently done -- so it must be
     // serviced at most once here, or this fd would short-circuit the
-    // kernel Wait() and spin the poll loop on it forever.
-    if (mActiveList[idx].mReadiness.terminallyFailed &&
-        !mActiveList[idx].mReadiness.plaintextReady) {
+    // kernel Wait() and spin the poll loop on it forever. This has to fire
+    // on terminallyFailed alone: gating it on !plaintextReady too meant a
+    // connection that failed with leftover buffered plaintext was never
+    // removed, since terminallyFailed's defining property is that no future
+    // callback will ever recompute plaintextReady to false either. The one
+    // shot above already folds in PR_POLL_READ for that buffered data (if
+    // the handler wants it), so removing here doesn't lose it.
+    if (readiness.terminallyFailed) {
       mReadyNowList.RemoveElementAt(j);
+      mActiveList[idx].mOnReadyNowList = false;
     }
   }
 
