@@ -456,7 +456,7 @@ index ebeffb6802..827d965dcb 100644
  
  config("audio_device_warnings_config") {
 diff --git a/modules/audio_processing/aec3/BUILD.gn b/modules/audio_processing/aec3/BUILD.gn
-index 540af562a2..c91e22bcc3 100644
+index 709dcbdd24..d725d75449 100644
 --- a/modules/audio_processing/aec3/BUILD.gn
 +++ b/modules/audio_processing/aec3/BUILD.gn
 @@ -126,7 +126,7 @@ rtc_library("aec3") {
@@ -575,7 +575,7 @@ index 43317503c1..dc0d234db3 100644
  import("../../webrtc.gni")
  
 diff --git a/modules/video_coding/BUILD.gn b/modules/video_coding/BUILD.gn
-index 739e0ebe98..761e5f30ca 100644
+index 2551490255..fa86917019 100644
 --- a/modules/video_coding/BUILD.gn
 +++ b/modules/video_coding/BUILD.gn
 @@ -6,7 +6,7 @@
