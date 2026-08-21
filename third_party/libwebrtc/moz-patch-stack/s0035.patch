@@ -195,10 +195,10 @@ index fac8d06ea9..676b448587 100644
  static constexpr size_t kNumMediaTypes = 5;
  enum class RtpPacketMediaType : size_t {
 diff --git a/modules/rtp_rtcp/source/rtcp_receiver.cc b/modules/rtp_rtcp/source/rtcp_receiver.cc
-index 7c91428686..70afb108fd 100644
+index 7cd601bb0a..a5627108bd 100644
 --- a/modules/rtp_rtcp/source/rtcp_receiver.cc
 +++ b/modules/rtp_rtcp/source/rtcp_receiver.cc
-@@ -159,6 +159,7 @@ RTCPReceiver::RTCPReceiver(const Environment& env,
+@@ -158,6 +158,7 @@ RTCPReceiver::RTCPReceiver(const Environment& env,
        rtp_rtcp_(owner),
        registered_ssrcs_(config),
        network_link_rtcp_observer_(config.network_link_rtcp_observer),
@@ -206,7 +206,7 @@ index 7c91428686..70afb108fd 100644
        rtcp_intra_frame_observer_(config.intra_frame_callback),
        rtcp_loss_notification_observer_(config.rtcp_loss_notification_observer),
        network_state_estimate_observer_(config.network_state_estimate_observer),
-@@ -659,6 +660,10 @@ bool RTCPReceiver::HandleBye(const CommonHeader& rtcp_block) {
+@@ -658,6 +659,10 @@ bool RTCPReceiver::HandleBye(const CommonHeader& rtcp_block) {
      return false;
    }
  
@@ -217,7 +217,7 @@ index 7c91428686..70afb108fd 100644
    // Clear our lists.
    rtts_ = {};
    EraseIf(received_report_blocks_, [&](const auto& elem) {
-@@ -1066,12 +1071,21 @@ std::vector<rtcp::TmmbItem> RTCPReceiver::TmmbrReceived() {
+@@ -1065,12 +1070,21 @@ std::vector<rtcp::TmmbItem> RTCPReceiver::TmmbrReceived() {
  }
  
  bool RTCPReceiver::RtcpRrTimeoutLocked(Timestamp now) {
@@ -243,10 +243,10 @@ index 7c91428686..70afb108fd 100644
  
  }  // namespace webrtc
 diff --git a/modules/rtp_rtcp/source/rtcp_receiver.h b/modules/rtp_rtcp/source/rtcp_receiver.h
-index 0605250e15..4215d9d8df 100644
+index c98342dcfb..bfe64780a8 100644
 --- a/modules/rtp_rtcp/source/rtcp_receiver.h
 +++ b/modules/rtp_rtcp/source/rtcp_receiver.h
-@@ -301,6 +301,7 @@ class RTCPReceiver final {
+@@ -296,6 +296,7 @@ class RTCPReceiver final {
    RegisteredSsrcs registered_ssrcs_;
  
    NetworkLinkRtcpObserver* const network_link_rtcp_observer_;
