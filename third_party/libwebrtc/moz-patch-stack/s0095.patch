@@ -413,7 +413,7 @@ index d2eabafb59..2f2834fb28 100644
      deps = [
        ":generated_jni",
 diff --git a/logging/BUILD.gn b/logging/BUILD.gn
-index 880d6bbfd8..6db3c29f03 100644
+index 8a2707e344..d0e0e762a6 100644
 --- a/logging/BUILD.gn
 +++ b/logging/BUILD.gn
 @@ -11,8 +11,8 @@ if (rtc_enable_protobuf) {
