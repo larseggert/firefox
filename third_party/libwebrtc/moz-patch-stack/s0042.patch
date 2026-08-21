@@ -35,10 +35,10 @@ index 0170320cda..deba77c131 100644
      // Timing frame info: all important timestamps for a full lifetime of a
      // single 'timing frame'.
 diff --git a/modules/rtp_rtcp/source/rtcp_receiver.cc b/modules/rtp_rtcp/source/rtcp_receiver.cc
-index aac56f843e..3c7847114f 100644
+index 09b0006f4b..9f3f214c80 100644
 --- a/modules/rtp_rtcp/source/rtcp_receiver.cc
 +++ b/modules/rtp_rtcp/source/rtcp_receiver.cc
-@@ -328,11 +328,13 @@ RTCPReceiver::ConsumeReceivedXrReferenceTimeInfo() {
+@@ -324,11 +324,13 @@ RTCPReceiver::ConsumeReceivedXrReferenceTimeInfo() {
  
  void RTCPReceiver::RemoteRTCPSenderInfo(uint32_t* packet_count,
                                          uint32_t* octet_count,
@@ -55,10 +55,10 @@ index aac56f843e..3c7847114f 100644
  
  std::vector<ReportBlockData> RTCPReceiver::GetLatestReportBlockData() const {
 diff --git a/modules/rtp_rtcp/source/rtcp_receiver.h b/modules/rtp_rtcp/source/rtcp_receiver.h
-index fa85bcc5df..290519b4ef 100644
+index 323c21aa42..fb89f2a29f 100644
 --- a/modules/rtp_rtcp/source/rtcp_receiver.h
 +++ b/modules/rtp_rtcp/source/rtcp_receiver.h
-@@ -115,7 +115,8 @@ class RTCPReceiver final {
+@@ -111,7 +111,8 @@ class RTCPReceiver final {
    // Get received sender packet and octet counts
    void RemoteRTCPSenderInfo(uint32_t* packet_count,
                              uint32_t* octet_count,
@@ -104,10 +104,10 @@ index 4ec4174b51..579aa6cb0e 100644
    // A snapshot of the most recent Report Block with additional data of
    // interest to statistics. Used to implement RTCRemoteInboundRtpStreamStats.
 diff --git a/modules/rtp_rtcp/source/rtp_rtcp_interface.h b/modules/rtp_rtcp/source/rtp_rtcp_interface.h
-index 30fd8b0aef..29b8960e08 100644
+index ad7a220767..a130872901 100644
 --- a/modules/rtp_rtcp/source/rtp_rtcp_interface.h
 +++ b/modules/rtp_rtcp/source/rtp_rtcp_interface.h
-@@ -414,10 +414,11 @@ class RtpRtcpInterface : public RtcpFeedbackSenderInterface {
+@@ -412,10 +412,11 @@ class RtpRtcpInterface : public RtcpFeedbackSenderInterface {
        StreamDataCounters* rtx_counters) const = 0;
  
  
