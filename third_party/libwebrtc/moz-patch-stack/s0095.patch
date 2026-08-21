@@ -547,7 +547,7 @@ index d0b66cd592..838d961ce6 100644
    }
  
 diff --git a/modules/desktop_capture/BUILD.gn b/modules/desktop_capture/BUILD.gn
-index 63c91cbe12..d8c10399ef 100644
+index f91d8556a5..6fdac0cabf 100644
 --- a/modules/desktop_capture/BUILD.gn
 +++ b/modules/desktop_capture/BUILD.gn
 @@ -6,8 +6,8 @@
@@ -562,7 +562,7 @@ index 63c91cbe12..d8c10399ef 100644
  
  use_desktop_capture_differ_sse2 = target_cpu == "x86" || target_cpu == "x64"
 diff --git a/modules/portal/BUILD.gn b/modules/portal/BUILD.gn
-index 70466453f4..0a463c7619 100644
+index 43317503c1..dc0d234db3 100644
 --- a/modules/portal/BUILD.gn
 +++ b/modules/portal/BUILD.gn
 @@ -6,7 +6,7 @@

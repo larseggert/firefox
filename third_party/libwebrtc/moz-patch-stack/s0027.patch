@@ -840,10 +840,10 @@ index ce937d583f..2eaafdeb6a 100644
      } else {
        cflags = [
 diff --git a/modules/desktop_capture/BUILD.gn b/modules/desktop_capture/BUILD.gn
-index 42a8f52540..703fbe17c0 100644
+index a74f545b4f..6f9569430e 100644
 --- a/modules/desktop_capture/BUILD.gn
 +++ b/modules/desktop_capture/BUILD.gn
-@@ -663,37 +663,12 @@ rtc_library("desktop_capture") {
+@@ -664,37 +664,12 @@ rtc_library("desktop_capture") {
      ]
      deps += [ ":desktop_capture_objc" ]
    }
@@ -881,7 +881,7 @@ index 42a8f52540..703fbe17c0 100644
    }
  
    if (rtc_use_x11_extensions) {
-@@ -856,9 +831,7 @@ rtc_library("desktop_capture") {
+@@ -857,9 +832,7 @@ rtc_library("desktop_capture") {
      deps += [ "../../rtc_base:sanitizer" ]
    }
  
@@ -893,7 +893,7 @@ index 42a8f52540..703fbe17c0 100644
    if (use_desktop_capture_differ_sse2) {
      deps += [ ":desktop_capture_differ_sse2" ]
 diff --git a/modules/portal/BUILD.gn b/modules/portal/BUILD.gn
-index 52e515c1fc..11c8285abe 100644
+index d9c53b9d23..d2ddaa3b38 100644
 --- a/modules/portal/BUILD.gn
 +++ b/modules/portal/BUILD.gn
 @@ -11,6 +11,7 @@ import("//tools/generate_stubs/rules.gni")
@@ -904,7 +904,7 @@ index 52e515c1fc..11c8285abe 100644
    pkg_config("gio") {
      packages = [
        "gio-2.0",
-@@ -89,6 +90,12 @@ if ((is_linux || is_chromeos) && rtc_use_pipewire) {
+@@ -92,6 +93,12 @@ if ((is_linux || is_chromeos) && rtc_use_pipewire) {
        defines += [ "WEBRTC_USE_GIO" ]
      }
    }
@@ -917,7 +917,7 @@ index 52e515c1fc..11c8285abe 100644
  
    rtc_library("portal") {
      sources = [
-@@ -126,5 +133,22 @@ if ((is_linux || is_chromeos) && rtc_use_pipewire) {
+@@ -129,5 +136,22 @@ if ((is_linux || is_chromeos) && rtc_use_pipewire) {
  
        deps += [ ":pipewire_stubs" ]
      }
