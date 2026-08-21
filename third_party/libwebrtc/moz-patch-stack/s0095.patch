@@ -74,7 +74,7 @@ index 9962d2845d..485df8f5e1 100644
  # The python interpreter to use by default. On Windows, this will look
  # for python3.exe and python3.bat.
 diff --git a/BUILD.gn b/BUILD.gn
-index 5c61c7a981..e4dce7bd42 100644
+index afa6710ed1..4eb65649cd 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
 @@ -21,8 +21,8 @@
@@ -108,7 +108,7 @@ index 5c61c7a981..e4dce7bd42 100644
      defines = []
  
      deps = [
-@@ -860,7 +860,7 @@ rtc_static_library("dcsctp") {
+@@ -856,7 +856,7 @@ rtc_static_library("dcsctp") {
    visibility = [ "//:default" ]
    sources = []
    complete_static_lib = true
@@ -117,7 +117,7 @@ index 5c61c7a981..e4dce7bd42 100644
    defines = []
    deps = [
      "net/dcsctp/public:factory",
-@@ -898,7 +898,7 @@ group("poison_default_neural_residual_echo_estimator") {
+@@ -894,7 +894,7 @@ group("poison_default_neural_residual_echo_estimator") {
  if (!build_with_chromium) {
    # Write debug logs to gn_logs.txt.
    # This is also required for Siso builds.
@@ -413,7 +413,7 @@ index d2eabafb59..2f2834fb28 100644
      deps = [
        ":generated_jni",
 diff --git a/logging/BUILD.gn b/logging/BUILD.gn
-index 8a2707e344..d0e0e762a6 100644
+index 4ad82d0c29..0cb9cfb49f 100644
 --- a/logging/BUILD.gn
 +++ b/logging/BUILD.gn
 @@ -11,8 +11,8 @@ if (rtc_enable_protobuf) {
