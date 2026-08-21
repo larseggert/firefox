@@ -195,7 +195,7 @@ index fac8d06ea9..676b448587 100644
  static constexpr size_t kNumMediaTypes = 5;
  enum class RtpPacketMediaType : size_t {
 diff --git a/modules/rtp_rtcp/source/rtcp_receiver.cc b/modules/rtp_rtcp/source/rtcp_receiver.cc
-index 7c3576993e..79b4572616 100644
+index 4cabcadcef..7c9550a271 100644
 --- a/modules/rtp_rtcp/source/rtcp_receiver.cc
 +++ b/modules/rtp_rtcp/source/rtcp_receiver.cc
 @@ -159,6 +159,7 @@ RTCPReceiver::RTCPReceiver(const Environment& env,
@@ -206,7 +206,7 @@ index 7c3576993e..79b4572616 100644
        rtcp_intra_frame_observer_(config.intra_frame_callback),
        rtcp_loss_notification_observer_(config.rtcp_loss_notification_observer),
        network_state_estimate_observer_(config.network_state_estimate_observer),
-@@ -676,6 +677,10 @@ bool RTCPReceiver::HandleBye(const CommonHeader& rtcp_block) {
+@@ -674,6 +675,10 @@ bool RTCPReceiver::HandleBye(const CommonHeader& rtcp_block) {
      return false;
    }
  
@@ -215,9 +215,9 @@ index 7c3576993e..79b4572616 100644
 +  }
 +
    // Clear our lists.
-   rtts_.erase(bye.sender_ssrc());
+   rtts_ = {};
    EraseIf(received_report_blocks_, [&](const auto& elem) {
-@@ -1079,12 +1084,21 @@ std::vector<rtcp::TmmbItem> RTCPReceiver::TmmbrReceived() {
+@@ -1077,12 +1082,21 @@ std::vector<rtcp::TmmbItem> RTCPReceiver::TmmbrReceived() {
  }
  
  bool RTCPReceiver::RtcpRrTimeoutLocked(Timestamp now) {
@@ -243,7 +243,7 @@ index 7c3576993e..79b4572616 100644
  
  }  // namespace webrtc
 diff --git a/modules/rtp_rtcp/source/rtcp_receiver.h b/modules/rtp_rtcp/source/rtcp_receiver.h
-index 815b4e527a..0a3e1e299e 100644
+index 82deb55e11..0638ac23d9 100644
 --- a/modules/rtp_rtcp/source/rtcp_receiver.h
 +++ b/modules/rtp_rtcp/source/rtcp_receiver.h
 @@ -306,6 +306,7 @@ class RTCPReceiver final {
