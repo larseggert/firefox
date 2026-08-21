@@ -247,7 +247,7 @@ index 9b12fcdf59..b32274a9ab 100644
  
  if (rtc_include_tests) {
 diff --git a/api/video/BUILD.gn b/api/video/BUILD.gn
-index e1719b8c96..4914138139 100644
+index 96520cf02f..8112a3d28d 100644
 --- a/api/video/BUILD.gn
 +++ b/api/video/BUILD.gn
 @@ -8,8 +8,8 @@
@@ -428,7 +428,7 @@ index 880d6bbfd8..6db3c29f03 100644
  
  group("logging") {
 diff --git a/media/BUILD.gn b/media/BUILD.gn
-index 0b695751ff..b648193d82 100644
+index a8f2e045b3..a3072febba 100644
 --- a/media/BUILD.gn
 +++ b/media/BUILD.gn
 @@ -6,7 +6,7 @@
@@ -588,7 +588,7 @@ index 739e0ebe98..761e5f30ca 100644
  import("../../webrtc.gni")
  
 diff --git a/pc/BUILD.gn b/pc/BUILD.gn
-index 4018fa4813..dcafeb0aa2 100644
+index d721f7118c..04f81d0b43 100644
 --- a/pc/BUILD.gn
 +++ b/pc/BUILD.gn
 @@ -29,8 +29,8 @@
