@@ -114,10 +114,10 @@ index 87974ada5c..d8543e0ba2 100644
    absl::InlinedVector<uint32_t, 4> new_continuous_temporal_units_;
  };
 diff --git a/call/video_receive_stream.h b/call/video_receive_stream.h
-index deba77c131..466043f008 100644
+index a4ca2ca8b4..e1f34ad9f6 100644
 --- a/call/video_receive_stream.h
 +++ b/call/video_receive_stream.h
-@@ -118,6 +118,8 @@ class VideoReceiveStreamInterface : public MediaReceiveStreamInterface {
+@@ -117,6 +117,8 @@ class VideoReceiveStreamInterface : public MediaReceiveStreamInterface {
      // https://www.w3.org/TR/webrtc-stats/#dom-rtcvideoreceiverstats-framesdropped
      uint32_t frames_dropped = 0;
      uint32_t frames_decoded = 0;

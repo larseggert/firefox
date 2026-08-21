@@ -142,10 +142,10 @@ index 97c023a776..df6b99bdf2 100644
  
      // Receive-side RTT.
 diff --git a/call/video_receive_stream.cc b/call/video_receive_stream.cc
-index 06e33f6160..38408eb0ab 100644
+index 0bb2a0b449..b6f84c55df 100644
 --- a/call/video_receive_stream.cc
 +++ b/call/video_receive_stream.cc
-@@ -177,6 +177,8 @@ std::string VideoReceiveStreamInterface::Config::Rtp::ToString() const {
+@@ -176,6 +176,8 @@ std::string VideoReceiveStreamInterface::Config::Rtp::ToString() const {
      ss << pt << ", ";
    }
    ss << "}";
@@ -155,18 +155,18 @@ index 06e33f6160..38408eb0ab 100644
    return ss.Release();
  }
 diff --git a/call/video_receive_stream.h b/call/video_receive_stream.h
-index 04df52f20a..e4861797af 100644
+index b82762057e..9a3e30e6f5 100644
 --- a/call/video_receive_stream.h
 +++ b/call/video_receive_stream.h
-@@ -22,6 +22,7 @@
+@@ -21,6 +21,7 @@
+ #include <utility>
  #include <vector>
- 
  #include "api/call/transport.h"
 +#include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
  #include "api/crypto/crypto_options.h"
  #include "api/crypto/frame_decryptor_interface.h"
  #include "api/frame_transformer_interface.h"
-@@ -277,6 +278,8 @@ class VideoReceiveStreamInterface : public MediaReceiveStreamInterface {
+@@ -273,6 +274,8 @@ class VideoReceiveStreamInterface : public MediaReceiveStreamInterface {
        // meta data is expected to be present in generic frame descriptor
        // RTP header extension).
        std::set<int> raw_payload_types;

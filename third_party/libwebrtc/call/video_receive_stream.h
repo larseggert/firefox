@@ -20,7 +20,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
 #include "api/call/transport.h"
 #include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
 #include "api/crypto/crypto_options.h"
@@ -202,22 +201,19 @@ class VideoReceiveStreamInterface : public MediaReceiveStreamInterface {
   };
 
   struct Config {
-   private:
-    // Access to the copy constructor is private to force use of the Copy()
-    // method for those exceptional cases where we do use it.
-    Config(const Config&);
-
    public:
     Config() = delete;
+    Config(const Config&) = delete;
+    Config& operator=(const Config&) = delete;
     Config(Config&&);
     Config(Transport* rtcp_send_transport,
            VideoDecoderFactory* decoder_factory = nullptr);
     Config& operator=(Config&&);
-    Config& operator=(const Config&) = delete;
     ~Config();
 
-    // Mostly used by tests.  Avoid creating copies if you can.
-    Config Copy() const { return Config(*this); }
+    // Mostly used by tests. Avoid creating copies if you can.
+    // Note that this method will not copy move-only fields.
+    Config Copy() const;
 
     std::string ToString() const;
 
