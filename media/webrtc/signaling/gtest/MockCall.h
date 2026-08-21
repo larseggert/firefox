@@ -231,9 +231,9 @@ class MockCall : public webrtc::Call {
   }
 
   webrtc::AudioReceiveStreamInterface* CreateAudioReceiveStream(
-      const webrtc::AudioReceiveStreamInterface::Config& config) override {
+      webrtc::AudioReceiveStreamInterface::Config config) override {
     MOZ_RELEASE_ASSERT(!mAudioReceiveConfig);
-    mAudioReceiveConfig = mozilla::Some(config);
+    mAudioReceiveConfig = mozilla::Some(std::move(config));
     return new MockAudioReceiveStream(mCallWrapper);
   }
   void DestroyAudioReceiveStream(
