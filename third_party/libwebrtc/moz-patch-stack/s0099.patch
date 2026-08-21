@@ -9,7 +9,7 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/6918cf2d9126fa3e3
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/modules/rtp_rtcp/source/rtcp_receiver.cc b/modules/rtp_rtcp/source/rtcp_receiver.cc
-index a48cb725ef..97ab6c1666 100644
+index 09a764a099..d9fc9b018f 100644
 --- a/modules/rtp_rtcp/source/rtcp_receiver.cc
 +++ b/modules/rtp_rtcp/source/rtcp_receiver.cc
 @@ -327,8 +327,8 @@ void RTCPReceiver::RemoteRTCPSenderInfo(uint32_t* packet_count,
