@@ -28,7 +28,7 @@ index ae877a0539..089ab8d528 100644
      // single 'timing frame'.
      std::optional<webrtc::TimingFrameInfo> timing_frame_info;
 diff --git a/modules/rtp_rtcp/source/rtcp_receiver.cc b/modules/rtp_rtcp/source/rtcp_receiver.cc
-index 3440f92243..aebeb27f3c 100644
+index 59112085fa..cb9aec9360 100644
 --- a/modules/rtp_rtcp/source/rtcp_receiver.cc
 +++ b/modules/rtp_rtcp/source/rtcp_receiver.cc
 @@ -321,6 +321,13 @@ RTCPReceiver::ConsumeReceivedXrReferenceTimeInfo() {
@@ -46,7 +46,7 @@ index 3440f92243..aebeb27f3c 100644
    std::vector<ReportBlockData> result;
    MutexLock lock(&rtcp_receiver_lock_);
 diff --git a/modules/rtp_rtcp/source/rtcp_receiver.h b/modules/rtp_rtcp/source/rtcp_receiver.h
-index 26208852e6..e0f0350beb 100644
+index 71d30b9eef..d983107527 100644
 --- a/modules/rtp_rtcp/source/rtcp_receiver.h
 +++ b/modules/rtp_rtcp/source/rtcp_receiver.h
 @@ -108,6 +108,10 @@ class RTCPReceiver final {
