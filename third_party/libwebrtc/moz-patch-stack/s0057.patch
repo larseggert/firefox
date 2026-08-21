@@ -272,7 +272,7 @@ index ce689ae2c8..0ab06ed5f9 100644
        RTC_GUARDED_BY(packet_sequence_checker_);
    // h26x_packet_buffer_ is applicable to H.264 and H.265. For H.265 it is
 diff --git a/video/video_receive_stream2.cc b/video/video_receive_stream2.cc
-index 90ca4406a3..db74b5fb42 100644
+index c37676bed3..a2bb76b55c 100644
 --- a/video/video_receive_stream2.cc
 +++ b/video/video_receive_stream2.cc
 @@ -249,6 +249,7 @@ VideoReceiveStream2::VideoReceiveStream2(
