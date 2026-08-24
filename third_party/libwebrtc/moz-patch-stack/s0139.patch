@@ -145,7 +145,7 @@ index 231f448056..4304685ddb 100644
  
   protected:
 diff --git a/video/rtp_video_stream_receiver2.cc b/video/rtp_video_stream_receiver2.cc
-index 7d6b16b282..a18b39d4fb 100644
+index 851628871a..dddef57935 100644
 --- a/video/rtp_video_stream_receiver2.cc
 +++ b/video/rtp_video_stream_receiver2.cc
 @@ -130,7 +130,8 @@ std::unique_ptr<ModuleRtpRtcpImpl2> CreateRtpRtcpModule(
@@ -174,7 +174,7 @@ index 7d6b16b282..a18b39d4fb 100644
  
    return rtp_rtcp;
  }
-@@ -326,7 +320,8 @@ RtpVideoStreamReceiver2::RtpVideoStreamReceiver2(
+@@ -327,7 +321,8 @@ RtpVideoStreamReceiver2::RtpVideoStreamReceiver2(
            packet_router,
            config_.rtp.rtcp_xr.receiver_reference_time_report,
            config_.rtp.rtcp_event_observer,
