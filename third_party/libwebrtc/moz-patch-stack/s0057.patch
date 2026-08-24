@@ -114,7 +114,7 @@ index 87974ada5c..d8543e0ba2 100644
    absl::InlinedVector<uint32_t, 4> new_continuous_temporal_units_;
  };
 diff --git a/call/video_receive_stream.h b/call/video_receive_stream.h
-index a4ca2ca8b4..e1f34ad9f6 100644
+index 1bdf0b79c4..550c3b5017 100644
 --- a/call/video_receive_stream.h
 +++ b/call/video_receive_stream.h
 @@ -117,6 +117,8 @@ class VideoReceiveStreamInterface : public MediaReceiveStreamInterface {
@@ -214,10 +214,10 @@ index 16f42bd02d..2d9700bb73 100644
                                     int current_delay_ms,
                                     int target_delay_ms,
 diff --git a/video/rtp_video_stream_receiver2.cc b/video/rtp_video_stream_receiver2.cc
-index bf3de2d3ea..b5c950bd5f 100644
+index c3baa8099a..0f7b049b26 100644
 --- a/video/rtp_video_stream_receiver2.cc
 +++ b/video/rtp_video_stream_receiver2.cc
-@@ -294,6 +294,7 @@ RtpVideoStreamReceiver2::RtpVideoStreamReceiver2(
+@@ -295,6 +295,7 @@ RtpVideoStreamReceiver2::RtpVideoStreamReceiver2(
      RtcpPacketTypeCounterObserver* rtcp_packet_type_counter_observer,
      RtcpCnameCallback* rtcp_cname_callback,
      NackPeriodicProcessor* nack_periodic_processor,
@@ -225,7 +225,7 @@ index bf3de2d3ea..b5c950bd5f 100644
      OnCompleteFrameCallback* complete_frame_callback,
      scoped_refptr<FrameDecryptorInterface> frame_decryptor,
      scoped_refptr<FrameTransformerInterface> frame_transformer)
-@@ -338,6 +339,7 @@ RtpVideoStreamReceiver2::RtpVideoStreamReceiver2(
+@@ -339,6 +340,7 @@ RtpVideoStreamReceiver2::RtpVideoStreamReceiver2(
                                              config_.rtp.nack,
                                              &rtcp_feedback_buffer_,
                                              &rtcp_feedback_buffer_)),
@@ -233,7 +233,7 @@ index bf3de2d3ea..b5c950bd5f 100644
        packet_buffer_(kPacketBufferStartSize,
                       PacketBufferMaxSize(env_.field_trials())),
        reference_finder_(std::make_unique<RtpFrameReferenceFinder>()),
-@@ -1376,7 +1378,8 @@ void RtpVideoStreamReceiver2::FrameDecoded(int64_t picture_id) {
+@@ -1388,7 +1390,8 @@ void RtpVideoStreamReceiver2::FrameDecoded(int64_t picture_id) {
  
    if (seq_num != -1) {
      int64_t unwrapped_rtp_seq_num = rtp_seq_num_unwrapper_.Unwrap(seq_num);
@@ -244,10 +244,10 @@ index bf3de2d3ea..b5c950bd5f 100644
    } else {
      RTC_LOG(LS_WARNING) << "Frame with id " << picture_id
 diff --git a/video/rtp_video_stream_receiver2.h b/video/rtp_video_stream_receiver2.h
-index de38ae4605..a608fa65ac 100644
+index a349df6177..6b25ca7fa0 100644
 --- a/video/rtp_video_stream_receiver2.h
 +++ b/video/rtp_video_stream_receiver2.h
-@@ -68,6 +68,7 @@
+@@ -69,6 +69,7 @@
  #include "rtc_base/thread_annotations.h"
  #include "video/buffered_frame_decryptor.h"
  #include "video/unique_timestamp_counter.h"
@@ -255,7 +255,7 @@ index de38ae4605..a608fa65ac 100644
  
  namespace webrtc {
  
-@@ -110,6 +111,7 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
+@@ -111,6 +112,7 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
        RtcpPacketTypeCounterObserver* rtcp_packet_type_counter_observer,
        RtcpCnameCallback* rtcp_cname_callback,
        NackPeriodicProcessor* nack_periodic_processor,
@@ -263,7 +263,7 @@ index de38ae4605..a608fa65ac 100644
        // The KeyFrameRequestSender is optional; if not provided, key frame
        // requests are sent via the internal RtpRtcp module.
        OnCompleteFrameCallback* complete_frame_callback,
-@@ -390,6 +392,7 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
+@@ -393,6 +395,7 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
    std::unique_ptr<LossNotificationController> loss_notification_controller_
        RTC_GUARDED_BY(worker_queue_);
  
@@ -272,7 +272,7 @@ index de38ae4605..a608fa65ac 100644
    // h26x_packet_buffer_ is applicable to H.264 and H.265. For H.265 it is
    // always used but for H.264 it is only used if WebRTC-Video-H26xPacketBuffer
 diff --git a/video/video_receive_stream2.cc b/video/video_receive_stream2.cc
-index b93fac3c68..7799f81612 100644
+index 6c84ded9a4..7b2020ac50 100644
 --- a/video/video_receive_stream2.cc
 +++ b/video/video_receive_stream2.cc
 @@ -248,6 +248,7 @@ VideoReceiveStream2::VideoReceiveStream2(

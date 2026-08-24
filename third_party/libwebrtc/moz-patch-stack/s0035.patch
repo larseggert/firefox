@@ -155,7 +155,7 @@ index 0bb2a0b449..b6f84c55df 100644
    return ss.Release();
  }
 diff --git a/call/video_receive_stream.h b/call/video_receive_stream.h
-index b82762057e..9a3e30e6f5 100644
+index fe3b3d2ace..71384ce6c1 100644
 --- a/call/video_receive_stream.h
 +++ b/call/video_receive_stream.h
 @@ -21,6 +21,7 @@
@@ -269,10 +269,10 @@ index d2a3c72603..39172386e2 100644
  
      RtcpRttStats* rtt_stats = nullptr;
 diff --git a/video/rtp_video_stream_receiver2.cc b/video/rtp_video_stream_receiver2.cc
-index b3084c22fc..7c2d2fc8c7 100644
+index e6a02b0714..a1b2e563d5 100644
 --- a/video/rtp_video_stream_receiver2.cc
 +++ b/video/rtp_video_stream_receiver2.cc
-@@ -128,6 +128,7 @@ std::unique_ptr<ModuleRtpRtcpImpl2> CreateRtpRtcpModule(
+@@ -129,6 +129,7 @@ std::unique_ptr<ModuleRtpRtcpImpl2> CreateRtpRtcpModule(
      RtcpCnameCallback* rtcp_cname_callback,
      PacketRouter* packet_router,
      bool non_sender_rtt_measurement,
@@ -280,7 +280,7 @@ index b3084c22fc..7c2d2fc8c7 100644
      std::optional<uint32_t> remote_ssrc) {
    RtpRtcpInterface::Configuration configuration;
    configuration.audio = false;
-@@ -138,6 +139,7 @@ std::unique_ptr<ModuleRtpRtcpImpl2> CreateRtpRtcpModule(
+@@ -139,6 +140,7 @@ std::unique_ptr<ModuleRtpRtcpImpl2> CreateRtpRtcpModule(
    configuration.rtcp_packet_type_counter_observer =
        rtcp_packet_type_counter_observer;
    configuration.rtcp_cname_callback = rtcp_cname_callback;
@@ -288,7 +288,7 @@ index b3084c22fc..7c2d2fc8c7 100644
    configuration.non_sender_rtt_measurement = non_sender_rtt_measurement;
    configuration.rtcp_mode = RtcpMode::kCompound;
    configuration.remote_ssrc = remote_ssrc;
-@@ -322,6 +324,7 @@ RtpVideoStreamReceiver2::RtpVideoStreamReceiver2(
+@@ -323,6 +325,7 @@ RtpVideoStreamReceiver2::RtpVideoStreamReceiver2(
            rtcp_cname_callback,
            packet_router,
            config_.rtp.rtcp_xr.receiver_reference_time_report,
