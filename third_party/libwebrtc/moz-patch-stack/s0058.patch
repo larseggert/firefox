@@ -30,10 +30,10 @@ index b40e260dc6..05d8d9b7be 100644
  
  void ReceiveStatisticsProxy::OnPreDecode(VideoCodecType codec_type, int qp) {
 diff --git a/video/rtp_video_stream_receiver2.cc b/video/rtp_video_stream_receiver2.cc
-index 3ad2dd2361..bc06599817 100644
+index 6c405f0fdc..fa08ffd453 100644
 --- a/video/rtp_video_stream_receiver2.cc
 +++ b/video/rtp_video_stream_receiver2.cc
-@@ -1363,7 +1363,9 @@ void RtpVideoStreamReceiver2::FrameDecoded(int64_t picture_id) {
+@@ -1370,7 +1370,9 @@ void RtpVideoStreamReceiver2::FrameDecoded(int64_t picture_id) {
    if (seq_num != -1) {
      int64_t unwrapped_rtp_seq_num = rtp_seq_num_unwrapper_.Unwrap(seq_num);
      uint32_t num_packets_cleared = packet_buffer_.ClearTo(unwrapped_rtp_seq_num);
@@ -42,5 +42,5 @@ index 3ad2dd2361..bc06599817 100644
 +      vcm_receive_statistics_->OnDiscardedPackets(num_packets_cleared);
 +    }
      reference_finder_->ClearTo(seq_num, rtp_timestamp);
-   }
- }
+   } else {
+     RTC_LOG(LS_WARNING) << "Frame with id " << picture_id

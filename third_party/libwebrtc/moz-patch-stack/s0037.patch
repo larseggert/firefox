@@ -15,10 +15,10 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/edac9d01a9ac7594f
  3 files changed, 24 insertions(+)
 
 diff --git a/video/rtp_video_stream_receiver2.cc b/video/rtp_video_stream_receiver2.cc
-index fd243ee5d0..80493a72ef 100644
+index 32dc6ff78d..3995ba4c35 100644
 --- a/video/rtp_video_stream_receiver2.cc
 +++ b/video/rtp_video_stream_receiver2.cc
-@@ -1121,6 +1121,16 @@ std::optional<int64_t> RtpVideoStreamReceiver2::LastReceivedKeyframePacketMs()
+@@ -1128,6 +1128,16 @@ std::optional<int64_t> RtpVideoStreamReceiver2::LastReceivedKeyframePacketMs()
    return std::nullopt;
  }
  
@@ -36,10 +36,10 @@ index fd243ee5d0..80493a72ef 100644
  RtpVideoStreamReceiver2::GetSenderReportStats() const {
    RTC_DCHECK_RUN_ON(&packet_sequence_checker_);
 diff --git a/video/rtp_video_stream_receiver2.h b/video/rtp_video_stream_receiver2.h
-index e3e50a6a9c..52aa15c91e 100644
+index 2a4eda92a4..54f00a5006 100644
 --- a/video/rtp_video_stream_receiver2.h
 +++ b/video/rtp_video_stream_receiver2.h
-@@ -230,6 +230,12 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
+@@ -239,6 +239,12 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
    std::optional<RtpRtcpInterface::NonSenderRttStats> GetNonSenderRttStats()
        const;
  
