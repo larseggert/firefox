@@ -145,7 +145,7 @@ index 231f448056..4304685ddb 100644
  
   protected:
 diff --git a/video/rtp_video_stream_receiver2.cc b/video/rtp_video_stream_receiver2.cc
-index 851628871a..dddef57935 100644
+index c6da4b7b51..13a7b47349 100644
 --- a/video/rtp_video_stream_receiver2.cc
 +++ b/video/rtp_video_stream_receiver2.cc
 @@ -130,7 +130,8 @@ std::unique_ptr<ModuleRtpRtcpImpl2> CreateRtpRtcpModule(
