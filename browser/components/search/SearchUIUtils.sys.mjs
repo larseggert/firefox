@@ -446,7 +446,7 @@ export var SearchUIUtils = {
         : await lazy.SearchService.getDefault();
     }
 
-    let submission = engine.getSubmission(searchText, searchUrlType);
+    let submission = engine.getSubmission(searchText, searchUrlType, sapSource);
 
     // getSubmission can return null if the engine doesn't have a URL
     // for the given response type. This is an error if it occurs, since

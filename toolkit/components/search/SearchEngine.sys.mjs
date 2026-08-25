@@ -325,10 +325,12 @@ export class EngineURL {
    *   The user's search terms.
    * @param {string} queryCharset
    *   The character set that is being used for the query.
+   * @param {string} sapSource
+   *   The source of the search request.
    * @returns {SearchSubmissionData}
    *   The submission data containing the URL and post data for the URL.
    */
-  getSubmission(searchTerms, queryCharset) {
+  getSubmission(searchTerms, queryCharset, sapSource) {
     let escapedSearchTerms;
     try {
       escapedSearchTerms = Services.textToSubURI.ConvertAndEscape(
@@ -346,13 +348,18 @@ export class EngineURL {
     }
 
     let templateURI = new URL(this.template);
-    let paramString = this.#encodeParams(escapedSearchTerms, queryCharset);
+    let paramString = this.#encodeParams(
+      escapedSearchTerms,
+      queryCharset,
+      sapSource
+    );
 
     let postData = null;
     let query = this.#paramSubstitution(
       templateURI.search,
       escapedSearchTerms,
-      queryCharset
+      queryCharset,
+      sapSource
     );
     if (this.method == "GET" && paramString) {
       // Query parameters may be specified in the template url AND in `this.params`.
@@ -388,12 +395,14 @@ export class EngineURL {
       // decode them to ensure paramSubstitution finds them.
       decodeURIComponent(templateURI.pathname),
       urlSearchTerms,
-      queryCharset
+      queryCharset,
+      sapSource
     );
     templateURI.hash = this.#paramSubstitution(
       templateURI.hash,
       urlSearchTerms,
-      queryCharset
+      queryCharset,
+      sapSource
     );
 
     return { uri: templateURI.URI, postData };
@@ -418,10 +427,12 @@ export class EngineURL {
    *   The user's search terms escaped with the correct charset.
    * @param {string} queryCharset
    *   The character set that is being used for the query.
+   * @param {string} sapSource
+   *   The source of the search request.
    * @returns {string}
    *   Parameter string containing the search terms.
    */
-  #encodeParams(escapedSearchTerms, queryCharset) {
+  #encodeParams(escapedSearchTerms, queryCharset, sapSource) {
     let dataArray = [];
     for (let param of this.params) {
       // QueryPreferenceParameters might not have a preferenced saved, or a valid value.
@@ -429,8 +440,15 @@ export class EngineURL {
         let value = this.#paramSubstitution(
           param.value,
           escapedSearchTerms,
-          queryCharset
+          queryCharset,
+          sapSource
         );
+        // Don't insert the partner code parameter if the value is empty.
+        // We do allow insertion of other parameters if they are empty as sometimes
+        // they may be required by the server.
+        if (param.value == "{partnerCode}" && value == "") {
+          continue;
+        }
         dataArray.push(param.name + "=" + value);
       }
     }
@@ -451,10 +469,12 @@ export class EngineURL {
    *   as-is.
    * @param {string} queryCharset
    *   The character set of the search engine to use for query encoding.
+   * @param {string} sapSource
+   *   The source of the search request.
    * @returns {string}
    *   An updated parameter string.
    */
-  #paramSubstitution(paramValue, searchTerms, queryCharset) {
+  #paramSubstitution(paramValue, searchTerms, queryCharset, sapSource) {
     const PARAM_REGEXP = /\{(\w+)(\??)\}/g;
     return paramValue.replace(PARAM_REGEXP, (match, name, optional) => {
       // {searchTerms} is by far the most common param so handle it first.
@@ -464,6 +484,9 @@ export class EngineURL {
 
       // {partnerCode} is also frequent.
       if (name == "partnerCode") {
+        if (this.#partnerCodeMap.has(sapSource)) {
+          return this.#partnerCodeMap.get(sapSource).partnerCode;
+        }
         return this.#partnerCodeMap.get("default").partnerCode;
       }
 
@@ -961,8 +984,14 @@ export class SearchEngine {
       }
     );
 
-    let existingSubmission = existingUrl.getSubmission("", this.queryCharset);
-    let newSubmission = newUrl.getSubmission("", this.queryCharset);
+    // These two calls should use the default source, so that we're comparing
+    // the same thing.
+    let existingSubmission = existingUrl.getSubmission(
+      "",
+      this.queryCharset,
+      "default"
+    );
+    let newSubmission = newUrl.getSubmission("", this.queryCharset, "default");
 
     return (
       existingSubmission.uri.equals(newSubmission.uri) &&
@@ -1364,11 +1393,13 @@ export class SearchEngine {
    * @param {Values<typeof lazy.SearchUtils.URL_TYPE>} [responseType]
    *   The MIME type that we'd like to receive in response
    *   to this submission.  If null, will default to "text/html".
+   * @param {string} [sapSource]
+   *   The source of the search request.
    * @returns {?SearchSubmissionData}
    *   The submission data. If no appropriate submission can be determined for
    *   the request type, this may be null.
    */
-  getSubmission(searchTerms, responseType) {
+  getSubmission(searchTerms, responseType, sapSource = "default") {
     // We can't use a default parameter as that doesn't work correctly with
     // the idl interfaces.
     if (!responseType) {
@@ -1398,7 +1429,7 @@ export class SearchEngine {
       }
     }
 
-    return url.getSubmission(searchTerms, this.queryCharset);
+    return url.getSubmission(searchTerms, this.queryCharset, sapSource);
   }
 
   /**
@@ -1411,7 +1442,9 @@ export class SearchEngine {
   get searchURLWithNoTerms() {
     return this.getURLOfType(lazy.SearchUtils.URL_TYPE.SEARCH).getSubmission(
       "",
-      this.queryCharset
+      this.queryCharset,
+      // Use the default source, as this is used for non submission checks.
+      "default"
     ).uri;
   }
 
@@ -1569,7 +1602,9 @@ export class SearchEngine {
   get searchForm() {
     let url = this.getURLOfType(lazy.SearchUtils.URL_TYPE.SEARCH_FORM);
     if (url) {
-      return url.getSubmission("", this.queryCharset).uri.spec;
+      // Using "default" should be fine here, since we won't typically apply
+      // partner codes to search forms.
+      return url.getSubmission("", this.queryCharset, "default").uri.spec;
     }
     return this.searchURLWithNoTerms.prePath;
   }
@@ -1678,7 +1713,9 @@ export class SearchEngine {
     if (this.supportsResponseType(lazy.SearchUtils.URL_TYPE.SUGGEST_JSON)) {
       let suggestURI = this.getSubmission(
         "dummy",
-        lazy.SearchUtils.URL_TYPE.SUGGEST_JSON
+        lazy.SearchUtils.URL_TYPE.SUGGEST_JSON,
+        // Doesn't matter what we use here - this is for pre-connection only.
+        "default"
       ).uri;
       if (suggestURI.prePath != searchURI.prePath) {
         try {

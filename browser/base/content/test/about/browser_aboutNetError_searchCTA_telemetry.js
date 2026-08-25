@@ -11,6 +11,10 @@
 const { SearchService } = ChromeUtils.importESModule(
   "moz-src:///toolkit/components/search/SearchService.sys.mjs"
 );
+const { SearchUITestUtils } = ChromeUtils.importESModule(
+  "resource://testing-common/SearchUITestUtils.sys.mjs"
+);
+SearchUITestUtils.init(this);
 
 const CTA_PREF = "browser.netError.searchCTA.enabled";
 
@@ -25,14 +29,29 @@ function stubEngineSupported(supported) {
 }
 
 add_setup(async function () {
-  await SearchTestUtils.installSearchExtension(
+  await SearchTestUtils.updateRemoteSettingsConfig([
     {
-      name: "MozSearchCTATelemetry",
-      search_url: "https://example.com/",
-      search_url_get_params: "q={searchTerms}",
+      // Temporary conflict with a normal engine to check that the partner code is removed for now.
+      identifier: "google",
+      base: {
+        partnerCode: "foo",
+        classification: "general",
+        urls: {
+          search: {
+            base: "https://example.com/",
+            params: [
+              {
+                name: "client",
+                value: "{partnerCode}",
+              },
+            ],
+            searchTermParamName: "q",
+          },
+        },
+      },
     },
-    { setAsDefault: true }
-  );
+  ]);
+
   await SpecialPowers.pushPrefEnv({
     set: [
       [CTA_PREF, true],
@@ -40,6 +59,9 @@ add_setup(async function () {
       // guard is a no-op and this test doesn't depend on captive-portal state.
       ["browser.netError.searchCTA.connectivityFreshnessMs", 2147483647],
     ],
+  });
+  registerCleanupFunction(async () => {
+    await SearchTestUtils.updateRemoteSettingsConfig();
   });
 });
 
@@ -183,7 +205,12 @@ add_task(async function test_clickedCount() {
     const { tab, browser } = await loadDnsNotFoundPage(
       "https://foo.wildernessgear-cta.com/"
     );
-    const newTabPromise = BrowserTestUtils.waitForNewTab(gBrowser, null, true);
+    const newTabPromise = BrowserTestUtils.waitForNewTab(
+      gBrowser,
+      // Should be no client field.
+      "https://example.com/?q=wildernessgear-cta.com",
+      true
+    );
     await waitForSettledNetErrorCard(browser, {
       clickQuery: "searchCTAButton",
     });
