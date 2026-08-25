@@ -100,6 +100,11 @@ LazyLogModule sSelectionAPILog("SelectionAPI");
 // 5. Verbose: Prints the log even when the content has not frame
 LazyLogModule sSelectFramesLog("SelectFrames");
 
+// LookUpSelection log.
+// 3. Info: Logging only when returning something
+// 4. Debug: Logging when it's called and there are some ranges
+LazyLogModule sLookUpSelectionLog("LookUpSelection");
+
 std::string format_as(SelectionType aType) {
   constexpr const char* sNames[] = {
       "eInvalid",
@@ -2218,6 +2223,20 @@ UniquePtr<SelectionDetails> Selection::LookUpSelection(
     return aDetailsHead;
   }
 
+  bool hasPrintedCallLog = false;
+#define LOG_LOOK_UP_SELECTION(aLogLevel, ...)                           \
+  if (MOZ_LOG_TEST(sLookUpSelectionLog, aLogLevel)) [[unlikely]] {      \
+    if (!hasPrintedCallLog) {                                           \
+      hasPrintedCallLog = true;                                         \
+      MOZ_LOG_FMT(sLookUpSelectionLog, aLogLevel,                       \
+                  "{} LookUpSelection(aContent={}, aContentOffset={}, " \
+                  "aContentLength={}, aSelectionType={})",              \
+                  static_cast<void*>(this), *aContent, aContentOffset,  \
+                  aContentLength, aSelectionType);                      \
+    }                                                                   \
+    MOZ_LOG_FMT(sLookUpSelectionLog, aLogLevel, __VA_ARGS__);           \
+  }
+
   nsTArray<AbstractRange*> overlappingRanges;
   SelectionNodeCache* cache =
       GetPresShell() ? GetPresShell()->GetSelectionNodeCache() : nullptr;
@@ -2237,6 +2256,10 @@ UniquePtr<SelectionDetails> Selection::LookUpSelection(
                   GetAbstractRangeAt(0))) {
         newHead->mTextRangeStyle = *style;
       }
+
+      LOG_LOOK_UP_SELECTION(LogLevel::Info, "    fully selected, return {}",
+                            *newHead);
+
       auto detailsHead = std::move(newHead);
 
       return detailsHead;
@@ -2247,10 +2270,14 @@ UniquePtr<SelectionDetails> Selection::LookUpSelection(
       aContent, aContentOffset, aContent, aContentOffset + aContentLength,
       false, &overlappingRanges);
   if (NS_FAILED(rv)) {
+    LOG_LOOK_UP_SELECTION(LogLevel::Debug,
+                          "    GetAbstractRangesForIntervalArray() failed");
     return aDetailsHead;
   }
 
   if (overlappingRanges.Length() == 0) {
+    LOG_LOOK_UP_SELECTION(LogLevel::Debug,
+                          "    no overlapped ranges, return nothing");
     return aDetailsHead;
   }
 
@@ -2302,6 +2329,9 @@ UniquePtr<SelectionDetails> Selection::LookUpSelection(
       end.emplace(aContentLength);
     }
     if (start.isNothing()) {
+      LOG_LOOK_UP_SELECTION(LogLevel::Debug, "    range: {}", *range);
+      LOG_LOOK_UP_SELECTION(LogLevel::Debug,
+                            "            not overlapped, ignored");
       continue;  // the ranges do not overlap the input range
     }
 
@@ -2316,8 +2346,15 @@ UniquePtr<SelectionDetails> Selection::LookUpSelection(
             mStyledRanges.GetNonDefaultTextRangeStyle(range)) {
       newHead->mTextRangeStyle = *style;
     }
+    if (MOZ_LOG_TEST(sLookUpSelectionLog, LogLevel::Info)) [[unlikely]] {
+      LOG_LOOK_UP_SELECTION(LogLevel::Info, "    range: {}", *range);
+      LOG_LOOK_UP_SELECTION(LogLevel::Info, "        overlapped: {}", *newHead);
+    }
     detailsHead = std::move(newHead);
   }
+
+#undef LOG_LOOK_UP_SELECTION
+
   return detailsHead;
 }
 
