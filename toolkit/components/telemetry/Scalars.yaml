@@ -4242,21 +4242,6 @@ urlbar.unifiedsearchbutton:
       - main
 
 migration:
-  uninstaller_profile_refresh:
-    bug_numbers:
-      - 1634115
-      - 1672585
-    description: >
-      Set when a profile refresh is initiated from the uninstaller.
-    expires: never
-    kind: boolean
-    notification_emails:
-      - application-update-telemetry-alerts@mozilla.com
-    release_channel_collection: opt-out
-    products:
-      - 'firefox'
-    record_in_processes:
-      - main
   discovered_migrators:
     bug_numbers:
       - 1825655
