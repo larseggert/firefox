@@ -210,7 +210,7 @@ index 7c48268a24..2fd44a6e56 100644
      }
  
 diff --git a/api/BUILD.gn b/api/BUILD.gn
-index 50549817b2..5f5d69f743 100644
+index 6be89f9e92..7ecbbaa254 100644
 --- a/api/BUILD.gn
 +++ b/api/BUILD.gn
 @@ -34,6 +34,9 @@ rtc_library("enable_media") {
@@ -291,7 +291,7 @@ index 50549817b2..5f5d69f743 100644
  
  rtc_library("sctp_transport_interface") {
    visibility = [ "*" ]
-@@ -813,6 +840,7 @@ rtc_source_set("peer_network_dependencies") {
+@@ -812,6 +839,7 @@ rtc_source_set("peer_network_dependencies") {
  }
  
  rtc_source_set("peer_connection_quality_test_fixture_api") {
@@ -299,7 +299,7 @@ index 50549817b2..5f5d69f743 100644
    visibility = [ "*" ]
    testonly = true
    sources = [ "test/peerconnection_quality_test_fixture.h" ]
-@@ -828,6 +856,7 @@ rtc_source_set("peer_connection_quality_test_fixture_api") {
+@@ -827,6 +855,7 @@ rtc_source_set("peer_connection_quality_test_fixture_api") {
      "//third_party/abseil-cpp/absl/strings:string_view",
    ]
  }
@@ -307,7 +307,7 @@ index 50549817b2..5f5d69f743 100644
  
  rtc_library("frame_generator_api") {
    visibility = [ "*" ]
-@@ -929,6 +958,7 @@ rtc_library("create_frame_generator") {
+@@ -928,6 +957,7 @@ rtc_library("create_frame_generator") {
    ]
  }
  
@@ -315,7 +315,7 @@ index 50549817b2..5f5d69f743 100644
  rtc_library("create_peer_connection_quality_test_frame_generator") {
    visibility = [ "*" ]
    testonly = true
-@@ -946,6 +976,7 @@ rtc_library("create_peer_connection_quality_test_frame_generator") {
+@@ -945,6 +975,7 @@ rtc_library("create_peer_connection_quality_test_frame_generator") {
      "units:time_delta",
    ]
  }
@@ -323,7 +323,7 @@ index 50549817b2..5f5d69f743 100644
  
  rtc_source_set("data_channel_event_observer_interface") {
    visibility = [ "*" ]
-@@ -1126,6 +1157,7 @@ rtc_source_set("refcountedbase") {
+@@ -1125,6 +1156,7 @@ rtc_source_set("refcountedbase") {
  }
  
  rtc_library("ice_transport_factory") {
@@ -331,7 +331,7 @@ index 50549817b2..5f5d69f743 100644
    visibility = [ "*" ]
    sources = [
      "ice_transport_factory.cc",
-@@ -1143,6 +1175,7 @@ rtc_library("ice_transport_factory") {
+@@ -1142,6 +1174,7 @@ rtc_library("ice_transport_factory") {
      "../rtc_base/system:rtc_export",
    ]
  }
