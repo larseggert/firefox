@@ -162,6 +162,7 @@ support-files = [
 support-files = [
   "!/toolkit/content/tests/browser/common/mockTransfer.js",
   "file_pdf_download_link.html",
+  "file_pdfjs_form.pdf",
 ]
 
 ["browser_pdfjs_savedialog.js"]
