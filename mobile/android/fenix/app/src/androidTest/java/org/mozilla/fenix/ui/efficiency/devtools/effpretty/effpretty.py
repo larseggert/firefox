@@ -44,9 +44,11 @@ USAGE EXAMPLES
 from __future__ import annotations
 
 import argparse
+import atexit
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 
@@ -307,6 +309,34 @@ def find_adb() -> str | None:
     return None
 
 
+# Every `adb logcat` this process starts. Tracked at module level rather than relying on the
+# generator's `finally`, because the generator is not the thing that gets killed.
+#
+# effloop backgrounds `effpretty capture` and SIGTERMs it when the run ends. Python's default SIGTERM
+# handling terminates the interpreter WITHOUT unwinding generators, so the cleanup below never ran and
+# the adb child was left attached to the device --- once per loop iteration, accumulating silently.
+#
+# A stray reader is not free: logd serves it every line and applies backpressure to the app writing
+# them. Two of them were found attached after a day's work, and reaping them was measurable.
+_CHILDREN: list = []
+
+
+def _reap_children(*_args):
+    for proc in _CHILDREN:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+    _CHILDREN.clear()
+
+
+def _reap_and_exit(signum, _frame):
+    _reap_children()
+    sys.exit(128 + signum)
+
+
 def capture_lines(mode: str):
     """Yield logcat lines from a connected device. mode: live | watch | dump."""
     adb = find_adb()
@@ -324,16 +354,12 @@ def capture_lines(mode: str):
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, text=True, bufsize=1, errors="replace"
     )
+    _CHILDREN.append(proc)
     try:
         assert proc.stdout is not None
         yield from proc.stdout
     finally:
-        if proc.poll() is None:
-            proc.terminate()
-            try:
-                proc.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                proc.kill()
+        _reap_children()
 
 
 # --- CLI ------------------------------------------------------------------------
@@ -396,6 +422,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    atexit.register(_reap_children)
+    for sig in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, _reap_and_exit)
+
     argv = sys.argv[1:]
     # Default to `view` when no subcommand is given (e.g. `effpretty run.txt` or piped stdin).
     if not argv or (argv[0] not in ("view", "capture", "-h", "--help")):
