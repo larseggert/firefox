@@ -3355,9 +3355,6 @@
 - name: WasmNullConstant
   result_type: WordSized
 
-- name: WasmCallIndirectAdjunctSafepoint
-  gen_boilerplate: false
-
 - name: WasmCall
   gen_boilerplate: false
 
