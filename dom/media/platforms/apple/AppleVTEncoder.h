@@ -8,8 +8,6 @@
 #include <CoreMedia/CoreMedia.h>
 #include <VideoToolbox/VideoToolbox.h>
 
-#include <deque>
-
 #include "PlatformEncoderModule.h"
 #include "apple/AppleUtils.h"
 
@@ -61,14 +59,14 @@ class AppleVTEncoder final : public MediaDataEncoder {
   enum class EncodeResult { Success, EncodeError, FrameDropped, EmptyBuffer };
 
   virtual ~AppleVTEncoder() { MOZ_ASSERT(!mSession); }
-  RefPtr<EncodePromise> ProcessEncode(nsTArray<RefPtr<MediaData>>&& aSamples);
+  void ProcessEncode(const RefPtr<const VideoData>& aSample);
   RefPtr<ReconfigurationPromise> ProcessReconfigure(
       const RefPtr<const EncoderConfigurationChangeList>&
           aConfigurationChanges);
   void ProcessOutput(RefPtr<MediaRawData>&& aOutput, EncodeResult aResult,
                      bool aWasForcedKeyframe = false);
-  bool MaybeArmTimer();
-  void MaybeResolveOrRejectEncodePromises(bool aResolveAll = false);
+  void ForceOutputIfNeeded();
+  void MaybeResolveOrRejectEncodePromise();
   RefPtr<EncodePromise> ProcessDrain();
   RefPtr<ShutdownPromise> ProcessShutdown();
 
@@ -88,22 +86,20 @@ class AppleVTEncoder final : public MediaDataEncoder {
   bool IsSettingColorSpaceSupported() const;
   MediaResult SetColorSpace(const EncoderConfig::SampleFormat& aFormat);
 
-  void AssertOnTaskQueue() { MOZ_ASSERT(mTaskQueue->IsCurrentThreadIn()); }
+  void EncodeNextSample(nsTArray<RefPtr<MediaData>>&& aInputs,
+                        MediaDataEncoder::EncodedData&& aOutputs);
 
-  enum class EncodeState : uint8_t {
-    NotEncoding,
-    Encoding,
-    ResolveOrReject,
-  };
+  void AssertOnTaskQueue() { MOZ_ASSERT(mTaskQueue->IsCurrentThreadIn()); }
 
   EncoderConfig mConfig;
   const RefPtr<TaskQueue> mTaskQueue;
   const bool mHardwareNotAllowed;
-  // The following are accessed only in mTaskQueue.
-  EncodeState mEncodeState = EncodeState::NotEncoding;
+  // Accessed only in mTaskQueue.
   EncodedData mEncodedData;
-  MozPromiseHolder<EncodePromise> mDrainPromise;
-  std::deque<RefPtr<EncodePromise::Private>> mEncodePromises;
+  // Accessed only in mTaskQueue.
+  MozPromiseHolder<EncodePromise> mEncodePromise;
+  MozPromiseHolder<EncodePromise> mEncodeBatchPromise;
+  MozPromiseRequestHolder<EncodePromise> mEncodeBatchRequest;
   RefPtr<MediaByteBuffer> mAvcc;  // Stores latest avcC data.
   MediaResult mError;
 
