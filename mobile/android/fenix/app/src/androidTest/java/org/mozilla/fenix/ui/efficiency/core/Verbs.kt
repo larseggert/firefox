@@ -50,14 +50,13 @@ fun <T : VerbHost> T.require(
     predicate: (Any) -> Boolean = { true },
     action: (Any) -> Unit = {},
 ): T {
-    val rep = reporter()
-    rep?.startCmd(stepId(verb, selector.description), "Attempting to $verb '${selector.description}'...", 1)
+    val cmd = cmd(verb, selector.description, "Attempting to $verb '${selector.description}'...")
 
-    val probe = seek(selector, policy, applyPreconditions, predicate, rep, via)
+    val probe = seek(selector, policy, applyPreconditions, predicate, via)
     val element = probe.matched
     if (element == null) {
         if (optional) {
-            rep?.endCmdSkip(message = "'${selector.description}' not present; skipped")
+            cmd.skip("'${selector.description}' not present; skipped")
             return this
         }
         // Keep "not on screen" and "on screen but wrong state" distinguishable. The verbs this
@@ -69,14 +68,14 @@ fun <T : VerbHost> T.require(
             } else {
                 "'${selector.description}' was found but $expectation was false"
             }
-        rep?.endCmd(success = false, message = message)
+        cmd.fail(message)
         if (dumpOnFailure) dumpFailure("$verb failed: ${selector.description}")
         throw AssertionError("$message (${selector.strategy} -> ${selector.value})")
     }
 
     try {
         action(element)
-        rep?.endCmd(success = true, message = "$verb '${selector.description}' ok")
+        cmd.ok("$verb '${selector.description}' ok")
         return this
     } catch (e: Throwable) {
         // Optional means best-effort all the way through, not just at the lookup: the element can be
@@ -84,10 +83,10 @@ fun <T : VerbHost> T.require(
         // "was added" dialog is the standing example - and a failed click on something we were
         // willing not to find at all is not a test failure.
         if (optional) {
-            rep?.endCmdSkip(message = "'${selector.description}' went away mid-$verb; skipped")
+            cmd.skip("'${selector.description}' went away mid-$verb; skipped")
             return this
         }
-        rep?.endCmd(success = false, message = "$verb '${selector.description}' failed: ${e.message ?: "exception"}")
+        cmd.fail("$verb '${selector.description}' failed: ${e.message ?: "exception"}")
         if (dumpOnFailure) dumpFailure("$verb failed: ${selector.description}")
         throw e
     }
@@ -105,8 +104,7 @@ fun <T : VerbHost> T.requireAbsent(
     sustain: Boolean = false,
     dumpOnFailure: Boolean = false,
 ): T {
-    val rep = reporter()
-    rep?.startCmd(stepId(verb, selector.description), "Verifying '${selector.description}' is absent...", 1)
+    val cmd = cmd(verb, selector.description, "Verifying '${selector.description}' is absent...")
 
     fun present(): Boolean =
         runCatching { locate(selector, false) }
@@ -132,11 +130,11 @@ fun <T : VerbHost> T.requireAbsent(
                     "'${selector.description}' was expected to disappear but is still visible after ${timeout}ms"
                 else -> "'${selector.description}' was expected to be absent but is visible"
             }
-        rep?.endCmd(success = false, message = message)
+        cmd.fail(message)
         if (dumpOnFailure) dumpFailure("$verb failed: ${selector.description}")
         throw AssertionError(message)
     }
-    rep?.endCmd(success = true, message = "'${selector.description}' absent")
+    cmd.ok("'${selector.description}' absent")
     return this
 }
 
@@ -158,8 +156,7 @@ fun <T : VerbHost> T.requireAll(
     satisfied: (SemanticsNodeInteractionCollection) -> Boolean,
     action: (SemanticsNodeInteractionCollection) -> Unit = {},
 ): T {
-    val rep = reporter()
-    rep?.startCmd(stepId(verb, selector.description), "Verifying '${selector.description}' $expectation...", 1)
+    val cmd = cmd(verb, selector.description, "Verifying '${selector.description}' $expectation...")
     before()
 
     val timeout = (policy as? WaitPolicy.Poll)?.timeout ?: 0
@@ -169,14 +166,14 @@ fun <T : VerbHost> T.requireAll(
         val all = locateAll(selector)
         if (all == null) {
             val message = "${selector.strategy} cannot match more than one element; $verb needs a Compose tag selector"
-            rep?.endCmd(success = false, message = message)
+            cmd.fail(message)
             throw AssertionError(message)
         }
         if (runCatching { satisfied(all) }.getOrDefault(false)) {
             // Outside the runCatching above: a failing action is a real error to propagate, not a
             // "the expectation was false".
             action(all)
-            rep?.endCmd(success = true, message = "'${selector.description}' $expectation")
+            cmd.ok("'${selector.description}' $expectation")
             return this
         }
         if (SystemClock.uptimeMillis() >= deadline) break
@@ -185,7 +182,7 @@ fun <T : VerbHost> T.requireAll(
     }
 
     val message = "'${selector.description}' $expectation was false" + if (timeout > 0) " after ${timeout}ms" else ""
-    rep?.endCmd(success = false, message = message)
+    cmd.fail(message)
     if (dumpOnFailure) dumpFailure("$verb failed: ${selector.description}")
     throw AssertionError(message)
 }
@@ -207,27 +204,20 @@ fun <T : VerbHost> T.driveUntil(
     settle: () -> Unit = {},
     step: () -> Unit,
 ): T {
-    val rep = reporter()
     val goal = if (want) "present" else "gone"
-    rep?.startCmd(stepId(verb, selector.description), "$verb until '${selector.description}' is $goal...", 1)
+    val cmd = cmd(verb, selector.description, "$verb until '${selector.description}' is $goal...")
 
     fun matches(attempt: Int): Boolean {
-        rep?.startLoc(
-            stepId("loc", "${selector.description}_attempt_$attempt"),
-            "Attempting to locate '${selector.description}'...",
-            2,
-        )
+        val loc = loc(selector.description, "_attempt_$attempt")
         val here = runCatching { locate(selector, false)?.let { probe(it) } }.getOrNull() == true
-        rep?.endLoc(
-            success = here == want,
-            message = if (here) "'${selector.description}' found" else "'${selector.description}' not found",
-        )
+        // The LOC succeeded if the screen is how the caller wants it, not if the element is there.
+        loc.done(here == want, if (here) "'${selector.description}' found" else "'${selector.description}' not found")
         return here == want
     }
 
     for (attempt in 0..attempts) {
         if (matches(attempt + 1)) {
-            rep?.endCmd(success = true, message = "'${selector.description}' $goal after $attempt $verb(s)")
+            cmd.ok("'${selector.description}' $goal after $attempt $verb(s)")
             return this
         }
         if (attempt == attempts) break
@@ -236,7 +226,7 @@ fun <T : VerbHost> T.driveUntil(
     }
 
     val message = "'${selector.description}' still not $goal after $attempts $verb(s)"
-    rep?.endCmd(success = false, message = message)
+    cmd.fail(message)
     if (dumpOnFailure) dumpFailure("$verb failed: ${selector.description}")
     throw AssertionError(message)
 }
@@ -252,15 +242,14 @@ fun <T : VerbHost> T.requireState(
     dumpOnFailure: Boolean = false,
     condition: () -> Boolean,
 ): T {
-    val rep = reporter()
-    rep?.startCmd(verb, "Verifying $description...", 1)
+    val cmd = reporter().start(TimedReporter.Type.CMD, verb, "Verifying $description...")
 
     val timeout = (policy as? WaitPolicy.Poll)?.timeout ?: 0
     val deadline = SystemClock.uptimeMillis() + timeout
     var wait = policy.firstGap()
     while (true) {
         if (runCatching { condition() }.getOrDefault(false)) {
-            rep?.endCmd(success = true, message = "$description: yes")
+            cmd.ok("$description: yes")
             return this
         }
         if (SystemClock.uptimeMillis() >= deadline) break
@@ -269,7 +258,7 @@ fun <T : VerbHost> T.requireState(
     }
 
     val message = if (timeout > 0) "$description: no, after ${timeout}ms" else "$description: no"
-    rep?.endCmd(success = false, message = message)
+    cmd.fail(message)
     if (dumpOnFailure) dumpFailure(verb)
     throw AssertionError(message)
 }
@@ -287,14 +276,13 @@ fun <T : VerbHost> T.reportAround(
     dumpOnFailure: Boolean = false,
     block: () -> Unit,
 ): T {
-    val rep = reporter()
-    rep?.startCmd(stepId(verb, description), "$description...", 1)
+    val cmd = cmd(verb, description, "$description...")
     try {
         block()
-        rep?.endCmd(success = true, message = "$description: done")
+        cmd.ok("$description: done")
         return this
     } catch (e: Throwable) {
-        rep?.endCmd(success = false, message = "$description failed: ${e.message ?: "exception"}")
+        cmd.fail("$description failed: ${e.message ?: "exception"}")
         if (dumpOnFailure) dumpFailure("$verb failed: $description")
         throw e
     }
@@ -313,19 +301,15 @@ fun VerbHost.groupPresent(
     policy: WaitPolicy = WaitPolicy.Immediate,
     applyPreconditions: Boolean = false,
 ): Boolean {
-    val rep = reporter()
-    rep?.startCmd(stepId(verb, label), "Checking '$label'...", 1)
+    val cmd = cmd(verb, label, "Checking '$label'...")
 
     fun allPresent(): Boolean = selectors.all { sel ->
-        rep?.startLoc(stepId("loc", "${label}_${sel.description}"), "Attempting to locate '${sel.description}'...", 2)
+        val loc = loc(sel.description, "_in_$label")
         val present =
             runCatching { locate(sel, applyPreconditions) }
                 .getOrNull()
                 ?.let { ElementState.probe(it, ElementState.Trait.DISPLAYED) } == true
-        rep?.endLoc(
-            success = present,
-            message = if (present) "'${sel.description}' found" else "'${sel.description}' not found",
-        )
+        loc.found(sel.description, present)
         present
     }
 
@@ -339,7 +323,7 @@ fun VerbHost.groupPresent(
         here = allPresent()
     }
 
-    rep?.endCmd(success = here, message = if (here) "'$label' present" else "'$label' not present")
+    cmd.done(here, if (here) "'$label' present" else "'$label' not present")
     return here
 }
 
@@ -358,23 +342,19 @@ private fun VerbHost.seek(
     policy: WaitPolicy,
     applyPreconditions: Boolean,
     predicate: (Any) -> Boolean,
-    rep: TimedReporter?,
     via: ((Selector, Boolean) -> Any?)? = null,
 ): Probe {
     var seen: Any? = null
 
     fun once(): Any? {
-        rep?.startLoc(stepId("loc", selector.description), "Attempting to locate '${selector.description}'...", 2)
+        val loc = loc(selector.description)
         val found = runCatching {
             via?.invoke(selector, applyPreconditions) ?: locate(selector, applyPreconditions)
         }
             .getOrNull()
         if (found != null) seen = found
         val ok = found != null && runCatching { predicate(found) }.getOrDefault(false)
-        rep?.endLoc(
-            success = ok,
-            message = if (ok) "'${selector.description}' found" else "'${selector.description}' not found",
-        )
+        loc.found(selector.description, ok)
         return if (ok) found else null
     }
 

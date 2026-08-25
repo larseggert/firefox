@@ -86,6 +86,9 @@ LEVEL_STYLE = {
     "LOC": ("purple", False),
     "OK": ("green", False),
     "ERR": ("vermillion", True),
+    # A skipped scope is an outcome, not an absence: an optional element that was not there, or one
+    # that vanished mid-verb. Unstyled it read as ordinary output.
+    "SKIP": ("orange", False),
     "WARN": ("orange", True),
     "INFO": ("gray", False),
     "SHOT": ("sky", False),

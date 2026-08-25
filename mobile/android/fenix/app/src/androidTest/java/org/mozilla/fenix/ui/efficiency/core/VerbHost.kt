@@ -13,7 +13,7 @@ import org.mozilla.fenix.ui.efficiency.logging.TimedReporter
  * navigation or Compose rules, which is what lets the verbs live outside it.
  */
 interface VerbHost {
-    fun reporter(): TimedReporter?
+    fun reporter(): TimedReporter
 
     fun locate(selector: Selector, applyPreconditions: Boolean): Any?
 
@@ -27,3 +27,16 @@ interface VerbHost {
 
     fun stepId(prefix: String, description: String): String
 }
+
+/** Open the CMD scope a verb reports under. */
+internal fun VerbHost.cmd(verb: String, description: String, announce: String) =
+    reporter().start(TimedReporter.Type.CMD, stepId(verb, description), announce)
+
+/** Open the LOC scope one lookup reports under. Every lookup announces itself the same way. */
+internal fun VerbHost.loc(description: String, suffix: String = "") =
+    reporter()
+        .start(
+            TimedReporter.Type.LOC,
+            stepId("loc", description + suffix),
+            "Attempting to locate '$description'...",
+        )

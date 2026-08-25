@@ -28,6 +28,7 @@ import org.mozilla.fenix.helpers.TestHelper.appContext
 import org.mozilla.fenix.helpers.TestHelper.exitMenu
 import org.mozilla.fenix.ui.efficiency.logging.LoggingBridge
 import org.mozilla.fenix.ui.efficiency.logging.TestLogging
+import org.mozilla.fenix.ui.efficiency.logging.TimedReporter
 import org.mozilla.fenix.ui.efficiency.navigation.LaunchConfig
 import org.mozilla.fenix.ui.efficiency.navigation.NavigationRegistry
 import org.mozilla.fenix.ui.efficiency.navigation.PageCatalog
@@ -181,10 +182,12 @@ abstract class BaseTest(
         // Second arg is captureScreenshotOnFailure = false.
         Espresso.setFailureHandler(DefaultFailureHandler(appContext, false))
 
-        if (TestLogging.reporter == null) {
+        // Silent until a test installs a real one, so page objects driven outside a test - the
+        // inspector, tooling - narrate nothing rather than crashing or logging into a void.
+        if (TestLogging.reporter === TimedReporter.Silent) {
             TestLogging.reporter = LoggingBridge.createReporter()
         }
-        TestLogging.reporter?.reset()
+        TestLogging.reporter.reset()
         if (java.lang.Boolean.getBoolean("logNavigationSummary")) {
             NavigationRegistry.logPathSummary()
         }
@@ -227,7 +230,7 @@ abstract class BaseTest(
     @After
     fun tearDownLogging() {
         try {
-            TestLogging.reporter?.printSummary()
+            TestLogging.reporter.printSummary()
         } catch (_: Throwable) {
             // Logging must never fail a test.
         }

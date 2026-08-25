@@ -51,6 +51,8 @@ import org.mozilla.fenix.ui.efficiency.core.require
 import org.mozilla.fenix.ui.efficiency.core.requireAbsent
 import org.mozilla.fenix.ui.efficiency.core.requireAll
 import org.mozilla.fenix.ui.efficiency.core.requireState
+import org.mozilla.fenix.ui.efficiency.logging.TestLogging
+import org.mozilla.fenix.ui.efficiency.logging.TimedReporter
 import org.mozilla.fenix.ui.efficiency.navigation.NavigationRegistry
 import org.mozilla.fenix.ui.efficiency.navigation.NavigationStep
 
@@ -105,7 +107,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
 
     // --- Reporting internals -----------------------------------------------------
 
-    private fun rep() = org.mozilla.fenix.ui.efficiency.logging.TestLogging.reporter
+    private fun rep() = TestLogging.reporter
 
     private fun safeId(prefix: String, raw: String): String {
         val cleaned = raw.replace(Regex("[^A-Za-z0-9_\\-]"), "_")
@@ -115,13 +117,12 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
     // --- Navigation (STEP) -------------------------------------------------------
 
     open fun navigateToPage(url: String = "", forceNavigation: Boolean = false): BasePage {
-        val rep = rep()
-        rep?.startStep("nav_$pageName", "Attempting to Navigate to $pageName", 0)
+        val step = rep().start(TimedReporter.Type.STEP, "nav_$pageName", "Attempting to Navigate to $pageName")
 
         try {
             if (!forceNavigation && mozIsOnPageNow()) {
                 PageStateTracker.currentPageName = pageName
-                rep?.endStep(success = true, message = "'$pageName' already loaded")
+                step.ok("'$pageName' already loaded")
                 return this
             }
 
@@ -132,7 +133,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
 
             if (path == null) {
                 NavigationRegistry.logGraph()
-                rep?.endStep(success = false, message = "No navigation path found to '$pageName'")
+                step.fail("No navigation path found to '$pageName'")
                 assertionFailure("No navigation path found from '$fromPage' to '$pageName'")
             } else {
                 Log.i("PageNavigation", "Navigation path found from '$fromPage' to '$pageName':")
@@ -160,15 +161,15 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             }
 
             if (!mozWaitForPageToLoad()) {
-                rep?.endStep(success = false, message = "'$pageName' did not load")
+                step.fail("'$pageName' did not load")
                 assertionFailure("Failed to navigate to $pageName")
             }
 
             PageStateTracker.currentPageName = pageName
-            rep?.endStep(success = true, message = "Navigation to '$pageName' completed")
+            step.ok("Navigation to '$pageName' completed")
             return this
         } catch (t: Throwable) {
-            rep?.endStep(success = false, message = "Navigation to '$pageName' failed: ${t.message ?: "exception"}")
+            step.fail("Navigation to '$pageName' failed: ${t.message ?: "exception"}")
             // Without this a nav failure says only "did not arrive" - not which page we landed on.
             ScreenDump.dump(composeRule, "navigateToPage failed: $pageName")
             throw t
@@ -671,11 +672,10 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
     // For leaving something with no selector to poll - closing a 404 tab, say. "Back until X is gone"
     // cannot stand in: it presses again if the first press has not landed yet.
     fun mozPressBack(): BasePage {
-        val rep = rep()
-        rep?.startCmd("press_back", "Pressing back...", 1)
+        val cmd = rep().start(TimedReporter.Type.CMD, "press_back", "Pressing back...")
         mDevice.pressBack()
         mDevice.waitForIdle()
-        rep?.endCmd(success = true, message = "Pressed back")
+        cmd.ok("Pressed back")
         return this
     }
 
