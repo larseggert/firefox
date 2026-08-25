@@ -20,12 +20,9 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.filter
-import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasAnySibling
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasParent
-import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
@@ -34,7 +31,6 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -45,7 +41,6 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.test.espresso.Espresso.closeSoftKeyboard
-import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.ViewInteraction
 import androidx.test.espresso.action.ViewActions.clearText
 import androidx.test.espresso.action.ViewActions.click
@@ -65,8 +60,6 @@ import androidx.test.espresso.matcher.ViewMatchers.isEnabled
 import androidx.test.espresso.matcher.ViewMatchers.isNotChecked
 import androidx.test.espresso.matcher.ViewMatchers.isNotSelected
 import androidx.test.espresso.matcher.ViewMatchers.isSelected
-import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
-import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withResourceName
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.platform.app.InstrumentationRegistry
@@ -84,6 +77,9 @@ import org.mozilla.fenix.helpers.TestHelper.mDevice
 import org.mozilla.fenix.helpers.TestHelper.packageName
 import org.mozilla.fenix.ui.efficiency.core.ComposeUiElement
 import org.mozilla.fenix.ui.efficiency.core.EspressoUiElement
+import org.mozilla.fenix.ui.efficiency.core.Layer
+import org.mozilla.fenix.ui.efficiency.core.Resolvers
+import org.mozilla.fenix.ui.efficiency.core.STRATEGY_LOCATORS
 import org.mozilla.fenix.ui.efficiency.core.UiElement
 import org.mozilla.fenix.ui.efficiency.core.UiObject2UiElement
 import org.mozilla.fenix.ui.efficiency.core.UiObjectUiElement
@@ -1834,300 +1830,33 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         }
     }
 
+    /**
+     * Find the element a selector names, or null.
+     *
+     * Was a 295-line `when` with one arm per SelectorStrategy. The strategies are a product of a few small choices
+     * rather than 34 separate ideas, so they are described as data in [STRATEGY_LOCATORS] and interpreted by four
+     * resolvers in [Resolvers] - one per UI toolkit. Adding a strategy is now a row in that table, and two strategies
+     * can no longer disagree about something the caller never chose.
+     */
     private fun mozGetElement(selector: Selector, applyPreconditions: Boolean = true): Any? {
         if (selector.value.isBlank()) {
             Log.i("mozGetElement", "Empty or blank selector value: ${selector.description}")
             return null
         }
-
         if (applyPreconditions && requiresScroll(selector.groups)) {
             ensureReachable(selector) // may call mozSwipeTo with applyPreconditions = false
         }
-
-        return when (selector.strategy) {
-            SelectorStrategy.COMPOSE_BY_TAG -> {
-                try {
-                    composeRule.onNodeWithTag(selector.value)
-                } catch (_: Exception) {
-                    Log.i("mozGetElement", "Compose node not found for tag: ${selector.value}")
-                    null
-                }
-            }
-
-            SelectorStrategy.COMPOSE_BY_TAG_AND_TEXT -> {
-                val textToMatch = selector.secondaryValue ?: ""
-                try {
-                    // Unmerged: the tag and the text sit on the same Text node, which a merging
-                    // ancestor would otherwise absorb.
-                    composeRule.onNode(
-                        hasTestTag(selector.value) and hasText(textToMatch),
-                        useUnmergedTree = true,
-                    )
-                } catch (_: Exception) {
-                    Log.i(
-                        "mozGetElement",
-                        "Compose node not found for tag: ${selector.value} with text: $textToMatch",
-                    )
-                    null
-                }
-            }
-            SelectorStrategy.COMPOSE_BY_TAG_AND_CONTENT_DESCRIPTION_SUBSTRING -> {
-                val descriptionToMatch = selector.secondaryValue ?: ""
-                try {
-                    composeRule.onNode(
-                        hasTestTag(selector.value) and hasContentDescription(descriptionToMatch, substring = true)
-                    )
-                } catch (_: Exception) {
-                    Log.i(
-                        "mozGetElement",
-                        "Compose node not found for tag: ${selector.value} with content description: $descriptionToMatch",
-                    )
-                    null
-                }
-            }
-            // There is no easier way yet to isolate parent/child/sibling elements: this auto-selects
-            // siblings or children on failure, as a back-up.
-            SelectorStrategy.COMPOSE_ON_ALL_NODES_BY_TAG_ON_FIRST -> {
-                try {
-                    composeRule.onAllNodesWithTag(selector.value).onFirst()
-                } catch (_: Exception) {
-                    Log.i("mozGetElement", "Compose node not found for tag: ${selector.value}")
-                    null
-                }
-            }
-
-            SelectorStrategy.COMPOSE_ON_ALL_NODES_BY_TAG_WITH_CHILD_TEXT_ON_FIRST -> {
-                val textToMatch = selector.secondaryValue ?: ""
-                try {
-                    composeRule.onAllNodesWithTag(selector.value).filter(hasAnyChild(hasText(textToMatch))).onFirst()
-                } catch (_: Exception) {
-                    Log.i(
-                        "mozGetElement",
-                        "Compose node not found for tag: ${selector.value} with child text: $textToMatch",
-                    )
-                    null
-                }
-            }
-
-            SelectorStrategy.COMPOSE_BY_TEXT -> {
-                try {
-                    composeRule.onNodeWithText(selector.value, useUnmergedTree = true)
-                } catch (_: Exception) {
-                    Log.i("mozGetElement", "Compose node not found for text: ${selector.value}")
-                    null
-                }
-            }
-
-            SelectorStrategy.COMPOSE_BY_TEXT_MERGED -> composeRule.onNodeWithText(selector.value)
-
-            SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION -> {
-                try {
-                    composeRule.onNodeWithContentDescription(selector.value)
-                } catch (_: Exception) {
-                    Log.i("mozGetElement", "Compose node not found for content description: ${selector.value}")
-                    null
-                }
-            }
-
-            SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION_SUBSTRING -> {
-                try {
-                    composeRule.onNodeWithContentDescription(selector.value, substring = true)
-                } catch (_: Exception) {
-                    Log.i("mozGetElement", "Compose node not found for content description: ${selector.value}")
-                    null
-                }
-            }
-
-            SelectorStrategy.COMPOSE_EDITABLE_BY_ANCESTOR_TAG -> {
-                try {
-                    composeRule.onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag(selector.value)))
-                } catch (_: Exception) {
-                    Log.i("mozGetElement", "Editable compose node not found under tag: ${selector.value}")
-                    null
-                }
-            }
-
-            SelectorStrategy.ESPRESSO_BY_ID -> {
-                val resId = selector.toResourceId()
-                if (resId == 0) {
-                    Log.i("mozGetElement", "Invalid resource ID for: ${selector.value}")
-                    null
-                } else {
-                    onView(withId(resId))
-                }
-            }
-
-            SelectorStrategy.ESPRESSO_BY_ID_WITH_SIBLING_TEXT -> {
-                val resId = selector.toResourceId()
-                val siblingText = selector.secondaryValue ?: ""
-
-                if (resId == 0) {
-                    Log.i("mozGetElement", "Invalid resource ID for: ${selector.value}")
-                    null
-                } else {
-                    onView(
-                        allOf(
-                            withId(resId),
-                            hasSibling(withText(siblingText)),
-                        )
-                    )
-                }
-            }
-
-            SelectorStrategy.ESPRESSO_BY_TEXT -> onView(withText(selector.value))
-            SelectorStrategy.ESPRESSO_BY_TEXT_WITH_SIBLING_TEXT -> {
-                val siblingText = selector.secondaryValue ?: ""
-
-                onView(
-                    allOf(
-                        withText(selector.value),
-                        hasSibling(withText(siblingText)),
-                    )
-                )
-            }
-            SelectorStrategy.ESPRESSO_BY_CONTENT_DESC -> onView(withContentDescription(selector.value))
-            SelectorStrategy.ESPRESSO_BY_RES_NAME -> onView(withResourceName(containsString(selector.value)))
-
-            SelectorStrategy.UIAUTOMATOR2_BY_CLASS -> {
-                val obj = mDevice.findObject(By.clazz(selector.value))
-                if (obj == null) {
-                    Log.i("mozGetElement", "UIObject2 not found for res: ${selector.value}")
-                    null
-                } else {
-                    obj
-                }
-            }
-
-            SelectorStrategy.UIAUTOMATOR2_BY_TEXT -> {
-                val obj = mDevice.findObject(By.text(selector.value))
-                if (obj == null) {
-                    Log.i("mozGetElement", "UIObject2 not found for res: ${selector.value}")
-                    null
-                } else {
-                    obj
-                }
-            }
-
-            SelectorStrategy.UIAUTOMATOR2_BY_TEXT_CONTAINS -> {
-                val obj = mDevice.findObject(By.textContains(selector.value))
-                if (obj == null) {
-                    Log.i("mozGetElement", "UIObject2 not found for textContains: ${selector.value}")
-                    null
-                } else {
-                    obj
-                }
-            }
-
-            SelectorStrategy.UIAUTOMATOR2_BY_DESCRIPTION_CONTAINS -> {
-                val obj = mDevice.findObject(By.descContains(selector.value))
-                if (obj == null) {
-                    Log.i("mozGetElement", "UIObject2 not found for descContains: ${selector.value}")
-                    null
-                } else {
-                    obj
-                }
-            }
-
-            SelectorStrategy.UIAUTOMATOR2_BY_RAW_RES -> {
-                val obj = mDevice.findObject(By.res(selector.value))
-                if (obj == null) {
-                    Log.i("mozGetElement", "UIObject2 not found for raw res: ${selector.value}")
-                    null
-                } else {
-                    obj
-                }
-            }
-
-            SelectorStrategy.UIAUTOMATOR2_BY_RES -> {
-                val obj = mDevice.findObject(By.res(packageName + ":id/" + selector.value))
-                if (obj == null) {
-                    Log.i("mozGetElement", "UIObject2 not found for res: ${selector.value}")
-                    null
-                } else {
-                    obj
-                }
-            }
-
-            SelectorStrategy.UIAUTOMATOR_WITH_RES_ID -> {
-                val obj = mDevice.findObject(UiSelector().resourceId(packageName + ":id/" + selector.value))
-                if (!obj.exists()) null else obj
-            }
-
-            SelectorStrategy.UIAUTOMATOR_WITH_COMPOSE_TAG -> {
-                val obj = mDevice.findObject(UiSelector().resourceId(selector.value))
-                if (!obj.exists()) null else obj
-            }
-
-            SelectorStrategy.UIAUTOMATOR_WITH_RES_ID_AND_DESCRIPTION_CONTAINS -> {
-                val descriptionToMatch = selector.secondaryValue ?: ""
-                val obj =
-                    mDevice.findObject(UiSelector().resourceId(selector.value).descriptionContains(descriptionToMatch))
-                if (!obj.exists()) null else obj
-            }
-
-            SelectorStrategy.UIAUTOMATOR_WITH_TEXT -> {
-                val obj = mDevice.findObject(UiSelector().text(selector.value))
-                if (!obj.exists()) null else obj
-            }
-
-            SelectorStrategy.UIAUTOMATOR_WITH_TEXT_CONTAINS -> {
-                val obj = mDevice.findObject(UiSelector().textContains(selector.value))
-                if (!obj.exists()) null else obj
-            }
-
-            SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS -> {
-                val obj = mDevice.findObject(UiSelector().descriptionContains(selector.value))
-                if (!obj.exists()) null else obj
-            }
-
-            SelectorStrategy.UIAUTOMATOR_WITH_RES_ID_AND_TEXT -> {
-                val textToMatch = selector.secondaryValue ?: ""
-
-                val fullResId = packageName + ":id/" + selector.value
-
-                val obj = mDevice.findObject(UiSelector().resourceId(fullResId).text(textToMatch))
-
-                if (!obj.exists()) null else obj
-            }
-
-            SelectorStrategy.UIAUTOMATOR_WITH_RES_ID_CONTAINING_TEXT -> {
-                val textToMatch = selector.secondaryValue ?: ""
-                val fullResId = packageName + ":id/" + selector.value
-                val obj = mDevice.findObject(UiSelector().resourceId(fullResId).textContains(textToMatch))
-                if (!obj.exists()) null else obj
-            }
-
-            // Res-id used verbatim — no packageName prefix — for system-UI ids we do not own.
-            SelectorStrategy.UIAUTOMATOR_WITH_RAW_RES_ID_CONTAINING_TEXT -> {
-                val textToMatch = selector.secondaryValue ?: ""
-                val obj = mDevice.findObject(UiSelector().resourceId(selector.value).textContains(textToMatch))
-                if (!obj.exists()) null else obj
-            }
-
-            SelectorStrategy.UIAUTOMATOR_WITH_RAW_RES_ID -> {
-                val obj = mDevice.findObject(UiSelector().resourceId(selector.value))
-                if (!obj.exists()) null else obj
-            }
-
-            SelectorStrategy.UIAUTOMATOR_WITH_WEB_ID_AND_TEXT -> {
-                val textToMatch = selector.secondaryValue ?: ""
-                // Raw web DOM id (no package prefix), matched together with exact text.
-                val obj = mDevice.findObject(UiSelector().resourceId(selector.value).text(textToMatch))
-                if (!obj.exists()) null else obj
-            }
-
-            SelectorStrategy.COMPOSE_BY_TEXT_SUBSTRING -> {
-                val node =
-                    composeRule.onAllNodesWithText(selector.value, substring = true, useUnmergedTree = true).onFirst()
-                try {
-                    node.assertExists()
-                    node
-                } catch (_: AssertionError) {
-                    Log.i("mozGetElement", "Compose node not found for text substring: ${selector.value}")
-                    null
-                }
-            }
+        val locator = STRATEGY_LOCATORS[selector.strategy]
+        if (locator == null) {
+            Log.i("mozGetElement", "No locator for strategy ${selector.strategy}")
+            return null
         }
+        return when (locator.layer) {
+            Layer.COMPOSE -> Resolvers.compose(composeRule, locator, selector)
+            Layer.ESPRESSO -> Resolvers.espresso(locator, selector) { selector.toResourceId() }
+            Layer.UIAUTOMATOR -> Resolvers.uiAutomator(mDevice, packageName, locator, selector)
+            Layer.UIAUTOMATOR2 -> Resolvers.uiAutomator2(mDevice, packageName, locator, selector)
+        }.also { if (it == null) Log.i("mozGetElement", "not found: ${selector.description}") }
     }
 
     private fun mozVerifyElement(selector: Selector, applyPreconditions: Boolean = true): Boolean {
