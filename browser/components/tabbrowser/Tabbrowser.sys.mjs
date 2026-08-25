@@ -4282,12 +4282,12 @@ export class Tabbrowser {
   }
 
   /**
-   * @param {MozSplitViewWrapper} container
+   * @param {MozTabSplitViewWrapper} container
    * @param {object} [options]
    * @param {number} [options.elementIndex]
    * @param {number} [options.tabIndex]
    * @param {boolean} [options.selectTab]
-   * @returns {MozSplitViewWrapper}
+   * @returns {MozTabSplitViewWrapper}
    */
   adoptSplitView(container, { elementIndex, tabIndex, selectTab } = {}) {
     if (container.ownerDocument == this.document) {
@@ -6627,9 +6627,9 @@ export class Tabbrowser {
    * Closes all tabs matching the list of nsURIs.
    * This does not close any tabs that have a beforeUnload prompt.
    *
-   * @param {nsURI[]} urisToClose
+   * @param {nsIURI[]} urisToClose
    *   The set of uris to remove.
-   * @returns {number} The count of successfully closed tabs.
+   * @returns {Promise<number>} The count of successfully closed tabs.
    */
   async closeTabsByURI(urisToClose) {
     let tabsToRemove = [];
@@ -7866,7 +7866,7 @@ export class Tabbrowser {
    *
    * @param {MozTabbrowserTab} aTab
    * @param {MozTabSplitViewWrapper} aSplitViewWrapper
-   * @param {int} [insertAtIndex=-1] An optional index for a tab to insert into the split view
+   * @param {number} [insertAtIndex=-1] An optional index for a tab to insert into the split view
    */
   moveTabToSplitView(aTab, aSplitViewWrapper, insertAtIndex = -1) {
     if (!this.isTab(aTab)) {
@@ -7934,7 +7934,7 @@ export class Tabbrowser {
 
   /**
    *
-   * @param {MozSplitViewWrapper} aSplitView
+   * @param {MozTabSplitViewWrapper} aSplitView
    * @param {MozTabbrowserTabGroup} aGroup
    * @param {object} [options]
    * @param {TabMetricsContext} [options.metricsContext]
