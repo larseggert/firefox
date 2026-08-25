@@ -12,11 +12,16 @@
 use log::error;
 use nserror::{nsresult, NS_ERROR_FAILURE, NS_ERROR_FILE_NOT_FOUND, NS_OK};
 use nsstring::nsAString;
-use windows::core::{Result as WindowsResult, HSTRING};
+use windows::core::{Result as WindowsResult, GUID, HSTRING};
 use windows::ApplicationModel::Background::{
     BackgroundTaskBuilder, BackgroundTaskRegistration, TimeTrigger,
 };
-use xpcom::{xpcom, xpcom_method};
+use xpcom::{nsID, xpcom, xpcom_method};
+
+/// XPCOM `nsID` and WinRT `GUID` share the same DCE UUID layout.
+fn nsid_to_guid(id: &nsID) -> GUID {
+    GUID::from_values(id.0, id.1, id.2, id.3)
+}
 
 /// Unregister every task whose name matches `name`, returning how many were
 /// unregistered.
@@ -53,10 +58,19 @@ impl WinBackgroundTaskRegistrar {
     xpcom_method!(
         register_task => RegisterTask(
             id: *const nsAString,
+            entry_point_clsid: *const nsID,
             interval_minutes: u32
         )
     );
-    fn register_task(&self, id: &nsAString, interval_minutes: u32) -> Result<(), nsresult> {
+    fn register_task(
+        &self,
+        id: &nsAString,
+        entry_point_clsid: &nsID,
+        interval_minutes: u32,
+    ) -> Result<(), nsresult> {
+        // These calls only succeed with package identity (an MSIX install) on
+        // Windows 10 build 19041+ (SetTaskEntryPointClsid).
+        let clsid = nsid_to_guid(entry_point_clsid);
         (|| -> WindowsResult<()> {
             let task_name = HSTRING::from_wide(id);
 
@@ -66,9 +80,7 @@ impl WinBackgroundTaskRegistrar {
 
             let builder = BackgroundTaskBuilder::new()?;
             builder.SetName(&task_name)?;
-            builder.SetTaskEntryPoint(&HSTRING::from(
-                mozbuild::config::MOZ_BACKGROUNDTASK_ACTIVATABLE_CLASS_ID,
-            ))?;
+            builder.SetTaskEntryPointClsid(clsid)?;
 
             let trigger = TimeTrigger::Create(interval_minutes, false)?;
             builder.SetTrigger(&trigger)?;

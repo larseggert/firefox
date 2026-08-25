@@ -22,7 +22,6 @@ const platformSpecificInterfaces = new Map([
   ["nsIWindowsAlertNotification", "windows"],
   ["nsIWindowsMutexFactory", "windows"],
   ["nsIWinAppHelper", "windows"],
-  ["nsIWinBackgroundTaskRegistrar", "windows"],
   ["nsIWinTaskbar", "windows"],
   ["nsIWinTaskSchedulerService", "windows"],
   ["nsIWindowsRegKey", "windows"],
