@@ -25,7 +25,6 @@ import androidx.emoji2.text.EmojiCompat
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration.Builder
 import androidx.work.Configuration.Provider
-import androidx.work.DelegatingWorkerFactory
 import java.util.Date
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToLong
@@ -130,7 +129,6 @@ import org.mozilla.fenix.perf.ProfilerMarkerFactProcessor
 import org.mozilla.fenix.perf.StartupTimeline
 import org.mozilla.fenix.perf.StorageStatsMetrics
 import org.mozilla.fenix.perf.runBlockingIncrement
-import org.mozilla.fenix.privacyreport.PrivacyReportWorkerFactory
 import org.mozilla.fenix.push.PushFxaIntegration
 import org.mozilla.fenix.push.WebPushEngineIntegration
 import org.mozilla.fenix.session.VisibilityLifecycleCallback
@@ -1253,21 +1251,7 @@ open class FenixApplication : Application(), Provider, ThemeProvider {
     }
 
     override val workManagerConfiguration
-        get() =
-            Builder()
-                .setMinimumLoggingLevel(INFO)
-                .setWorkerFactory(
-                    DelegatingWorkerFactory().apply {
-                        addFactory(
-                            PrivacyReportWorkerFactory(
-                                settings = components.settings,
-                                trackingProtectionUseCases = components.useCases.trackingProtectionUseCases,
-                                notificationsDelegate = components.notificationsDelegate,
-                            )
-                        )
-                    }
-                )
-                .build()
+        get() = Builder().setMinimumLoggingLevel(INFO).build()
 
     @OptIn(DelicateCoroutinesApi::class)
     open fun downloadWallpapers() {

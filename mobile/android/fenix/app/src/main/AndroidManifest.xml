@@ -527,7 +527,6 @@
                 <data android:host="install_search_widget"/>
                 <data android:host="make_default_browser"/>
                 <data android:host="open"/>
-                <data android:host="privacy_report"/>
                 <data android:host="settings"/>
                 <data android:host="settings_accessibility"/>
                 <data android:host="settings_addon_manager"/>
@@ -760,10 +759,6 @@
                 <action android:name="org.mozilla.fenix.onboarding.WidgetPinnedReceiver.widgetPinned"/>
             </intent-filter>
         </receiver>
-
-        <receiver
-            android:name=".privacyreport.PrivacyReportNotificationReceiver"
-            android:exported="false" />
 
         <service
             android:name=".session.PrivateNotificationService"
