@@ -2539,11 +2539,12 @@ void AppWindow::WindowMoved(nsIWidget*, const LayoutDeviceIntPoint&) {
 
   // Notify all tabs that the widget moved.
   if (mDocShell && mDocShell->GetWindow()) {
-    nsCOMPtr<EventTarget> eventTarget =
+    const nsCOMPtr<EventTarget> eventTarget =
         mDocShell->GetWindow()->GetTopWindowRoot();
+    const RefPtr<Document> doc = mDocShell->GetDocument();
     nsContentUtils::DispatchChromeEvent(
-        mDocShell->GetDocument(), eventTarget, u"MozUpdateWindowPos"_ns,
-        CanBubble::eNo, Cancelable::eNo, nullptr);
+        doc, eventTarget, u"MozUpdateWindowPos"_ns, CanBubble::eNo,
+        Cancelable::eNo, nullptr);
   }
 
   // Persist position, but not immediately, in case this OS is firing

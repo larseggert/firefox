@@ -99,8 +99,9 @@ class HTMLTextAreaElement final : public TextControlElement,
   bool HasCachedSelection() override;
 
   // nsIContent
-  nsresult BindToTree(BindContext&, nsINode& aParent) override;
-  void UnbindFromTree(UnbindContext&) override;
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY nsresult BindToTree(BindContext&,
+                                                  nsINode& aParent) override;
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY void UnbindFromTree(UnbindContext&) override;
   bool ParseAttribute(int32_t aNamespaceID, nsAtom* aAttribute,
                       const nsAString& aValue,
                       nsIPrincipal* aMaybeScriptedPrincipal,

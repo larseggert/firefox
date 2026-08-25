@@ -9619,7 +9619,8 @@ void PresShell::EventHandler::MaybeHandleKeyboardEventBeforeDispatch(
   Document* doc = mPresShell->GetCurrentEventContent()
                       ? mPresShell->mCurrentEventTarget.mContent->OwnerDoc()
                       : nullptr;
-  Document* root = nsContentUtils::GetInProcessSubtreeRootDocument(doc);
+  const RefPtr<Document> root =
+      nsContentUtils::GetInProcessSubtreeRootDocument(doc);
   if (root && root->GetFullscreenElement()) {
     Document* fullscreenLeaf = Document::GetFullscreenLeaf(root);
     if (fullscreenLeaf->HasFullscreenKeyboardLockEnabled()) {

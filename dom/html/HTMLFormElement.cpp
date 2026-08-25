@@ -1047,8 +1047,9 @@ nsresult HTMLFormElement::DoSecureToInsecureSubmitCheck(nsIURI* aActionURL,
 nsresult HTMLFormElement::DispatchBeforeSubmitChromeOnlyEvent(
     bool* aCancelSubmit) {
   bool defaultAction = true;
+  const RefPtr<Document> doc = OwnerDoc();
   nsresult rv = nsContentUtils::DispatchEventOnlyToChrome(
-      OwnerDoc(), static_cast<nsINode*>(this), u"DOMFormBeforeSubmit"_ns,
+      doc, static_cast<nsINode*>(this), u"DOMFormBeforeSubmit"_ns,
       CanBubble::eYes, Cancelable::eYes, &defaultAction);
   *aCancelSubmit = !defaultAction;
   if (*aCancelSubmit) {

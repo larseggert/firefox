@@ -2650,7 +2650,8 @@ void nsGlobalWindowOuter::DispatchDOMWindowCreated() {
   }
 
   // Fire DOMWindowCreated at chrome event listeners
-  nsContentUtils::DispatchChromeEvent(mDoc, mDoc, u"DOMWindowCreated"_ns,
+  const RefPtr<Document> doc = mDoc;
+  nsContentUtils::DispatchChromeEvent(doc, doc, u"DOMWindowCreated"_ns,
                                       CanBubble::eYes, Cancelable::eNo);
 
   nsCOMPtr<nsIObserverService> observerService =
@@ -3920,7 +3921,8 @@ nsresult nsGlobalWindowOuter::SetFullScreen(bool aFullscreen) {
                                aFullscreen);
 }
 
-static void FinishDOMFullscreenChange(Document* aDoc, bool aInDOMFullscreen) {
+MOZ_CAN_RUN_SCRIPT static void FinishDOMFullscreenChange(
+    Document* aDoc, bool aInDOMFullscreen) {
   if (aInDOMFullscreen) {
     // Ask the document to handle any pending DOM fullscreen change.
     if (!Document::HandlePendingFullscreenRequests(aDoc)) {
@@ -4319,7 +4321,8 @@ nsresult nsGlobalWindowOuter::SetFullscreenInternal(FullscreenReason aReason,
       // If there is a in-process fullscreen request, FinishDOMFullscreenChange
       // will be called when the request is finished.
       if (!mInProcessFullscreenRequest.isSome()) {
-        FinishDOMFullscreenChange(mDoc, false);
+        const RefPtr<Document> doc = mDoc;
+        FinishDOMFullscreenChange(doc, false);
       }
       return NS_OK;
     }
@@ -4438,7 +4441,8 @@ void nsGlobalWindowOuter::FinishFullscreenChange(bool aIsFullscreen) {
   // of the document before dispatching the "fullscreen" event, so
   // that the chrome can distinguish between browser fullscreen mode
   // and DOM fullscreen.
-  FinishDOMFullscreenChange(mDoc, aIsFullscreen);
+  const RefPtr<Document> doc = mDoc;
+  FinishDOMFullscreenChange(doc, aIsFullscreen);
 
   // dispatch a "fullscreen" DOM event so that XUL apps can
   // respond visually if we are kicked into full screen mode

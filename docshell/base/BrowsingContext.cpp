@@ -3726,11 +3726,13 @@ void BrowsingContext::DidSet(FieldIndex<IDX_IsActiveBrowserWindowInternal>,
   // The browser window containing this context has changed
   // activation state so update window inactive document states
   // for all in-process documents.
-  PreOrderWalk([isActivateEvent](BrowsingContext* aContext) {
+  PreOrderWalk([isActivateEvent](
+                   BrowsingContext* aContext) MOZ_CAN_RUN_SCRIPT_BOUNDARY {
     if (RefPtr<Document> doc = aContext->GetExtantDocument()) {
       doc->UpdateDocumentStates(DocumentState::WINDOW_INACTIVE, true);
 
-      RefPtr<nsPIDOMWindowInner> win = doc->GetInnerWindow();
+      const RefPtr<nsGlobalWindowInner> win =
+          nsGlobalWindowInner::Cast(doc->GetInnerWindow());
       if (win) {
         RefPtr<MediaDevices> devices;
         if (isActivateEvent && (devices = win->GetExtantMediaDevices())) {
@@ -3743,8 +3745,7 @@ void BrowsingContext::DidSet(FieldIndex<IDX_IsActiveBrowserWindowInternal>,
           // the context is the top of a sub-tree of in-process
           // contexts.
           nsContentUtils::DispatchEventOnlyToChrome(
-              doc, nsGlobalWindowInner::Cast(win),
-              isActivateEvent ? u"activate"_ns : u"deactivate"_ns,
+              doc, win, isActivateEvent ? u"activate"_ns : u"deactivate"_ns,
               CanBubble::eYes, Cancelable::eYes, nullptr);
         }
       }

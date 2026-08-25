@@ -226,8 +226,9 @@ class HTMLMediaElement : public nsGenericHTMLElement,
                       nsIPrincipal* aMaybeScriptedPrincipal,
                       nsAttrValue& aResult) override;
 
-  nsresult BindToTree(BindContext&, nsINode& aParent) override;
-  void UnbindFromTree(UnbindContext&) override;
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY nsresult BindToTree(BindContext&,
+                                                  nsINode& aParent) override;
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY void UnbindFromTree(UnbindContext&) override;
   void DoneCreatingElement() override;
 
   bool IsHTMLFocusable(IsFocusableFlags, bool* aIsFocusable,
@@ -1436,11 +1437,10 @@ class HTMLMediaElement : public nsGenericHTMLElement,
   // suspend-video-decoder is disabled.
   void MarkAsTainted();
 
-  virtual void AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
-                            const nsAttrValue* aValue,
-                            const nsAttrValue* aOldValue,
-                            nsIPrincipal* aMaybeScriptedPrincipal,
-                            bool aNotify) override;
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY void AfterSetAttr(
+      int32_t aNameSpaceID, nsAtom* aName, const nsAttrValue* aValue,
+      const nsAttrValue* aOldValue, nsIPrincipal* aMaybeScriptedPrincipal,
+      bool aNotify) override;
   virtual void OnAttrSetButNotChanged(int32_t aNamespaceID, nsAtom* aName,
                                       const nsAttrValueOrString& aValue,
                                       bool aNotify) override;

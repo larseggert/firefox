@@ -10128,7 +10128,7 @@ class Document::TitleChangeEvent final : public Runnable {
     }
   }
 
-  NS_IMETHOD Run() final {
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY NS_IMETHOD Run() final {
     if (!mDoc) {
       return NS_OK;
     }
@@ -16973,8 +16973,8 @@ const char* Document::GetFullscreenError(CallerType aCallerType) {
 
 // Informs JSWA Fullscreen implementation to resume via sending
 // "MozDOMFullscreen:Entered".
-static inline void PropagateFullscreenRequest(Document* aDoc,
-                                              Element* aElement) {
+MOZ_CAN_RUN_SCRIPT static inline void PropagateFullscreenRequest(
+    Document* aDoc, Element* aElement) {
   nsContentUtils::DispatchEventOnlyToChrome(
       aDoc, aElement, u"MozDOMFullscreen:Entered"_ns, CanBubble::eYes,
       Cancelable::eNo, /* DefaultAction */ nullptr);
@@ -16991,7 +16991,7 @@ static bool ElementIsRemoteFrame(Element* aElement) {
 
 Document::ElementReadyCheckResult Document::FullscreenElementReadyCheck(
     FullscreenRequest& aRequest) {
-  Element* elem = aRequest.Element();
+  const RefPtr<Element> elem = aRequest.Element();
   // Strictly speaking, this isn't part of the fullscreen element ready
   // check in the spec, but per steps in the spec, when an element which
   // is already the fullscreen element requests fullscreen, nothing
@@ -17254,7 +17254,7 @@ bool Document::HandlePendingFullscreenRequests(Document* aDoc) {
   }
   bool handled = false;
   for (UniquePtr<FullscreenRequest>& request : requests) {
-    Document* doc = request->Document();
+    const RefPtr<Document> doc = request->Document();
     if (doc->ApplyFullscreen(std::move(request))) {
       handled = true;
     }
@@ -17295,9 +17295,8 @@ bool Document::HasPendingFullscreenRequests() {
   return !iter.AtEnd();
 }
 
-MOZ_CAN_RUN_SCRIPT_BOUNDARY
 bool Document::ApplyFullscreen(UniquePtr<FullscreenRequest> aRequest) {
-  Element* elem = aRequest->Element();
+  const RefPtr<Element> elem = aRequest->Element();
 
   // Runs the ready check and returns the value ApplyFullscreen should return,
   // or Nothing() to keep going.

@@ -227,7 +227,8 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
   /**
    * Called when an attribute is about to be changed
    */
-  nsresult BindToTree(BindContext&, nsINode& aParent) override;
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY nsresult BindToTree(BindContext&,
+                                                  nsINode& aParent) override;
   void UnbindFromTree(UnbindContext&) override;
   void BeforeSetAttr(int32_t aNameSpaceID, nsAtom* aName,
                      const nsAttrValue* aValue, bool aNotify) override;
@@ -302,7 +303,7 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
 
   HTMLButtonElement* GetFirstButton() const;
 
-  void SetupShadowTree();
+  MOZ_CAN_RUN_SCRIPT void SetupShadowTree();
   void GetSlotNameFor(const ShadowRoot&, const nsIContent&,
                       nsAString&) const override;
   void OnChildBeforeSlotted(ShadowRoot&, nsIContent&) override;

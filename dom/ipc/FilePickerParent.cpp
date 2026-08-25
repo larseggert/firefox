@@ -307,9 +307,12 @@ mozilla::ipc::IPCResult FilePickerParent::RecvOpen(
   }
 
   MOZ_ASSERT(!mCallback);
-  mCallback = new FilePickerShownCallback(this);
+  const RefPtr<FilePickerShownCallback> callback =
+      MakeRefPtr<FilePickerShownCallback>(this);
+  mCallback = callback;
 
-  mFilePicker->Open(mCallback);
+  const nsCOMPtr<nsIFilePicker> filePicker = mFilePicker;
+  filePicker->Open(callback);
   return IPC_OK();
 }
 

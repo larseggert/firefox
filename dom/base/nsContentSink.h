@@ -177,7 +177,7 @@ class nsContentSink : public nsICSSLoaderObserver,
  public:
   void StartLayout(bool aIgnorePendingSheets);
 
-  static void NotifyDocElementCreated(Document* aDoc);
+  MOZ_CAN_RUN_SCRIPT static void NotifyDocElementCreated(Document* aDoc);
 
   Document* GetDocument() { return mDocument; }
 

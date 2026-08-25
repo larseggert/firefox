@@ -1751,11 +1751,10 @@ class nsContentUtils {
    * @param aDefaultAction Set to true if default action should be taken,
    *                       see EventTarget::DispatchEvent.
    */
-  static nsresult DispatchChromeEvent(Document* aDoc,
-                                      mozilla::dom::EventTarget* aTarget,
-                                      const nsAString& aEventName, CanBubble,
-                                      Cancelable,
-                                      bool* aDefaultAction = nullptr);
+  MOZ_CAN_RUN_SCRIPT static nsresult DispatchChromeEvent(
+      Document* aDoc, mozilla::dom::EventTarget* aTarget,
+      const nsAString& aEventName, CanBubble, Cancelable,
+      bool* aDefaultAction = nullptr);
 
   /**
    * Helper to dispatch a "framefocusrequested" event to chrome, which will only
@@ -1783,12 +1782,12 @@ class nsContentUtils {
    * @param aDefaultAction Set to true if default action should be taken,
    *                       see EventTarget::DispatchEvent.
    */
-  MOZ_CAN_RUN_SCRIPT_BOUNDARY static nsresult DispatchEventOnlyToChrome(
+  MOZ_CAN_RUN_SCRIPT static nsresult DispatchEventOnlyToChrome(
       Document* aDoc, mozilla::dom::EventTarget* aTarget,
       const nsAString& aEventName, CanBubble, Cancelable,
       Composed aComposed = Composed::eDefault, bool* aDefaultAction = nullptr);
 
-  MOZ_CAN_RUN_SCRIPT_BOUNDARY static nsresult DispatchEventOnlyToChrome(
+  MOZ_CAN_RUN_SCRIPT static nsresult DispatchEventOnlyToChrome(
       Document* aDoc, mozilla::dom::EventTarget* aTarget,
       const nsAString& aEventName, CanBubble aCanBubble, Cancelable aCancelable,
       bool* aDefaultAction) {

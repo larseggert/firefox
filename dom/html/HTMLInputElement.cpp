@@ -332,7 +332,8 @@ HTMLInputElement::nsFilePickerShownCallback::nsFilePickerShownCallback(
 NS_IMPL_ISUPPORTS(UploadLastDir::ContentPrefCallback, nsIContentPrefCallback2)
 
 NS_IMETHODIMP
-UploadLastDir::ContentPrefCallback::HandleCompletion(uint16_t aReason) {
+UploadLastDir::ContentPrefCallback::HandleCompletion(uint16_t aReason)
+    MOZ_CAN_RUN_SCRIPT_BOUNDARY {
   nsCOMPtr<nsIFile> localFile;
   nsAutoString prefStr;
 
@@ -2472,8 +2473,8 @@ void HTMLInputElement::OpenDateTimePicker(const DateTimeValue& aInitialValue) {
   }
 
   mDateTimeInputBoxValue = MakeUnique<DateTimeValue>(aInitialValue);
-  nsContentUtils::DispatchChromeEvent(OwnerDoc(), this,
-                                      u"MozOpenDateTimePicker"_ns,
+  const RefPtr<Document> doc = OwnerDoc();
+  nsContentUtils::DispatchChromeEvent(doc, this, u"MozOpenDateTimePicker"_ns,
                                       CanBubble::eYes, Cancelable::eYes);
 }
 
@@ -2481,9 +2482,8 @@ void HTMLInputElement::CloseDateTimePicker() {
   if (NS_WARN_IF(!IsDateTimeInputType(mType))) {
     return;
   }
-
-  nsContentUtils::DispatchChromeEvent(OwnerDoc(), this,
-                                      u"MozCloseDateTimePicker"_ns,
+  const RefPtr<Document> doc = OwnerDoc();
+  nsContentUtils::DispatchChromeEvent(doc, this, u"MozCloseDateTimePicker"_ns,
                                       CanBubble::eYes, Cancelable::eYes);
 }
 
@@ -2495,10 +2495,9 @@ void HTMLInputElement::OpenColorPicker() {
   if (NS_WARN_IF(mType != FormControlType::InputColor)) {
     return;
   }
-
-  nsContentUtils::DispatchChromeEvent(OwnerDoc(), this,
-                                      u"MozOpenColorPicker"_ns, CanBubble::eYes,
-                                      Cancelable::eYes);
+  const RefPtr<Document> doc = OwnerDoc();
+  nsContentUtils::DispatchChromeEvent(doc, this, u"MozOpenColorPicker"_ns,
+                                      CanBubble::eYes, Cancelable::eYes);
 }
 
 void HTMLInputElement::SetFocusState(bool aIsFocused) {
@@ -4238,7 +4237,7 @@ nsresult HTMLInputElement::PostHandleEvent(EventChainPostVisitor& aVisitor) {
   return NS_OK;
 }
 
-void EndSubmitClick(EventChainPostVisitor& aVisitor) {
+MOZ_CAN_RUN_SCRIPT void EndSubmitClick(EventChainPostVisitor& aVisitor) {
   if (aVisitor.mItemFlags & NS_IN_SUBMIT_CLICK) {
     nsCOMPtr<nsIContent> content(do_QueryInterface(aVisitor.mItemData));
     RefPtr<HTMLFormElement> form = HTMLFormElement::FromNodeOrNull(content);
@@ -4258,7 +4257,8 @@ void EndSubmitClick(EventChainPostVisitor& aVisitor) {
 void HTMLInputElement::ActivationBehavior(EventChainPostVisitor& aVisitor) {
   auto oldType = FormControlType(NS_CONTROL_TYPE(aVisitor.mItemFlags));
 
-  auto endSubmit = MakeScopeExit([&] { EndSubmitClick(aVisitor); });
+  auto endSubmit = MakeScopeExit(
+      [&]() MOZ_CAN_RUN_SCRIPT_BOUNDARY { EndSubmitClick(aVisitor); });
 
   if (IsDisabled() && oldType != FormControlType::InputCheckbox &&
       oldType != FormControlType::InputRadio) {

@@ -1611,7 +1611,7 @@ class Document : public nsINode,
   void AddMediaElementWithMSE();
   void RemoveMediaElementWithMSE();
 
-  void DoNotifyPossibleTitleChange();
+  MOZ_CAN_RUN_SCRIPT void DoNotifyPossibleTitleChange();
 
   void InitFeaturePolicy(const Variant<Nothing, FeaturePolicyInfo, Element*>&
                              aContainerFeaturePolicy);
@@ -1984,7 +1984,8 @@ class Document : public nsINode,
   // It returns ElementReadyCheckResult::eOk if the given element is allowed to
   // go into fullscreen. It is responsive to dispatch "fullscreenerror" event
   // when necessary.
-  ElementReadyCheckResult FullscreenElementReadyCheck(FullscreenRequest&);
+  MOZ_CAN_RUN_SCRIPT ElementReadyCheckResult
+  FullscreenElementReadyCheck(FullscreenRequest&);
 
   /**
    * When this is called on content process, this asynchronously requests that
@@ -2004,8 +2005,8 @@ class Document : public nsINode,
       bool aApplyFullscreenDirectly = false);
 
  private:
-  void RequestFullscreenInContentProcess(UniquePtr<FullscreenRequest> aRequest,
-                                         bool aApplyFullscreenDirectly);
+  MOZ_CAN_RUN_SCRIPT void RequestFullscreenInContentProcess(
+      UniquePtr<FullscreenRequest> aRequest, bool aApplyFullscreenDirectly);
   MOZ_CAN_RUN_SCRIPT void RequestFullscreenInParentProcess(
       UniquePtr<FullscreenRequest> aRequest);
 
@@ -2166,7 +2167,8 @@ class Document : public nsINode,
    *
    * Returns whether there is any fullscreen request handled.
    */
-  static bool HandlePendingFullscreenRequests(Document* aDocument);
+  MOZ_CAN_RUN_SCRIPT static bool HandlePendingFullscreenRequests(
+      Document* aDocument);
 
   /**
    * Clear pending fullscreen in aDocument.
@@ -4242,7 +4244,7 @@ class Document : public nsINode,
   // Notify the document that a fetch or a XHR request has completed
   // succesfully in this document. This is used by the password manager to infer
   // whether a form is submitted.
-  void NotifyFetchOrXHRSuccess();
+  MOZ_CAN_RUN_SCRIPT void NotifyFetchOrXHRSuccess();
 
   // Set whether NotifyFetchOrXHRSuccess should dispatch an event.
   void SetNotifyFetchSuccess(bool aShouldNotify);
@@ -4638,8 +4640,7 @@ class Document : public nsINode,
   // Apply the fullscreen state to the document, and trigger related
   // events. It returns false if the fullscreen element ready check
   // fails and nothing gets changed.
-  MOZ_CAN_RUN_SCRIPT_BOUNDARY bool ApplyFullscreen(
-      UniquePtr<FullscreenRequest>);
+  MOZ_CAN_RUN_SCRIPT bool ApplyFullscreen(UniquePtr<FullscreenRequest>);
 
   void RemoveDocStyleSheetsFromStyleSets();
   void ResetStylesheetsToURI(nsIURI* aURI);

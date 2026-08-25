@@ -100,8 +100,8 @@ class UploadLastDir final : public nsIObserver, public nsSupportsWeakReference {
     NS_DECL_ISUPPORTS
     NS_DECL_NSICONTENTPREFCALLBACK2
 
-    nsCOMPtr<nsIFilePicker> mFilePicker;
-    nsCOMPtr<nsIFilePickerShownCallback> mFpCallback;
+    MOZ_KNOWN_LIVE const nsCOMPtr<nsIFilePicker> mFilePicker;
+    MOZ_KNOWN_LIVE const nsCOMPtr<nsIFilePickerShownCallback> mFpCallback;
     nsCOMPtr<nsIContentPref> mResult;
   };
 };
@@ -185,9 +185,9 @@ class HTMLInputElement final : public TextControlElement,
 
   void GetEventTargetParent(EventChainPreVisitor& aVisitor) override;
   void LegacyPreActivationBehavior(EventChainVisitor& aVisitor) override;
-  MOZ_CAN_RUN_SCRIPT
-  void ActivationBehavior(EventChainPostVisitor& aVisitor) override;
-  void LegacyCanceledActivationBehavior(
+  MOZ_CAN_RUN_SCRIPT void ActivationBehavior(
+      EventChainPostVisitor& aVisitor) override;
+  MOZ_CAN_RUN_SCRIPT void LegacyCanceledActivationBehavior(
       EventChainPostVisitor& aVisitor) override;
   MOZ_CAN_RUN_SCRIPT_BOUNDARY
   nsresult PreHandleEvent(EventChainVisitor& aVisitor) override;
@@ -212,8 +212,9 @@ class HTMLInputElement final : public TextControlElement,
   void SetValueOfRangeForUserEvent(Decimal aValue,
                                    SnapToTickMarks = SnapToTickMarks::No);
 
-  nsresult BindToTree(BindContext&, nsINode& aParent) override;
-  void UnbindFromTree(UnbindContext&) override;
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY nsresult BindToTree(BindContext&,
+                                                  nsINode& aParent) override;
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY void UnbindFromTree(UnbindContext&) override;
 
   MOZ_CAN_RUN_SCRIPT_BOUNDARY
   void DoneCreatingElement() override;
@@ -778,8 +779,9 @@ class HTMLInputElement final : public TextControlElement,
    * The following functions are called from the datetimebox element to control
    * and update the picker.
    */
-  void OpenDateTimePicker(const DateTimeValue& aInitialValue);
-  void CloseDateTimePicker();
+  MOZ_CAN_RUN_SCRIPT void OpenDateTimePicker(
+      const DateTimeValue& aInitialValue);
+  MOZ_CAN_RUN_SCRIPT void CloseDateTimePicker();
 
   /**
    * Sets open state for the input element, depending on whether the picker is
@@ -787,7 +789,7 @@ class HTMLInputElement final : public TextControlElement,
    */
   void SetOpenState(bool aIsOpen);
 
-  void OpenColorPicker();
+  MOZ_CAN_RUN_SCRIPT void OpenColorPicker();
 
   /*
    * Called from datetime input box binding when inner text fields are focused
@@ -906,7 +908,7 @@ class HTMLInputElement final : public TextControlElement,
 
   // If needed, lazily sets up the shadow tree for this <input> element.
   // Returns the ShadowRoot _only if it was just created_!
-  ShadowRoot* CreateShadowTreeFromLayoutIfNeeded();
+  MOZ_CAN_RUN_SCRIPT ShadowRoot* CreateShadowTreeFromLayoutIfNeeded();
 
  protected:
   MOZ_CAN_RUN_SCRIPT_BOUNDARY virtual ~HTMLInputElement();
@@ -1408,7 +1410,7 @@ class HTMLInputElement final : public TextControlElement,
    * this function checks if it is needed, and if so, open the corresponding
    * picker (color picker or file picker).
    */
-  nsresult MaybeInitPickers(EventChainPostVisitor& aVisitor);
+  MOZ_CAN_RUN_SCRIPT nsresult MaybeInitPickers(EventChainPostVisitor& aVisitor);
 
   /**
    * Returns all valid colors in the <datalist> for the input with type=color.
@@ -1416,8 +1418,8 @@ class HTMLInputElement final : public TextControlElement,
   nsTArray<nsString> GetColorsFromList();
 
   enum FilePickerType { FILE_PICKER_FILE, FILE_PICKER_DIRECTORY };
-  nsresult InitFilePicker(FilePickerType aType);
-  nsresult InitColorPicker();
+  MOZ_CAN_RUN_SCRIPT nsresult InitFilePicker(FilePickerType aType);
+  MOZ_CAN_RUN_SCRIPT nsresult InitColorPicker();
 
   GetFilesHelper* GetOrCreateGetFilesHelper(bool aRecursiveFlag,
                                             ErrorResult& aRv);
@@ -1661,7 +1663,7 @@ class HTMLInputElement final : public TextControlElement,
            aType == FormControlType::InputRange ||
            aType == FormControlType::InputNumber;
   }
-  void SetupShadowTree(bool aNotify);
+  MOZ_CAN_RUN_SCRIPT void SetupShadowTree(bool aNotify);
 
   bool CheckActivationBehaviorPreconditions(EventChainVisitor& aVisitor) const;
 

@@ -1644,11 +1644,12 @@ void Element::NotifyUAWidgetSetupOrChange() {
   // UA Widget to re-init.
   nsContentUtils::AddScriptRunner(NS_NewRunnableFunction(
       "Element::NotifyUAWidgetSetupOrChange::UAWidgetSetupOrChange",
-      [self = RefPtr<Element>(this), doc = RefPtr<Document>(doc)]() {
-        nsContentUtils::DispatchChromeEvent(doc, self,
-                                            u"UAWidgetSetupOrChange"_ns,
-                                            CanBubble::eYes, Cancelable::eNo);
-      }));
+      [self = RefPtr<Element>(this), doc = RefPtr<Document>(doc)]()
+          MOZ_CAN_RUN_SCRIPT_BOUNDARY_LAMBDA {
+            nsContentUtils::DispatchChromeEvent(
+                doc, self, u"UAWidgetSetupOrChange"_ns, CanBubble::eYes,
+                Cancelable::eNo);
+          }));
 }
 
 void Element::TeardownUAShadowRoot(NotifyUAWidget aNotify,
@@ -1674,19 +1675,20 @@ void Element::TeardownUAShadowRoot(NotifyUAWidget aNotify,
   // The runnable will dispatch an event to tear down UA Widget.
   nsContentUtils::AddScriptRunner(NS_NewRunnableFunction(
       "Element::NotifyUAWidgetTeardownAndUnattachShadow::UAWidgetTeardown",
-      [self = RefPtr<Element>(this), doc = RefPtr<Document>(doc)]() {
-        // Bail out if the element is being collected by CC
-        bool hasHadScriptObject = true;
-        nsIScriptGlobalObject* scriptObject =
-            doc->GetScriptHandlingObject(hasHadScriptObject);
-        if (!scriptObject && hasHadScriptObject) {
-          return;
-        }
+      [self = RefPtr<Element>(this), doc = RefPtr<Document>(doc)]()
+          MOZ_CAN_RUN_SCRIPT_BOUNDARY_LAMBDA {
+            // Bail out if the element is being collected by CC
+            bool hasHadScriptObject = true;
+            nsIScriptGlobalObject* scriptObject =
+                doc->GetScriptHandlingObject(hasHadScriptObject);
+            if (!scriptObject && hasHadScriptObject) {
+              return;
+            }
 
-        (void)nsContentUtils::DispatchChromeEvent(
-            doc, self, u"UAWidgetTeardown"_ns, CanBubble::eYes,
-            Cancelable::eNo);
-      }));
+            (void)nsContentUtils::DispatchChromeEvent(
+                doc, self, u"UAWidgetTeardown"_ns, CanBubble::eYes,
+                Cancelable::eNo);
+          }));
 }
 
 void Element::UnattachShadow() {

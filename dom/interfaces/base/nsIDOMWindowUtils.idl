@@ -1276,6 +1276,7 @@ interface nsIDOMWindowUtils : nsISupports {
    * The return value indicates whether there is any fullscreen request
    * handled by this call.
    */
+  [can_run_script]
   boolean handleFullscreenRequests();
 
   /**

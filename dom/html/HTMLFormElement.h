@@ -302,7 +302,7 @@ class HTMLFormElement final : public nsGenericHTMLElement {
    */
   MOZ_CAN_RUN_SCRIPT void MaybeSubmit(Element* aSubmitter);
   MOZ_CAN_RUN_SCRIPT void MaybeReset(Element* aSubmitter);
-  void Submit(ErrorResult& aRv);
+  MOZ_CAN_RUN_SCRIPT void Submit(ErrorResult& aRv);
 
   /**
    * Requests to submit the form. Unlike submit(), this method includes
@@ -371,7 +371,7 @@ class HTMLFormElement final : public nsGenericHTMLElement {
    * @param aPresContext the presentation context
    * @param aEvent the DOM event that was passed to us for the submit
    */
-  nsresult DoSubmit(Event* aEvent = nullptr);
+  MOZ_CAN_RUN_SCRIPT nsresult DoSubmit(Event* aEvent = nullptr);
 
   /**
    * Prepare the submission object (called by DoSubmit)
@@ -385,7 +385,8 @@ class HTMLFormElement final : public nsGenericHTMLElement {
    *
    * @param aFormSubmission the submission object
    */
-  nsresult SubmitSubmission(HTMLFormSubmission* aFormSubmission);
+  MOZ_CAN_RUN_SCRIPT nsresult
+  SubmitSubmission(HTMLFormSubmission* aFormSubmission);
 
   /**
    * Submit a form[method=dialog]
@@ -399,7 +400,8 @@ class HTMLFormElement final : public nsGenericHTMLElement {
    * @param aCancelSubmit out param where submit observers can specify that the
    *        submit should be cancelled.
    */
-  nsresult DispatchBeforeSubmitChromeOnlyEvent(bool* aCancelSubmit);
+  MOZ_CAN_RUN_SCRIPT nsresult
+  DispatchBeforeSubmitChromeOnlyEvent(bool* aCancelSubmit);
 
   /**
    * If this form submission is secure -> insecure, ask the user if they want
@@ -448,7 +450,7 @@ class HTMLFormElement final : public nsGenericHTMLElement {
    * forces the pending submission to be submitted. (happens when the handler
    * returns false or there is an action/target change in the script)
    */
-  void FlushPendingSubmission();
+  MOZ_CAN_RUN_SCRIPT void FlushPendingSubmission();
 
   /**
    * Get the full URL to submit to.  Do not submit if the returned URL is null.

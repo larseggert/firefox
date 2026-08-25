@@ -282,7 +282,8 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
   mozilla::ipc::IPCResult RecvKeyboardHeightChanged(
       const mozilla::ScreenIntCoord& aHeight);
 
-  mozilla::ipc::IPCResult RecvAndroidPipModeChanged(bool aPipMode);
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY mozilla::ipc::IPCResult RecvAndroidPipModeChanged(
+      bool aPipMode);
 
   mozilla::ipc::IPCResult RecvActivate(uint64_t aActionId);
 

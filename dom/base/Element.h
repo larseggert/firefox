@@ -1725,20 +1725,20 @@ class Element : public FragmentOrElement {
 
   // Attach UA Shadow Root if it is not attached.
   enum class NotifyUAWidget : bool { No, Yes };
-  void AttachAndSetUAShadowRoot(NotifyUAWidget = NotifyUAWidget::Yes,
-                                DelegatesFocus = DelegatesFocus::No,
-                                CustomSlotDispatch = CustomSlotDispatch::No,
-                                bool aNotify = true);
+  MOZ_CAN_RUN_SCRIPT void AttachAndSetUAShadowRoot(
+      NotifyUAWidget = NotifyUAWidget::Yes, DelegatesFocus = DelegatesFocus::No,
+      CustomSlotDispatch = CustomSlotDispatch::No, bool aNotify = true);
 
   // Dispatch an event to UAWidgetsChild, triggering construction
   // or onchange callback on the existing widget.
-  void NotifyUAWidgetSetupOrChange();
+  MOZ_CAN_RUN_SCRIPT void NotifyUAWidgetSetupOrChange();
 
   enum class UnattachShadowRoot : bool { No, Yes };
   // Dispatch an event to UAWidgetsChild, triggering UA Widget destruction.
   // and optionally remove the shadow root.
-  void TeardownUAShadowRoot(NotifyUAWidget = NotifyUAWidget::Yes,
-                            UnattachShadowRoot = UnattachShadowRoot::Yes);
+  MOZ_CAN_RUN_SCRIPT void TeardownUAShadowRoot(
+      NotifyUAWidget = NotifyUAWidget::Yes,
+      UnattachShadowRoot = UnattachShadowRoot::Yes);
 
   void UnattachShadow();
 

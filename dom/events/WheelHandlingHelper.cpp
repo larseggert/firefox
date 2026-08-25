@@ -360,10 +360,12 @@ void WheelTransaction::OnFailToScrollTarget() {
 
   if (StaticPrefs::test_mousescroll()) {
     // This event is used for automated tests, see bug 442774.
+    const RefPtr<dom::Document> doc =
+        sScrollTargetFrame->GetContent()->OwnerDoc();
+    const nsCOMPtr<nsIContent> content = sScrollTargetFrame->GetContent();
     nsContentUtils::DispatchEventOnlyToChrome(
-        sScrollTargetFrame->GetContent()->OwnerDoc(),
-        sScrollTargetFrame->GetContent(), u"MozMouseScrollFailed"_ns,
-        CanBubble::eYes, Cancelable::eYes);
+        doc, content, u"MozMouseScrollFailed"_ns, CanBubble::eYes,
+        Cancelable::eYes);
   }
   // The target frame might be destroyed in the event handler, at that time,
   // we need to finish the current transaction
@@ -390,9 +392,10 @@ void WheelTransaction::OnTimeout(nsITimer* aTimer, void* aClosure) {
 
   if (StaticPrefs::test_mousescroll()) {
     // This event is used for automated tests, see bug 442774.
+    const RefPtr<dom::Document> doc = frame->GetContent()->OwnerDoc();
+    const nsCOMPtr<nsIContent> content = frame->GetContent();
     nsContentUtils::DispatchEventOnlyToChrome(
-        frame->GetContent()->OwnerDoc(), frame->GetContent(),
-        u"MozMouseScrollTransactionTimeout"_ns, CanBubble::eYes,
+        doc, content, u"MozMouseScrollTransactionTimeout"_ns, CanBubble::eYes,
         Cancelable::eYes);
   }
 }

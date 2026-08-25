@@ -1457,12 +1457,10 @@ class nsCSSFrameConstructor final : public nsFrameManager {
   // The guts of AddFrameConstructionItems
   // aParentFrame might be null.  If it is, that means it was an
   // inline frame.
-  void AddFrameConstructionItemsInternal(nsFrameConstructorState& aState,
-                                         nsIContent* aContent,
-                                         nsContainerFrame* aParentFrame,
-                                         bool aSuppressWhiteSpaceOptimizations,
-                                         ComputedStyle*, ItemFlags,
-                                         FrameConstructionItemList& aItems);
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY void AddFrameConstructionItemsInternal(
+      nsFrameConstructorState& aState, nsIContent* aContent,
+      nsContainerFrame* aParentFrame, bool aSuppressWhiteSpaceOptimizations,
+      ComputedStyle*, ItemFlags, FrameConstructionItemList& aItems);
 
   /**
    * Construct frames for the given item list and parent frame, and put the

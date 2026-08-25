@@ -287,8 +287,8 @@ nsMapRuleToAttributesFunc HTMLVideoElement::GetAttributeMappingFunction()
 }
 
 void HTMLVideoElement::UnbindFromTree(UnbindContext& aContext) {
-  if (mVisualCloneSource) {
-    mVisualCloneSource->EndCloningVisually();
+  if (const RefPtr<HTMLVideoElement> visualCloneSource = mVisualCloneSource) {
+    visualCloneSource->EndCloningVisually();
   } else if (mVisualCloneTarget) {
     AsyncEventDispatcher::RunDOMEventWhenSafe(
         *this, u"MozStopPictureInPicture"_ns, CanBubble::eNo,

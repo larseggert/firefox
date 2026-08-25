@@ -1844,10 +1844,12 @@ void nsPresContext::ThemeChangedInternal() {
       MediaFeatureChangePropagation::All);
 
   if (Document()->IsInChromeDocShell()) {
-    if (RefPtr<nsPIDOMWindowInner> win = Document()->GetInnerWindow()) {
+    if (const RefPtr<nsGlobalWindowInner> win =
+            nsGlobalWindowInner::Cast(Document()->GetInnerWindow())) {
+      const RefPtr<dom::Document> doc = Document();
       nsContentUtils::DispatchEventOnlyToChrome(
-          Document(), nsGlobalWindowInner::Cast(win), u"nativethemechange"_ns,
-          CanBubble::eYes, Cancelable::eYes, nullptr);
+          doc, win, u"nativethemechange"_ns, CanBubble::eYes, Cancelable::eYes,
+          nullptr);
     }
   }
 }
