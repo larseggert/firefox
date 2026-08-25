@@ -67,16 +67,14 @@ import org.mozilla.fenix.ui.efficiency.navigation.NavigationStep
  */
 abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *>) : VerbHost {
 
-    // ----------------------------------------------------------
-    // What the verb executor needs from a page
-    // ----------------------------------------------------------
+    // --- What the verb executor needs from a page --------------------------------
 
     override fun reporter() = rep()
 
     override fun locate(selector: Selector, applyPreconditions: Boolean) = mozGetElement(selector, applyPreconditions)
 
-    // Only a Compose tag can name more than one element; every other strategy resolves to at most
-    // one, and the collection verbs report that as the reason rather than as "not found".
+    // Only a Compose tag can name more than one element; the collection verbs report any other
+    // strategy as the reason rather than as "not found".
     override fun locateAll(selector: Selector): SemanticsNodeInteractionCollection? =
         if (selector.value.isBlank()) {
             null
@@ -94,9 +92,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
 
     override fun stepId(prefix: String, description: String) = safeId(prefix, description)
 
-    // ----------------------------------------------------------
-    // Page identity
-    // ----------------------------------------------------------
+    // --- Page identity -----------------------------------------------------------
 
     abstract val pageName: String
 
@@ -107,21 +103,16 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         private const val CLICKABLE_VISIBILITY_PERCENT = 90
     }
 
-    // ----------------------------------------------------------
-    // Reporting internals
-    // ----------------------------------------------------------
+    // --- Reporting internals -----------------------------------------------------
 
     private fun rep() = org.mozilla.fenix.ui.efficiency.logging.TestLogging.reporter
 
     private fun safeId(prefix: String, raw: String): String {
-        // Helps avoid super long or illegal step ids due to punctuation/spaces
         val cleaned = raw.replace(Regex("[^A-Za-z0-9_\\-]"), "_")
         return "'$prefix'_$cleaned".take(120)
     }
 
-    // ----------------------------------------------------------
-    // Navigation (STEP)
-    // ----------------------------------------------------------
+    // --- Navigation (STEP) -------------------------------------------------------
 
     open fun navigateToPage(url: String = "", forceNavigation: Boolean = false): BasePage {
         val rep = rep()
@@ -178,19 +169,15 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             return this
         } catch (t: Throwable) {
             rep?.endStep(success = false, message = "Navigation to '$pageName' failed: ${t.message ?: "exception"}")
-            // Navigation failures (esp. a page-arrival timeout on the requiredForPage anchor) previously
-            // produced no screen snapshot, leaving these undebuggable. Dump the current screen so the
-            // failing state (which page we actually landed on, what handles exist) is captured.
+            // Without this a nav failure says only "did not arrive" - not which page we landed on.
             ScreenDump.dump(composeRule, "navigateToPage failed: $pageName")
             throw t
         }
     }
 
     /**
-     * Fast "already here?" check: one pass, no polling.
-     *
-     * navigateToPage() asks this before doing anything, so it must not spend seconds confirming a destination it has
-     * not started navigating to yet. Waiting for readiness is [mozWaitForPageToLoad]'s job, after the steps have run.
+     * One pass, no polling: navigateToPage() asks before it has navigated anywhere, so waiting here would spend seconds
+     * confirming a page it has not tried to reach. Readiness is [mozWaitForPageToLoad]'s job, afterwards.
      */
     private fun mozIsOnPageNow(): Boolean = groupPresent("is_on", pageName, mozGetSelectorsByGroup("requiredForPage"))
 
@@ -224,27 +211,19 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
                 applyPreconditions = true,
             )
         if (!present) {
-            // Dump for the same reason the element verbs do. A group failure names only the group, and
-            // the per-selector log stops at the first miss (the check is an `all {}`), so without this
-            // there is nothing to tell you whether the missing element is absent, renamed, or just
-            // off-screen.
+            // The `all {}` stops at the first miss, so the log alone cannot tell you whether the
+            // element is absent, renamed, or merely off-screen.
             ScreenDump.dump(composeRule, "mozVerifyElementsByGroup failed: $pageName group '$group'")
             assertionFailure("Not all elements in group '$group' are present")
         }
         return this
     }
 
-    // ----------------------------------------------------------
-    // Resolution: selector -> element
-    // ----------------------------------------------------------
+    // --- Resolution: selector -> element -----------------------------------------
 
     /**
-     * Find the element a selector names, or null.
-     *
-     * Was a 295-line `when` with one arm per SelectorStrategy. The strategies are a product of a few small choices
-     * rather than 34 separate ideas, so they are described as data in [STRATEGY_LOCATORS] and interpreted by four
-     * resolvers in [Resolvers] - one per UI toolkit. Adding a strategy is now a row in that table, and two strategies
-     * can no longer disagree about something the caller never chose.
+     * Find the element a selector names, or null. Strategies are described as data in [STRATEGY_LOCATORS] and
+     * interpreted by [Resolvers], one per UI toolkit, so adding one is a table row rather than a branch.
      */
     private fun mozGetElement(selector: Selector, applyPreconditions: Boolean = true): Any? {
         if (selector.value.isBlank()) {
@@ -268,9 +247,8 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
     }
 
     /**
-     * The single seam between "locate" and "interact" for the click path: fetch the candidates for a selector, apply
-     * one selection policy - prefer the displayed match, else the first - and return a backend-agnostic [UiElement].
-     * Verbs call element.click() and never switch on the node type.
+     * The click path's resolver: prefer the on-screen match, else the first, as a backend-agnostic [UiElement]. Every
+     * other verb resolves through [mozGetElement] instead, so an element can be clickable and unverifiable - MTE-5737.
      */
     private fun resolve(selector: Selector, applyPreconditions: Boolean = true): UiElement? {
         if (selector.value.isBlank()) return null
@@ -282,17 +260,14 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
     }
 
     private fun mozVerifyElement(selector: Selector, applyPreconditions: Boolean = true): Boolean {
-        // A *presence probe*, and it must NEVER throw: mozIsOnPageNow()/mozWaitForPageToLoad() poll it
-        // before navigation even starts, and an escaped exception reaches navigateToPage(), which on
-        // real hardware triggers the failure-screenshot path and a StrictMode penaltyDeath that MASKS
-        // the real error. Both halves below swallow everything and degrade to false.
+        // MUST NOT throw. The page probes poll this before navigation starts, and an escaped
+        // exception reaches navigateToPage() -> failure screenshot -> StrictMode penaltyDeath, which
+        // masks the real error. Both halves below degrade to false instead.
         val element = runCatching { mozGetElement(selector, applyPreconditions) }.getOrNull() ?: return false
         return ElementState.probe(element, ElementState.Trait.DISPLAYED)
     }
 
-    // ----------------------------------------------------------
-    // Preconditions and interference
-    // ----------------------------------------------------------
+    // --- Preconditions and interference ------------------------------------------
 
     private fun requiresScroll(groups: List<String>): Boolean {
         return groups.any {
@@ -323,12 +298,9 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
     }
 
     /**
-     * Hide the soft keyboard, tolerating Espresso's failure to do so.
-     *
-     * closeSoftKeyboard() throws PerformException when the focused view's root is not the one it expects, which happens
-     * whenever no editable view has focus - on the homepage, or after a dialog takes focus. Hiding the keyboard is only
-     * ever a convenience for the assertion that follows, so failing to do it must not fail the test. Protected so page
-     * objects can use it in place of a bare call.
+     * Hide the soft keyboard, tolerating failure. closeSoftKeyboard() throws PerformException when no editable view has
+     * focus - the homepage, or after a dialog takes it. Hiding the keyboard is only ever a convenience for the next
+     * assertion, so it must not fail the test. Use this, never a bare closeSoftKeyboard().
      */
     protected fun dismissSoftKeyboard() {
         runCatching { closeSoftKeyboard() }
@@ -336,17 +308,14 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
     }
 
     /**
-     * Detect any known blocking overlay ([OverlayRegistry]) covering the app and dismiss it. Returns true if one was
-     * DETECTED and a dismiss was attempted — not that the dismiss succeeded; callers re-probe for their own target
-     * rather than trusting this. No-op (false) when none are present.
+     * Dismiss any known blocking overlay ([OverlayRegistry]) covering the app. Every verb calls this on a locate miss,
+     * so an OEM popup in its own window cannot masquerade as "element not found"; page objects can also call it
+     * directly when they know one is likely.
      *
-     * Called automatically by mozClick/mozVerify on a locate miss so an OEM/system popup (stylus prompt, etc.) in a
-     * separate window can't masquerade as "element not found". Also callable explicitly from a page-object flow that
-     * knows an overlay is likely.
+     * Returns true if an overlay was DETECTED and a dismiss attempted - not that it worked. Callers re-probe for their
+     * own target rather than trusting this.
      *
-     * Every known overlay is checked on each call, and each overlay's dismiss selectors are tried in order until the
-     * overlay stops being detected. That is adequate for the single seeded overlay but has not been exercised with
-     * several registered at once — see the OverlayRegistry KDoc for the open design questions before adding more.
+     * Exercised with one registered overlay only; read the OverlayRegistry KDoc before adding more.
      */
     fun dismissKnownOverlaysIfPresent(): Boolean {
         var handled = false
@@ -355,8 +324,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
                 Log.i("BasePage", "⚠ Blocking overlay detected: '${overlay.name}' — attempting dismiss")
                 for (dismiss in overlay.dismiss) {
                     mozClickIfPresent(dismiss, timeout = 1_000)
-                    // Stop at the first control that actually cleared it. Continuing would click the
-                    // remaining selectors through to whatever is now underneath the dismissed overlay.
+                    // Stop once it is gone: further clicks would land on whatever is underneath.
                     if (!mozVerifyElement(overlay.presence, applyPreconditions = false)) break
                 }
                 handled = true
@@ -366,9 +334,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         return handled
     }
 
-    // ----------------------------------------------------------
-    // Verbs: is it there?
-    // ----------------------------------------------------------
+    // --- Verbs: is it there? -----------------------------------------------------
 
     fun mozVerify(selector: Selector, timeout: Long = 5_000, interval: Long = 500) =
         require(
@@ -379,10 +345,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             predicate = { ElementState.probe(it, ElementState.Trait.DISPLAYED) },
         )
 
-    /**
-     * Is [selector] on screen right now? A probe, not an assertion: it never throws and never waits, so it can drive
-     * control flow (e.g. "press back until the app screen is showing again").
-     */
+    /** On screen right now? Never throws, never waits, so it can drive control flow. */
     fun mozIsElementPresent(selector: Selector): Boolean = mozVerifyElement(selector, applyPreconditions = false)
 
     fun mozVerifyElementAbsent(selector: Selector) = requireAbsent("verify_absent", selector)
@@ -394,12 +357,9 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
     ) = requireAbsent("wait_until_absent", selector, WaitPolicy.Poll(timeout, interval))
 
     /**
-     * Assert [selector] stays absent for the whole of [timeout], failing the moment it appears.
-     *
-     * Not the same as [mozVerifyElementAbsent] (a single instantaneous probe) or [mozWaitUntilAbsent] (waits for
-     * something to go away). This is "must not show up", and it is sometimes load-bearing rather than defensive: a
-     * screen that navigates away and bounces straight back looks absent-then-present, which only a sustained check can
-     * tell apart from absent.
+     * "Must not show up" - fails the moment it appears, unlike [mozVerifyElementAbsent] (one probe) or
+     * [mozWaitUntilAbsent] (waits for it to go). Sometimes load-bearing: a screen that navigates away and bounces back
+     * looks absent-then-present, which only a sustained check separates from absent.
      */
     fun mozVerifyElementStaysAbsent(
         selector: Selector,
@@ -414,9 +374,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             dumpOnFailure = true,
         )
 
-    // ----------------------------------------------------------
-    // Verbs: what state is it in?
-    // ----------------------------------------------------------
+    // --- Verbs: what state is it in? ---------------------------------------------
 
     fun mozVerifyElementIsSelected(selector: Selector, applyPreconditions: Boolean = true) =
         state(selector, ElementState.Trait.SELECTED, want = true, applyPreconditions)
@@ -477,9 +435,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             predicate = { Relations.hasCheckedSiblingNamed(it, siblingResName) },
         )
 
-    // ----------------------------------------------------------
-    // Verbs: all the matches at once
-    // ----------------------------------------------------------
+    // --- Verbs: all the matches at once ------------------------------------------
 
     fun mozVerifyElementCount(
         selector: Selector,
@@ -546,9 +502,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             action = { it.filter(hasParent(hasText(parentText))).onFirst().performClick() },
         )
 
-    // ----------------------------------------------------------
-    // Verbs: touch it
-    // ----------------------------------------------------------
+    // --- Verbs: touch it ---------------------------------------------------------
 
     fun mozClick(selector: Selector) =
         require(
@@ -573,11 +527,9 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         )
 
     /**
-     * Polls until [selector] is present AND enabled, then clicks it. Use for a control that renders immediately but is
-     * briefly disabled (e.g. the add-on permission dialog's "Add" button, which PermissionsDialogFragment disables for
-     * ~1s): [mozClick]/[mozClickIfPresent] check presence only and would tap the still-disabled control, which the app
-     * ignores — a silent no-op. Dispatches across all element backends so it works regardless of the selector's
-     * strategy.
+     * For a control that renders immediately but is briefly disabled - the add-on permission dialog's "Add" button,
+     * disabled for ~1s. [mozClick] checks presence only and would tap it while disabled, which the app ignores: a
+     * silent no-op that passes.
      */
     fun mozClickWhenEnabled(
         selector: Selector,
@@ -626,9 +578,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             }
         }
 
-    // ----------------------------------------------------------
-    // Verbs: type into it
-    // ----------------------------------------------------------
+    // --- Verbs: type into it -----------------------------------------------------
 
     fun mozEnterText(text: String, selector: Selector) =
         require(
@@ -661,9 +611,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             action = UiActions::pressEnter,
         )
 
-    // ----------------------------------------------------------
-    // Verbs: move the screen
-    // ----------------------------------------------------------
+    // --- Verbs: move the screen --------------------------------------------------
 
     fun mozSwipeTo(
         selector: Selector,
@@ -683,9 +631,8 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         )
 
     /**
-     * Swipe a single [direction] on [selector]'s element. [steps] sets the UiAutomator gesture speed (motion-event
-     * count): low is a flick, high a slow drag. Some gestures only register as a flick
-     * - swiping the navigation toolbar to switch tabs - which is why callers can ask for one.
+     * Swipe once on [selector]'s element. [steps] is the UiAutomator motion-event count, so it sets gesture speed: some
+     * gestures only register as a flick (the navigation toolbar to switch tabs), hence a low value.
      */
     fun mozSwipeElement(
         selector: Selector,
@@ -721,9 +668,8 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             step = { mozSwipeElement(selector, direction, applyPreconditions) },
         )
 
-    // A single back press. mozPressBackUntilGone cannot stand in when the thing being left has no selector
-    // to poll — closing a 404 tab to return to the previous one, for instance — and "back until X is gone"
-    // would press again if the first press has not landed yet.
+    // For leaving something with no selector to poll - closing a 404 tab, say. "Back until X is gone"
+    // cannot stand in: it presses again if the first press has not landed yet.
     fun mozPressBack(): BasePage {
         val rep = rep()
         rep?.startCmd("press_back", "Pressing back...", 1)
@@ -746,11 +692,8 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         )
 
     /**
-     * Press back until [selector] is showing, up to [maxPresses] times.
-     *
-     * The counterpart to [mozPressBackUntilGone], for backing out of an unknown number of screens: how deep you are can
-     * depend on whether a dialog or a fragment intercepted an earlier step, and a fixed number of presses either
-     * overshoots (backgrounding the app) or stops short.
+     * For backing out of an unknown number of screens: how deep you are depends on whether a dialog intercepted an
+     * earlier step, and a fixed count either overshoots - backgrounding the app - or stops short.
      */
     fun mozPressBackUntilPresent(selector: Selector, maxPresses: Int = 5) =
         driveUntil(
@@ -765,15 +708,9 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             },
         )
 
-    // ----------------------------------------------------------
-    // Verbs: the device around the app
-    // ----------------------------------------------------------
+    // --- Verbs: the device around the app ----------------------------------------
 
-    /**
-     * True while a soft-keyboard (IME) window is on screen. Reads the accessibility window list rather than shelling
-     * out to `dumpsys input_method` the way the legacy AppAndSystemHelper does, so it needs no shell access and no
-     * output parsing.
-     */
+    /** Is an IME window on screen? Reads the accessibility window list, so no shell access needed. */
     fun mozIsKeyboardVisible(): Boolean =
         InstrumentationRegistry.getInstrumentation().uiAutomation.windows.any {
             it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD
