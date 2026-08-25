@@ -1914,9 +1914,9 @@ notes = "First-party code"
 [[audits.cssparser]]
 who = "Emilio Cobos Álvarez <emilio@crisal.io>"
 criteria = "safe-to-deploy"
-delta = "0.37.0 -> 0.37.0@git:eff8704e994dc54e5df2a936b78b51828ee21464"
+delta = "0.37.0 -> 0.38.0@git:84af7967fc0093c81f44c2d03029fe6db546485e"
 importable = false
-notes = "Unpublished changes all authored or reviewed by me."
+notes = "All changes authored or reviewed by me."
 
 [[audits.cssparser-color]]
 who = "Emilio Cobos Álvarez <emilio@crisal.io>"
@@ -1953,9 +1953,9 @@ notes = "First party code"
 [[audits.cssparser-macros]]
 who = "Emilio Cobos Álvarez <emilio@crisal.io>"
 criteria = "safe-to-deploy"
-delta = "0.7.0 -> 0.7.0@git:eff8704e994dc54e5df2a936b78b51828ee21464"
+delta = "0.7.0 -> 0.7.0@git:84af7967fc0093c81f44c2d03029fe6db546485e"
 importable = false
-notes = "Dependency updates + upstream-reviewed changes."
+notes = "Change authored by me to allow syn 3 and 2."
 
 [[audits.cstr]]
 who = "Emilio Cobos Álvarez <emilio@crisal.io>"
@@ -9108,31 +9108,31 @@ end = "2024-04-25"
 criteria = "safe-to-deploy"
 user-id = 51017 # Yuki Okushi (JohnTitor)
 start = "2021-06-17"
-end = "2026-01-03"
+end = "2027-08-25"
 
 [[trusted.phf_codegen]]
 criteria = "safe-to-deploy"
 user-id = 51017 # Yuki Okushi (JohnTitor)
 start = "2021-06-17"
-end = "2026-01-03"
+end = "2027-08-25"
 
 [[trusted.phf_generator]]
 criteria = "safe-to-deploy"
 user-id = 51017 # Yuki Okushi (JohnTitor)
 start = "2021-06-17"
-end = "2026-01-03"
+end = "2027-08-25"
 
 [[trusted.phf_macros]]
 criteria = "safe-to-deploy"
 user-id = 51017 # Yuki Okushi (JohnTitor)
 start = "2021-06-17"
-end = "2026-01-03"
+end = "2027-08-25"
 
 [[trusted.phf_shared]]
 criteria = "safe-to-deploy"
 user-id = 51017 # Yuki Okushi (JohnTitor)
 start = "2021-06-17"
-end = "2026-01-03"
+end = "2027-08-25"
 
 [[trusted.proc-macro-hack]]
 criteria = "safe-to-deploy"
