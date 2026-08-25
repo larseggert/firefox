@@ -498,7 +498,6 @@ contentblocking:
     notification_emails:
       - privacy-team@mozilla.org
     expires: never
-    telemetry_mirror: COOKIE_BEHAVIOR
 
   tracking_protection_enabled:
     type: labeled_counter
