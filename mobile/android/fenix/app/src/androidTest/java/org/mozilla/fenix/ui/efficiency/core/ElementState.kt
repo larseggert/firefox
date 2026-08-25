@@ -26,9 +26,6 @@ import androidx.test.uiautomator.UiObject2
 /**
  * Element state, across the four element types the harness can hand back.
  *
- * Six verbs - selected, not selected, enabled, not enabled, checked, not checked - were forty lines each and identical
- * apart from which assertion they called and whether the sense was inverted.
- *
  * Everything here answers true/false and never throws, so the same probe can drive an assertion, a poll predicate or
  * control flow.
  */

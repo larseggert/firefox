@@ -24,9 +24,9 @@ import org.hamcrest.Matchers.containsString
 /**
  * Questions about an element's neighbours.
  *
- * A row in a settings list is usually two nodes - a label and its switch - with no single selector that reaches both,
- * so "this setting is on" has to be asked as "the label next to a checked switch". These are the predicates for that,
- * one per backend, returning true/false rather than throwing so they can be handed to [require] like any other trait.
+ * A settings row is usually two nodes - a label and its switch - with no selector reaching both, so "this setting is
+ * on" has to be asked as "the label next to a checked switch". True/false rather than throwing, so these hand to
+ * [require] like any other trait.
  */
 object Relations {
 

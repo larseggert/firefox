@@ -76,9 +76,6 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
     // What the verb executor needs from a page
     // ----------------------------------------------------------
 
-    // The six things the verb executor in core/ needs from a page. Everything else it does - reporting,
-    // polling, the one overlay retry, the failure text and the screen dump - it does once, for every
-    // verb, instead of each verb doing it again slightly differently.
     override fun reporter() = rep()
 
     override fun locate(selector: Selector, applyPreconditions: Boolean) = mozGetElement(selector, applyPreconditions)
@@ -378,7 +375,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
     // Verbs: is it there?
     // ----------------------------------------------------------
 
-    fun mozVerify(selector: Selector, timeout: Long = 5_000, interval: Long = 500): BasePage {
+    fun mozVerify(selector: Selector, timeout: Long = 5_000, interval: Long = 500) =
         require(
             verb = "verify",
             selector = selector,
@@ -386,8 +383,6 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             applyPreconditions = false,
             predicate = { ElementState.probe(it, ElementState.Trait.DISPLAYED) },
         )
-        return this
-    }
 
     /**
      * Is [selector] on screen right now? A probe, not an assertion: it never throws and never waits, so it can drive
@@ -395,19 +390,13 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
      */
     fun mozIsElementPresent(selector: Selector): Boolean = mozVerifyElement(selector, applyPreconditions = false)
 
-    fun mozVerifyElementAbsent(selector: Selector): BasePage {
-        requireAbsent("verify_absent", selector)
-        return this
-    }
+    fun mozVerifyElementAbsent(selector: Selector) = requireAbsent("verify_absent", selector)
 
     fun mozWaitUntilAbsent(
         selector: Selector,
         timeout: Long = TestAssetHelper.waitingTime,
         interval: Long = 500,
-    ): BasePage {
-        requireAbsent("wait_until_absent", selector, WaitPolicy.Poll(timeout, interval))
-        return this
-    }
+    ) = requireAbsent("wait_until_absent", selector, WaitPolicy.Poll(timeout, interval))
 
     /**
      * Assert [selector] stays absent for the whole of [timeout], failing the moment it appears.
@@ -421,7 +410,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         selector: Selector,
         timeout: Long = TestAssetHelper.waitingTimeShort,
         interval: Long = 200,
-    ): BasePage {
+    ) =
         requireAbsent(
             verb = "verify_stays_absent",
             selector = selector,
@@ -429,15 +418,11 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             sustain = true,
             dumpOnFailure = true,
         )
-        return this
-    }
 
     // ----------------------------------------------------------
     // Verbs: what state is it in?
     // ----------------------------------------------------------
 
-    // Six verbs, one shape. Each was ~40 lines of the same resolve-report-assert-report skeleton,
-    // differing only in which trait it asked about and whether the sense was inverted.
     fun mozVerifyElementIsSelected(selector: Selector, applyPreconditions: Boolean = true) =
         state(selector, ElementState.Trait.SELECTED, want = true, applyPreconditions)
 
@@ -478,7 +463,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         selector: Selector,
         siblingText: String,
         applyPreconditions: Boolean = true,
-    ): BasePage {
+    ) =
         require(
             verb = "verify_sibling_text",
             selector = selector,
@@ -487,10 +472,8 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             dumpOnFailure = false,
             predicate = { Relations.hasSiblingWithText(it, siblingText) },
         )
-        return this
-    }
 
-    fun mozVerifyElementHasCheckedSiblingByResName(selector: Selector, siblingResName: String): BasePage {
+    fun mozVerifyElementHasCheckedSiblingByResName(selector: Selector, siblingResName: String) =
         require(
             verb = "verify_checked_sibling",
             selector = selector,
@@ -498,8 +481,6 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             dumpOnFailure = false,
             predicate = { Relations.hasCheckedSiblingNamed(it, siblingResName) },
         )
-        return this
-    }
 
     // ----------------------------------------------------------
     // Verbs: all the matches at once
@@ -510,7 +491,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         count: Int,
         timeout: Long = TestAssetHelper.waitingTime,
         interval: Long = 500,
-    ): BasePage {
+    ) =
         requireAll(
             verb = "verify_element_count",
             selector = selector,
@@ -522,15 +503,13 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             before = { dismissSoftKeyboard() },
             satisfied = { it.fetchSemanticsNodes().size == count },
         )
-        return this
-    }
 
     fun mozVerifyAnyContainsText(
         selector: Selector,
         text: String,
         timeout: Long = TestAssetHelper.waitingTime,
         interval: Long = 500,
-    ): BasePage {
+    ) =
         requireAll(
             verb = "verify_any_contains_text",
             selector = selector,
@@ -539,15 +518,13 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             before = { dismissSoftKeyboard() },
             satisfied = { it.filter(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty() },
         )
-        return this
-    }
 
     fun mozVerifyAnyHasChildWithText(
         selector: Selector,
         text: String,
         timeout: Long = TestAssetHelper.waitingTime,
         interval: Long = 500,
-    ): BasePage {
+    ) =
         requireAll(
             verb = "verify_any_has_child_text",
             selector = selector,
@@ -555,10 +532,8 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             policy = WaitPolicy.Poll(timeout, interval),
             satisfied = { it.filter(hasAnyChild(hasText(text))).fetchSemanticsNodes().isNotEmpty() },
         )
-        return this
-    }
 
-    fun mozVerifyNoneContainText(selector: Selector, text: String): BasePage {
+    fun mozVerifyNoneContainText(selector: Selector, text: String) =
         requireAll(
             verb = "verify_none_contain_text",
             selector = selector,
@@ -566,10 +541,8 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             before = { dismissSoftKeyboard() },
             satisfied = { it.filter(hasText(text)).fetchSemanticsNodes().isEmpty() },
         )
-        return this
-    }
 
-    fun mozClickFirstWithParentText(selector: Selector, parentText: String): BasePage {
+    fun mozClickFirstWithParentText(selector: Selector, parentText: String) =
         requireAll(
             verb = "click_first_with_parent_text",
             selector = selector,
@@ -577,14 +550,12 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             satisfied = { it.filter(hasParent(hasText(parentText))).fetchSemanticsNodes().isNotEmpty() },
             action = { it.filter(hasParent(hasText(parentText))).onFirst().performClick() },
         )
-        return this
-    }
 
     // ----------------------------------------------------------
     // Verbs: touch it
     // ----------------------------------------------------------
 
-    fun mozClick(selector: Selector): BasePage {
+    fun mozClick(selector: Selector) =
         require(
             verb = "click",
             selector = selector,
@@ -595,10 +566,8 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             },
             action = UiActions::click,
         )
-        return this
-    }
 
-    fun mozClickIfPresent(selector: Selector, timeout: Long = 3_000, interval: Long = 200): BasePage {
+    fun mozClickIfPresent(selector: Selector, timeout: Long = 3_000, interval: Long = 200) =
         require(
             verb = "click_if_present",
             selector = selector,
@@ -607,8 +576,6 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             optional = true,
             action = UiActions::click,
         )
-        return this
-    }
 
     /**
      * Polls until [selector] is present AND enabled, then clicks it. Use for a control that renders immediately but is
@@ -621,7 +588,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         selector: Selector,
         timeout: Long = TestAssetHelper.waitingTime,
         interval: Long = 200,
-    ): BasePage {
+    ) =
         require(
             verb = "click_when_enabled",
             selector = selector,
@@ -631,10 +598,8 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             predicate = { ElementState.probe(it, ElementState.Trait.ENABLED) },
             action = UiActions::click,
         )
-        return this
-    }
 
-    fun mozLongClick(selector: Selector): BasePage {
+    fun mozLongClick(selector: Selector) =
         require(
             verb = "long_click",
             selector = selector,
@@ -657,24 +622,20 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
                 }
             },
         )
-        return this
-    }
 
-    fun mozSetSliderValue(selector: Selector, value: Float): BasePage {
+    fun mozSetSliderValue(selector: Selector, value: Float) =
         reportAround("set_slider", "Setting '${selector.description}' to $value", dumpOnFailure = true) {
             composeRule.onNodeWithTag(selector.value).run {
                 assertExists()
                 performSemanticsAction(SemanticsActions.SetProgress) { it(value) }
             }
         }
-        return this
-    }
 
     // ----------------------------------------------------------
     // Verbs: type into it
     // ----------------------------------------------------------
 
-    fun mozEnterText(text: String, selector: Selector): BasePage {
+    fun mozEnterText(text: String, selector: Selector) =
         require(
             verb = "enter_text",
             selector = selector,
@@ -682,10 +643,8 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             dumpOnFailure = false,
             action = { UiActions.enterText(it, text) },
         )
-        return this
-    }
 
-    fun mozClear(selector: Selector): BasePage {
+    fun mozClear(selector: Selector) =
         require(
             verb = "clear_text",
             selector = selector,
@@ -693,23 +652,19 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             dumpOnFailure = false,
             action = UiActions::clear,
         )
-        return this
-    }
 
     fun mozClearAndEnterText(text: String, selector: Selector): BasePage {
         mozClear(selector)
         return mozEnterText(text, selector)
     }
 
-    fun mozPressEnter(selector: Selector): BasePage {
+    fun mozPressEnter(selector: Selector) =
         require(
             verb = "press_enter",
             selector = selector,
             dumpOnFailure = false,
             action = UiActions::pressEnter,
         )
-        return this
-    }
 
     // ----------------------------------------------------------
     // Verbs: move the screen
@@ -719,7 +674,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         selector: Selector,
         direction: SwipeDirection = SwipeDirection.DOWN,
         maxSwipes: Int = 10, // TODO (Jackie J. 10/30/2025): replace hard-coded value with self-selecting x,y boundaries
-    ): BasePage {
+    ) =
         driveUntil(
             verb = "swipe_to",
             selector = selector,
@@ -731,8 +686,6 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             settle = { SystemClock.sleep(500) },
             step = { Gestures.onScreen(direction) },
         )
-        return this
-    }
 
     /**
      * Swipe a single [direction] on [selector]'s element. [steps] sets the UiAutomator gesture speed (motion-event
@@ -744,7 +697,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         direction: SwipeDirection,
         applyPreconditions: Boolean = false,
         steps: Int = 100,
-    ): BasePage {
+    ) =
         require(
             verb = "swipe_element",
             selector = selector,
@@ -753,15 +706,13 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             dumpOnFailure = false,
             action = { Gestures.onElement(it, direction, steps) },
         )
-        return this
-    }
 
     fun mozSwipeElementUntilAbsent(
         selector: Selector,
         direction: SwipeDirection,
         maxSwipes: Int = 3,
         applyPreconditions: Boolean = false,
-    ): BasePage {
+    ) =
         driveUntil(
             verb = "swipe_element_until_absent",
             selector = selector,
@@ -774,8 +725,6 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             },
             step = { mozSwipeElement(selector, direction, applyPreconditions) },
         )
-        return this
-    }
 
     // A single back press. mozPressBackUntilGone cannot stand in when the thing being left has no selector
     // to poll — closing a 404 tab to return to the previous one, for instance — and "back until X is gone"
@@ -789,7 +738,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         return this
     }
 
-    fun mozPressBackUntilGone(selector: Selector, maxPresses: Int = 5): BasePage {
+    fun mozPressBackUntilGone(selector: Selector, maxPresses: Int = 5) =
         driveUntil(
             verb = "press_back_until_gone",
             selector = selector,
@@ -800,8 +749,6 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
                 mDevice.waitForIdle()
             },
         )
-        return this
-    }
 
     /**
      * Press back until [selector] is showing, up to [maxPresses] times.
@@ -810,7 +757,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
      * depend on whether a dialog or a fragment intercepted an earlier step, and a fixed number of presses either
      * overshoots (backgrounding the app) or stops short.
      */
-    fun mozPressBackUntilPresent(selector: Selector, maxPresses: Int = 5): BasePage {
+    fun mozPressBackUntilPresent(selector: Selector, maxPresses: Int = 5) =
         driveUntil(
             verb = "press_back_until_present",
             selector = selector,
@@ -822,8 +769,6 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
                 mDevice.waitForIdle()
             },
         )
-        return this
-    }
 
     // ----------------------------------------------------------
     // Verbs: the device around the app
@@ -840,7 +785,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         }
 
     /** Poll until the soft keyboard is showing; throws if it never appears within [timeout]. */
-    fun mozVerifyKeyboardVisible(timeout: Long = 5_000, interval: Long = 200): BasePage {
+    fun mozVerifyKeyboardVisible(timeout: Long = 5_000, interval: Long = 200) =
         requireState(
             verb = "verify_keyboard_visible",
             description = "the soft keyboard is visible",
@@ -848,31 +793,23 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             dumpOnFailure = true,
             condition = ::mozIsKeyboardVisible,
         )
-        return this
-    }
 
-    fun mozOpenNotificationsTray(): BasePage {
+    fun mozOpenNotificationsTray() =
         reportAround("open_notifications_tray", "Opening the Notifications tray") { mDevice.openNotification() }
-        return this
-    }
 
     /**
      * Asserts the native app [appPackageName] launches, then force-stops it so it doesn't linger into subsequent tests.
      * Falls back to verifying [url] if the package isn't installed.
      */
-    fun mozVerifyNativeAppOpens(appPackageName: String, url: String = ""): BasePage {
+    fun mozVerifyNativeAppOpens(appPackageName: String, url: String = "") =
         reportAround("verify_native_app_opens", "Verifying native app '$appPackageName' opens") {
             AppAndSystemHelper.assertNativeAppOpens(composeRule, appPackageName, url)
         }
-        return this
-    }
 
-    fun mozVerifyFileOpensInExternalApp(appPackageName: String): BasePage {
+    fun mozVerifyFileOpensInExternalApp(appPackageName: String) =
         reportAround("verify_file_opens_in_external_app", "Verifying external app '$appPackageName' opens") {
             AppAndSystemHelper.assertExternalAppOpens(appPackageName)
         }
-        return this
-    }
 }
 
 /**

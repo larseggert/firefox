@@ -20,14 +20,9 @@ import androidx.test.uiautomator.UiObject
 import androidx.test.uiautomator.UiObject2
 
 /**
- * Do a thing to a located element, whatever backend it came from.
- *
- * The second duplication in BasePage, after the verb skeleton: every action verb ended in the same four-branch `when
- * (element)` over ViewInteraction / UiObject / UiObject2 / SemanticsNodeInteraction, with an `else -> throw` for the
- * impossible fifth case. Nine verbs each carried their own copy, so a backend that a verb forgot to handle failed as
- * "unsupported element type" rather than doing the obvious thing.
- *
- * One copy, here. A verb now names its action and nothing else.
+ * Do a thing to a located element, whatever backend it came from, so a verb names its action and nothing else. One copy
+ * of the four-way dispatch: a backend a verb would have forgotten to handle does the obvious thing instead of failing
+ * as "unsupported element type".
  */
 object UiActions {
 

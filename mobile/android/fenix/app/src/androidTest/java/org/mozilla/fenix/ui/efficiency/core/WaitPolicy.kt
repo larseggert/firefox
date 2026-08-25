@@ -4,13 +4,7 @@
 
 package org.mozilla.fenix.ui.efficiency.core
 
-/**
- * How long a verb keeps trying.
- *
- * Before this, patience was hand-rolled per verb: ten `while (currentTimeMillis() < deadline)` loops that had drifted
- * apart, so mozVerify polled and mozClick did not, and there was no way to tell from a call site which you were
- * getting.
- */
+/** How long a verb keeps trying, declared at the call site rather than hand-rolled in each verb. */
 sealed class WaitPolicy {
     /** One look. What mozClick did, and the reason it threw on a screen that was still settling. */
     object Immediate : WaitPolicy()

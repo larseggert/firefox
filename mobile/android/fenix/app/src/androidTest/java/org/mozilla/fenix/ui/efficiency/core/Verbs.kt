@@ -10,15 +10,11 @@ import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.logging.TimedReporter
 
 /**
- * The shapes every element verb has.
+ * The shapes every element verb has. Each announces the command, resolves, retries once if a known overlay was covering
+ * the target, reports, dumps the screen and throws with the selector named - so no verb has to, and no two verbs can
+ * disagree about it.
  *
- * Forty public verbs in BasePage were the same dozen lines with three lines of difference: announce the command,
- * announce the lookup, resolve, retry once if a known overlay was covering the target, report the miss, dump the
- * screen, throw with the selector in the message - and somewhere in the middle, do the thing. That skeleton appeared
- * forty times, which is why patience drifted between verbs and why the failure text differed depending on which one you
- * called.
- *
- * Here it exists once, in six shapes:
+ * Seven shapes:
  *
  * - [require] one element must satisfy something; then act on it
  * - [requireAbsent] one element must not be there, now or for a while
@@ -28,14 +24,17 @@ import org.mozilla.fenix.ui.efficiency.logging.TimedReporter
  * - [requireState] poll a condition that has no selector behind it
  * - [reportAround] put the reporting around a call that throws on its own
  *
- * A verb is now a name, a policy, a predicate and an action.
+ * A verb is now a name, a policy, a predicate and an action. Each returns its receiver, so a page-object verb is a
+ * single expression rather than a block ending in `return this`.
  */
 
 /**
  * Resolve [selector], satisfy [predicate], then run [action]. Throws AssertionError naming the selector if it cannot,
  * having dumped the screen first.
+ *
+ * @return the receiver
  */
-fun VerbHost.require(
+fun <T : VerbHost> T.require(
     verb: String,
     selector: Selector,
     expectation: String = "present",
@@ -46,7 +45,7 @@ fun VerbHost.require(
     via: ((Selector, Boolean) -> Any?)? = null,
     predicate: (Any) -> Boolean = { true },
     action: (Any) -> Unit = {},
-): Boolean {
+): T {
     val rep = reporter()
     rep?.startCmd(stepId(verb, selector.description), "Attempting to $verb '${selector.description}'...", 1)
 
@@ -55,7 +54,7 @@ fun VerbHost.require(
     if (element == null) {
         if (optional) {
             rep?.endCmdSkip(message = "'${selector.description}' not present; skipped")
-            return false
+            return this
         }
         // Keep "not on screen" and "on screen but wrong state" distinguishable. The verbs this
         // replaced threw two different errors for the two cases, and collapsing them into one
@@ -74,7 +73,7 @@ fun VerbHost.require(
     try {
         action(element)
         rep?.endCmd(success = true, message = "$verb '${selector.description}' ok")
-        return true
+        return this
     } catch (e: Throwable) {
         // Optional means best-effort all the way through, not just at the lookup: the element can be
         // torn down between resolving it and acting on it - an add-on's onboarding tab closing the
@@ -82,7 +81,7 @@ fun VerbHost.require(
         // willing not to find at all is not a test failure.
         if (optional) {
             rep?.endCmdSkip(message = "'${selector.description}' went away mid-$verb; skipped")
-            return false
+            return this
         }
         rep?.endCmd(success = false, message = "$verb '${selector.description}' failed: ${e.message ?: "exception"}")
         if (dumpOnFailure) dumpFailure("$verb failed: ${selector.description}")
@@ -91,19 +90,17 @@ fun VerbHost.require(
 }
 
 /**
- * The inverse of [require]: assert [selector] is *not* on screen.
+ * The inverse of [require]: assert [selector] is *not* on screen - now, or for the whole window.
  *
- * Three verbs asked this three ways - an instant probe, "wait for it to go away", and "it must never appear" - and each
- * rebuilt its own poll loop and message. They differ only in the policy and whether absence has to hold for the whole
- * window.
+ * @return the receiver
  */
-fun VerbHost.requireAbsent(
+fun <T : VerbHost> T.requireAbsent(
     verb: String,
     selector: Selector,
     policy: WaitPolicy = WaitPolicy.Immediate,
     sustain: Boolean = false,
     dumpOnFailure: Boolean = false,
-) {
+): T {
     val rep = reporter()
     rep?.startCmd(stepId(verb, selector.description), "Verifying '${selector.description}' is absent...", 1)
 
@@ -136,17 +133,18 @@ fun VerbHost.requireAbsent(
         throw AssertionError(message)
     }
     rep?.endCmd(success = true, message = "'${selector.description}' absent")
+    return this
 }
 
 /**
  * Assert something about *all* the matches for a selector, rather than one of them.
  *
- * Five verbs - any contains text, any has a child with text, none contain text, exactly N of them, click the first
- * under a given parent - each fetched the collection, each rebuilt the same poll loop, and each wrote its own "strategy
- * not supported" error. Only Compose tag selectors can produce a collection at all, which is the one fact worth
- * reporting when a caller picks another.
+ * Only a Compose tag selector can produce a collection, which is the one fact worth reporting when a caller picks
+ * another strategy.
+ *
+ * @return the receiver
  */
-fun VerbHost.requireAll(
+fun <T : VerbHost> T.requireAll(
     verb: String,
     selector: Selector,
     expectation: String,
@@ -155,7 +153,7 @@ fun VerbHost.requireAll(
     before: () -> Unit = {},
     satisfied: (SemanticsNodeInteractionCollection) -> Boolean,
     action: (SemanticsNodeInteractionCollection) -> Unit = {},
-) {
+): T {
     val rep = reporter()
     rep?.startCmd(stepId(verb, selector.description), "Verifying '${selector.description}' $expectation...", 1)
     before()
@@ -175,7 +173,7 @@ fun VerbHost.requireAll(
             // "the expectation was false".
             action(all)
             rep?.endCmd(success = true, message = "'${selector.description}' $expectation")
-            return
+            return this
         }
         if (SystemClock.uptimeMillis() >= deadline) break
         SystemClock.sleep(wait)
@@ -191,13 +189,11 @@ fun VerbHost.requireAll(
 /**
  * Do [step] up to [attempts] times until [selector]'s presence matches [want].
  *
- * Four verbs were this loop: swipe until it shows, swipe until it goes, press back until it goes, press back until it
- * shows. Each rebuilt the attempt counter, the per-attempt LOC line and its own failure text - and they disagreed on
- * whether to check before or after the last step, so two of them could take one more action than they were asked for.
- *
  * Checks first, acts second: if the screen is already how the caller wants it, nothing happens.
+ *
+ * @return the receiver
  */
-fun VerbHost.driveUntil(
+fun <T : VerbHost> T.driveUntil(
     verb: String,
     selector: Selector,
     attempts: Int,
@@ -206,7 +202,7 @@ fun VerbHost.driveUntil(
     probe: (Any) -> Boolean = { ElementState.probe(it, ElementState.Trait.DISPLAYED) },
     settle: () -> Unit = {},
     step: () -> Unit,
-) {
+): T {
     val rep = reporter()
     val goal = if (want) "present" else "gone"
     rep?.startCmd(stepId(verb, selector.description), "$verb until '${selector.description}' is $goal...", 1)
@@ -228,7 +224,7 @@ fun VerbHost.driveUntil(
     for (attempt in 0..attempts) {
         if (matches(attempt + 1)) {
             rep?.endCmd(success = true, message = "'${selector.description}' $goal after $attempt $verb(s)")
-            return
+            return this
         }
         if (attempt == attempts) break
         step()
@@ -245,13 +241,13 @@ fun VerbHost.driveUntil(
  * Poll a condition with no selector behind it - the soft keyboard being up, a foreign package coming to the
  * foreground - with the same reporting and failure shape as the selector verbs.
  */
-fun VerbHost.requireState(
+fun <T : VerbHost> T.requireState(
     verb: String,
     description: String,
     policy: WaitPolicy = WaitPolicy.Immediate,
     dumpOnFailure: Boolean = false,
     condition: () -> Boolean,
-) {
+): T {
     val rep = reporter()
     rep?.startCmd(verb, "Verifying $description...", 1)
 
@@ -261,7 +257,7 @@ fun VerbHost.requireState(
     while (true) {
         if (runCatching { condition() }.getOrDefault(false)) {
             rep?.endCmd(success = true, message = "$description: yes")
-            return
+            return this
         }
         if (SystemClock.uptimeMillis() >= deadline) break
         SystemClock.sleep(wait)
@@ -281,17 +277,18 @@ fun VerbHost.requireState(
  * AppAndSystemHelper's external-app assertions - where there is nothing to resolve and nothing to poll, only a call
  * whose failure should reach the report before it reaches the test.
  */
-fun VerbHost.reportAround(
+fun <T : VerbHost> T.reportAround(
     verb: String,
     description: String,
     dumpOnFailure: Boolean = false,
     block: () -> Unit,
-) {
+): T {
     val rep = reporter()
     rep?.startCmd(stepId(verb, description), "$description...", 1)
     try {
         block()
         rep?.endCmd(success = true, message = "$description: done")
+        return this
     } catch (e: Throwable) {
         rep?.endCmd(success = false, message = "$description failed: ${e.message ?: "exception"}")
         if (dumpOnFailure) dumpFailure("$verb failed: $description")
@@ -300,12 +297,8 @@ fun VerbHost.reportAround(
 }
 
 /**
- * Are all of [selectors] on screen? Reports each one, answers rather than throwing.
- *
- * Three page-level functions were this loop: "am I already here", "wait until I am here", and "verify this group of
- * elements". Each iterated the group, wrote its own per-selector LOC line, and folded the results with `all {}` - and
- * the polling one restarted its CMD on every tick, so a ten-second wait wrote a hundred command pairs into the report
- * for one question.
+ * Are all of [selectors] on screen? Reports each one, answers rather than throwing. One command in the report however
+ * long the wait, not one per tick.
  *
  * @return true when every selector is present before the policy expires
  */

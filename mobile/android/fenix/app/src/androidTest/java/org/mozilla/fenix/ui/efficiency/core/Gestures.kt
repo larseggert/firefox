@@ -16,13 +16,7 @@ import androidx.test.uiautomator.UiObject
 import androidx.test.uiautomator.UiObject2
 import org.mozilla.fenix.ui.efficiency.helpers.SwipeDirection
 
-/**
- * Swipe gestures, per backend, once.
- *
- * [onElement] was 103 lines in BasePage: a four-branch `when` in which each branch re-derived the same four directions
- * in that backend's own vocabulary - sixteen cases, written out longhand. The direction is now one lookup and each
- * backend contributes one line.
- */
+/** Swipe gestures, per backend, once. The direction is a lookup; each backend contributes a line. */
 object Gestures {
 
     private val device: UiDevice

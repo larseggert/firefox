@@ -9,10 +9,8 @@ import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.logging.TimedReporter
 
 /**
- * What the verb executor needs from its host.
- *
- * BasePage supplies these six; the executor knows nothing about pages, navigation or Compose rules, which is what lets
- * the whole verb vocabulary live outside BasePage.
+ * What the verb executor needs from its host. BasePage supplies these six; the executor knows nothing about pages,
+ * navigation or Compose rules, which is what lets the verbs live outside it.
  */
 interface VerbHost {
     fun reporter(): TimedReporter?
