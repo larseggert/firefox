@@ -6333,7 +6333,6 @@ bool js::Promise_static_species(JSContext* cx, unsigned argc, Value* vp) {
 static PromiseReactionRecord* NewReactionRecord(
     JSContext* cx, Handle<PromiseCapability> resultCapability,
     HandleValue onFulfilled, HandleValue onRejected) {
-
 #ifdef DEBUG
   if (!resultCapability.promise()) {
     MOZ_ASSERT(!resultCapability.resolve());
