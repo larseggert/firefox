@@ -572,14 +572,19 @@ void PDMFactory::CreateRddPDMs() {
   StartupPDM(FFVPXRuntimeLinker::CreateDecoder());
 #ifdef MOZ_FFMPEG
   if (StaticPrefs::media_ffmpeg_enabled() &&
-      StaticPrefs::media_rdd_ffmpeg_enabled() &&
-      !StartupPDM(FFmpegRuntimeLinker::CreateDecoder(),
-                  // When Vulkan video decoding is enabled, insert the full
-                  // FFmpeg decoder before ffvpx until ffvpx is fully updated to
-                  // work with Vulkan (Bug 2034236).
-                  gfx::gfxVars::CanUseVulkanHardwareVideoDecoding())) {
-    mFailureFlags += GetFailureFlagBasedOnFFmpegStatus(
-        FFmpegRuntimeLinker::LinkStatusCode());
+      StaticPrefs::media_rdd_ffmpeg_enabled()) {
+    // Prefer system FFmpeg first only when Vulkan is wanted and
+    // PreferSystemFFmpegForVulkan() is true; otherwise leave ffvpx first.
+    const bool preferSystemForVulkan =
+        gfx::gfxVars::CanUseVulkanHardwareVideoDecoding() &&
+        FFmpegRuntimeLinker::PreferSystemFFmpegForVulkan();
+    PDM_INIT_LOG("Insert system FFmpeg before ffvpx: {}",
+                 preferSystemForVulkan);
+    if (!StartupPDM(FFmpegRuntimeLinker::CreateDecoder(),
+                    preferSystemForVulkan)) {
+      mFailureFlags += GetFailureFlagBasedOnFFmpegStatus(
+          FFmpegRuntimeLinker::LinkStatusCode());
+    }
   }
 #endif
   StartupPDM(AgnosticDecoderModule::Create(),
