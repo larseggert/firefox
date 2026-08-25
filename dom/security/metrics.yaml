@@ -438,6 +438,7 @@ security:
       - julianwels@mozilla.com
       - seceng-telemetry@mozilla.com
     expires: never
+    telemetry_mirror: HTTPS_ONLY_MODE_UPGRADE_TIME_MS
 
   https_only_mode_upgrade_type:
     type: dual_labeled_counter
@@ -482,6 +483,7 @@ security:
       - seceng-telemetry@mozilla.com
       - julianwels@mozilla.com
     expires: never
+    telemetry_mirror: HTTPS_ONLY_MODE_UPGRADE_TYPE
 
 mixed_content:
   page_load:
