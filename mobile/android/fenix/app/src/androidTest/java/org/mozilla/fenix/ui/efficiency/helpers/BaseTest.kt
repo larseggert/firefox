@@ -91,20 +91,44 @@ abstract class BaseTest(private val defaultLaunchConfig: LaunchConfig = LaunchCo
 
     @get:Rule(order = 0) val fenixTestRule: FenixTestRule = FenixTestRule()
 
-    // Backing property so composeRule can be built once launchConfig() has been read.
-    // AndroidComposeTestRule holds a TestScope that can only be entered once, so it is built per test.
+    // Built per test rather than declared as a plain @get:Rule, because the activity flags come
+    // from launchConfig(), which subclasses override --- so the config has to be read before the
+    // rule is constructed. AndroidComposeTestRule also holds a TestScope that can only be entered
+    // once, so it could not be reused across tests even if the flags were fixed.
     private var _composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *>? = null
-    val composeRule
-        get() = _composeRule!!
 
-    // Builds composeRule per test rather than declaring it as a plain @get:Rule, because the activity flags come from
-    // launchConfig(), which subclasses override — so the config has to be read before the rule is constructed.
+    /**
+     * The Compose rule for the test currently running.
+     *
+     * Reading this before the rule at order 1 has built it is a programming error, and it used to be a `!!` --- a
+     * NullPointerException with no explanation, from a rule ordering that is nowhere written down. The same hazard
+     * already cost one silent bug: a watcher at order 2 recorded state through a reporter that a later @Before had not
+     * installed yet, so the first test of every class lost its sample and nothing said so.
+     *
+     * So it says what went wrong instead. Anything that runs outside a test body --- a watcher, a rule at a lower
+     * order, the inspector --- is on the wrong side of this and should not be reaching for it.
+     */
+    val composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *>
+        get() =
+            checkNotNull(_composeRule) {
+                "composeRule read before the activity rule built it. Rules run outermost-first by " +
+                    "ascending order: -1 samples arrival, 0 is FenixTestRule, 1 builds this, 2 " +
+                    "records boundaries. Anything at a lower order than 1, or outside a test body, " +
+                    "runs before this exists."
+            }
+
+    // There is deliberately no retry here. Firebase re-runs a failing test once
+    // (num-flaky-test-attempts in the TAE flank configs), and under Gradle the AndroidX Test
+    // Orchestrator gives every test its own process with package data cleared. An in-process retry
+    // would be the one thing that escapes that isolation: the second attempt inherits whatever the
+    // first left behind, so it can pass for the wrong reason or fail differently. See bug 2065120.
     //
-    // There is deliberately no retry here. Every test already runs in its own process with package data cleared
-    // (ANDROIDX_TEST_ORCHESTRATOR + clearPackageData in app/build.gradle), and Firebase re-runs a failing test once
-    // (num-flaky-test-attempts in the TAE flank configs). An in-process retry would be the one thing that escapes that
-    // isolation: the second attempt inherits whatever the first left behind, so it can pass for the wrong reason or
-    // fail differently. See bug 2065120.
+    // Note that the orchestrator is a GRADLE-path guarantee, not a universal one. The fleet
+    // dispatches with `am instrument`, where there is no orchestrator and no clearPackageData, so
+    // a class's methods share one process and one data directory --- verified by a download added
+    // to the BrowserStore in one method still being there at the start of the next. Whatever
+    // isolation a test needs on that path comes from the reset between queue items and from the
+    // cleanup in this file, not from the runner.
     @get:Rule(order = 1)
     val composeRuleWithCleanup: TestRule = TestRule { base, description ->
         object : Statement() {
@@ -152,7 +176,7 @@ abstract class BaseTest(private val defaultLaunchConfig: LaunchConfig = LaunchCo
                             }
                         }
                     try {
-                        _composeRule!!.apply(dumpOnFailure, description).evaluate()
+                        composeRule.apply(dumpOnFailure, description).evaluate()
                     } finally {
                         // Tidy up after, not only before. Cleaning only at the start meant a
                         // failing test left everything it created on the device until the next
