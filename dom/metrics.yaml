@@ -1065,9 +1065,6 @@ dom:
     type: labeled_counter
     description: >
       Storage Access API UI events.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      categorical histogram STORAGE_ACCESS_API_UI.
     labels:
       - Request
       - AllowAutomatically
@@ -1092,7 +1089,6 @@ dom:
       - emz@mozilla.com
       - tihuang@mozilla.com
     expires: never
-    telemetry_mirror: h#STORAGE_ACCESS_API_UI
 
   slow_script_notice_count:
     type: counter

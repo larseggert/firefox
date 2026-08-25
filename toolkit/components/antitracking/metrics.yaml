@@ -261,9 +261,6 @@ contentblocking:
     description: >
       The time remaining until expiration per storage access permissions, in
       days (one record per permission, not averaged).
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram STORAGE_ACCESS_REMAINING_DAYS.
     range_min: 0
     range_max: 60
     bucket_count: 61
@@ -275,7 +272,6 @@ contentblocking:
     notification_emails:
       - privacy-team@mozilla.org
     expires: never
-    telemetry_mirror: STORAGE_ACCESS_REMAINING_DAYS
 
   query_stripping_count:
     type: labeled_counter
