@@ -194,6 +194,8 @@ export class EngineURL {
    * @param {string} [options.isNewUntil]
    *   Indicates the date until which the URL is considered new
    *   (format: YYYY-MM-DD).
+   * @param {Map<string, {partnerCode: ?string, telemetryId: ?string}>} [options.partnerCodeMap]
+   *   The partner code to use, if any.
    * @param {boolean} [options.excludePartnerCodeFromTelemetry]
    *   Whether the engine's partner code should be excluded from telemetry when
    *   this URL is visited.
@@ -215,6 +217,7 @@ export class EngineURL {
     method = "GET",
     displayName = "",
     isNewUntil = "",
+    partnerCodeMap = new Map(),
     excludePartnerCodeFromTelemetry = false,
     acceptedContentTypes = null,
   }) {
@@ -255,6 +258,7 @@ export class EngineURL {
     this.type = type.toLowerCase();
     this.displayName = displayName ?? "";
     this.isNewUntil = isNewUntil ?? "";
+    this.#partnerCodeMap = partnerCodeMap;
     this.excludePartnerCodeFromTelemetry = !!excludePartnerCodeFromTelemetry;
     this.acceptedContentTypes = acceptedContentTypes;
   }
@@ -452,13 +456,18 @@ export class EngineURL {
    */
   #paramSubstitution(paramValue, searchTerms, queryCharset) {
     const PARAM_REGEXP = /\{(\w+)(\??)\}/g;
-    return paramValue.replace(PARAM_REGEXP, function (match, name, optional) {
+    return paramValue.replace(PARAM_REGEXP, (match, name, optional) => {
       // {searchTerms} is by far the most common param so handle it first.
       if (name == "searchTerms") {
         return searchTerms;
       }
 
-      // {inputEncoding} is the second most common param.
+      // {partnerCode} is also frequent.
+      if (name == "partnerCode") {
+        return this.#partnerCodeMap.get("default").partnerCode;
+      }
+
+      // {inputEncoding} is probably the next most common param.
       if (name == OS_PARAM_INPUT_ENCODING) {
         return queryCharset;
       }
@@ -535,6 +544,9 @@ export class EngineURL {
 
     return json;
   }
+
+  /** @type {Map<string, {partnerCode: ?string, telemetryId: ?string}>} */
+  #partnerCodeMap;
 }
 
 /**
