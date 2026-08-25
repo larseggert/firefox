@@ -91,6 +91,7 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/b86cb7278bc4e5571
  .../audio_processing/agc2/rnn_vad/BUILD.gn    |  2 +-
  modules/desktop_capture/BUILD.gn              | 29 +----------
  modules/portal/BUILD.gn                       | 24 +++++++++
+ modules/sframe/BUILD.gn                       |  2 +
  modules/utility/BUILD.gn                      |  4 ++
  modules/video_capture/BUILD.gn                | 11 +---
  rtc_base/BUILD.gn                             | 26 +++++++++-
@@ -98,7 +99,7 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/b86cb7278bc4e5571
  test/BUILD.gn                                 | 10 ++++
  video/BUILD.gn                                |  4 +-
  webrtc.gni                                    | 32 ++++++++----
- 30 files changed, 291 insertions(+), 90 deletions(-)
+ 31 files changed, 293 insertions(+), 90 deletions(-)
  create mode 100644 api/rtp_sender_setparameters_callback.cc
  create mode 100644 api/rtp_sender_setparameters_callback.h
 
@@ -940,6 +941,26 @@ index d9c53b9d23..d2ddaa3b38 100644
    }
  }
 +
+diff --git a/modules/sframe/BUILD.gn b/modules/sframe/BUILD.gn
+index c012e67dfa..f805d339ee 100644
+--- a/modules/sframe/BUILD.gn
++++ b/modules/sframe/BUILD.gn
+@@ -9,6 +9,7 @@
+ import("../../webrtc.gni")
+ 
+ group("sframe") {
++if (!build_with_mozilla) {
+   deps = [
+     ":sframe_context_factory",
+     ":sframe_decryptor",
+@@ -17,6 +18,7 @@ group("sframe") {
+     ":sframe_media_encryptor_interface",
+   ]
+ }
++}
+ 
+ rtc_library("sframe_context_factory") {
+   visibility = [ ":*" ]
 diff --git a/modules/utility/BUILD.gn b/modules/utility/BUILD.gn
 index 167bce9157..89203fbcb4 100644
 --- a/modules/utility/BUILD.gn
