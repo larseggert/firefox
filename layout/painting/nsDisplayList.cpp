@@ -4608,8 +4608,8 @@ bool nsDisplayBoxShadowOuter::CreateWebRenderCommands(
     nscoord spread = shadow.spread.ToAppUnits();
     float spreadRadius = float(spread) / float(appUnitsPerDevPixel);
 
-    wr::BorderRadius borderRadius{};
-    wr::BorderRadius shadowRadius{};
+    wr::BorderRadius borderRadius = wr::EmptyBorderRadius();
+    wr::BorderRadius shadowRadius = wr::EmptyBorderRadius();
     if (hasBorderRadius) {
       borderRadius = wr::ToBorderRadius(borderRadii);
       if (spreadRadius) {
@@ -4729,8 +4729,8 @@ void nsDisplayBoxShadowInner::CreateInsetBoxShadowWebRenderCommands(
     nscoord spread = shadow.spread.ToAppUnits();
     float spreadRadius = spread / float(appUnitsPerDevPixel);
 
-    wr::BorderRadius borderRadius{};
-    wr::BorderRadius shadowRadius{};
+    wr::BorderRadius borderRadius = wr::EmptyBorderRadius();
+    wr::BorderRadius shadowRadius = wr::EmptyBorderRadius();
     if (hasBorderRadius) {
       borderRadius = wr::ToBorderRadius(innerRadii);
       if (spreadRadius) {
