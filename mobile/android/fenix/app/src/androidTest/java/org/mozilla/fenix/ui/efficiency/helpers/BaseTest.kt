@@ -52,6 +52,11 @@ import org.mozilla.fenix.ui.efficiency.navigation.PageCatalog
  */
 abstract class BaseTest(private val defaultLaunchConfig: LaunchConfig = LaunchConfig()) {
 
+    private companion object {
+        /** Espresso's failure handler is a process-wide singleton; installing it is a one-off. */
+        @Volatile var espressoHandlerInstalled = false
+    }
+
     /**
      * How this test launches the app.
      *
@@ -232,6 +237,12 @@ abstract class BaseTest(private val defaultLaunchConfig: LaunchConfig = LaunchCo
      *
      * am instrument -e logPageCatalog true ...
      */
+    private fun installEspressoFailureHandlerOnce() {
+        if (espressoHandlerInstalled) return
+        Espresso.setFailureHandler(DefaultFailureHandler(appContext, false))
+        espressoHandlerInstalled = true
+    }
+
     private fun flagArg(name: String): Boolean =
         InstrumentationRegistry.getArguments().getString(name)?.toBooleanStrictOrNull() ?: false
 
@@ -248,7 +259,12 @@ abstract class BaseTest(private val defaultLaunchConfig: LaunchConfig = LaunchCo
         // handler with captureScreenshotOnFailure = false keeps failure messages intact without the
         // fatal screenshot. We still get the real error (and our own ScreenDump) for debugging.
         // Second arg is captureScreenshotOnFailure = false.
-        Espresso.setFailureHandler(DefaultFailureHandler(appContext, false))
+        //
+        // Installed once for the process rather than on every test. It is a process-wide
+        // singleton and nothing ever put it back, so setting it per test was writing the same
+        // value repeatedly to a global with no owner --- and under `am instrument` the process is
+        // shared across a class's methods, so "per test" was never true anyway.
+        installEspressoFailureHandlerOnce()
 
         installedReporter().reset()
         if (flagArg("logNavigationSummary")) {
@@ -269,9 +285,14 @@ abstract class BaseTest(private val defaultLaunchConfig: LaunchConfig = LaunchCo
             }
         }
 
-        // State tracker is a lightweight breadcrumb used by navigation helpers.
-        // Source-of-truth remains selector-based verification (mozIsOnPageNow / mozWaitForPageToLoad).
-        PageStateTracker.currentPageName = "AppEntry"
+        // Where navigation believes it is. A breadcrumb, not a source of truth --- that stays
+        // selector-based verification (mozIsOnPageNow / mozWaitForPageToLoad) --- but it now has a
+        // second reader: ScreenDump writes it into a failure as `harnessPage`, and mission-control
+        // shows it beside the page the analyser infers from the screen. A disagreement between the
+        // two means navigation recorded an arrival it did not make. So a stale value is a
+        // misleading diagnostic now, not just an internal inconsistency, and resetting it at the
+        // start of every test is what keeps it honest.
+        PageStateTracker.reset()
     }
 
     /**
