@@ -6,6 +6,7 @@
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  DeferredTask: "resource://gre/modules/DeferredTask.sys.mjs",
   Sqlite: "resource://gre/modules/Sqlite.sys.mjs",
   CONFIRMATION_UI_TYPES:
     "moz-src:///browser/components/aiwindow/ui/modules/ToolUI.sys.mjs",
@@ -51,6 +52,7 @@ import {
   REMOVE_ALL_SITE_URLS_FROM_MESSAGES,
   REMOVE_SITE_URL_FROM_MESSAGES,
   getConversationMessagesSql,
+  getDeleteConversationsByIdsSql,
   getDeleteMessagesByIdsSql,
   getDeleteEmptyConversationsSql,
   getUniformSamplingByConvIdsSql,
@@ -99,6 +101,13 @@ import { migrations } from "./ChatMigrations.sys.mjs";
 const MAX_DB_SIZE_BYTES = 75 * 1024 * 1024;
 const SORTS = ["ASC", "DESC"];
 
+// time to wait/collect before running recordDatabaseSize
+//  prevents running this function after every chunk of the response
+const DB_SIZE_RECORD_DELAY_MS = 10_000;
+
+// number of rows to delete at once (max is 999)
+const DELETE_CHUNK_SIZE = 250;
+
 /**
  * Simple interface to store and retrieve chat conversations and messages.
  *
@@ -146,9 +155,16 @@ class ChatStore {
   #conn;
   #promiseConn;
   #lastRecordedSize;
+  #sizeRecordTask;
 
   constructor() {
     this.#asyncShutdownBlocker = async () => {
+      // Flush before closing: #recordDatabaseSize() would otherwise reopen the
+      // connection it is racing against. Drop the task afterwards so a write
+      // on a reopened connection builds a fresh one rather than arming a
+      // finalized task, which throws.
+      await this.#sizeRecordTask?.finalize();
+      this.#sizeRecordTask = null;
       await this.#closeConnection();
     };
     this.#lastRecordedSize = null;
@@ -235,7 +251,7 @@ class ChatStore {
         throw e;
       });
 
-    this.#recordDatabaseSize();
+    this.#queueDatabaseSizeRecord();
   }
 
   async #applyToolResults(conversation) {
@@ -306,7 +322,7 @@ class ChatStore {
         throw e;
       });
 
-    this.#recordDatabaseSize();
+    this.#queueDatabaseSizeRecord();
   }
 
   /**
@@ -338,7 +354,7 @@ class ChatStore {
         throw e;
       });
 
-    this.#recordDatabaseSize();
+    this.#queueDatabaseSizeRecord();
   }
 
   /**
@@ -738,9 +754,9 @@ class ChatStore {
         break;
       }
 
-      for (const chat of oldestConversations) {
-        await this.deleteConversationById(chat.id);
-      }
+      await this.#deleteConversationsByIds(
+        oldestConversations.map(chat => chat.id)
+      );
 
       const newDbSize = await this.getDbBytesInUse();
       if (newDbSize >= dbSize) {
@@ -754,6 +770,27 @@ class ChatStore {
 
     // Actually reclaim disk space.
     await this.#conn.execute("PRAGMA incremental_vacuum;");
+
+    await this.recordDatabaseSizeNow();
+  }
+
+  /**
+   * Deletes conversations in bulk. Messages are cascade-deleted via foreign
+   * key constraints. Callers are responsible for recording the resulting
+   * database size.
+   *
+   * @param {Array<string>} ids - The conv_ids of the conversations to delete
+   */
+  async #deleteConversationsByIds(ids) {
+    for (let i = 0; i < ids.length; i += DELETE_CHUNK_SIZE) {
+      const chunk = ids.slice(i, i + DELETE_CHUNK_SIZE);
+      await this.#conn.executeTransaction(async () => {
+        await this.#conn.execute(
+          getDeleteConversationsByIdsSql(chunk.length),
+          chunk
+        );
+      });
+    }
   }
 
   /**
@@ -771,10 +808,9 @@ class ChatStore {
       throw e;
     });
 
-    const chunkSize = 250;
     const chunks = [];
-    for (let i = 0; i < messages.length; i += chunkSize) {
-      chunks.push(messages.slice(i, i + chunkSize));
+    for (let i = 0; i < messages.length; i += DELETE_CHUNK_SIZE) {
+      chunks.push(messages.slice(i, i + DELETE_CHUNK_SIZE));
     }
 
     for (const chunk of chunks) {
@@ -800,7 +836,7 @@ class ChatStore {
       });
     }
 
-    this.#recordDatabaseSize();
+    this.#queueDatabaseSizeRecord();
   }
 
   /**
@@ -843,7 +879,7 @@ class ChatStore {
       conv_id: id,
     });
 
-    this.#recordDatabaseSize();
+    this.#queueDatabaseSizeRecord();
   }
 
   /**
@@ -889,13 +925,37 @@ class ChatStore {
    * This method is meant to only be used for testing cleanup
    */
   async destroyDatabase() {
+    this.#sizeRecordTask?.disarm();
     await this.#promiseConn?.catch(() => {});
     await this.#removeDatabaseFiles();
     this.#promiseConn = null;
     this.#recordDatabaseSizeValue(0);
   }
 
-  async #recordDatabaseSize() {
+  /**
+   * Measures and records the database size immediately, cancelling any
+   * measurement queued by #queueDatabaseSizeRecord(). Records even when the
+   * size is unchanged, so callers can rely on the metric having been set.
+   */
+  async recordDatabaseSizeNow() {
+    this.#sizeRecordTask?.disarm();
+    await this.#recordDatabaseSize(true);
+  }
+
+  /**
+   * Requests a database size measurement, coalescing requests that arrive
+   * within DB_SIZE_RECORD_DELAY_MS of each other. Callers on write paths
+   * should use this rather than measuring inline.
+   */
+  #queueDatabaseSizeRecord() {
+    this.#sizeRecordTask ??= new lazy.DeferredTask(
+      () => this.#recordDatabaseSize(),
+      DB_SIZE_RECORD_DELAY_MS
+    );
+    this.#sizeRecordTask.arm();
+  }
+
+  async #recordDatabaseSize(force = false) {
     let size = null;
     try {
       size = await this.getDatabaseSize();
@@ -904,11 +964,11 @@ class ChatStore {
       return;
     }
 
-    this.#recordDatabaseSizeValue(size);
+    this.#recordDatabaseSizeValue(size, force);
   }
 
-  #recordDatabaseSizeValue(size) {
-    if (size === this.#lastRecordedSize) {
+  #recordDatabaseSizeValue(size, force = false) {
+    if (!force && size === this.#lastRecordedSize) {
       return;
     }
     this.#lastRecordedSize = size;
@@ -1268,7 +1328,7 @@ class ChatStore {
         throw e;
       });
 
-    this.#recordDatabaseSize();
+    this.#queueDatabaseSizeRecord();
   }
 
   /**
@@ -1315,7 +1375,7 @@ class ChatStore {
         throw e;
       });
 
-    this.#recordDatabaseSize();
+    this.#queueDatabaseSizeRecord();
   }
 
   /**
