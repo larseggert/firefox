@@ -61,12 +61,6 @@ add_task(async function test_searchbar_a11y_tree() {
             children: [],
           },
 
-          // context menu
-          {
-            role: ROLE_MENUPOPUP,
-            children: [],
-          },
-
           // The go button is hidden and the result list is empty, so neither
           // shows up in the tree.
         ],
@@ -118,12 +112,6 @@ add_task(async function test_searchbar_a11y_tree_with_results() {
                 children: [],
               },
             ],
-          },
-
-          // context menu
-          {
-            role: ROLE_MENUPOPUP,
-            children: [],
           },
 
           // go button

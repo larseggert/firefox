@@ -12,15 +12,21 @@ add_setup(async function () {
 });
 
 add_task(async function test_clearSearchHistoryAvailability() {
+  // The context menu is shared by both inputs, so the item is there either way
+  // and only shown for the searchbar.
   await UrlbarTestUtils.withContextMenu(window, popup => {
-    let mozInputBox = popup.parentNode;
-    let menuitem = mozInputBox.getMenuItem("clear-search-history");
-    Assert.ok(!menuitem, "Menuitem is not available in urlbar");
+    let menuitem = popup.querySelector('[anonid="clear-search-history"]');
+    Assert.ok(
+      !BrowserTestUtils.isVisible(menuitem),
+      "Menuitem is not shown for the urlbar"
+    );
   });
   await SearchbarTestUtils.withContextMenu(window, popup => {
-    let mozInputBox = popup.parentNode;
-    let menuitem = mozInputBox.getMenuItem("clear-search-history");
-    Assert.ok(menuitem, "Menuitem is available in searchbar");
+    let menuitem = popup.querySelector('[anonid="clear-search-history"]');
+    Assert.ok(
+      BrowserTestUtils.isVisible(menuitem),
+      "Menuitem is shown for the searchbar"
+    );
   });
 });
 
