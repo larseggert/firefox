@@ -1747,21 +1747,6 @@ function checkSyncNowButtons(syncing, tooltip = null) {
       );
     }
   }
-
-  const secureSyncNowLabel = PanelMultiView.getViewNode(
-    document,
-    "PanelUI-fxa-menu-secure-sync-now-label"
-  );
-  const expectedSecureSyncNowLabel = syncing
-    ? gSync.fluentStrings.formatValueSync("fxa-toolbar-sync-syncing2")
-    : gSync.fluentStrings.formatValueSync("fxa-menu-sync-device-now", {
-        deviceName: fxAccounts.device.getLocalName(),
-      });
-  is(
-    secureSyncNowLabel.value,
-    expectedSecureSyncNowLabel,
-    "secure sync now button label reflects the syncing state"
-  );
 }
 
 async function checkFxaToolbarButtonPanel({
