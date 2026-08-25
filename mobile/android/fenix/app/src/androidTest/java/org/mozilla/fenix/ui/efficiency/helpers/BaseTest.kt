@@ -208,6 +208,9 @@ abstract class BaseTest(
     val recordTestBoundaries: TestRule =
         object : TestWatcher() {
             override fun starting(description: Description) {
+                // Sampled AFTER the reset and before the test body, so a non-zero count here is state
+                // the reset could not reach --- somebody else's leftovers.
+                StateProbe.record("start", description.displayName)
                 // The launch configuration goes on the record, because "was this test even running the
                 // app it expects?" is otherwise unanswerable after the fact. testStart has always taken
                 // meta; nothing was filling it, so every trace claimed a default launch.
@@ -215,10 +218,14 @@ abstract class BaseTest(
             }
 
             override fun succeeded(description: Description) {
+                StateProbe.record("end", description.displayName)
                 installedReporter().testEnd(description.displayName, TestStatus.PASS)
             }
 
             override fun failed(e: Throwable, description: Description) {
+                // Especially on failure: "the store has three history entries and the screen shows
+                // none" is a different bug report from "the store is empty too".
+                StateProbe.record("end", description.displayName)
                 installedReporter().testEnd(description.displayName, TestStatus.FAIL)
             }
 
