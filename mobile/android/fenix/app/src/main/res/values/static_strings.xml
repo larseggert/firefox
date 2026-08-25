@@ -139,6 +139,8 @@
     <string name="preferences_key_enable_listen_to_page" translatable="false">Enable Listen to Page Feature Flag</string>
     <!-- Label for enabling the weekly privacy notification -->
     <string name="preferences_debug_settings_privacy_report_notification" translatable="false">Enable Weekly Privacy Notification Feature</string>
+    <!-- Label for forcing the weekly privacy report notification to show, with a fixed count of blocked trackers -->
+    <string name="preferences_debug_settings_force_weekly_privacy_report_notification" translatable="false">Force weekly privacy report notification (5 trackers)</string>
     <!-- Label for enabling remote search configuration -->
     <string name="preferences_debug_settings_remote_search_configuration" translatable="false">Enable Remote Search Configuration (requires restart)</string>
     <!-- Label for enabling Address Sync -->

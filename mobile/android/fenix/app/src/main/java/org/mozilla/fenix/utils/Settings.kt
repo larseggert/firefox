@@ -2760,6 +2760,16 @@ class Settings(
             default = { FxNimbus.features.weeklyPrivacyNotification.value().enabled },
         )
 
+    /**
+     * Debug-only switch to force the weekly privacy report notification to show, without needing real
+     * tracking-protection data to cross the notification's blocked-tracker threshold.
+     */
+    var debugForceWeeklyPrivacyReportNotification by
+        booleanPreference(
+            key = appContext.getPreferenceKey(R.string.pref_key_debug_force_weekly_privacy_report_notification),
+            default = false,
+        )
+
     var aiControlsFeatureFlagEnabled by
         booleanPreference(
             key = appContext.getPreferenceKey(R.string.pref_key_enable_ai_controls),

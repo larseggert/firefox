@@ -71,6 +71,10 @@ class PrivacyReportNotificationWorker(
     }
 
     private suspend fun fetchTrackersBlockedThisWeek(): Int {
+        if (settings.debugForceWeeklyPrivacyReportNotification) {
+            return SHOW_NOTIFICATION_THRESHOLD + 1
+        }
+
         val now = dateTimeProvider.currentTimeMillis()
         val oneWeekAgo = now - WEEK_IN_MILLIS
 
