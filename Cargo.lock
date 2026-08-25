@@ -3959,7 +3959,6 @@ dependencies = [
 name = "ipcclientcerts"
 version = "0.1.0"
 dependencies = [
- "byteorder",
  "env_logger",
  "log",
  "pkcs11-bindings",
@@ -6034,7 +6033,6 @@ name = "osclientcerts"
 version = "0.1.4"
 dependencies = [
  "android_logger",
- "byteorder",
  "core-foundation 0.9.999",
  "cstr",
  "env_logger",
@@ -7001,7 +6999,6 @@ dependencies = [
 name = "rsclientcerts"
 version = "0.1.0"
 dependencies = [
- "byteorder",
  "digest",
  "env_logger",
  "pkcs11-bindings",
