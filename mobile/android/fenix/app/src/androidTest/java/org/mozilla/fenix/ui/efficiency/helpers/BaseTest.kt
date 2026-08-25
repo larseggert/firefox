@@ -146,7 +146,32 @@ abstract class BaseTest(
                         }
                     }
                     appContext.components.useCases.tabsUseCases.removeAllTabs()
-                    _composeRule!!.apply(base, description).evaluate()
+                    // Dump on ANY failure, not only those raised through a page-object verb.
+                    // BasePage.dumpFailure covers navigateToPage and mozVerifyElementsByGroup, but
+                    // a page object asserting with a bare JUnit assertTrue --- BrowserPage
+                    // .verifyPageContent, for one --- throws straight past it, and the failure that
+                    // most needs a picture is the one nobody wrote a verb for.
+                    //
+                    // Wrapped INSIDE the activity rule on purpose. Catching further out photographs
+                    // a black screen: the activity rule finishes the activity in its own teardown,
+                    // which runs before the exception reaches anything outside it.
+                    val dumpOnFailure =
+                        object : Statement() {
+                            override fun evaluate() {
+                                try {
+                                    base.evaluate()
+                                } catch (t: Throwable) {
+                                    runCatching {
+                                        ScreenDump.dumpAll(_composeRule, "test failed: ${description.methodName}")
+                                    }
+                                        .onFailure {
+                                            Log.i("BaseTest", "BaseTest: failure dump failed: ${it.message}")
+                                        }
+                                    throw t
+                                }
+                            }
+                        }
+                    _composeRule!!.apply(dumpOnFailure, description).evaluate()
                 } catch (t: NoLeakAssertionFailedError) {
                     Log.i("BaseTest", "BaseTest: NoLeakAssertionFailedError caught.")
                     cleanup(removeTabs = true)
