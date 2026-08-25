@@ -634,6 +634,7 @@ add_task(async function test_resume_prompt_click_shows_confirmation_card() {
         {
           uiType: "tab-group-confirmation",
           toolCallId: "resume-activity-memory-1",
+          isResumeActivity: true,
           properties: {
             actionType: "open_tabs",
             tabGroupLabel: "Your research",
@@ -717,6 +718,7 @@ add_task(
           {
             uiType: "tab-group-confirmation",
             toolCallId: "resume-activity-memory-1",
+            isResumeActivity: true,
             properties: {
               actionType: "open_tabs",
               tabGroupLabel: "Your research",

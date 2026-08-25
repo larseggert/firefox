@@ -2072,6 +2072,7 @@ export class AIWindow extends MozLitElement {
     await this.reloadAndGenerate(conversation, {
       uiType: "tab-group-confirmation",
       toolCallId: `resume-activity-${resumePrompt.memory.id}`,
+      isResumeActivity: true,
       properties: {
         actionType: "open_tabs",
         tabGroupLabel:
