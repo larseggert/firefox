@@ -3446,16 +3446,28 @@ const MESSAGES = () => [
 ];
 
 export const PanelTestProvider = {
+  /**
+   * Tag a message with the panel_local_testing provider and set
+   * its targeting.
+   *
+   * @param {object} message A message object
+   * @returns {object} The mutated message
+   */
+  tagMessageForTesting(message) {
+    message.provider = "panel_local_testing";
+    message.targeting =
+      typeof message.targeting === "string" &&
+      message.targeting?.includes("isAIWindow")
+        ? `isAIWindow && providerCohorts.panel_local_testing == "SHOW_TEST"`
+        : `providerCohorts.panel_local_testing == "SHOW_TEST"`;
+    return message;
+  },
+
   getMessages() {
     return Promise.resolve(
-      MESSAGES().map(message => ({
-        ...message,
-        targeting:
-          typeof message.targeting === "string" &&
-          message.targeting?.includes("isAIWindow")
-            ? `isAIWindow && providerCohorts.panel_local_testing == "SHOW_TEST"`
-            : `providerCohorts.panel_local_testing == "SHOW_TEST"`,
-      }))
+      MESSAGES().map(message =>
+        PanelTestProvider.tagMessageForTesting({ ...message })
+      )
     );
   },
 };

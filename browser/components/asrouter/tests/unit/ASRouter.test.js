@@ -1127,6 +1127,28 @@ describe("ASRouter", () => {
         });
       });
     });
+    it("should tag the message with panel_local_testing when force is true", () => {
+      const msg = {
+        template: "feature_callout",
+        provider: "cfr",
+        targeting: "true",
+      };
+      const { message } = Router.routeCFRMessage(msg, browser, {}, true);
+      assert.equal(message.provider, "panel_local_testing");
+      assert.include(
+        message.targeting,
+        'providerCohorts.panel_local_testing == "SHOW_TEST"'
+      );
+    });
+    it("should not modify the message provider when force is false", () => {
+      const msg = {
+        template: "feature_callout",
+        provider: "cfr",
+        targeting: "true",
+      };
+      const { message } = Router.routeCFRMessage(msg, browser, {}, false);
+      assert.equal(message.provider, "cfr");
+    });
   });
 
   describe("#loadMessagesFromAllProviders", () => {
@@ -1943,6 +1965,11 @@ describe("ASRouter", () => {
       });
 
       assert.isFalse(Router.isUnblockedMessage(msg));
+    });
+    it("should not exclude a message with no provider", async () => {
+      const msg = { id: "msg1", groups: [] };
+      await Router.setState({ messages: [msg], providers: [] });
+      assert.isTrue(Router.isUnblockedMessage(msg));
     });
   });
 
