@@ -214,7 +214,7 @@ index 5ac8a77130..0b6b1ec6d7 100644
                                     int current_delay_ms,
                                     int target_delay_ms,
 diff --git a/video/rtp_video_stream_receiver2.cc b/video/rtp_video_stream_receiver2.cc
-index c3baa8099a..0f7b049b26 100644
+index 537dee082d..e82a655c19 100644
 --- a/video/rtp_video_stream_receiver2.cc
 +++ b/video/rtp_video_stream_receiver2.cc
 @@ -295,6 +295,7 @@ RtpVideoStreamReceiver2::RtpVideoStreamReceiver2(
@@ -233,7 +233,7 @@ index c3baa8099a..0f7b049b26 100644
        packet_buffer_(kPacketBufferStartSize,
                       PacketBufferMaxSize(env_.field_trials())),
        reference_finder_(std::make_unique<RtpFrameReferenceFinder>()),
-@@ -1388,7 +1390,8 @@ void RtpVideoStreamReceiver2::FrameDecoded(int64_t picture_id) {
+@@ -1396,7 +1398,8 @@ void RtpVideoStreamReceiver2::FrameDecoded(int64_t picture_id) {
  
    if (seq_num != -1) {
      int64_t unwrapped_rtp_seq_num = rtp_seq_num_unwrapper_.Unwrap(seq_num);
@@ -244,10 +244,10 @@ index c3baa8099a..0f7b049b26 100644
    } else {
      RTC_LOG(LS_WARNING) << "Frame with id " << picture_id
 diff --git a/video/rtp_video_stream_receiver2.h b/video/rtp_video_stream_receiver2.h
-index a349df6177..6b25ca7fa0 100644
+index 7eb086d83f..cd53b3f84b 100644
 --- a/video/rtp_video_stream_receiver2.h
 +++ b/video/rtp_video_stream_receiver2.h
-@@ -69,6 +69,7 @@
+@@ -70,6 +70,7 @@
  #include "rtc_base/thread_annotations.h"
  #include "video/buffered_frame_decryptor.h"
  #include "video/unique_timestamp_counter.h"
@@ -255,7 +255,7 @@ index a349df6177..6b25ca7fa0 100644
  
  namespace webrtc {
  
-@@ -111,6 +112,7 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
+@@ -112,6 +113,7 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
        RtcpPacketTypeCounterObserver* rtcp_packet_type_counter_observer,
        RtcpCnameCallback* rtcp_cname_callback,
        NackPeriodicProcessor* nack_periodic_processor,
@@ -263,7 +263,7 @@ index a349df6177..6b25ca7fa0 100644
        // The KeyFrameRequestSender is optional; if not provided, key frame
        // requests are sent via the internal RtpRtcp module.
        OnCompleteFrameCallback* complete_frame_callback,
-@@ -393,6 +395,7 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
+@@ -408,6 +410,7 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
    std::unique_ptr<LossNotificationController> loss_notification_controller_
        RTC_GUARDED_BY(worker_queue_);
  

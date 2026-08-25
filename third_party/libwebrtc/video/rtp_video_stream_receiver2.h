@@ -19,6 +19,7 @@
 #include <optional>
 #include <set>
 #include <span>
+#include <utility>
 #include <vector>
 
 #include "api/crypto/frame_decryptor_interface.h"
@@ -163,12 +164,6 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
     return last_timestamp_for_pic_id_;
   }
 
-  // Returns true if the packet should be stashed and retried at a later stage.
-  bool OnReceivedPayloadData(CopyOnWriteBuffer codec_payload,
-                             const RtpPacketReceived& rtp_packet,
-                             const RTPVideoHeader& video,
-                             int times_nacked);
-
   // Implements RecoveredPacketReceiver.
   void OnRecoveredPacket(const RtpPacketReceived& packet) override;
 
@@ -243,6 +238,15 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
       const;
   std::optional<RtpRtcpInterface::NonSenderRttStats> GetNonSenderRttStats()
       const;
+
+  // Instead of composing `rtp_packet` payload and passing result to
+  // `OnRtpPacket`, tests may pass parsed parts of an rtp packet directly.
+  void OnReceivedPayloadDataForTesting(CopyOnWriteBuffer codec_payload,
+                                       const RtpPacketReceived& rtp_packet,
+                                       const RTPVideoHeader& video) {
+    OnReceivedPayloadData(std::move(codec_payload), rtp_packet, video,
+                          /*times_nacked=*/0);
+  }
 
   // Mozilla modification: VideoReceiveStream2 and friends do not surface RTCP
   // stats at all, and even on the most recent libwebrtc code there does not
@@ -326,9 +330,20 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
   enum ParseGenericDependenciesResult {
     kStashPacket,
     kDropPacket,
+    kNewVideoStructure,  // implies 'HasGenericDescriptor'
     kHasGenericDescriptor,
     kNoGenericDescriptor
   };
+
+  enum class StashResult {
+    kIgnore,   // No stash-related action should be performed.
+    kStash,    // The packet should be stashed for later processing.
+    kUnstash,  // Previously stashed packets should be retried.
+  };
+  StashResult OnReceivedPayloadData(CopyOnWriteBuffer codec_payload,
+                                    const RtpPacketReceived& rtp_packet,
+                                    const RTPVideoHeader& video,
+                                    int times_nacked);
 
   // Entry point doing non-stats work for a received packet. Called
   // for the same packet both before and after RED decapsulation.
