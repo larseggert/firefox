@@ -1846,9 +1846,8 @@ void nsPresContext::ThemeChangedInternal() {
   if (Document()->IsInChromeDocShell()) {
     if (const RefPtr<nsGlobalWindowInner> win =
             nsGlobalWindowInner::Cast(Document()->GetInnerWindow())) {
-      const RefPtr<dom::Document> doc = Document();
       nsContentUtils::DispatchEventOnlyToChrome(
-          doc, win, u"nativethemechange"_ns, CanBubble::eYes, Cancelable::eYes,
+          win, win, u"nativethemechange"_ns, CanBubble::eYes, Cancelable::eYes,
           nullptr);
     }
   }

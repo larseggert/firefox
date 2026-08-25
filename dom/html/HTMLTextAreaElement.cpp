@@ -437,11 +437,7 @@ void HTMLTextAreaElement::FireChangeEventIfNeeded() {
 
   // Dispatch the change event.
   mFocusedValue = std::move(value);
-  // We can use MOZ_KnownLive(OwnerDoc()) here because it's used only for
-  // considering the event target before dispatching the event and here may be
-  // in a hot path.
-  nsContentUtils::DispatchTrustedEvent(MOZ_KnownLive(OwnerDoc()), this,
-                                       u"change"_ns, CanBubble::eYes,
+  nsContentUtils::DispatchTrustedEvent(this, u"change"_ns, CanBubble::eYes,
                                        Cancelable::eNo);
 }
 

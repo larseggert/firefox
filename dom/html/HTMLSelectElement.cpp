@@ -1558,8 +1558,8 @@ void HTMLSelectElement::UserFinishedInteracting(bool aChanged) {
 
   // 5. Fire an event named change at element, with the bubbles attribute
   //    initialized to true.
-  nsContentUtils::DispatchTrustedEvent(OwnerDoc(), this, u"change"_ns,
-                                       CanBubble::eYes, Cancelable::eNo);
+  nsContentUtils::DispatchTrustedEvent(this, u"change"_ns, CanBubble::eYes,
+                                       Cancelable::eNo);
 }
 
 void HTMLSelectElement::AttributeChanged(dom::Element* aElement,
@@ -1918,8 +1918,8 @@ void HTMLSelectElement::FireDropDownEvent(bool aShow,
     }
     return u"mozhidedropdown"_ns;
   }();
-  nsContentUtils::DispatchChromeEvent(OwnerDoc(), this, eventName,
-                                      CanBubble::eYes, Cancelable::eNo);
+  nsContentUtils::DispatchChromeEvent(this, eventName, CanBubble::eYes,
+                                      Cancelable::eNo);
 }
 
 void HTMLSelectElement::PostHandleKeyEvent(int32_t aNewIndex,

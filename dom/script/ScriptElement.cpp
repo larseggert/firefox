@@ -61,9 +61,8 @@ ScriptElement::ScriptAvailable(nsresult aResult, nsIScriptElement* aElement,
 /* virtual */
 nsresult ScriptElement::FireErrorEvent() {
   const nsCOMPtr<nsIContent> cont = GetAsContent();
-  const RefPtr<Document> doc = cont->OwnerDoc();
-  return nsContentUtils::DispatchTrustedEvent(doc, cont, u"error"_ns,
-                                              CanBubble::eNo, Cancelable::eNo);
+  return nsContentUtils::DispatchTrustedEvent(cont, u"error"_ns, CanBubble::eNo,
+                                              Cancelable::eNo);
 }
 
 NS_IMETHODIMP

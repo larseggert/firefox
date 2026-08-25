@@ -1644,11 +1644,10 @@ void nsFocusManager::ActivateOrDeactivate(nsPIDOMWindowOuter* aWindow,
   }
 
   if (aWindow->GetExtantDoc()) {
-    const RefPtr<Document> doc = aWindow->GetExtantDoc();
     const RefPtr<nsGlobalWindowInner> win =
         nsGlobalWindowInner::Cast(aWindow->GetCurrentInnerWindow());
     nsContentUtils::DispatchEventOnlyToChrome(
-        doc, win, aActive ? u"activate"_ns : u"deactivate"_ns, CanBubble::eYes,
+        win, win, aActive ? u"activate"_ns : u"deactivate"_ns, CanBubble::eYes,
         Cancelable::eYes, nullptr);
   }
 }

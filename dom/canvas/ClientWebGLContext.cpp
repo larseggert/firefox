@@ -260,12 +260,9 @@ bool ClientWebGLContext::DispatchEvent(const nsAString& eventName) const {
   bool useDefaultHandler = true;
 
   if (mCanvasElement) {
-    // We can use MOZ_KnownLive(mCanvasElement->OwnerDoc()) here because it's
-    // used only for computing the event target before dispatching the event.
     const RefPtr<dom::HTMLCanvasElement> canvasElement = mCanvasElement;
-    nsContentUtils::DispatchTrustedEvent(
-        MOZ_KnownLive(mCanvasElement->OwnerDoc()), canvasElement, eventName,
-        kCanBubble, kIsCancelable, &useDefaultHandler);
+    nsContentUtils::DispatchTrustedEvent(canvasElement, eventName, kCanBubble,
+                                         kIsCancelable, &useDefaultHandler);
   } else if (mOffscreenCanvas) {
     // OffscreenCanvas case
     const RefPtr<dom::Event> event =

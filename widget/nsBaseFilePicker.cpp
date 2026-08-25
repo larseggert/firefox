@@ -359,10 +359,9 @@ bool nsBaseFilePicker::MaybeBlockFilePicker(
     RefPtr<Element> topFrameElement = mBrowsingContext->GetTopFrameElement();
     if (topFrameElement) {
       // Dispatch an event that the frontend may use.
-      const RefPtr<Document> doc = topFrameElement->OwnerDoc();
       nsContentUtils::DispatchEventOnlyToChrome(
-          doc, topFrameElement, u"FilePickerBlocked"_ns,
-          mozilla::CanBubble::eYes, mozilla::Cancelable::eNo);
+          topFrameElement, u"FilePickerBlocked"_ns, mozilla::CanBubble::eYes,
+          mozilla::Cancelable::eNo);
     }
 
     return true;

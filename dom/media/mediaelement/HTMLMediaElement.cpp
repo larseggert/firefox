@@ -7285,8 +7285,8 @@ nsresult HTMLMediaElement::FireEvent(const nsAString& aName) {
   LOG_EVENT(LogLevel::Debug, ("{} Firing event {}", fmt::ptr(this),
                               NS_ConvertUTF16toUTF8(aName).get()));
 
-  return nsContentUtils::DispatchTrustedEvent(OwnerDoc(), this, aName,
-                                              CanBubble::eNo, Cancelable::eNo);
+  return nsContentUtils::DispatchTrustedEvent(this, aName, CanBubble::eNo,
+                                              Cancelable::eNo);
 }
 
 void HTMLMediaElement::QueueEvent(const nsAString& aName) {

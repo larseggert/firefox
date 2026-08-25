@@ -176,9 +176,8 @@ NS_IMETHODIMP nsSourceErrorEventRunner::Run() {
                         {}, ErrorMarker{}, mErrorDetails,
                         Flow::FromPointer(mElement.get()));
   }
-  const RefPtr<Document> doc = mElement->OwnerDoc();
   const nsCOMPtr<nsIContent> source = mSource;
-  return nsContentUtils::DispatchTrustedEvent(doc, source, u"error"_ns,
+  return nsContentUtils::DispatchTrustedEvent(source, u"error"_ns,
                                               CanBubble::eNo, Cancelable::eNo);
 }
 

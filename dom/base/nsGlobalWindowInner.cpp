@@ -5206,11 +5206,8 @@ void nsGlobalWindowInner::FireOfflineStatusEventIfChanged() {
   } else {
     name.AssignLiteral("online");
   }
-  // mDoc is used only for considering the event target. Therefore,
-  // MOZ_KnownLive is safe here.
-  nsContentUtils::DispatchTrustedEvent(MOZ_KnownLive(mDoc), this, name,
-                                       CanBubble::eNo, Cancelable::eNo);
-  // Be aware! mDoc may have been changed.
+  nsContentUtils::DispatchTrustedEvent(this, this, name, CanBubble::eNo,
+                                       Cancelable::eNo);
 }
 
 nsGlobalWindowInner::SlowScriptResponse

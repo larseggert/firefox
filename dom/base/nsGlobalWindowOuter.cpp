@@ -3851,18 +3851,15 @@ bool nsGlobalWindowOuter::DispatchCustomEvent(
     const nsAString& aEventName, ChromeOnlyDispatch aChromeOnlyDispatch) {
   bool defaultActionEnabled = true;
 
-  // mDoc will be used only for considering the event target before dispatching
-  // the event. Therefore, we can use MOZ_KnownLive(mDoc) here.
   if (aChromeOnlyDispatch == ChromeOnlyDispatch::eYes) {
-    nsContentUtils::DispatchEventOnlyToChrome(
-        MOZ_KnownLive(mDoc), this, aEventName, CanBubble::eYes,
-        Cancelable::eYes, &defaultActionEnabled);
+    nsContentUtils::DispatchEventOnlyToChrome(this, this, aEventName,
+                                              CanBubble::eYes, Cancelable::eYes,
+                                              &defaultActionEnabled);
   } else {
-    nsContentUtils::DispatchTrustedEvent(MOZ_KnownLive(mDoc), this, aEventName,
+    nsContentUtils::DispatchTrustedEvent(this, this, aEventName,
                                          CanBubble::eYes, Cancelable::eYes,
                                          &defaultActionEnabled);
   }
-  // Be aware, mDoc may have been changed.
 
   return defaultActionEnabled;
 }

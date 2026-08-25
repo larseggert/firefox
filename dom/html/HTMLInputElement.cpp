@@ -252,8 +252,7 @@ class DispatchChangeEventCallback final : public GetFilesCallback {
     nsresult rv = nsContentUtils::DispatchInputEvent(mInputElement);
     NS_WARNING_ASSERTION(NS_SUCCEEDED(rv), "Failed to dispatch input event");
     mInputElement->SetUserInteracted(true);
-    const RefPtr<Document> doc = mInputElement->OwnerDoc();
-    rv = nsContentUtils::DispatchTrustedEvent(doc, mInputElement, u"change"_ns,
+    rv = nsContentUtils::DispatchTrustedEvent(mInputElement, u"change"_ns,
                                               CanBubble::eYes, Cancelable::eNo);
 
     return rv;
@@ -452,9 +451,8 @@ HTMLInputElement::nsFilePickerShownCallback::Done(
   mInput->PickerClosed();
 
   if (aResult == nsIFilePicker::returnCancel) {
-    const RefPtr<Document> doc = mInput->OwnerDoc();
     return nsContentUtils::DispatchTrustedEvent(
-        doc, mInput, u"cancel"_ns, CanBubble::eYes, Cancelable::eNo);
+        mInput, u"cancel"_ns, CanBubble::eYes, Cancelable::eNo);
   }
 
   mInput->OwnerDoc()->NotifyUserGestureActivation();
@@ -703,8 +701,7 @@ nsColorPickerShownCallback::Done(const nsAString& aColor) {
 
   if (mValueChanged) {
     mInput->SetUserInteracted(true);
-    const RefPtr<Document> doc = mInput->OwnerDoc();
-    rv = nsContentUtils::DispatchTrustedEvent(doc, mInput, u"change"_ns,
+    rv = nsContentUtils::DispatchTrustedEvent(mInput, u"change"_ns,
                                               CanBubble::eYes, Cancelable::eNo);
   }
 
@@ -2473,8 +2470,7 @@ void HTMLInputElement::OpenDateTimePicker(const DateTimeValue& aInitialValue) {
   }
 
   mDateTimeInputBoxValue = MakeUnique<DateTimeValue>(aInitialValue);
-  const RefPtr<Document> doc = OwnerDoc();
-  nsContentUtils::DispatchChromeEvent(doc, this, u"MozOpenDateTimePicker"_ns,
+  nsContentUtils::DispatchChromeEvent(this, u"MozOpenDateTimePicker"_ns,
                                       CanBubble::eYes, Cancelable::eYes);
 }
 
@@ -2482,8 +2478,7 @@ void HTMLInputElement::CloseDateTimePicker() {
   if (NS_WARN_IF(!IsDateTimeInputType(mType))) {
     return;
   }
-  const RefPtr<Document> doc = OwnerDoc();
-  nsContentUtils::DispatchChromeEvent(doc, this, u"MozCloseDateTimePicker"_ns,
+  nsContentUtils::DispatchChromeEvent(this, u"MozCloseDateTimePicker"_ns,
                                       CanBubble::eYes, Cancelable::eYes);
 }
 
@@ -2495,8 +2490,7 @@ void HTMLInputElement::OpenColorPicker() {
   if (NS_WARN_IF(mType != FormControlType::InputColor)) {
     return;
   }
-  const RefPtr<Document> doc = OwnerDoc();
-  nsContentUtils::DispatchChromeEvent(doc, this, u"MozOpenColorPicker"_ns,
+  nsContentUtils::DispatchChromeEvent(this, u"MozOpenColorPicker"_ns,
                                       CanBubble::eYes, Cancelable::eYes);
 }
 
@@ -2806,9 +2800,9 @@ void HTMLInputElement::FireChangeEventIfNeeded() {
     return;
   }
   // Dispatch the change event.
-  nsContentUtils::DispatchTrustedEvent(
-      OwnerDoc(), static_cast<nsIContent*>(this), u"change"_ns, CanBubble::eYes,
-      Cancelable::eNo);
+  nsContentUtils::DispatchTrustedEvent(static_cast<nsIContent*>(this),
+                                       u"change"_ns, CanBubble::eYes,
+                                       Cancelable::eNo);
 }
 
 FileList* HTMLInputElement::GetFiles() {
@@ -6079,8 +6073,7 @@ void HTMLInputElement::ShowPicker(ErrorResult& aRv) {
     if (CreatesDateTimeWidget()) {
       if (RefPtr<Element> dateTimeBoxElement = GetDateTimeBoxElement()) {
         // Event is dispatched to closed-shadow tree and doesn't bubble.
-        RefPtr<Document> doc = OwnerDoc();
-        nsContentUtils::DispatchTrustedEvent(doc, dateTimeBoxElement,
+        nsContentUtils::DispatchTrustedEvent(dateTimeBoxElement,
                                              u"MozDateTimeShowPickerForJS"_ns,
                                              CanBubble::eNo, Cancelable::eNo);
       }
@@ -7266,14 +7259,13 @@ void HTMLInputElement::SetRevealPassword(bool aValue) {
   if (aValue == State().HasState(ElementState::REVEALED)) {
     return;
   }
-  RefPtr doc = OwnerDoc();
   // We allow chrome code to prevent this. This is important for about:logins,
   // which may need to run some OS-dependent authentication code before
   // revealing the saved passwords.
   bool defaultAction = true;
-  nsContentUtils::DispatchEventOnlyToChrome(
-      doc, this, u"MozWillToggleReveal"_ns, CanBubble::eYes, Cancelable::eYes,
-      &defaultAction);
+  nsContentUtils::DispatchEventOnlyToChrome(this, u"MozWillToggleReveal"_ns,
+                                            CanBubble::eYes, Cancelable::eYes,
+                                            &defaultAction);
   if (NS_WARN_IF(!defaultAction)) {
     return;
   }

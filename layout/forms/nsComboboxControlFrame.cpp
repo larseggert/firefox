@@ -298,10 +298,9 @@ void nsComboboxControlFrame::Destroy(DestroyContext& aContext) {
           // from DOM node removal. But perhaps we can be a bit smarter here.
           if (!element->IsCombobox() ||
               !element->GetPrimaryFrame(FlushType::Frames)) {
-            const RefPtr<dom::Document> doc = element->OwnerDoc();
-            nsContentUtils::DispatchChromeEvent(
-                doc, element, u"mozhidedropdown"_ns, CanBubble::eYes,
-                Cancelable::eNo);
+            nsContentUtils::DispatchChromeEvent(element, u"mozhidedropdown"_ns,
+                                                CanBubble::eYes,
+                                                Cancelable::eNo);
           }
         }));
   }
