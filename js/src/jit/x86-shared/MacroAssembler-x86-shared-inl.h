@@ -338,11 +338,13 @@ void MacroAssembler::absDouble(FloatRegister src, FloatRegister dest) {
 }
 
 void MacroAssembler::sqrtFloat32(FloatRegister src, FloatRegister dest) {
-  vsqrtss(src, dest, dest);
+  // If we have AVX, pass the source register as src0 to avoid a false
+  // dependency on the output register.
+  vsqrtss(src, HasAVX() ? src : dest, dest);
 }
 
 void MacroAssembler::sqrtDouble(FloatRegister src, FloatRegister dest) {
-  vsqrtsd(src, dest, dest);
+  vsqrtsd(src, HasAVX() ? src : dest, dest);
 }
 
 void MacroAssembler::minFloat32(FloatRegister other, FloatRegister srcDest,
