@@ -38,6 +38,10 @@ ChromeUtils.defineESModuleGetters(lazy, {
  * {
  *  data?: undefined,
  *  name: "SmartFormFill:RefreshAutocomplete"
+ * } |
+ * {
+ *  data?: undefined,
+ *  name: "SmartFormFill:ShowAutocompletePopup"
  * }} SmartFormFillMessage
  */
 
@@ -183,6 +187,19 @@ export class SmartFormFillChild extends JSWindowActorChild {
       case "SmartFormFill:RefreshAutocomplete":
         this.#refreshAutocomplete();
         return undefined;
+
+      case "SmartFormFill:ShowAutocompletePopup": {
+        const autocompleteActor = this.manager.getActor("AutoComplete");
+        const focusedElement = this.document.activeElement;
+        if (
+          !autocompleteActor?.popupOpen &&
+          this.#smartFormFillDocument.isSupportedField(focusedElement) &&
+          lazy.formFillController.controlledElement === focusedElement
+        ) {
+          lazy.formFillController.showPopup();
+        }
+        return undefined;
+      }
     }
 
     return null;
