@@ -92,7 +92,15 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
 
     override fun dismissOverlays() = dismissKnownOverlaysIfPresent()
 
-    override fun dumpFailure(label: String) = ScreenDump.dump(composeRule, label)
+    // Both layers, because they answer different questions. dump() is the readable trace and the
+    // structured dumpNode records triage queries; dumpAll() additionally writes a screenshot and
+    // every element's on-screen bounds, which is what renders the failure as a picture with the
+    // available selectors mapped onto it. Failure-only, so the cost is not on the passing path.
+    override fun dumpFailure(label: String) {
+        ScreenDump.dump(composeRule, label)
+        runCatching { ScreenDump.dumpAll(composeRule, label) }
+            .onFailure { Log.i("Eff", "dumpAll failed, text dump stands: ${it.message}") }
+    }
 
     override fun stepId(prefix: String, description: String) = safeId(prefix, description)
 
@@ -188,7 +196,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
                 facts = facts("navigate", failure = Failure.ACTION_FAILED, extra = mapOf("page" to pageName)),
             )
             // Without this a nav failure says only "did not arrive" - not which page we landed on.
-            ScreenDump.dump(composeRule, "navigateToPage failed: $pageName")
+            dumpFailure("navigateToPage failed: $pageName")
             throw t
         }
     }
@@ -237,7 +245,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         if (!present) {
             // The `all {}` stops at the first miss, so the log alone cannot tell you whether the
             // element is absent, renamed, or merely off-screen.
-            ScreenDump.dump(composeRule, "mozVerifyElementsByGroup failed: $pageName group '$group'")
+            dumpFailure("mozVerifyElementsByGroup failed: $pageName group '$group'")
             assertionFailure("Not all elements in group '$group' are present")
         }
         return this
