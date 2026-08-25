@@ -44,18 +44,24 @@ impl TextDirectiveParameter {
         // However, it looks as it is implicitly expected.
         if starts_with_dash {
             if let Ok(decoded_suffix) = percent_decode(&token[1..]).decode_utf8() {
-                return Some(Self::Suffix(String::from(decoded_suffix.trim())));
+                return Some(TextDirectiveParameter::Suffix(String::from(
+                    decoded_suffix.trim(),
+                )));
             }
             return None;
         }
         if ends_with_dash {
             if let Ok(decoded_prefix) = percent_decode(&token[..token.len() - 1]).decode_utf8() {
-                return Some(Self::Prefix(String::from(decoded_prefix.trim())));
+                return Some(TextDirectiveParameter::Prefix(String::from(
+                    decoded_prefix.trim(),
+                )));
             }
             return None;
         }
-        if let Ok(decoded_text) = percent_decode(token).decode_utf8() {
-            return Some(Self::StartOrEnd(String::from(decoded_text.trim())));
+        if let Ok(decoded_text) = percent_decode(&token).decode_utf8() {
+            return Some(TextDirectiveParameter::StartOrEnd(String::from(
+                decoded_text.trim(),
+            )));
         }
         None
     }
@@ -63,7 +69,9 @@ impl TextDirectiveParameter {
     /// Returns the value of the token as percent-decoded `String`.
     pub fn value(&self) -> &String {
         match self {
-            Self::Prefix(value) | Self::StartOrEnd(value) | Self::Suffix(value) => value,
+            TextDirectiveParameter::Prefix(value) => &value,
+            TextDirectiveParameter::StartOrEnd(value) => &value,
+            TextDirectiveParameter::Suffix(value) => &value,
         }
     }
 
@@ -80,7 +88,7 @@ impl TextDirectiveParameter {
             Self::Suffix(text) => {
                 let encoded = encode(text);
                 let mut result = String::with_capacity(encoded.len() + 1);
-                result.push('-');
+                result.push_str("-");
                 result.push_str(&encoded);
                 result
             }
@@ -106,28 +114,28 @@ impl TextDirective {
     /// Creates an instance from string parts.
     /// This function is intended to be used when a fragment directive string should be created.
     /// Returns `None` if `start` is empty.
-    pub fn from_parts(prefix: &str, start: &str, end: &str, suffix: &str) -> Option<Self> {
-        if start.is_empty() {
-            None
-        } else {
+    pub fn from_parts(prefix: String, start: String, end: String, suffix: String) -> Option<Self> {
+        if !start.is_empty() {
             Some(Self {
-                prefix: if prefix.is_empty() {
-                    None
-                } else {
+                prefix: if !prefix.is_empty() {
                     Some(TextDirectiveParameter::Prefix(prefix.trim().into()))
+                } else {
+                    None
                 },
                 start: Some(TextDirectiveParameter::StartOrEnd(start.trim().into())),
-                end: if end.is_empty() {
-                    None
-                } else {
+                end: if !end.is_empty() {
                     Some(TextDirectiveParameter::StartOrEnd(end.trim().into()))
-                },
-                suffix: if suffix.is_empty() {
-                    None
                 } else {
+                    None
+                },
+                suffix: if !suffix.is_empty() {
                     Some(TextDirectiveParameter::Suffix(suffix.trim().into()))
+                } else {
+                    None
                 },
             })
+        } else {
+            None
         }
     }
 
@@ -154,7 +162,7 @@ impl TextDirective {
 
         let mut parsed_text_directive = Self::default();
         let valid = text_directive[5..]
-            .split(',')
+            .split(",")
             // Parse the substrings into `TextDirectiveParameter`s. This will determine
             // for each substring if it is a Prefix, Suffix or Start/End,
             // or if it is invalid.
@@ -162,14 +170,14 @@ impl TextDirective {
             // populate `parsed_text_directive` and check its validity by inserting the parameters
             // one by one. Given that the parameters are sorted by their position in the source,
             // the validity of the text directive can be determined while adding the parameters.
-            .all(|token| match token {
+            .map(|token| match token {
                 Some(TextDirectiveParameter::Prefix(..)) => {
                     if !parsed_text_directive.is_empty() {
                         // `prefix-` must be the first result.
                         return false;
                     }
                     parsed_text_directive.prefix = token;
-                    true
+                    return true;
                 }
                 Some(TextDirectiveParameter::StartOrEnd(..)) => {
                     if parsed_text_directive.suffix.is_some() {
@@ -186,7 +194,7 @@ impl TextDirective {
                     }
                     // if `start` and `end` is already filled,
                     // this is invalid as well.
-                    false
+                    return false;
                 }
                 Some(TextDirectiveParameter::Suffix(..)) => {
                     if parsed_text_directive.start.is_some()
@@ -197,11 +205,12 @@ impl TextDirective {
                         parsed_text_directive.suffix = token;
                         return true;
                     }
-                    false
+                    return false;
                 }
                 // empty or invalid token renders the whole text directive invalid.
                 None => false,
-            });
+            })
+            .all(|valid| valid);
         if valid {
             return Some(parsed_text_directive);
         }
@@ -219,7 +228,7 @@ impl TextDirective {
             + &[&self.prefix, &self.start, &self.end, &self.suffix]
                 .iter()
                 .filter_map(|&token| token.as_ref())
-                .map(TextDirectiveParameter::to_percent_encoded_string)
+                .map(|token| token.to_percent_encoded_string())
                 .collect::<Vec<_>>()
                 .join(",")
     }
@@ -278,10 +287,11 @@ pub fn parse_fragment_directive_and_remove_it_from_hash(
         // - if a fragment does not start with `text=`, it is not a text directive and will be ignored.
         // - if parsing of the text fragment fails (for whatever reason), it will be ignored.
         let text_directives: Vec<_> = fragment_directive
-            .split('&')
-            .filter_map(|maybe_text_fragment| {
-                TextDirective::from_percent_encoded_string(maybe_text_fragment)
+            .split("&")
+            .map(|maybe_text_fragment| {
+                TextDirective::from_percent_encoded_string(&maybe_text_fragment)
             })
+            .filter_map(|maybe_text_directive| maybe_text_directive)
             .collect();
 
         return Some((
@@ -301,14 +311,14 @@ pub fn parse_fragment_directive_and_remove_it_from_hash(
 /// are skipped.
 ///
 /// Returns `None` if `fragment_directives` is empty.
-pub fn create_fragment_directive_string(text_directives: &[TextDirective]) -> Option<String> {
+pub fn create_fragment_directive_string(text_directives: &Vec<TextDirective>) -> Option<String> {
     if text_directives.is_empty() {
         return None;
     }
     let encoded_fragment_directives: Vec<_> = text_directives
         .iter()
         .filter(|&fragment_directive| fragment_directive.is_valid())
-        .map(TextDirective::to_percent_encoded_string)
+        .map(|fragment_directive| fragment_directive.to_percent_encoded_string())
         .filter(|text_directive| !text_directive.is_empty())
         .collect();
     if encoded_fragment_directives.is_empty() {
