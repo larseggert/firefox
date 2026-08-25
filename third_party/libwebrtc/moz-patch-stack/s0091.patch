@@ -133,7 +133,7 @@ index e17bab807c..cd56026c7b 100644
    webrtc::MutexLock lock(&callback_lock_);
  
 diff --git a/modules/video_capture/linux/pipewire_session.h b/modules/video_capture/linux/pipewire_session.h
-index f03ada7528..0eebcc0f6a 100644
+index 934933402f..4dc99a14fc 100644
 --- a/modules/video_capture/linux/pipewire_session.h
 +++ b/modules/video_capture/linux/pipewire_session.h
 @@ -34,6 +34,7 @@
