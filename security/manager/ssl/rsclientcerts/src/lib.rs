@@ -282,6 +282,8 @@ macro_rules! declare_pkcs11_find_functions {
                 CKA_ID => "CKA_ID".to_string(),
                 CKA_ISSUER => "CKA_ISSUER".to_string(),
                 CKA_KEY_TYPE => "CKA_KEY_TYPE".to_string(),
+                CKA_HASH_OF_CERTIFICATE => "CKA_HASH_OF_CERTIFICATE".to_string(),
+                CKA_NAME_HASH_ALGORITHM => "CKA_NAME_HASH_ALGORITHM".to_string(),
                 CKA_LABEL => "CKA_LABEL".to_string(),
                 CKA_MODULUS => "CKA_MODULUS".to_string(),
                 CKA_PRIVATE => "CKA_PRIVATE".to_string(),
@@ -289,6 +291,10 @@ macro_rules! declare_pkcs11_find_functions {
                 CKA_SUBJECT => "CKA_SUBJECT".to_string(),
                 CKA_TOKEN => "CKA_TOKEN".to_string(),
                 CKA_VALUE => "CKA_VALUE".to_string(),
+                nss::CKA_PKCS_TRUST_CLIENT_AUTH => "CKA_TRUST_CLIENT_AUTH".to_string(),
+                nss::CKA_PKCS_TRUST_CODE_SIGNING => "CKA_TRUST_CODE_SIGNING".to_string(),
+                nss::CKA_PKCS_TRUST_EMAIL_PROTECTION => "CKA_TRUST_EMAIL_PROTECTION".to_string(),
+                nss::CKA_PKCS_TRUST_SERVER_AUTH => "CKA_TRUST_SERVER_AUTH".to_string(),
                 _ => format!("0x{:x}", typ),
             };
             if print_value {
@@ -305,21 +311,6 @@ macro_rules! declare_pkcs11_find_functions {
                 log_with_thread_id!(trace, "{prefix}CK_ATTRIBUTE {{ type: {typ}, ulValueLen: {len} }}");
             }
         }
-
-        const RELEVANT_ATTRIBUTES: &[CK_ATTRIBUTE_TYPE] = &[
-            CKA_CLASS,
-            CKA_EC_PARAMS,
-            CKA_ID,
-            CKA_ISSUER,
-            CKA_KEY_TYPE,
-            CKA_LABEL,
-            CKA_MODULUS,
-            CKA_PRIVATE,
-            CKA_SERIAL_NUMBER,
-            CKA_SUBJECT,
-            CKA_TOKEN,
-            CKA_VALUE,
-        ];
 
         /// This gets called to initialize a search for objects matching a given list of attributes.
         extern "C" fn C_FindObjectsInit(
@@ -338,13 +329,6 @@ macro_rules! declare_pkcs11_find_functions {
                 trace_attr("  ", attr, true);
                 // Copy out the attribute type to avoid making a reference to an unaligned field.
                 let attr_type = attr.type_;
-                if !RELEVANT_ATTRIBUTES.contains(&attr_type) {
-                    log_with_thread_id!(
-                        debug,
-                        "C_FindObjectsInit: irrelevant attribute, returning CKR_ATTRIBUTE_TYPE_INVALID"
-                    );
-                    return CKR_ATTRIBUTE_TYPE_INVALID;
-                }
                 let slice = unsafe {
                     std::slice::from_raw_parts(attr.pValue as *const u8, attr.ulValueLen as usize)
                 };
