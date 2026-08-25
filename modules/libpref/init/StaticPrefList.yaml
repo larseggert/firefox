@@ -2755,6 +2755,12 @@
   value: false
   mirror: always
 
+# Whether to enable large window for brotli on DecompressionStream.
+- name: dom.compression_streams.brotli.large_window.enabled
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
 # Compression Streams (zstd) (CompressionStream/DecompressionStream)
 # Whether or not "zstd" is a supported format for these streams.
 - name: dom.compression_streams.zstd.enabled
