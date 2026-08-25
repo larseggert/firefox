@@ -532,7 +532,7 @@ function Privacy({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
             menuId="privacy-context-menu"
             type="ghost"
           />
-          <panel-list id="privacy-context-menu">
+          <panel-list className="panel-list-no-icons" id="privacy-context-menu">
             {widgetsMayBeMaximized && (
               <panel-item submenu="privacy-size-submenu">
                 <span data-l10n-id="newtab-widget-menu-change-size"></span>

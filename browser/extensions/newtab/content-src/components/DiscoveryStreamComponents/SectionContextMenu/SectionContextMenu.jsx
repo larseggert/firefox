@@ -74,7 +74,11 @@ export function SectionContextMenu({
         data-l10n-args={title ? JSON.stringify({ title }) : null}
         menuId={menuId}
       />
-      <panel-list id={menuId} ref={panelListRef}>
+      <panel-list
+        className="panel-list-no-icons"
+        id={menuId}
+        ref={panelListRef}
+      >
         <PanelListItems options={options} />
       </panel-list>
     </div>

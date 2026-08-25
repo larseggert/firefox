@@ -1508,10 +1508,6 @@ toolbar[inactive="true"] .urlbar,
   > panel-item::part(button) {
     /* The --icon-url variable allows setting an icon in JS. */
     background-image: var(--icon-url, url("chrome://global/skin/icons/search-glass.svg"));
-    /* The icon sits at --panel-menuitem-padding-inline and is --icon-size wide,
-       so the label clears it. panel-item reserves that room itself, but New Tab
-       overrides it with too little (bug 2065170). */
-    padding-inline-start: calc(var(--panel-menuitem-padding-inline) + 22px);
     /* With Nova, panel-list already has these styles by default; Proton needs
        adjustments to look like a proper menu. */
     /* stylelint-disable-next-line media-query-no-invalid */
