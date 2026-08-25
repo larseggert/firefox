@@ -45,6 +45,7 @@ export interface Modules {
   "chrome://browser/content/tabbrowser/tab-hover-preview.mjs": typeof import("chrome://browser/content/tabbrowser/tab-hover-preview.mjs"),
   "chrome://browser/content/translations/TranslationsPanelShared.sys.mjs": typeof import("chrome://browser/content/translations/TranslationsPanelShared.sys.mjs"),
   "chrome://browser/content/urlbar/L10nCache.mjs": typeof import("chrome://browser/content/urlbar/L10nCache.mjs"),
+  "chrome://browser/content/urlbar/SearchbarInput.mjs": typeof import("chrome://browser/content/urlbar/SearchbarInput.mjs"),
   "chrome://browser/content/urlbar/SmartbarInput.mjs": typeof import("chrome://browser/content/urlbar/SmartbarInput.mjs"),
   "chrome://browser/content/urlbar/SmartbarInputController.mjs": typeof import("chrome://browser/content/urlbar/SmartbarInputController.mjs"),
   "chrome://browser/content/urlbar/UrlbarChildController.mjs": typeof import("chrome://browser/content/urlbar/UrlbarChildController.mjs"),

@@ -406,6 +406,9 @@
       "chrome://browser/content/urlbar/SearchModeSwitcher.mjs": [
         "../../../browser/components/urlbar/content/SearchModeSwitcher.mjs"
       ],
+      "chrome://browser/content/urlbar/SearchbarInput.mjs": [
+        "../../../browser/components/urlbar/content/SearchbarInput.mjs"
+      ],
       "chrome://browser/content/urlbar/SmartbarInput.mjs": [
         "../../../browser/components/urlbar/content/SmartbarInput.mjs"
       ],
