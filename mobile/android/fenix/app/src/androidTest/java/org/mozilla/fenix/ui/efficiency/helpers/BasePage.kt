@@ -10,12 +10,9 @@ import android.view.accessibility.AccessibilityWindowInfo
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.SemanticsNodeInteractionCollection
-import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertAll
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasAnyChild
-import androidx.compose.ui.test.hasAnySibling
 import androidx.compose.ui.test.hasParent
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -30,29 +27,14 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipe
 import androidx.test.espresso.Espresso.closeSoftKeyboard
 import androidx.test.espresso.ViewInteraction
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.longClick
-import androidx.test.espresso.action.ViewActions.swipeDown
-import androidx.test.espresso.action.ViewActions.swipeLeft
-import androidx.test.espresso.action.ViewActions.swipeRight
-import androidx.test.espresso.action.ViewActions.swipeUp
-import androidx.test.espresso.assertion.ViewAssertions.matches
-import androidx.test.espresso.matcher.ViewMatchers.hasSibling
-import androidx.test.espresso.matcher.ViewMatchers.isChecked
-import androidx.test.espresso.matcher.ViewMatchers.isDisplayingAtLeast
-import androidx.test.espresso.matcher.ViewMatchers.withResourceName
-import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiObject
 import androidx.test.uiautomator.UiObject2
-import androidx.test.uiautomator.UiSelector
-import org.hamcrest.CoreMatchers.allOf
 import org.hamcrest.CoreMatchers.not
-import org.hamcrest.Matchers.containsString
 import org.mozilla.fenix.helpers.AppAndSystemHelper
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.TestAssetHelper
@@ -61,7 +43,9 @@ import org.mozilla.fenix.helpers.TestHelper.packageName
 import org.mozilla.fenix.ui.efficiency.core.ComposeUiElement
 import org.mozilla.fenix.ui.efficiency.core.ElementState
 import org.mozilla.fenix.ui.efficiency.core.EspressoUiElement
+import org.mozilla.fenix.ui.efficiency.core.Gestures
 import org.mozilla.fenix.ui.efficiency.core.Layer
+import org.mozilla.fenix.ui.efficiency.core.Relations
 import org.mozilla.fenix.ui.efficiency.core.Resolvers
 import org.mozilla.fenix.ui.efficiency.core.STRATEGY_LOCATORS
 import org.mozilla.fenix.ui.efficiency.core.UiActions
@@ -70,8 +54,12 @@ import org.mozilla.fenix.ui.efficiency.core.UiObject2UiElement
 import org.mozilla.fenix.ui.efficiency.core.UiObjectUiElement
 import org.mozilla.fenix.ui.efficiency.core.VerbHost
 import org.mozilla.fenix.ui.efficiency.core.WaitPolicy
+import org.mozilla.fenix.ui.efficiency.core.driveUntil
+import org.mozilla.fenix.ui.efficiency.core.reportAround
 import org.mozilla.fenix.ui.efficiency.core.require
 import org.mozilla.fenix.ui.efficiency.core.requireAbsent
+import org.mozilla.fenix.ui.efficiency.core.requireAll
+import org.mozilla.fenix.ui.efficiency.core.requireState
 import org.mozilla.fenix.ui.efficiency.navigation.NavigationRegistry
 import org.mozilla.fenix.ui.efficiency.navigation.NavigationStep
 
@@ -93,12 +81,25 @@ import org.mozilla.fenix.ui.efficiency.navigation.NavigationStep
  */
 abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *>) : VerbHost {
 
-    // The five things core/Interaction.kt needs from a page. Everything else it does - reporting,
+    // The six things the verb executor in core/ needs from a page. Everything else it does - reporting,
     // polling, the one overlay retry, the failure text and the screen dump - it does once, for every
     // verb, instead of each verb doing it again slightly differently.
     override fun reporter() = rep()
 
     override fun locate(selector: Selector, applyPreconditions: Boolean) = mozGetElement(selector, applyPreconditions)
+
+    // Only a Compose tag can name more than one element; every other strategy resolves to at most
+    // one, and the collection verbs report that as the reason rather than as "not found".
+    override fun locateAll(selector: Selector): SemanticsNodeInteractionCollection? =
+        if (selector.value.isBlank()) {
+            null
+        } else {
+            when (selector.strategy) {
+                SelectorStrategy.COMPOSE_BY_TAG,
+                SelectorStrategy.COMPOSE_ON_ALL_NODES_BY_TAG_ON_FIRST -> composeRule.onAllNodesWithTag(selector.value)
+                else -> null
+            }
+        }
 
     override fun dismissOverlays() = dismissKnownOverlaysIfPresent()
 
@@ -412,19 +413,14 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
 
     /** Poll until the soft keyboard is showing; throws if it never appears within [timeout]. */
     fun mozVerifyKeyboardVisible(timeout: Long = 5_000, interval: Long = 200): BasePage {
-        val rep = rep()
-        rep?.startCmd("verify_keyboard_visible", "Verifying the soft keyboard is visible...", 1)
-        val deadline = System.currentTimeMillis() + timeout
-        while (System.currentTimeMillis() < deadline) {
-            if (mozIsKeyboardVisible()) {
-                rep?.endCmd(success = true, message = "Soft keyboard is visible")
-                return this
-            }
-            SystemClock.sleep(interval)
-        }
-        rep?.endCmd(success = false, message = "Soft keyboard not visible after ${timeout}ms")
-        ScreenDump.dump(composeRule, "mozVerifyKeyboardVisible failed")
-        assertionFailure("Soft keyboard was expected to be visible but is not, after ${timeout}ms")
+        requireState(
+            verb = "verify_keyboard_visible",
+            description = "the soft keyboard is visible",
+            policy = WaitPolicy.Poll(timeout, interval),
+            dumpOnFailure = true,
+            condition = ::mozIsKeyboardVisible,
+        )
+        return this
     }
 
     fun mozVerifyAnyContainsText(
@@ -433,31 +429,15 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         timeout: Long = TestAssetHelper.waitingTime,
         interval: Long = 500,
     ): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("verify_any_contains_text", selector.description),
-            "Verifying any '${selector.description}' contains text '$text'...",
-            1,
+        requireAll(
+            verb = "verify_any_contains_text",
+            selector = selector,
+            expectation = "has a match containing '$text'",
+            policy = WaitPolicy.Poll(timeout, interval),
+            before = { dismissSoftKeyboard() },
+            satisfied = { it.filter(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty() },
         )
-        dismissSoftKeyboard()
-        val deadline = System.currentTimeMillis() + timeout
-        while (System.currentTimeMillis() < deadline) {
-            val match =
-                mozGetAllElements(selector)
-                    ?.filter(hasText(text, substring = true))
-                    ?.fetchSemanticsNodes()
-                    ?.isNotEmpty() == true
-            if (match) {
-                rep?.endCmd(success = true, message = "Found '${selector.description}' containing text '$text'")
-                return this
-            }
-            SystemClock.sleep(interval)
-        }
-        rep?.endCmd(
-            success = false,
-            message = "No '${selector.description}' containing text '$text' after ${timeout}ms",
-        )
-        assertionFailure("No '${selector.description}' found containing text '$text' after ${timeout}ms")
+        return this
     }
 
     fun mozVerifyAnyHasChildWithText(
@@ -466,86 +446,45 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         timeout: Long = TestAssetHelper.waitingTime,
         interval: Long = 500,
     ): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("verify_any_has_child_text", selector.description),
-            "Verifying any '${selector.description}' has child with text '$text'...",
-            1,
+        requireAll(
+            verb = "verify_any_has_child_text",
+            selector = selector,
+            expectation = "has a match with a child containing '$text'",
+            policy = WaitPolicy.Poll(timeout, interval),
+            satisfied = { it.filter(hasAnyChild(hasText(text))).fetchSemanticsNodes().isNotEmpty() },
         )
-        val deadline = System.currentTimeMillis() + timeout
-        while (System.currentTimeMillis() < deadline) {
-            val match =
-                mozGetAllElements(selector)?.filter(hasAnyChild(hasText(text)))?.fetchSemanticsNodes()?.isNotEmpty() ==
-                    true
-            if (match) {
-                rep?.endCmd(success = true, message = "Found '${selector.description}' with child text '$text'")
-                return this
-            }
-            SystemClock.sleep(interval)
-        }
-        rep?.endCmd(
-            success = false,
-            message = "No '${selector.description}' with child text '$text' after ${timeout}ms",
-        )
-        assertionFailure("No '${selector.description}' found with a child containing text '$text' after ${timeout}ms")
-    }
-
-    fun mozVerifyNoneContainText(selector: Selector, text: String): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("verify_none_contain_text", selector.description),
-            "Verifying no '${selector.description}' contains text '$text'...",
-            1,
-        )
-        dismissSoftKeyboard()
-        val result = mozGetAllElements(selector)
-        if (result == null) {
-            rep?.endCmd(success = false, message = "Selector strategy '${selector.strategy}' not supported")
-            assertionFailure("Selector strategy '${selector.strategy}' not supported by mozVerifyNoneContainText")
-        }
-        result.assertAll(hasText(text).not())
-        rep?.endCmd(success = true, message = "No '${selector.description}' contains text '$text'")
         return this
     }
 
-    // Polls until the match count settles on [count] rather than sampling once: lists that are still being
-    // populated pass through the expected count on their way to a larger one.
+    fun mozVerifyNoneContainText(selector: Selector, text: String): BasePage {
+        requireAll(
+            verb = "verify_none_contain_text",
+            selector = selector,
+            expectation = "has no match containing '$text'",
+            before = { dismissSoftKeyboard() },
+            satisfied = { it.filter(hasText(text)).fetchSemanticsNodes().isEmpty() },
+        )
+        return this
+    }
+
     fun mozVerifyElementCount(
         selector: Selector,
         count: Int,
         timeout: Long = TestAssetHelper.waitingTime,
         interval: Long = 500,
     ): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("verify_element_count", selector.description),
-            "Verifying there are exactly $count '${selector.description}' elements...",
-            1,
+        requireAll(
+            verb = "verify_element_count",
+            selector = selector,
+            expectation = "has exactly $count matches",
+            // Fixed interval, no backoff: a list still being populated passes through the expected count
+            // on its way to a larger one, and probing faster makes that transient easier to catch.
+            policy = WaitPolicy.Poll(timeout, interval, backoff = false),
+            dumpOnFailure = true,
+            before = { dismissSoftKeyboard() },
+            satisfied = { it.fetchSemanticsNodes().size == count },
         )
-        closeSoftKeyboard()
-        val deadline = System.currentTimeMillis() + timeout
-        var actual = -1
-        while (System.currentTimeMillis() < deadline) {
-            val elements = mozGetAllElements(selector)
-            if (elements == null) {
-                rep?.endCmd(success = false, message = "Selector strategy '${selector.strategy}' not supported")
-                throw AssertionError("Selector strategy '${selector.strategy}' not supported by mozVerifyElementCount")
-            }
-            actual = elements.fetchSemanticsNodes().size
-            if (actual == count) {
-                rep?.endCmd(success = true, message = "Found exactly $count '${selector.description}'")
-                return this
-            }
-            SystemClock.sleep(interval)
-        }
-        rep?.endCmd(
-            success = false,
-            message = "Expected $count '${selector.description}' but found $actual after ${timeout}ms",
-        )
-        ScreenDump.dump(composeRule, "mozVerifyElementCount failed: ${selector.description}")
-        throw AssertionError(
-            "Expected exactly $count '${selector.description}' elements but found $actual after ${timeout}ms"
-        )
+        return this
     }
 
     // ------------------------------------------------------------
@@ -683,39 +622,14 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         return this
     }
 
-    /**
-     * Waits up to [timeout] ms for [selector] to appear, then clicks it if visible; silently skips if it never appears.
-     *
-     * Use this exclusively for UI that is genuinely optional by design (e.g. a one-time dialog that only appears on the
-     * first run). Never use it as a workaround for flaky selectors or timing issues — those should be fixed at the
-     * source.
-     */
     fun mozClickFirstWithParentText(selector: Selector, parentText: String): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("click_first_with_parent_text", selector.description),
-            "Attempting to click first '${selector.description}' with parent text '$parentText'...",
-            1,
+        requireAll(
+            verb = "click_first_with_parent_text",
+            selector = selector,
+            expectation = "has a match under a parent reading '$parentText'",
+            satisfied = { it.filter(hasParent(hasText(parentText))).fetchSemanticsNodes().isNotEmpty() },
+            action = { it.filter(hasParent(hasText(parentText))).onFirst().performClick() },
         )
-        val result = mozGetAllElements(selector)
-        if (result == null) {
-            rep?.endCmd(success = false, message = "Selector strategy '${selector.strategy}' not supported")
-            assertionFailure("Selector strategy '${selector.strategy}' not supported by mozClickFirstWithParentText")
-        }
-        try {
-            result.filter(hasParent(hasText(parentText))).onFirst().performClick()
-            rep?.endCmd(
-                success = true,
-                message = "Clicked first '${selector.description}' with parent text '$parentText'",
-            )
-        } catch (e: Throwable) {
-            rep?.endCmd(
-                success = false,
-                message =
-                    "Click failed for '${selector.description}' with parent text '$parentText': ${e.message ?: "exception"}",
-            )
-            throw e
-        }
         return this
     }
 
@@ -755,46 +669,18 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         return this
     }
 
-    /**
-     * Presses back until [selector] disappears, bounded by [maxPresses]. Mirrors the legacy exitMenu() pattern: gating
-     * on the anchor's disappearance rather than a fixed back-press count tolerates presses that are swallowed while a
-     * Compose/fragment transition is still settling (waitForIdle() can return early), which is the cause of
-     * intermittent "Failed to navigate to HomePage" failures when backing out of nested Settings.
-     */
     fun mozPressBackUntilGone(selector: Selector, maxPresses: Int = 5): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("press_back_until_gone", selector.description),
-            "Pressing back until '${selector.description}' is gone...",
-            1,
+        driveUntil(
+            verb = "press_back_until_gone",
+            selector = selector,
+            attempts = maxPresses,
+            want = false,
+            step = {
+                mDevice.pressBack()
+                mDevice.waitForIdle()
+            },
         )
-
-        repeat(maxPresses) { attempt ->
-            rep?.startLoc(
-                safeId("loc", "${selector.description}_attempt_${attempt + 1}"),
-                "Attempting to locate '${selector.description}'...",
-                2,
-            )
-            val present = waitForPresence(selector, TestAssetHelper.waitingTimeShort)
-            rep?.endLoc(
-                success = !present,
-                message = if (present) found(selector.description) else notFound(selector.description),
-            )
-
-            if (!present) {
-                rep?.endCmd(success = true, message = "'${selector.description}' gone after $attempt back press(es)")
-                return this
-            }
-
-            mDevice.pressBack()
-            mDevice.waitForIdle()
-        }
-
-        rep?.endCmd(
-            success = false,
-            message = "'${selector.description}' still present after $maxPresses back press(es)",
-        )
-        assertionFailure("'${selector.description}' still present after $maxPresses back press(es)")
+        return this
     }
 
     // A single back press. mozPressBackUntilGone cannot stand in when the thing being left has no selector
@@ -817,129 +703,43 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
      * overshoots (backgrounding the app) or stops short.
      */
     fun mozPressBackUntilPresent(selector: Selector, maxPresses: Int = 5): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("press_back_until_present", selector.description),
-            "Pressing back until '${selector.description}' is showing...",
-            1,
+        driveUntil(
+            verb = "press_back_until_present",
+            selector = selector,
+            attempts = maxPresses,
+            want = true,
+            dumpOnFailure = true,
+            step = {
+                mDevice.pressBack()
+                mDevice.waitForIdle()
+            },
         )
-
-        repeat(maxPresses) { attempt ->
-            if (mozVerifyElement(selector, applyPreconditions = false)) {
-                rep?.endCmd(success = true, message = "'${selector.description}' showing after $attempt back press(es)")
-                return this
-            }
-            mDevice.pressBack()
-            mDevice.waitForIdle()
-        }
-
-        if (mozVerifyElement(selector, applyPreconditions = false)) {
-            rep?.endCmd(success = true, message = "'${selector.description}' showing after $maxPresses back press(es)")
-            return this
-        }
-        rep?.endCmd(
-            success = false,
-            message = "'${selector.description}' never appeared after $maxPresses back press(es)",
-        )
-        ScreenDump.dump(composeRule, "mozPressBackUntilPresent failed: ${selector.description}")
-        throw AssertionError("'${selector.description}' did not appear after $maxPresses back press(es)")
-    }
-
-    private fun waitForPresence(selector: Selector, timeout: Long, interval: Long = 200): Boolean {
-        val deadline = System.currentTimeMillis() + timeout
-        while (System.currentTimeMillis() < deadline) {
-            if (mozVerifyElement(selector, applyPreconditions = false)) return true
-            android.os.SystemClock.sleep(interval)
-        }
-        return false
+        return this
     }
 
     fun mozSwipeTo(
         selector: Selector,
         direction: SwipeDirection = SwipeDirection.DOWN,
         maxSwipes: Int = 10, // TODO (Jackie J. 10/30/2025): replace hard-coded value with self-selecting x,y boundaries
-        applyPreconditions: Boolean = false, // default false to avoid recursive preconditions
     ): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("swipe_to", selector.description),
-            "Attempting to swipe to '${selector.description}'...",
-            1,
+        driveUntil(
+            verb = "swipe_to",
+            selector = selector,
+            attempts = maxSwipes,
+            want = true,
+            // Stricter than plain presence: Espresso's click() rejects a view displayed under
+            // CLICKABLE_VISIBILITY_PERCENT, so stopping at "exists" would leave the element unclickable.
+            probe = { ElementState.isClickablyVisible(it, CLICKABLE_VISIBILITY_PERCENT) },
+            settle = { SystemClock.sleep(500) },
+            step = { Gestures.onScreen(direction) },
         )
-
-        try {
-            repeat(maxSwipes) { attempt ->
-                // Each attempt is a LOC check for visibility.
-                rep?.startLoc(
-                    safeId("loc", "${selector.description}_attempt_${attempt + 1}"),
-                    "Attempting to locate '${selector.description}'...",
-                    2,
-                )
-                val element = mozGetElement(selector, applyPreconditions = applyPreconditions)
-
-                val isVisible =
-                    when (element) {
-                        // Espresso's click() rejects views displayed under CLICKABLE_VISIBILITY_PERCENT,
-                        // so stop swiping only once the element clears that bar.
-                        is ViewInteraction ->
-                            try {
-                                element.check(matches(isDisplayingAtLeast(CLICKABLE_VISIBILITY_PERCENT)))
-                                true
-                            } catch (_: Throwable) {
-                                false
-                            }
-                        is UiObject -> element.exists()
-                        is UiObject2 -> true
-                        is SemanticsNodeInteraction ->
-                            try {
-                                element.assertExists()
-                                element.assertIsDisplayed()
-                                true
-                            } catch (_: AssertionError) {
-                                false
-                            }
-                        else -> false
-                    }
-
-                rep?.endLoc(
-                    success = isVisible,
-                    message = if (isVisible) found(selector.description) else notFound(selector.description),
-                )
-
-                if (isVisible) {
-                    Log.i("MozSwipeTo", "Element '${selector.description}' found after $attempt swipe(s)")
-                    rep?.endCmd(
-                        success = true,
-                        message = "Reached '${selector.description}' after ${attempt + 1} swipe(s)",
-                    )
-                    return this
-                }
-
-                // The swipe itself is an action; we keep it as part of the CMD.
-                performSwipe(direction)
-                Thread.sleep(500)
-            }
-
-            rep?.endCmd(
-                success = false,
-                message = "Swipe-to '${selector.description}' failed after $maxSwipes attempts",
-            )
-            assertionFailure("Element '${selector.description}' not found after $maxSwipes swipe(s)")
-        } catch (t: Throwable) {
-            rep?.endCmd(
-                success = false,
-                message = "Swipe-to '${selector.description}' failed: ${t.message ?: "exception"}",
-            )
-            throw t
-        }
+        return this
     }
 
     /**
-     * Swipe a single [direction] on [selector]'s element. [steps] controls the gesture speed for the UiAutomator
-     * ([UiObject]) backend: it is the number of motion events sent, so a low value produces a fast flick and a high
-     * value a slow drag. Some gestures only register as a flick (e.g. swiping the navigation toolbar to switch tabs),
-     * so callers that need one pass a small [steps]; the default of 100 keeps the original slow-drag behaviour for
-     * existing callers.
+     * Swipe a single [direction] on [selector]'s element. [steps] sets the UiAutomator gesture speed (motion-event
+     * count): low is a flick, high a slow drag. Some gestures only register as a flick
+     * - swiping the navigation toolbar to switch tabs - which is why callers can ask for one.
      */
     fun mozSwipeElement(
         selector: Selector,
@@ -947,101 +747,14 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         applyPreconditions: Boolean = false,
         steps: Int = 100,
     ): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("swipe_element", selector.description),
-            "Swiping ${direction.name} on '${selector.description}'...",
-            1,
+        require(
+            verb = "swipe_element",
+            selector = selector,
+            expectation = "swipeable",
+            applyPreconditions = applyPreconditions,
+            dumpOnFailure = false,
+            action = { Gestures.onElement(it, direction, steps) },
         )
-
-        try {
-            val containerElement = mozGetElement(selector, applyPreconditions = applyPreconditions)
-
-            when (containerElement) {
-                is ViewInteraction -> {
-                    val action =
-                        when (direction) {
-                            SwipeDirection.DOWN -> swipeDown()
-                            SwipeDirection.UP -> swipeUp()
-                            SwipeDirection.RIGHT -> swipeRight()
-                            SwipeDirection.LEFT -> swipeLeft()
-                        }
-                    containerElement.perform(action)
-                }
-
-                is UiObject -> {
-                    when (direction) {
-                        SwipeDirection.DOWN -> containerElement.swipeDown(steps)
-                        SwipeDirection.UP -> containerElement.swipeUp(steps)
-                        SwipeDirection.RIGHT -> containerElement.swipeRight(steps)
-                        SwipeDirection.LEFT -> containerElement.swipeLeft(steps)
-                    }
-                }
-
-                is UiObject2 -> {
-                    val swipePercent = 1.0f
-
-                    val uiAutomatorDirection =
-                        when (direction) {
-                            SwipeDirection.DOWN -> androidx.test.uiautomator.Direction.DOWN
-                            SwipeDirection.UP -> androidx.test.uiautomator.Direction.UP
-                            SwipeDirection.RIGHT -> androidx.test.uiautomator.Direction.RIGHT
-                            SwipeDirection.LEFT -> androidx.test.uiautomator.Direction.LEFT
-                        }
-
-                    containerElement.swipe(uiAutomatorDirection, swipePercent)
-                }
-
-                is SemanticsNodeInteraction -> {
-                    containerElement.performTouchInput {
-                        val swipeDistance = 1500f
-                        val swipeDuration = 200L
-
-                        when (direction) {
-                            SwipeDirection.DOWN ->
-                                swipe(
-                                    start = center,
-                                    end = androidx.compose.ui.geometry.Offset(center.x, center.y + swipeDistance),
-                                    durationMillis = swipeDuration,
-                                )
-                            SwipeDirection.UP ->
-                                swipe(
-                                    start = center,
-                                    end = androidx.compose.ui.geometry.Offset(center.x, center.y - swipeDistance),
-                                    durationMillis = swipeDuration,
-                                )
-                            SwipeDirection.RIGHT ->
-                                swipe(
-                                    start = center,
-                                    end = androidx.compose.ui.geometry.Offset(center.x + swipeDistance, center.y),
-                                    durationMillis = swipeDuration,
-                                )
-                            SwipeDirection.LEFT ->
-                                swipe(
-                                    start = center,
-                                    end = androidx.compose.ui.geometry.Offset(center.x - swipeDistance, center.y),
-                                    durationMillis = swipeDuration,
-                                )
-                        }
-                    }
-                }
-
-                else -> {
-                    throw IllegalArgumentException(
-                        "Unsupported element type for targeted swiping: ${containerElement?.javaClass?.simpleName}"
-                    )
-                }
-            }
-
-            rep?.endCmd(success = true, message = "Successfully swiped ${direction.name} on '${selector.description}'")
-        } catch (t: Throwable) {
-            rep?.endCmd(
-                success = false,
-                message = "Failed to swipe on '${selector.description}': ${t.message ?: "exception"}",
-            )
-            throw t
-        }
-
         return this
     }
 
@@ -1051,78 +764,24 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         maxSwipes: Int = 3,
         applyPreconditions: Boolean = false,
     ): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("swipe_element_until_absent", selector.description),
-            "Swiping ${direction.name} on '${selector.description}' until absent...",
-            1,
+        driveUntil(
+            verb = "swipe_element_until_absent",
+            selector = selector,
+            attempts = maxSwipes,
+            want = false,
+            dumpOnFailure = true,
+            settle = {
+                composeRule.waitForIdle()
+                mDevice.waitForIdle()
+            },
+            step = { mozSwipeElement(selector, direction, applyPreconditions) },
         )
-
-        repeat(maxSwipes) { attempt ->
-            rep?.startLoc(
-                safeId("loc", "${selector.description}_attempt_${attempt + 1}"),
-                "Attempting to locate '${selector.description}'...",
-                2,
-            )
-            val present = mozVerifyElement(selector, applyPreconditions = false)
-            rep?.endLoc(
-                success = !present,
-                message = if (present) found(selector.description) else notFound(selector.description),
-            )
-
-            if (!present) {
-                rep?.endCmd(success = true, message = "'${selector.description}' gone after $attempt swipe(s)")
-                return this
-            }
-
-            mozSwipeElement(selector, direction, applyPreconditions)
-            composeRule.waitForIdle()
-            mDevice.waitForIdle()
-        }
-
-        rep?.endCmd(success = false, message = "'${selector.description}' still present after $maxSwipes swipe(s)")
-        ScreenDump.dump(composeRule, "mozSwipeElementUntilAbsent failed: ${selector.description}")
-        assertionFailure("'${selector.description}' still present after $maxSwipes swipe(s)")
+        return this
     }
 
     fun mozOpenNotificationsTray(): BasePage {
-        val rep = rep()
-        rep?.startCmd("open_notifications_tray", "Attempting to open Notifications tray...", 1)
-        return try {
-            mDevice.openNotification()
-            rep?.endCmd(success = true, message = "Notifications tray opened")
-            this
-        } catch (t: Throwable) {
-            rep?.endCmd(success = false, message = "Open Notifications tray failed: ${t.message ?: "exception"}")
-            throw t
-        }
-    }
-
-    private fun performSwipe(direction: SwipeDirection) {
-        val rep = rep()
-        rep?.startCmd(safeId("swipe", direction.name), "Attempting to swipe ${direction.name.lowercase()}...", 2)
-
-        try {
-            val height = mDevice.displayHeight
-            val width = mDevice.displayWidth
-
-            val (startX, startY, endX, endY) =
-                when (direction) {
-                    SwipeDirection.UP -> listOf(width / 2, height / 2, width / 2, height / 4)
-                    SwipeDirection.DOWN -> listOf(width / 2, height / 2, width / 2, height * 3 / 4)
-                    SwipeDirection.LEFT -> listOf(width * 3 / 4, height / 2, width / 4, height / 2)
-                    SwipeDirection.RIGHT -> listOf(width / 4, height / 2, width * 3 / 4, height / 2)
-                }
-
-            mDevice.swipe(startX, startY, endX, endY, 20)
-            rep?.endCmd(success = true, message = "Swipe ${direction.name.lowercase()} completed")
-        } catch (t: Throwable) {
-            rep?.endCmd(
-                success = false,
-                message = "Swipe ${direction.name.lowercase()} failed: ${t.message ?: "exception"}",
-            )
-            throw t
-        }
+        reportAround("open_notifications_tray", "Opening the Notifications tray") { mDevice.openNotification() }
+        return this
     }
 
     fun mozEnterText(text: String, selector: Selector): BasePage {
@@ -1146,29 +805,14 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         return this
     }
 
-    /**
-     * Drive a Compose slider to [value] via its SetProgress semantics action, rather than a touch drag. A synthetic
-     * swipe can only land on whatever step the gesture geometry happens to hit; SetProgress asks the slider for an
-     * exact value, which is what the legacy accessibility test relied on to set a precise font-size percentage.
-     * Compose-tag selectors only.
-     */
     fun mozSetSliderValue(selector: Selector, value: Float): BasePage {
-        val rep = rep()
-        rep?.startCmd(safeId("set_slider", selector.description), "Setting '${selector.description}' to $value...", 1)
-        try {
-            val node = composeRule.onNodeWithTag(selector.value)
-            node.assertExists()
-            node.performSemanticsAction(SemanticsActions.SetProgress) { it(value) }
-            rep?.endCmd(success = true, message = "Set '${selector.description}' to $value")
-            return this
-        } catch (e: Throwable) {
-            rep?.endCmd(
-                success = false,
-                message = "Set slider '${selector.description}' failed: ${e.message ?: "exception"}",
-            )
-            ScreenDump.dump(composeRule, "mozSetSliderValue failed: ${selector.description}")
-            throw e
+        reportAround("set_slider", "Setting '${selector.description}' to $value", dumpOnFailure = true) {
+            composeRule.onNodeWithTag(selector.value).run {
+                assertExists()
+                performSemanticsAction(SemanticsActions.SetProgress) { it(value) }
+            }
         }
+        return this
     }
 
     // Six verbs, one shape. Each was ~40 lines of the same resolve-report-assert-report skeleton,
@@ -1210,43 +854,13 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
     }
 
     fun mozVerifyElementHasCheckedSiblingByResName(selector: Selector, siblingResName: String): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("verify_checked_sibling", selector.description),
-            "Verifying '${selector.description}' has a checked sibling '$siblingResName'...",
-            1,
+        require(
+            verb = "verify_checked_sibling",
+            selector = selector,
+            expectation = "has a checked sibling named '$siblingResName'",
+            dumpOnFailure = false,
+            predicate = { Relations.hasCheckedSiblingNamed(it, siblingResName) },
         )
-        rep?.startLoc(safeId("loc", selector.description), "Attempting to locate '${selector.description}'...", 2)
-
-        val element = mozGetElement(selector)
-        if (element == null) {
-            rep?.endLoc(success = false, message = notFound(selector.description))
-            rep?.endCmd(success = false, message = "'${selector.description}' not found")
-            assertionFailure(
-                "Element not found for selector: ${selector.description} (${selector.strategy} -> ${selector.value})"
-            )
-        }
-        rep?.endLoc(success = true, message = found(selector.description))
-
-        when (element) {
-            is ViewInteraction ->
-                element.check(
-                    matches(
-                        hasSibling(
-                            allOf(
-                                withResourceName(containsString(siblingResName)),
-                                isChecked(),
-                            )
-                        )
-                    )
-                )
-            else ->
-                assertionFailure(
-                    "mozVerifyElementHasCheckedSiblingByResName only supports Espresso selectors for: ${selector.description}"
-                )
-        }
-
-        rep?.endCmd(success = true, message = "'${selector.description}' has a checked sibling '$siblingResName'")
         return this
     }
 
@@ -1255,63 +869,20 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         siblingText: String,
         applyPreconditions: Boolean = true,
     ): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("verify_sibling_text", selector.description),
-            "Verifying '${selector.description}' has sibling with text '$siblingText'...",
-            1,
+        require(
+            verb = "verify_sibling_text",
+            selector = selector,
+            expectation = "has a sibling reading '$siblingText'",
+            applyPreconditions = applyPreconditions,
+            dumpOnFailure = false,
+            predicate = { Relations.hasSiblingWithText(it, siblingText) },
         )
-        rep?.startLoc(safeId("loc", selector.description), "Attempting to locate '${selector.description}'...", 2)
-
-        val element = mozGetElement(selector, applyPreconditions = applyPreconditions)
-        if (element == null) {
-            rep?.endLoc(success = false, message = notFound(selector.description))
-            rep?.endCmd(success = false, message = "'${selector.description}' not found")
-            assertionFailure(
-                "Element not found for selector: ${selector.description} (${selector.strategy} -> ${selector.value})"
-            )
-        }
-        rep?.endLoc(success = true, message = found(selector.description))
-
-        try {
-            when (element) {
-                is ViewInteraction -> element.check(matches(hasSibling(withText(siblingText))))
-                is UiObject -> {
-                    val sibling = element.getFromParent(UiSelector().text(siblingText))
-                    if (!sibling.exists()) {
-                        assertionFailure("'${selector.description}' has no sibling with text '$siblingText'")
-                    }
-                }
-                is UiObject2 -> {
-                    val sibling = element.parent?.findObject(By.text(siblingText))
-                    if (sibling == null) {
-                        assertionFailure("'${selector.description}' has no sibling with text '$siblingText'")
-                    }
-                }
-                is SemanticsNodeInteraction -> element.assert(hasAnySibling(hasText(siblingText)))
-                else -> assertionFailure("Unsupported element type for selector: ${selector.description}")
-            }
-        } catch (e: Throwable) {
-            rep?.endCmd(success = false, message = "'${selector.description}' has no sibling with text '$siblingText'")
-            throw e
-        }
-
-        rep?.endCmd(success = true, message = "'${selector.description}' has sibling with text '$siblingText'")
         return this
     }
 
     // ------------------------------------------------------------
     // Element resolution + verification (LOC)
     // ------------------------------------------------------------
-
-    private fun mozGetAllElements(selector: Selector): SemanticsNodeInteractionCollection? {
-        if (selector.value.isBlank()) return null
-        return when (selector.strategy) {
-            SelectorStrategy.COMPOSE_BY_TAG,
-            SelectorStrategy.COMPOSE_ON_ALL_NODES_BY_TAG_ON_FIRST -> composeRule.onAllNodesWithTag(selector.value)
-            else -> null
-        }
-    }
 
     /**
      * Find the element a selector names, or null.
@@ -1387,66 +958,33 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
     }
 
     fun mozVerifyFileOpensInExternalApp(appPackageName: String): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("verify_file_opens_in_external_app", appPackageName),
-            "Verifying external app '$appPackageName' opens...",
-        )
-        try {
+        reportAround("verify_file_opens_in_external_app", "Verifying external app '$appPackageName' opens") {
             AppAndSystemHelper.assertExternalAppOpens(appPackageName)
-            rep?.endCmd(success = true, message = "Asserted external app '$appPackageName' open flow")
-        } catch (e: Throwable) {
-            rep?.endCmd(success = false, message = "External app assertion failed for '$appPackageName': ${e.message}")
-            throw e
         }
         return this
     }
 
     /**
      * Asserts the native app [appPackageName] launches, then force-stops it so it doesn't linger into subsequent tests.
-     * Falls back to verifying [url] if the package isn't installed. Delegates to
-     * [AppAndSystemHelper.assertNativeAppOpens].
+     * Falls back to verifying [url] if the package isn't installed.
      */
     fun mozVerifyNativeAppOpens(appPackageName: String, url: String = ""): BasePage {
-        val rep = rep()
-        rep?.startCmd(
-            safeId("verify_native_app_opens", appPackageName),
-            "Verifying native app '$appPackageName' opens...",
-        )
-        try {
+        reportAround("verify_native_app_opens", "Verifying native app '$appPackageName' opens") {
             AppAndSystemHelper.assertNativeAppOpens(composeRule, appPackageName, url)
-            rep?.endCmd(success = true, message = "Verified native app '$appPackageName' open flow")
-        } catch (e: Throwable) {
-            rep?.endCmd(success = false, message = "Native app verification failed for '$appPackageName': ${e.message}")
-            throw e
         }
         return this
     }
 
     private fun ensureReachable(selector: Selector) {
-        val rep = rep()
-
-        if (requiresScroll(selector.groups)) {
-            val dir = desiredSwipeDirection(selector.groups)
-
-            rep?.startCmd(
-                safeId("precondition_scroll", selector.description),
-                "Attempting to bring '${selector.description}' into view (swipe ${dir.name.lowercase()})...",
-                1,
-            )
-            Log.i("Preconditions", "'${selector.description}' requires scroll. Swiping $dir to bring into view.")
-
+        if (!requiresScroll(selector.groups)) return
+        val dir = desiredSwipeDirection(selector.groups)
+        Log.i("Preconditions", "'${selector.description}' requires scroll. Swiping $dir to bring into view.")
+        reportAround(
+            "precondition_scroll",
+            "Bringing '${selector.description}' into view (swipe ${dir.name.lowercase()})",
+        ) {
             // IMPORTANT: do not allow nested preconditions during swipe-to lookup
-            try {
-                mozSwipeTo(selector, direction = dir, maxSwipes = 10, applyPreconditions = false)
-                rep?.endCmd(success = true, message = "Precondition satisfied for '${selector.description}'")
-            } catch (t: Throwable) {
-                rep?.endCmd(
-                    success = false,
-                    message = "Precondition failed for '${selector.description}': ${t.message ?: "exception"}",
-                )
-                throw t
-            }
+            mozSwipeTo(selector, direction = dir, maxSwipes = 10)
         }
     }
 
