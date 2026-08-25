@@ -14271,11 +14271,7 @@
 # Factor to be multiplied for constant acceleration.
 - name: mousewheel.acceleration.factor
   type: RelaxedAtomicInt32
-#if defined(XP_MACOSX) && defined(NIGHTLY_BUILD)
-  value: 4
-#else
   value: 10
-#endif
   mirror: always
 
 # This affects how line scrolls from wheel events will be accelerated.
@@ -14283,11 +14279,7 @@
 # Acceleration can be turned off if pref is set to -1.
 - name: mousewheel.acceleration.start
   type: RelaxedAtomicInt32
-#if defined(XP_MACOSX) && defined(NIGHTLY_BUILD)
-  value: 3
-#else
   value: -1
-#endif
   mirror: always
 
 # Auto-dir is a feature which treats any single-wheel scroll as a scroll in the
