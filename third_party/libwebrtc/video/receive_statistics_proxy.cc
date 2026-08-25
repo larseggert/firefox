@@ -112,8 +112,8 @@ void ReceiveStatisticsProxy::UpdateHistograms(
   Timestamp now = clock_->CurrentTime();
   TimeDelta stream_duration = now - start_;
 
-  if (stats_.frame_counts.key_frames > 0 ||
-      stats_.frame_counts.delta_frames > 0) {
+  if (stats_.received_frame_counts.key_frames > 0 ||
+      stats_.received_frame_counts.delta_frames > 0) {
     RTC_HISTOGRAM_COUNTS_100000("WebRTC.Video.ReceiveStreamLifetimeInSeconds",
                                 stream_duration.seconds());
     log_stream << "WebRTC.Video.ReceiveStreamLifetimeInSeconds "
@@ -191,10 +191,10 @@ void ReceiveStatisticsProxy::UpdateHistograms(
                << freq_offset_stats.ToString() << '\n';
   }
 
-  int num_total_frames =
-      stats_.frame_counts.key_frames + stats_.frame_counts.delta_frames;
+  int num_total_frames = stats_.received_frame_counts.key_frames +
+                         stats_.received_frame_counts.delta_frames;
   if (num_total_frames >= kMinRequiredSamples) {
-    int num_key_frames = stats_.frame_counts.key_frames;
+    int num_key_frames = stats_.received_frame_counts.key_frames;
     int key_frames_permille =
         (num_key_frames * 1000 + num_total_frames / 2) / num_total_frames;
     RTC_HISTOGRAM_COUNTS_1000("WebRTC.Video.KeyFramesReceivedInPermille",
@@ -662,6 +662,11 @@ void ReceiveStatisticsProxy::OnDecodedFrame(
       &content_specific_stats_[content_type];
 
   ++stats_.frames_decoded;
+  if (frame_type == VideoFrameType::kVideoFrameKey) {
+    ++stats_.decoded_frame_counts.key_frames;
+  } else {
+    ++stats_.decoded_frame_counts.delta_frames;
+  }
   if (qp) {
     if (!stats_.qp_sum) {
       if (stats_.frames_decoded != 1) {
@@ -776,9 +781,9 @@ void ReceiveStatisticsProxy::OnCompleteFrame(bool is_keyframe,
                "remote_ssrc", remote_ssrc_, "is_keyframe", is_keyframe);
 
   if (is_keyframe) {
-    ++stats_.frame_counts.key_frames;
+    ++stats_.received_frame_counts.key_frames;
   } else {
-    ++stats_.frame_counts.delta_frames;
+    ++stats_.received_frame_counts.delta_frames;
   }
 
   // Content type extension is set only for keyframes and should be propagated

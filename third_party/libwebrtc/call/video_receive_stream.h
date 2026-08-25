@@ -96,7 +96,6 @@ class VideoReceiveStreamInterface : public MediaReceiveStreamInterface {
     // Decoder stats.
     std::optional<std::string> decoder_implementation_name;
     std::optional<bool> power_efficient_decoder;
-    FrameCounts frame_counts;
     int decode_ms = 0;
     int max_decode_ms = 0;
     int current_delay_ms = 0;
@@ -116,13 +115,20 @@ class VideoReceiveStreamInterface : public MediaReceiveStreamInterface {
     // Frames dropped due to decoding failures or if the system is too slow.
     // https://www.w3.org/TR/webrtc-stats/#dom-rtcvideoreceiverstats-framesdropped
     uint32_t frames_dropped = 0;
+    // https://w3c.github.io/webrtc-stats/#dom-rtcinboundrtpstreamstats-framesdecoded
     uint32_t frames_decoded = 0;
+    // Key/delta split of `frames_decoded`.
+    // https://w3c.github.io/webrtc-stats/#dom-rtcinboundrtpstreamstats-keyframesdecoded
+    FrameCounts decoded_frame_counts;
     // https://w3c.github.io/webrtc-stats/#dom-rtcreceivedrtpstreamstats-packetsdiscarded
     uint64_t packets_discarded = 0;
     // https://w3c.github.io/webrtc-stats/#dom-rtcinboundrtpstreamstats-totaldecodetime
     TimeDelta total_decode_time = TimeDelta::Zero();
     // https://w3c.github.io/webrtc-stats/#dom-rtcinboundrtpstreamstats-totalprocessingdelay
     TimeDelta total_processing_delay = TimeDelta::Zero();
+
+    // Counted when inserted into the frame buffer, before decoding.
+    FrameCounts received_frame_counts;
 
     // https://w3c.github.io/webrtc-stats/#dom-rtcinboundrtpstreamstats-totalassemblytime
     TimeDelta total_assembly_time = TimeDelta::Zero();
