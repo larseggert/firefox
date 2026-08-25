@@ -1735,6 +1735,9 @@ export class PictureInPictureChild extends JSWindowActorChild {
       return;
     }
 
+    // Listen for track mode changes even if no track is active yet.
+    originatingVideo.textTracks.addEventListener("change", this);
+
     // Verify active track for originating video
     this.setActiveTextTrack(originatingVideo.textTracks);
 
@@ -1744,8 +1747,7 @@ export class PictureInPictureChild extends JSWindowActorChild {
       return;
     }
 
-    // Listen for changes in tracks and active cues
-    originatingVideo.textTracks.addEventListener("change", this);
+    // Listen for changes in active cues
     this._currentWebVTTTrack.addEventListener("cuechange", this.onCueChange);
 
     const cues = this._currentWebVTTTrack.activeCues;
