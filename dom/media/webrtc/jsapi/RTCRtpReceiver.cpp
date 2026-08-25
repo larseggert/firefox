@@ -540,7 +540,7 @@ nsTArray<RefPtr<RTCStatsPromise>> RTCRtpReceiver::GetStatsInternal(
               // Lastly, fill in video decoder stats
               local.mFramesDecoded.Construct(videoStats->frames_decoded);
               local.mKeyFramesDecoded.Construct(
-                  videoStats->frame_counts.key_frames);
+                  videoStats->decoded_frame_counts.key_frames);
 
               local.mFramesPerSecond.Construct(videoStats->decode_frame_rate);
               local.mFrameWidth.Construct(videoStats->width);
@@ -548,8 +548,8 @@ nsTArray<RefPtr<RTCStatsPromise>> RTCRtpReceiver::GetStatsInternal(
               // XXX: key_frames + delta_frames may undercount frames because
               // they were dropped in FrameBuffer::InsertFrame. (bug 1766553)
               local.mFramesReceived.Construct(
-                  videoStats->frame_counts.key_frames +
-                  videoStats->frame_counts.delta_frames);
+                  videoStats->received_frame_counts.key_frames +
+                  videoStats->received_frame_counts.delta_frames);
               local.mJitterBufferDelay.Construct(
                   videoStats->jitter_buffer_delay.seconds<double>());
               local.mJitterBufferTargetDelay.Construct(
