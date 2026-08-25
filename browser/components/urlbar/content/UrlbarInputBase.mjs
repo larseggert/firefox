@@ -113,13 +113,10 @@ let getUntransformedTop =
 let px = number => number.toFixed(2) + "px";
 
 const XHTML_NS = "http://www.w3.org/1999/xhtml";
-const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
 /**
  * Parses an input's markup into a fragment. The markup is XML in the XHTML
- * namespace, with `xul:` for its one XUL element. A content document can hold no
- * XUL at all, so there that prefix resolves to HTML as well and the element
- * parses as an undefined custom element.
+ * namespace.
  *
  * @param {string} markup
  *   The markup to parse.
@@ -127,17 +124,10 @@ const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
  */
 function parseMarkupToFragment(markup) {
   let parser = new DOMParser();
-  let xulNS = XHTML_NS;
-  if (typeof ChromeUtils != "undefined") {
-    // A DOMParser constructed with the system principal gives its document a
-    // null principal, which disallows XUL like any other content principal.
-    parser.forceEnableXULXBL();
-    xulNS = XUL_NS;
-  }
 
   // A template's contents stay inert until they are imported into a document.
   let doc = parser.parseFromString(
-    `<template xmlns="${XHTML_NS}" xmlns:xul="${xulNS}">${markup}</template>`,
+    `<template xmlns="${XHTML_NS}">${markup}</template>`,
     "application/xml"
   );
   if (doc.documentElement.localName == "parsererror") {
