@@ -1323,7 +1323,7 @@ bool AppWindow::UpdateWindowStateFromMiscXULAttributes() {
     nsCOMPtr<mozIDOMWindowProxy> ourWindow;
     GetWindowDOMWindow(getter_AddRefs(ourWindow));
     auto* piWindow = nsPIDOMWindowOuter::From(ourWindow);
-    piWindow->SetFullScreen(true);
+    MOZ_KnownLive(piWindow)->SetFullScreen(true);
   } else {
     // For maximized windows, ignore the XUL size and position attributes,
     // as setting them would set the window back to normal sizemode.
@@ -2691,11 +2691,12 @@ void AppWindow::FullscreenChanged(bool aInFullscreen) {
     NS_DelayedDispatchToCurrentThread(
         NS_NewRunnableFunction(
             "AppWindow::FullscreenChanged",
-            [this, kungFuDeathGrip, newState, aInFullscreen]() {
-              if (mFullscreenChangeState == newState) {
-                FinishFullscreenChange(aInFullscreen);
-              }
-            }),
+            [this, kungFuDeathGrip, newState, aInFullscreen]()
+                MOZ_CAN_RUN_SCRIPT_BOUNDARY_LAMBDA {
+                  if (mFullscreenChangeState == newState) {
+                    FinishFullscreenChange(aInFullscreen);
+                  }
+                }),
         80);
   }
 }

@@ -426,10 +426,10 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
   mozilla::ipc::IPCResult RecvLoadRemoteScript(const nsAString& aURL,
                                                const bool& aRunInGlobalScope);
 
-  mozilla::ipc::IPCResult RecvAsyncMessage(const nsAString& aMessage,
-                                           NotNull<StructuredCloneData*> aData);
-  mozilla::ipc::IPCResult RecvSwappedWithOtherRemoteLoader(
-      const IPCTabContext& aContext);
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY mozilla::ipc::IPCResult RecvAsyncMessage(
+      const nsAString& aMessage, NotNull<StructuredCloneData*> aData);
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY mozilla::ipc::IPCResult
+  RecvSwappedWithOtherRemoteLoader(const IPCTabContext& aContext);
 
   mozilla::ipc::IPCResult RecvSafeAreaInsetsChanged(
       const mozilla::LayoutDeviceIntMargin& aSafeAreaInsets);
@@ -538,7 +538,7 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
       const MaybeDiscardedBrowsingContext&, const PrintData&,
       const MaybeDiscardedBrowsingContext&);
 
-  mozilla::ipc::IPCResult RecvDestroyPrintClone(
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY mozilla::ipc::IPCResult RecvDestroyPrintClone(
       const MaybeDiscardedBrowsingContext&);
 
   mozilla::ipc::IPCResult RecvUpdateNativeWindowHandle(

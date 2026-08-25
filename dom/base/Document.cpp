@@ -1119,7 +1119,8 @@ void ExternalResourceMap::ShowViewers() {
   }
 }
 
-void TransferShowingState(Document* aFromDoc, Document* aToDoc) {
+void TransferShowingState(Document* aFromDoc,
+                          Document* aToDoc) MOZ_CAN_RUN_SCRIPT {
   MOZ_ASSERT(aFromDoc && aToDoc, "transferring showing state from/to null doc");
 
   if (aFromDoc->IsShowing()) {
@@ -1188,7 +1189,8 @@ NS_IMPL_ISUPPORTS(ExternalResourceMap::PendingLoad, nsIStreamListener,
                   nsIRequestObserver)
 
 NS_IMETHODIMP
-ExternalResourceMap::PendingLoad::OnStartRequest(nsIRequest* aRequest) {
+ExternalResourceMap::PendingLoad::OnStartRequest(nsIRequest* aRequest)
+    MOZ_CAN_RUN_SCRIPT_BOUNDARY {
   ExternalResourceMap& map = mDisplayDocument->ExternalResourceMap();
   if (map.HaveShutDown()) {
     return NS_BINDING_ABORTED;
@@ -1200,8 +1202,10 @@ ExternalResourceMap::PendingLoad::OnStartRequest(nsIRequest* aRequest) {
       SetupViewer(aRequest, getter_AddRefs(viewer), getter_AddRefs(loadGroup));
 
   // Make sure to do this no matter what
+  const nsCOMPtr<nsIURI> uri = mURI;
+  const RefPtr<Document> displayDocument = mDisplayDocument;
   nsresult rv2 =
-      map.AddExternalResource(mURI, viewer, loadGroup, mDisplayDocument);
+      map.AddExternalResource(uri, viewer, loadGroup, displayDocument);
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -8591,7 +8595,8 @@ void Document::SetScriptGlobalObject(
 
   // The global in the template contents owner document should be the same.
   if (mTemplateContentsOwner && mTemplateContentsOwner != this) {
-    mTemplateContentsOwner->SetScriptGlobalObject(aScriptGlobalObject);
+    const RefPtr<Document> anotherDoc = mTemplateContentsOwner;
+    anotherDoc->SetScriptGlobalObject(aScriptGlobalObject);
   }
 
   // Tell the script loader about the new global object.
@@ -10354,9 +10359,9 @@ Document* Document::RequestExternalResource(
   MOZ_ASSERT(aURI, "Must have a URI");
   MOZ_ASSERT(aRequestingNode, "Must have a node");
   MOZ_ASSERT(aReferrerInfo, "Must have a referrerInfo");
-  if (mDisplayDocument) {
-    return mDisplayDocument->RequestExternalResource(
-        aURI, aReferrerInfo, aRequestingNode, aPendingLoad);
+  if (const RefPtr<Document> displayDoc = mDisplayDocument) {
+    return displayDoc->RequestExternalResource(aURI, aReferrerInfo,
+                                               aRequestingNode, aPendingLoad);
   }
 
   return mExternalResourceMap.RequestResource(
@@ -12493,7 +12498,7 @@ bool Document::CanSavePresentation(nsIRequest* aNewRequest,
 
 // https://wicg.github.io/document-picture-in-picture/#close-any-associated-document-picture-in-picture-windows
 void Document::CloseAnyAssociatedDocumentPiPWindows() {
-  BrowsingContext* bc = GetBrowsingContext();
+  const RefPtr<BrowsingContext> bc = GetBrowsingContext();
   if (!bc || !bc->IsTop()) {
     return;
   }
@@ -12856,10 +12861,12 @@ void Document::OnPageShow(bool aPersisted, EventTarget* aDispatchStartTarget,
 
   NotifyActivityChanged();
 
-  EnumerateExternalResources([aPersisted](Document& aExternalResource) {
-    aExternalResource.OnPageShow(aPersisted, nullptr);
-    return CallState::Continue;
-  });
+  EnumerateExternalResources([aPersisted](Document& aExternalResource)
+                                 MOZ_CAN_RUN_SCRIPT_BOUNDARY_LAMBDA {
+                                   aExternalResource.OnPageShow(aPersisted,
+                                                                nullptr);
+                                   return CallState::Continue;
+                                 });
 
   if (mAnimationController) {
     mAnimationController->OnPageShow();
@@ -12976,10 +12983,12 @@ void Document::OnPageHide(bool aPersisted, EventTarget* aDispatchStartTarget,
     UpdateVisibilityState();
   }
 
-  EnumerateExternalResources([aPersisted](Document& aExternalResource) {
-    aExternalResource.OnPageHide(aPersisted, nullptr);
-    return CallState::Continue;
-  });
+  EnumerateExternalResources([aPersisted](Document& aExternalResource)
+                                 MOZ_CAN_RUN_SCRIPT_BOUNDARY_LAMBDA {
+                                   aExternalResource.OnPageHide(aPersisted,
+                                                                nullptr);
+                                   return CallState::Continue;
+                                 });
   NotifyActivityChanged();
 
   ClearPendingFullscreenRequests(this);
@@ -14587,8 +14596,9 @@ already_AddRefed<Document> Document::CreateStaticClone(
 
     clone.mElement->SetFrameLoader(frameLoader);
 
+    const RefPtr<nsFrameLoader> frameLoaderOfClone = clone.mStaticCloneOf;
     nsresult rv = frameLoader->FinishStaticClone(
-        clone.mStaticCloneOf, aPrintSettings, aOutHasInProcessPrintCallbacks);
+        frameLoaderOfClone, aPrintSettings, aOutHasInProcessPrintCallbacks);
     (void)NS_WARN_IF(NS_FAILED(rv));
   }
 
@@ -14967,7 +14977,7 @@ void Document::DoUpdateSVGUseElementShadowTrees() {
         MOZ_ASSERT(useElementsToUpdate.Length() > 1);
         continue;
       }
-      useElement->UpdateShadowTree();
+      MOZ_KnownLive(useElement)->UpdateShadowTree();
     }
   } while (!mSVGUseElementsNeedingShadowTreeUpdate.IsEmpty());
 }
@@ -15858,13 +15868,13 @@ already_AddRefed<Promise> Document::ExitPictureInPicture(ErrorResult& aRv) {
   return p.forget();
 }
 
-static void AskWindowToExitFullscreen(Document* aDoc) {
+static void AskWindowToExitFullscreen(Document* aDoc) MOZ_CAN_RUN_SCRIPT {
   if (XRE_GetProcessType() == GeckoProcessType_Content) {
     nsContentUtils::DispatchEventOnlyToChrome(
         aDoc, aDoc, u"MozDOMFullscreen:Exit"_ns, CanBubble::eYes,
         Cancelable::eNo, /* DefaultAction */ nullptr);
   } else {
-    if (nsPIDOMWindowOuter* win = aDoc->GetWindow()) {
+    if (const RefPtr<nsPIDOMWindowOuter> win = aDoc->GetWindow()) {
       win->SetFullscreenInternal(FullscreenReason::ForFullscreenAPI, false);
     }
   }
@@ -15875,7 +15885,7 @@ class nsCallExitFullscreen : public Runnable {
   explicit nsCallExitFullscreen(Document* aDoc)
       : mozilla::Runnable("nsCallExitFullscreen"), mDoc(aDoc) {}
 
-  NS_IMETHOD Run() final {
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY NS_IMETHOD Run() final {
     if (!mDoc) {
       FullscreenRoots::ForEach(&AskWindowToExitFullscreen);
     } else {
@@ -15885,7 +15895,7 @@ class nsCallExitFullscreen : public Runnable {
   }
 
  private:
-  nsCOMPtr<Document> mDoc;
+  MOZ_KNOWN_LIVE const nsCOMPtr<Document> mDoc;
 };
 
 /* static */
@@ -15963,7 +15973,7 @@ class ExitFullscreenScriptRunnable : public Runnable {
         mRoot(aRoot),
         mLeaf(aLeaf) {}
 
-  NS_IMETHOD Run() override {
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY NS_IMETHOD Run() override {
     // Dispatch MozDOMFullscreen:Exited to the original fullscreen leaf
     // document since we want this event to follow the same path that
     // MozDOMFullscreen:Entered was dispatched.
@@ -15972,7 +15982,7 @@ class ExitFullscreenScriptRunnable : public Runnable {
         Cancelable::eNo, /* DefaultAction */ nullptr);
     // Ensure the window exits fullscreen, as long as we don't have
     // pending fullscreen requests.
-    if (nsPIDOMWindowOuter* win = mRoot->GetWindow()) {
+    if (const RefPtr<nsPIDOMWindowOuter> win = mRoot->GetWindow()) {
       if (!mRoot->HasPendingFullscreenRequests()) {
         win->SetFullscreenInternal(FullscreenReason::ForForceExitFullscreen,
                                    false);
@@ -15982,8 +15992,8 @@ class ExitFullscreenScriptRunnable : public Runnable {
   }
 
  private:
-  nsCOMPtr<Document> mRoot;
-  nsCOMPtr<Document> mLeaf;
+  MOZ_KNOWN_LIVE const nsCOMPtr<Document> mRoot;
+  MOZ_KNOWN_LIVE const nsCOMPtr<Document> mLeaf;
 };
 
 /* static */

@@ -248,21 +248,19 @@ class DispatchChangeEventCallback final : public GetFilesCallback {
     (void)NS_WARN_IF(NS_FAILED(DispatchEvents()));
   }
 
-  MOZ_CAN_RUN_SCRIPT_BOUNDARY
-  nsresult DispatchEvents() {
-    RefPtr<HTMLInputElement> inputElement(mInputElement);
-    nsresult rv = nsContentUtils::DispatchInputEvent(inputElement);
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY nsresult DispatchEvents() {
+    nsresult rv = nsContentUtils::DispatchInputEvent(mInputElement);
     NS_WARNING_ASSERTION(NS_SUCCEEDED(rv), "Failed to dispatch input event");
     mInputElement->SetUserInteracted(true);
-    rv = nsContentUtils::DispatchTrustedEvent(mInputElement->OwnerDoc(),
-                                              mInputElement, u"change"_ns,
+    const RefPtr<Document> doc = mInputElement->OwnerDoc();
+    rv = nsContentUtils::DispatchTrustedEvent(doc, mInputElement, u"change"_ns,
                                               CanBubble::eYes, Cancelable::eNo);
 
     return rv;
   }
 
  private:
-  RefPtr<HTMLInputElement> mInputElement;
+  MOZ_KNOWN_LIVE const RefPtr<HTMLInputElement> mInputElement;
 };
 
 struct HTMLInputElement::FileData {
@@ -453,10 +451,9 @@ HTMLInputElement::nsFilePickerShownCallback::Done(
   mInput->PickerClosed();
 
   if (aResult == nsIFilePicker::returnCancel) {
-    RefPtr<HTMLInputElement> inputElement(mInput);
+    const RefPtr<Document> doc = mInput->OwnerDoc();
     return nsContentUtils::DispatchTrustedEvent(
-        inputElement->OwnerDoc(), inputElement, u"cancel"_ns, CanBubble::eYes,
-        Cancelable::eNo);
+        doc, mInput, u"cancel"_ns, CanBubble::eYes, Cancelable::eNo);
   }
 
   mInput->OwnerDoc()->NotifyUserGestureActivation();
@@ -643,7 +640,7 @@ class nsColorPickerShownCallback final : public nsIColorPickerShownCallback {
   MOZ_CAN_RUN_SCRIPT
   nsresult UpdateInternal(const nsAString& aColor, bool aTrustedUpdate);
 
-  RefPtr<HTMLInputElement> mInput;
+  MOZ_KNOWN_LIVE const RefPtr<HTMLInputElement> mInput;
   nsCOMPtr<nsIColorPicker> mColorPicker;
   bool mValueChanged;
 };
@@ -705,9 +702,9 @@ nsColorPickerShownCallback::Done(const nsAString& aColor) {
 
   if (mValueChanged) {
     mInput->SetUserInteracted(true);
-    rv = nsContentUtils::DispatchTrustedEvent(
-        mInput->OwnerDoc(), static_cast<Element*>(mInput.get()), u"change"_ns,
-        CanBubble::eYes, Cancelable::eNo);
+    const RefPtr<Document> doc = mInput->OwnerDoc();
+    rv = nsContentUtils::DispatchTrustedEvent(doc, mInput, u"change"_ns,
+                                              CanBubble::eYes, Cancelable::eNo);
   }
 
   return rv;
@@ -4284,7 +4281,7 @@ void HTMLInputElement::ActivationBehavior(EventChainPostVisitor& aVisitor) {
 
     // FIXME: Why is this different than every other change event?
     nsContentUtils::DispatchTrustedEvent<WidgetEvent>(
-        OwnerDoc(), static_cast<Element*>(this), eFormChange, CanBubble::eYes,
+        static_cast<Element*>(this), eFormChange, CanBubble::eYes,
         Cancelable::eNo);
   }
 

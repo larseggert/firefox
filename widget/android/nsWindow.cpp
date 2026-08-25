@@ -1934,8 +1934,10 @@ void GeckoViewSupport::Close() {
     return;
   }
 
-  mDOMWindow->ForceClose();
-  mDOMWindow = nullptr;
+  if (const nsCOMPtr<nsPIDOMWindowOuter> window = std::move(mDOMWindow)) {
+    MOZ_ASSERT(!mDOMWindow);
+    window->ForceClose();
+  }
   mGeckoViewWindow = nullptr;
 }
 

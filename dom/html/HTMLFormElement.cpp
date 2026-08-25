@@ -1673,7 +1673,8 @@ bool HTMLFormElement::CheckFormValidity(
     nsCOMPtr<nsIConstraintValidation> cvElmt =
         do_QueryObject(sortedControls[i]);
     bool defaultAction = true;
-    if (cvElmt && !cvElmt->CheckValidity(*sortedControls[i], &defaultAction)) {
+    if (cvElmt && !cvElmt->CheckValidity(MOZ_KnownLive(*sortedControls[i]),
+                                         &defaultAction)) {
       ret = false;
 
       // Add all unhandled invalid controls to aInvalidElements if the caller

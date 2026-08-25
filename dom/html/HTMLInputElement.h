@@ -398,7 +398,7 @@ class HTMLInputElement final : public TextControlElement,
    * if a change event may be fired on bluring.
    * Sets mFocusedValue to value, if a change event is fired.
    */
-  void FireChangeEventIfNeeded();
+  MOZ_CAN_RUN_SCRIPT void FireChangeEventIfNeeded();
 
   /**
    * Returns the input element's value as a Decimal.
@@ -827,7 +827,7 @@ class HTMLInputElement final : public TextControlElement,
 
   void StartNumberControlSpinnerSpin();
   enum SpinnerStopState { eAllowDispatchingEvents, eDisallowDispatchingEvents };
-  void StopNumberControlSpinnerSpin(
+  MOZ_CAN_RUN_SCRIPT void StopNumberControlSpinnerSpin(
       SpinnerStopState aState = eAllowDispatchingEvents);
   MOZ_CAN_RUN_SCRIPT
   void StepNumberControlForUserEvent(int32_t aDirection);
@@ -1727,11 +1727,12 @@ class HTMLInputElement final : public TextControlElement,
                               nsIFilePicker* aFilePicker);
     NS_DECL_ISUPPORTS
 
-    NS_IMETHOD Done(nsIFilePicker::ResultCode aResult) override;
+    MOZ_CAN_RUN_SCRIPT_BOUNDARY NS_IMETHOD
+        Done(nsIFilePicker::ResultCode) override;
 
    private:
-    nsCOMPtr<nsIFilePicker> mFilePicker;
-    const RefPtr<HTMLInputElement> mInput;
+    MOZ_KNOWN_LIVE const nsCOMPtr<nsIFilePicker> mFilePicker;
+    MOZ_KNOWN_LIVE const RefPtr<HTMLInputElement> mInput;
   };
 };
 

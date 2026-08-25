@@ -276,6 +276,16 @@ static inline nsGlobalWindowInner* GetCurrentInnerWindowInternal(
   return GetCurrentInnerWindowInternal(this)->method args; \
   PR_END_MACRO
 
+#define FORWARD_TO_INNER_SAFE(method, args, err_rval)          \
+  PR_BEGIN_MACRO                                               \
+  if (!mInnerWindow) {                                         \
+    NS_WARNING("No inner window available!");                  \
+    return err_rval;                                           \
+  }                                                            \
+  const RefPtr innerWin = GetCurrentInnerWindowInternal(this); \
+  return innerWin->method args;                                \
+  PR_END_MACRO
+
 #define FORWARD_TO_INNER_WITH_STRONG_REF(method, args, err_rval)           \
   PR_BEGIN_MACRO                                                           \
   if (!mInnerWindow) {                                                     \
@@ -3840,15 +3850,18 @@ bool nsGlobalWindowOuter::DispatchCustomEvent(
     const nsAString& aEventName, ChromeOnlyDispatch aChromeOnlyDispatch) {
   bool defaultActionEnabled = true;
 
+  // mDoc will be used only for considering the event target before dispatching
+  // the event. Therefore, we can use MOZ_KnownLive(mDoc) here.
   if (aChromeOnlyDispatch == ChromeOnlyDispatch::eYes) {
-    nsContentUtils::DispatchEventOnlyToChrome(mDoc, this, aEventName,
-                                              CanBubble::eYes, Cancelable::eYes,
-                                              &defaultActionEnabled);
+    nsContentUtils::DispatchEventOnlyToChrome(
+        MOZ_KnownLive(mDoc), this, aEventName, CanBubble::eYes,
+        Cancelable::eYes, &defaultActionEnabled);
   } else {
-    nsContentUtils::DispatchTrustedEvent(mDoc, this, aEventName,
+    nsContentUtils::DispatchTrustedEvent(MOZ_KnownLive(mDoc), this, aEventName,
                                          CanBubble::eYes, Cancelable::eYes,
                                          &defaultActionEnabled);
   }
+  // Be aware, mDoc may have been changed.
 
   return defaultActionEnabled;
 }
@@ -3955,7 +3968,7 @@ class FullscreenTransitionTask : public Runnable {
         mStage(eBeforeToggle),
         mFullscreen(aFullscreen) {}
 
-  NS_IMETHOD Run() override;
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY NS_IMETHOD Run() override;
 
  private:
   ~FullscreenTransitionTask() override = default;
@@ -4008,7 +4021,7 @@ class FullscreenTransitionTask : public Runnable {
    private:
     ~Observer() = default;
 
-    RefPtr<FullscreenTransitionTask> mTask;
+    MOZ_KNOWN_LIVE const RefPtr<FullscreenTransitionTask> mTask;
   };
 
   static const char* const kPaintedTopic;
@@ -4058,7 +4071,8 @@ FullscreenTransitionTask::Run() {
                                       mFullscreen, mWidget)) {
       // Fail to setup the widget, call FinishFullscreenChange to
       // complete fullscreen change directly.
-      mWindow->FinishFullscreenChange(mFullscreen);
+      const RefPtr<nsGlobalWindowOuter> win = mWindow;
+      win->FinishFullscreenChange(mFullscreen);
     }
     // Set observer for the next content paint.
     nsCOMPtr<nsIObserver> observer = new Observer(this);
@@ -4102,9 +4116,9 @@ FullscreenTransitionTask::Run() {
 NS_IMPL_ISUPPORTS(FullscreenTransitionTask::Observer, nsIObserver, nsINamed)
 
 NS_IMETHODIMP
-FullscreenTransitionTask::Observer::Observe(nsISupports* aSubject,
-                                            const char* aTopic,
-                                            const char16_t* aData) {
+FullscreenTransitionTask::Observer::Observe(
+    nsISupports* aSubject, const char* aTopic,
+    const char16_t* aData) MOZ_CAN_RUN_SCRIPT_BOUNDARY {
   bool shouldContinue = false;
   if (strcmp(aTopic, FullscreenTransitionTask::kPaintedTopic) == 0) {
     nsCOMPtr<nsPIDOMWindowInner> win(do_QueryInterface(aSubject));
@@ -6724,8 +6738,8 @@ bool nsGlobalWindowOuter::IsFrozen() const {
 }
 
 nsresult nsGlobalWindowOuter::FireDelayedDOMEvents(bool aIncludeSubWindows) {
-  FORWARD_TO_INNER(FireDelayedDOMEvents, (aIncludeSubWindows),
-                   NS_ERROR_UNEXPECTED);
+  FORWARD_TO_INNER_SAFE(FireDelayedDOMEvents, (aIncludeSubWindows),
+                        NS_ERROR_UNEXPECTED);
 }
 
 //*****************************************************************************

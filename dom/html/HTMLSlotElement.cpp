@@ -426,7 +426,8 @@ void HTMLSlotElement::EnqueueSlotChangeEvent() {
 }
 
 void HTMLSlotElement::FireSlotChangeEvent() {
-  nsContentUtils::DispatchTrustedEvent(OwnerDoc(), this, u"slotchange"_ns,
+  const RefPtr<Document> doc = OwnerDoc();
+  nsContentUtils::DispatchTrustedEvent(doc, this, u"slotchange"_ns,
                                        CanBubble::eYes, Cancelable::eNo);
 }
 

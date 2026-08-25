@@ -471,7 +471,7 @@ void HTMLTrackElement::DispatchTrackRunnable(const nsString& aEventName) {
 }
 
 void HTMLTrackElement::DispatchTrustedEvent(const nsAString& aName) {
-  Document* doc = OwnerDoc();
+  const RefPtr<Document> doc = OwnerDoc();
   if (!doc) {
     return;
   }

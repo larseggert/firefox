@@ -868,7 +868,7 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
   BrowsingContext* Self() { return this; }
   void Location(JSContext* aCx, JS::MutableHandle<JSObject*> aLocation,
                 ErrorResult& aError);
-  void Close(CallerType aCallerType, ErrorResult& aError);
+  MOZ_CAN_RUN_SCRIPT void Close(CallerType aCallerType, ErrorResult& aError);
   bool GetClosed(ErrorResult&) { return GetClosed(); }
   void Focus(CallerType aCallerType, ErrorResult& aError);
   void Blur(CallerType aCallerType, ErrorResult& aError);

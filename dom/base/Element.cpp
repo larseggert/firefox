@@ -5132,7 +5132,8 @@ already_AddRefed<Promise> Element::RequestFullscreen(
   if (const char* error = GetFullscreenError(aCallerType, OwnerDoc())) {
     request->Reject(error);
   } else {
-    OwnerDoc()->RequestFullscreen(std::move(request));
+    const RefPtr<Document> doc = OwnerDoc();
+    doc->RequestFullscreen(std::move(request));
   }
   return promise.forget();
 }

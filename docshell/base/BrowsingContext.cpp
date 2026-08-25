@@ -2700,8 +2700,9 @@ void BrowsingContext::Close(CallerType aCallerType, ErrorResult& aError) {
   }
 
   if (GetDOMWindow()) {
-    nsGlobalWindowOuter::Cast(GetDOMWindow())
-        ->CloseOuter(aCallerType == CallerType::System);
+    const RefPtr<nsGlobalWindowOuter> win =
+        nsGlobalWindowOuter::Cast(GetDOMWindow());
+    win->CloseOuter(aCallerType == CallerType::System);
     return;
   }
 
@@ -3347,36 +3348,39 @@ void BrowsingContext::DidSet(FieldIndex<IDX_HasOrientationOverride>,
   OrientationType type = GetCurrentOrientationType();
   float angle = GetCurrentOrientationAngle();
 
-  PreOrderWalk([&](BrowsingContext* aBrowsingContext) {
-    if (RefPtr<WindowContext> windowContext =
-            aBrowsingContext->GetCurrentWindowContext()) {
-      if (nsCOMPtr<nsPIDOMWindowInner> window =
-              windowContext->GetInnerWindow()) {
-        ScreenOrientation* orientation =
-            nsGlobalWindowInner::Cast(window)->Screen()->Orientation();
+  PreOrderWalk(
+      [&](BrowsingContext* aBrowsingContext)
+          MOZ_CAN_RUN_SCRIPT_BOUNDARY_LAMBDA {
+            if (RefPtr<WindowContext> windowContext =
+                    aBrowsingContext->GetCurrentWindowContext()) {
+              if (nsCOMPtr<nsPIDOMWindowInner> window =
+                      windowContext->GetInnerWindow()) {
+                const RefPtr<ScreenOrientation> orientation =
+                    nsGlobalWindowInner::Cast(window)->Screen()->Orientation();
 
-        float screenOrientationAngle =
-            orientation->DeviceAngle(CallerType::System);
-        OrientationType screenOrientationType =
-            orientation->DeviceType(CallerType::System);
+                float screenOrientationAngle =
+                    orientation->DeviceAngle(CallerType::System);
+                OrientationType screenOrientationType =
+                    orientation->DeviceType(CallerType::System);
 
-        bool overrideIsDifferentThanDevice =
-            screenOrientationType != type || screenOrientationAngle != angle;
+                bool overrideIsDifferentThanDevice =
+                    screenOrientationType != type ||
+                    screenOrientationAngle != angle;
 
-        // Reset orientation override.
-        if (!hasOrientationOverride && aOldValue) {
-          (void)aBrowsingContext->SetCurrentOrientation(screenOrientationType,
-                                                        screenOrientationAngle);
-        } else if (!aBrowsingContext->IsTop()) {
-          // Sync orientation override in the existing frames.
-          (void)aBrowsingContext->SetCurrentOrientation(type, angle);
-        }
+                // Reset orientation override.
+                if (!hasOrientationOverride && aOldValue) {
+                  (void)aBrowsingContext->SetCurrentOrientation(
+                      screenOrientationType, screenOrientationAngle);
+                } else if (!aBrowsingContext->IsTop()) {
+                  // Sync orientation override in the existing frames.
+                  (void)aBrowsingContext->SetCurrentOrientation(type, angle);
+                }
 
-        orientation->MaybeDispatchEventsForOverride(
-            aBrowsingContext, aOldValue, overrideIsDifferentThanDevice);
-      }
-    }
-  });
+                orientation->MaybeDispatchEventsForOverride(
+                    aBrowsingContext, aOldValue, overrideIsDifferentThanDevice);
+              }
+            }
+          });
 }
 
 void BrowsingContext::DidSet(FieldIndex<IDX_ForceDesktopViewport>,
@@ -4363,15 +4367,17 @@ void BrowsingContext::DidSet(FieldIndex<IDX_ForceOffline>, bool aOldValue) {
   if (newValue == aOldValue) {
     return;
   }
-  PreOrderWalk([&](BrowsingContext* aBrowsingContext) {
-    if (RefPtr<WindowContext> windowContext =
-            aBrowsingContext->GetCurrentWindowContext()) {
-      if (nsCOMPtr<nsPIDOMWindowInner> window =
-              windowContext->GetInnerWindow()) {
-        nsGlobalWindowInner::Cast(window)->FireOfflineStatusEventIfChanged();
-      }
-    }
-  });
+  PreOrderWalk([&](BrowsingContext* aBrowsingContext)
+                   MOZ_CAN_RUN_SCRIPT_BOUNDARY_LAMBDA {
+                     if (RefPtr<WindowContext> windowContext =
+                             aBrowsingContext->GetCurrentWindowContext()) {
+                       if (const RefPtr<nsGlobalWindowInner> window =
+                               nsGlobalWindowInner::Cast(
+                                   windowContext->GetInnerWindow())) {
+                         window->FireOfflineStatusEventIfChanged();
+                       }
+                     }
+                   });
 }
 
 bool BrowsingContext::IsPopupAllowed() {

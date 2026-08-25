@@ -48,7 +48,8 @@ class DialogCloseWatcherListener : public nsIDOMEventListener {
   }
 
   // https://html.spec.whatwg.org/#set-the-dialog-close-watcher
-  NS_IMETHODIMP HandleEvent(Event* aEvent) override {
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY NS_IMETHODIMP
+  HandleEvent(Event* aEvent) override {
     RefPtr<nsINode> node = do_QueryReferent(mDialog);
     if (HTMLDialogElement* dialog = HTMLDialogElement::FromNodeOrNull(node)) {
       nsAutoString eventType;
@@ -60,7 +61,8 @@ class DialogCloseWatcherListener : public nsIDOMEventListener {
         bool defaultAction = true;
         auto cancelable =
             aEvent->Cancelable() ? Cancelable::eYes : Cancelable::eNo;
-        nsContentUtils::DispatchTrustedEvent(dialog->OwnerDoc(), dialog,
+        const RefPtr<Document> doc = dialog->OwnerDoc();
+        nsContentUtils::DispatchTrustedEvent(doc, MOZ_KnownLive(dialog),
                                              u"cancel"_ns, CanBubble::eNo,
                                              cancelable, &defaultAction);
         if (!defaultAction) {

@@ -1618,17 +1618,13 @@ class nsContentUtils {
    * @param aDefaultAction Set to true if default action should be taken,
    *                       see EventTarget::DispatchEvent.
    */
-  // TODO: annotate with `MOZ_CAN_RUN_SCRIPT`
-  // (https://bugzilla.mozilla.org/show_bug.cgi?id=1625902).
-  static nsresult DispatchTrustedEvent(
+  MOZ_CAN_RUN_SCRIPT static nsresult DispatchTrustedEvent(
       Document* aDoc, mozilla::dom::EventTarget* aTarget,
       const nsAString& aEventName, CanBubble, Cancelable,
       Composed aComposed = Composed::eDefault, bool* aDefaultAction = nullptr,
       SystemGroupOnly aSystemGroupOnly = SystemGroupOnly::eNo);
 
-  // TODO: annotate with `MOZ_CAN_RUN_SCRIPT`
-  // (https://bugzilla.mozilla.org/show_bug.cgi?id=1625902).
-  static nsresult DispatchTrustedEvent(
+  MOZ_CAN_RUN_SCRIPT static nsresult DispatchTrustedEvent(
       Document* aDoc, mozilla::dom::EventTarget* aTarget,
       const nsAString& aEventName, CanBubble aCanBubble, Cancelable aCancelable,
       bool* aDefaultAction,
@@ -1649,16 +1645,15 @@ class nsContentUtils {
    *                       see EventTarget::DispatchEvent.
    */
   template <class WidgetEventType>
-  static nsresult DispatchTrustedEvent(
-      Document* aDoc, mozilla::dom::EventTarget* aTarget,
-      EventMessage aEventMessage, CanBubble aCanBubble, Cancelable aCancelable,
+  MOZ_CAN_RUN_SCRIPT static nsresult DispatchTrustedEvent(
+      mozilla::dom::EventTarget* aTarget, EventMessage aEventMessage,
+      CanBubble aCanBubble, Cancelable aCancelable,
       bool* aDefaultAction = nullptr,
       ChromeOnlyDispatch aOnlyChromeDispatch = ChromeOnlyDispatch::eNo) {
     WidgetEventType event(true, aEventMessage);
     MOZ_ASSERT(GetEventClassIDFromMessage(aEventMessage) == event.mClass);
-    return DispatchEvent(aDoc, aTarget, event, aEventMessage, aCanBubble,
-                         aCancelable, Trusted::eYes, aDefaultAction,
-                         aOnlyChromeDispatch);
+    return DispatchEvent(aTarget, event, aEventMessage, aCanBubble, aCancelable,
+                         Trusted::eYes, aDefaultAction, aOnlyChromeDispatch);
   }
 
   /**
@@ -1710,11 +1705,10 @@ class nsContentUtils {
    * @param aDefaultAction Set to true if default action should be taken,
    *                       see EventTarget::DispatchEvent.
    */
-  static nsresult DispatchUntrustedEvent(Document* aDoc,
-                                         mozilla::dom::EventTarget* aTarget,
-                                         const nsAString& aEventName, CanBubble,
-                                         Cancelable,
-                                         bool* aDefaultAction = nullptr);
+  MOZ_CAN_RUN_SCRIPT static nsresult DispatchUntrustedEvent(
+      Document* aDoc, mozilla::dom::EventTarget* aTarget,
+      const nsAString& aEventName, CanBubble, Cancelable,
+      bool* aDefaultAction = nullptr);
 
   /**
    * This method creates and dispatches a untrusted event using an event
@@ -1728,16 +1722,15 @@ class nsContentUtils {
    *                       see EventTarget::DispatchEvent.
    */
   template <class WidgetEventType>
-  static nsresult DispatchUntrustedEvent(
-      Document* aDoc, mozilla::dom::EventTarget* aTarget,
-      EventMessage aEventMessage, CanBubble aCanBubble, Cancelable aCancelable,
+  MOZ_CAN_RUN_SCRIPT static nsresult DispatchUntrustedEvent(
+      mozilla::dom::EventTarget* aTarget, EventMessage aEventMessage,
+      CanBubble aCanBubble, Cancelable aCancelable,
       bool* aDefaultAction = nullptr,
       ChromeOnlyDispatch aOnlyChromeDispatch = ChromeOnlyDispatch::eNo) {
     WidgetEventType event(false, aEventMessage);
     MOZ_ASSERT(GetEventClassIDFromMessage(aEventMessage) == event.mClass);
-    return DispatchEvent(aDoc, aTarget, event, aEventMessage, aCanBubble,
-                         aCancelable, Trusted::eNo, aDefaultAction,
-                         aOnlyChromeDispatch);
+    return DispatchEvent(aTarget, event, aEventMessage, aCanBubble, aCancelable,
+                         Trusted::eNo, aDefaultAction, aOnlyChromeDispatch);
   }
 
   /**
@@ -1790,17 +1783,15 @@ class nsContentUtils {
    * @param aDefaultAction Set to true if default action should be taken,
    *                       see EventTarget::DispatchEvent.
    */
-  static nsresult DispatchEventOnlyToChrome(
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY static nsresult DispatchEventOnlyToChrome(
       Document* aDoc, mozilla::dom::EventTarget* aTarget,
       const nsAString& aEventName, CanBubble, Cancelable,
       Composed aComposed = Composed::eDefault, bool* aDefaultAction = nullptr);
 
-  static nsresult DispatchEventOnlyToChrome(Document* aDoc,
-                                            mozilla::dom::EventTarget* aTarget,
-                                            const nsAString& aEventName,
-                                            CanBubble aCanBubble,
-                                            Cancelable aCancelable,
-                                            bool* aDefaultAction) {
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY static nsresult DispatchEventOnlyToChrome(
+      Document* aDoc, mozilla::dom::EventTarget* aTarget,
+      const nsAString& aEventName, CanBubble aCanBubble, Cancelable aCancelable,
+      bool* aDefaultAction) {
     return DispatchEventOnlyToChrome(aDoc, aTarget, aEventName, aCanBubble,
                                      aCancelable, Composed::eDefault,
                                      aDefaultAction);
@@ -3138,12 +3129,12 @@ class nsContentUtils {
       const mozilla::dom::Optional<
           mozilla::OwningNonNull<mozilla::dom::VoidFunction>>& aCallback);
 
-  static void FirePageShowEventForFrameLoaderSwap(
+  MOZ_CAN_RUN_SCRIPT static void FirePageShowEventForFrameLoaderSwap(
       nsIDocShellTreeItem* aItem,
       mozilla::dom::EventTarget* aChromeEventHandler, bool aFireIfShowing,
       bool aOnlySystemGroup = false);
 
-  static void FirePageHideEventForFrameLoaderSwap(
+  MOZ_CAN_RUN_SCRIPT static void FirePageHideEventForFrameLoaderSwap(
       nsIDocShellTreeItem* aItem,
       mozilla::dom::EventTarget* aChromeEventHandler,
       bool aOnlySystemGroup = false);
@@ -3681,19 +3672,17 @@ class nsContentUtils {
                              JS::MutableHandle<JS::Value> vp,
                              bool aAllowWrapping);
 
-  // TODO: Convert this to MOZ_CAN_RUN_SCRIPT (bug 1415230)
-  MOZ_CAN_RUN_SCRIPT_BOUNDARY static nsresult DispatchEvent(
+  MOZ_CAN_RUN_SCRIPT static nsresult DispatchEvent(
       Document* aDoc, mozilla::dom::EventTarget* aTarget,
       const nsAString& aEventName, CanBubble, Cancelable, Composed, Trusted,
       bool* aDefaultAction = nullptr,
       ChromeOnlyDispatch = ChromeOnlyDispatch::eNo,
       SystemGroupOnly = SystemGroupOnly::eNo);
 
-  // TODO: Convert this to MOZ_CAN_RUN_SCRIPT (bug 1415230)
-  MOZ_CAN_RUN_SCRIPT_BOUNDARY static nsresult DispatchEvent(
-      Document* aDoc, mozilla::dom::EventTarget* aTarget,
-      mozilla::WidgetEvent& aWidgetEvent, EventMessage aEventMessage, CanBubble,
-      Cancelable, Trusted, bool* aDefaultAction = nullptr,
+  MOZ_CAN_RUN_SCRIPT static nsresult DispatchEvent(
+      mozilla::dom::EventTarget* aTarget, mozilla::WidgetEvent& aWidgetEvent,
+      EventMessage aEventMessage, CanBubble, Cancelable, Trusted,
+      bool* aDefaultAction = nullptr,
       ChromeOnlyDispatch = ChromeOnlyDispatch::eNo);
 
   static void InitializeModifierStrings();

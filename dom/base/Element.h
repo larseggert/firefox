@@ -1654,8 +1654,8 @@ class Element : public FragmentOrElement {
 
   void ReleaseCapture();
 
-  already_AddRefed<Promise> RequestFullscreen(const FullscreenOptions&,
-                                              CallerType, ErrorResult&);
+  MOZ_CAN_RUN_SCRIPT already_AddRefed<Promise> RequestFullscreen(
+      const FullscreenOptions&, CallerType, ErrorResult&);
   already_AddRefed<Promise> RequestPointerLock(
       const PointerLockOptions& aOptions, CallerType aCallerType,
       ErrorResult& aRv);

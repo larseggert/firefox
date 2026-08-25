@@ -660,9 +660,9 @@ nsresult PrototypeDocumentContentSink::DoneWalking() {
                                               CanBubble::eYes, Cancelable::eNo);
   }
 
-  if (mScriptLoader) {
-    mScriptLoader->ParsingComplete(false);
-    mScriptLoader->DeferCheckpointReached();
+  if (const RefPtr<ScriptLoader> scriptLoader = mScriptLoader) {
+    scriptLoader->ParsingComplete(false);
+    scriptLoader->DeferCheckpointReached();
   }
 
   StartLayout();

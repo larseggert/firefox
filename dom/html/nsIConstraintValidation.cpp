@@ -41,9 +41,10 @@ bool nsIConstraintValidation::CheckValidity(nsIContent& aEventTarget,
     return true;
   }
 
-  nsContentUtils::DispatchTrustedEvent(
-      aEventTarget.OwnerDoc(), &aEventTarget, u"invalid"_ns, CanBubble::eNo,
-      Cancelable::eYes, Composed::eDefault, aEventDefaultAction);
+  const RefPtr<Document> doc = aEventTarget.OwnerDoc();
+  nsContentUtils::DispatchTrustedEvent(doc, &aEventTarget, u"invalid"_ns,
+                                       CanBubble::eNo, Cancelable::eYes,
+                                       Composed::eDefault, aEventDefaultAction);
   return false;
 }
 

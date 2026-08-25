@@ -218,16 +218,21 @@ bool nsICanvasRenderingContextInternal::DispatchEvent(
   bool useDefaultHandler = true;
 
   if (mCanvasElement) {
-    nsContentUtils::DispatchTrustedEvent(mCanvasElement->OwnerDoc(),
-                                         mCanvasElement, eventName, aCanBubble,
-                                         aIsCancelable, &useDefaultHandler);
+    const RefPtr<mozilla::dom::Document> doc = mCanvasElement->OwnerDoc();
+    const RefPtr<mozilla::dom::HTMLCanvasElement> canvasElement =
+        mCanvasElement;
+    nsContentUtils::DispatchTrustedEvent(doc, canvasElement, eventName,
+                                         aCanBubble, aIsCancelable,
+                                         &useDefaultHandler);
   } else if (mOffscreenCanvas) {
     // OffscreenCanvas case
     auto event = mozilla::MakeRefPtr<mozilla::dom::Event>(mOffscreenCanvas,
                                                           nullptr, nullptr);
     event->InitEvent(eventName, aCanBubble, aIsCancelable);
     event->SetTrusted(true);
-    useDefaultHandler = mOffscreenCanvas->DispatchEvent(
+    const RefPtr<mozilla::dom::OffscreenCanvas> offscreenCanvas =
+        mOffscreenCanvas;
+    useDefaultHandler = offscreenCanvas->DispatchEvent(
         *event, mozilla::dom::CallerType::System, mozilla::IgnoreErrors());
   }
   return useDefaultHandler;
