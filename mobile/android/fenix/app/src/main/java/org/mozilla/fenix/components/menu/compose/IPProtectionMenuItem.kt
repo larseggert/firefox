@@ -201,7 +201,7 @@ private fun badgeText(status: IPProtectionMenuStatus): String =
         IPProtectionMenuStatus.Activating -> stringResource(R.string.ip_protection_menu_connecting)
         IPProtectionMenuStatus.DataLimitReached -> stringResource(R.string.ip_protection_menu_paused)
         IPProtectionMenuStatus.ConnectionError -> stringResource(R.string.ip_protection_menu_error)
-        IPProtectionMenuStatus.AuthRequired -> stringResource(R.string.ip_protection_menu_auth_required)
+        IPProtectionMenuStatus.AuthRequired -> stringResource(R.string.ip_protection_menu_try_vpn_cta)
     }
 
 private fun badgeState(status: IPProtectionMenuStatus): MenuItemState =
