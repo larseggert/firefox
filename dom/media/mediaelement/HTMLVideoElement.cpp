@@ -666,7 +666,8 @@ already_AddRefed<Promise> HTMLVideoElement::CloneElementVisually(
   aTargetVideo.SetMediaInfo(mMediaInfo);
 
   if (IsInComposedDoc() && !StaticPrefs::media_cloneElementVisually_testing()) {
-    NotifyUAWidgetSetupOrChange();
+    const nsAutoScriptBlocker scriptBlocker;
+    AddScriptRunnerToNotifyUAWidgetSetupOrChange();
   }
 
   MaybeBeginCloningVisually();
@@ -728,7 +729,8 @@ void HTMLVideoElement::EndCloningVisually() {
 
   if (IsInComposedDoc() && OwnerDoc()->IsCurrentActiveDocument() &&
       !StaticPrefs::media_cloneElementVisually_testing()) {
-    NotifyUAWidgetSetupOrChange();
+    const nsAutoScriptBlocker scriptBlocker;
+    AddScriptRunnerToNotifyUAWidgetSetupOrChange();
   }
 
   ClosePictureInPictureWindowAndFireEvent();

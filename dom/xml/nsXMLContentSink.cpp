@@ -183,8 +183,7 @@ nsresult nsXMLContentSink::MaybePrettyPrint() {
   NS_ENSURE_SUCCESS(rv, rv);
 
   bool isPrettyPrinting;
-  const RefPtr<Document> doc = mDocument;
-  rv = printer->PrettyPrint(doc, mXSLTIsDisabled, &isPrettyPrinting);
+  rv = printer->PrettyPrint(mDocument, mXSLTIsDisabled, &isPrettyPrinting);
   NS_ENSURE_SUCCESS(rv, rv);
 
   mPrettyPrinting = isPrettyPrinting;

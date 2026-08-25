@@ -226,8 +226,7 @@ class HTMLMediaElement : public nsGenericHTMLElement,
                       nsIPrincipal* aMaybeScriptedPrincipal,
                       nsAttrValue& aResult) override;
 
-  MOZ_CAN_RUN_SCRIPT_BOUNDARY nsresult BindToTree(BindContext&,
-                                                  nsINode& aParent) override;
+  nsresult BindToTree(BindContext&, nsINode& aParent) override;
   MOZ_CAN_RUN_SCRIPT_BOUNDARY void UnbindFromTree(UnbindContext&) override;
   void DoneCreatingElement() override;
 

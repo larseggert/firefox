@@ -172,7 +172,7 @@ class nsXMLContentSink : public nsContentSink,
 
   bool CanStillPrettyPrint();
 
-  MOZ_CAN_RUN_SCRIPT nsresult MaybePrettyPrint();
+  nsresult MaybePrettyPrint();
 
   bool IsMonolithicContainer(mozilla::dom::NodeInfo* aNodeInfo);
 

@@ -212,9 +212,8 @@ class HTMLInputElement final : public TextControlElement,
   void SetValueOfRangeForUserEvent(Decimal aValue,
                                    SnapToTickMarks = SnapToTickMarks::No);
 
-  MOZ_CAN_RUN_SCRIPT_BOUNDARY nsresult BindToTree(BindContext&,
-                                                  nsINode& aParent) override;
-  MOZ_CAN_RUN_SCRIPT_BOUNDARY void UnbindFromTree(UnbindContext&) override;
+  nsresult BindToTree(BindContext&, nsINode& aParent) override;
+  void UnbindFromTree(UnbindContext&) override;
 
   MOZ_CAN_RUN_SCRIPT_BOUNDARY
   void DoneCreatingElement() override;
@@ -908,7 +907,9 @@ class HTMLInputElement final : public TextControlElement,
 
   // If needed, lazily sets up the shadow tree for this <input> element.
   // Returns the ShadowRoot _only if it was just created_!
-  MOZ_CAN_RUN_SCRIPT ShadowRoot* CreateShadowTreeFromLayoutIfNeeded();
+  // NOTE: This must be called with blocking script because this uses
+  // Element::SetupShadowTreeWithDispatchingChromeEventAsync().
+  ShadowRoot* CreateShadowTreeFromLayoutIfNeeded();
 
  protected:
   MOZ_CAN_RUN_SCRIPT_BOUNDARY virtual ~HTMLInputElement();
@@ -1663,7 +1664,13 @@ class HTMLInputElement final : public TextControlElement,
            aType == FormControlType::InputRange ||
            aType == FormControlType::InputNumber;
   }
-  MOZ_CAN_RUN_SCRIPT void SetupShadowTree(bool aNotify);
+
+  /**
+   * This method calls AddScriptRunnerToNotifyUAWidgetSetupOrChange().
+   * Therefore, any callers need to block running script before calling this
+   * method.
+   */
+  void SetupShadowTree(bool aNotify);
 
   bool CheckActivationBehaviorPreconditions(EventChainVisitor& aVisitor) const;
 

@@ -5668,7 +5668,7 @@ void HTMLMediaElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
         mDecoder->SetLooping(!!aValue);
       }
     } else if (aName == nsGkAtoms::controls && IsInComposedDoc()) {
-      NotifyUAWidgetSetupOrChange();
+      AddScriptRunnerToNotifyUAWidgetSetupOrChange();
       SetCuesDirty();
     } else if (aName == nsGkAtoms::muted) {
       // While the muted state is "default", the muted content attribute is a
@@ -5683,7 +5683,7 @@ void HTMLMediaElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
           SetMutedInternal(aValue ? (mMuted | MUTED_BY_CONTENT)
                                   : (mMuted & ~MUTED_BY_CONTENT));
           if (IsInComposedDoc()) {
-            NotifyUAWidgetSetupOrChange();
+            AddScriptRunnerToNotifyUAWidgetSetupOrChange();
           }
         }
       }
@@ -5724,7 +5724,7 @@ nsresult HTMLMediaElement::BindToTree(BindContext& aContext, nsINode& aParent) {
 
   if (IsInComposedDoc()) {
     // Construct Shadow Root so web content can be hidden in the DOM.
-    AttachAndSetUAShadowRoot();
+    AttachAndSetUAShadowRoot(NotifyUAWidget::Yes);
 
     // The preload action depends on the value of the autoplay attribute.
     // It's value may have changed, so update it.
@@ -5740,7 +5740,7 @@ void HTMLMediaElement::UnbindFromTree(UnbindContext& aContext) {
   mVisibilityState = Visibility::Untracked;
 
   if (IsInComposedDoc()) {
-    TeardownUAShadowRoot();
+    TeardownUAShadowRoot(NotifyUAWidget::Yes);
   }
 
   nsGenericHTMLElement::UnbindFromTree(aContext);

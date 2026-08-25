@@ -30,9 +30,8 @@ class nsXMLPrettyPrinter : public nsStubDocumentObserver {
    * @param [out] aDidPrettyPrint if true, and error not returned, actually
    *              went ahead with prettyprinting the document.
    */
-  MOZ_CAN_RUN_SCRIPT nsresult PrettyPrint(mozilla::dom::Document* aDocument,
-                                          bool aShowXSLTDisabledMessage,
-                                          bool* aDidPrettyPrint);
+  nsresult PrettyPrint(mozilla::dom::Document* aDocument,
+                       bool aShowXSLTDisabledMessage, bool* aDidPrettyPrint);
 
   /**
    * Unhook the prettyprinter

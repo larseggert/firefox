@@ -15,9 +15,8 @@ class HTMLMarqueeElement final : public nsGenericHTMLElement {
 
   NS_IMPL_FROMNODE_HTML_WITH_TAG(HTMLMarqueeElement, marquee);
 
-  MOZ_CAN_RUN_SCRIPT_BOUNDARY nsresult BindToTree(BindContext&,
-                                                  nsINode& aParent) override;
-  MOZ_CAN_RUN_SCRIPT_BOUNDARY void UnbindFromTree(UnbindContext&) override;
+  nsresult BindToTree(BindContext&, nsINode& aParent) override;
+  void UnbindFromTree(UnbindContext&) override;
 
   static const int kDefaultLoop = -1;
   static const int kDefaultScrollAmount = 6;

@@ -30,6 +30,7 @@
 #include "mozilla/dom/ContentList.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/Element.h"
+#include "mozilla/dom/ElementInlines.h"
 #include "mozilla/dom/FetchPriority.h"
 #include "mozilla/dom/HTMLImageElement.h"
 #include "mozilla/dom/ImageTextBinding.h"

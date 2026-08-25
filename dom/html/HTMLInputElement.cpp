@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "mozilla/dom/HTMLInputElement.h"
+#include "HTMLInputElement.h"
 
 #include <algorithm>
 #include <cmath>
@@ -4707,6 +4707,8 @@ static bool SetRangeTextApplies(FormControlType aType) {
 
 void HTMLInputElement::HandleTypeChange(FormControlType aNewType,
                                         bool aNotify) {
+  MOZ_ASSERT(!nsContentUtils::IsSafeToRunScript());
+
   FormControlType oldType = mType;
   MOZ_ASSERT(oldType != aNewType);
 
@@ -4931,25 +4933,25 @@ void HTMLInputElement::HandleTypeChange(FormControlType aNewType,
 
   if (IsInComposedDoc()) {
     if (mDoneCreating) {
-      const auto oldNotifiesUAWidget = NotifiesUAWidget(oldType);
+      const auto notifiedOldUAWidget = NotifiesUAWidget(oldType);
       if (CreatesUAShadowTree()) {
         if (wasTextControl && isTextControl) {
           // Keep existing shadow
           UpdateTextEditorShadowTree();
         } else {
-          const auto notifiesUAWidget = NotifiesUAWidget();
-          if (oldNotifiesUAWidget == notifiesUAWidget &&
-              notifiesUAWidget == NotifyUAWidget::Yes) {
-            NotifyUAWidgetSetupOrChange();
+          const auto notifyNewUAWidget = NotifiesUAWidget();
+          if (notifiedOldUAWidget == notifyNewUAWidget &&
+              notifyNewUAWidget == NotifyUAWidget::Yes) {
+            AddScriptRunnerToNotifyUAWidgetSetupOrChange();
           } else {
-            TeardownUAShadowRoot(oldNotifiesUAWidget);
-            if (notifiesUAWidget == NotifyUAWidget::Yes) {
+            TeardownUAShadowRoot(notifiedOldUAWidget);
+            if (notifyNewUAWidget == NotifyUAWidget::Yes) {
               SetupShadowTree(aNotify);
             }
           }
         }
       } else {
-        TeardownUAShadowRoot(oldNotifiesUAWidget);
+        TeardownUAShadowRoot(notifiedOldUAWidget);
       }
     }
     // If we're becoming a text control and have focus, make sure to show focus
@@ -6410,6 +6412,7 @@ void HTMLInputElement::DoneCreatingElement() {
   }
 
   if (CreatesDateTimeWidget() && IsInComposedDoc()) {
+    const nsAutoScriptBlocker scriptBlocker;
     SetupShadowTree(/* aNotify = */ false);
   }
 
