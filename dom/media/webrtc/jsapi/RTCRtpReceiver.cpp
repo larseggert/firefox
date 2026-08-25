@@ -758,7 +758,8 @@ void RTCRtpReceiver::UpdateTransport() {
     if (details) {
       details->ForEachRTPHeaderExtension(
           [&extmaps](const SdpExtmapAttributeList::Extmap& extmap) {
-            extmaps.emplace_back(extmap.extensionname, extmap.entry);
+            extmaps.emplace_back(extmap.extensionname,
+                                 webrtc::RtpHeaderExtensionId(extmap.entry));
           });
     }
 
@@ -856,7 +857,8 @@ void RTCRtpReceiver::UpdateVideoConduit() {
       // @@NG read extmap from track
       details.ForEachRTPHeaderExtension(
           [&extmaps](const SdpExtmapAttributeList::Extmap& extmap) {
-            extmaps.emplace_back(extmap.extensionname, extmap.entry);
+            extmaps.emplace_back(extmap.extensionname,
+                                 webrtc::RtpHeaderExtensionId(extmap.entry));
           });
       mLocalRtpExtensions = extmaps;
     }
@@ -927,7 +929,8 @@ void RTCRtpReceiver::UpdateAudioConduit() {
       // @@NG read extmap from track
       details.ForEachRTPHeaderExtension(
           [&extmaps](const SdpExtmapAttributeList::Extmap& extmap) {
-            extmaps.emplace_back(extmap.extensionname, extmap.entry);
+            extmaps.emplace_back(extmap.extensionname,
+                                 webrtc::RtpHeaderExtensionId(extmap.entry));
           });
       mLocalRtpExtensions = extmaps;
     }
