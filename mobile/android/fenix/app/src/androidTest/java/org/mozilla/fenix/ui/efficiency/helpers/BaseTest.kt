@@ -56,29 +56,18 @@ import org.mozilla.fenix.ui.efficiency.navigation.PageCatalog
  * - Later we can route the same events into richer sinks (files/JSON/XML) and unify with the existing Feature.spec /
  *   factory logging pipeline.
  */
-abstract class BaseTest(
-    private val skipOnboarding: Boolean = true,
-    private val isPageLoadTranslationsPromptEnabled: Boolean = false,
-    private val isPocketEnabled: Boolean = true,
-    private val isRecentlyVisitedFeatureEnabled: Boolean = true,
-    private val shouldUseExpandedToolbar: Boolean = false,
-    private val isTabStripEnabled: Boolean = false,
-    private val shakeToSummarizeFeatureFlagEnabled: Boolean = true,
-) {
+abstract class BaseTest(private val defaultLaunchConfig: LaunchConfig = LaunchConfig()) {
 
-    // Default launch built from the constructor args (back-compat for every existing subclass).
-    private val defaultLaunchConfig =
-        LaunchConfig(
-            skipOnboarding = skipOnboarding,
-            isPageLoadTranslationsPromptEnabled = isPageLoadTranslationsPromptEnabled,
-            isPocketEnabled = isPocketEnabled,
-            isRecentlyVisitedFeatureEnabled = isRecentlyVisitedFeatureEnabled,
-            shouldUseExpandedToolbar = shouldUseExpandedToolbar,
-            isTabStripEnabled = isTabStripEnabled,
-            shakeToSummarizeFeatureFlagEnabled = shakeToSummarizeFeatureFlagEnabled,
-        )
-
-    /** Override to vary the launch per run/case (e.g. the reachability shard uses the case's config). */
+    /**
+     * How this test launches the app.
+     *
+     * One mechanism, not two. BaseTest used to take the seven flags as separate constructor arguments AND expose this
+     * override, so the flag list existed in two places and a reader had to check both to know what a test launches
+     * with. Adding a flag meant changing a constructor signature every subclass inherits.
+     *
+     * Pass a LaunchConfig for a fixed launch, override this for one that varies per case --- the reachability shards
+     * pick theirs from the case they were given.
+     */
     protected open fun launchConfig(): LaunchConfig = defaultLaunchConfig
 
     @get:Rule(order = 0) val fenixTestRule: FenixTestRule = FenixTestRule()
