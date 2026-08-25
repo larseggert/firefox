@@ -44,9 +44,11 @@
       "stepEnd": ["type", "outcome", "elapsedMs"],
       "dump": ["dump", "layer"],
       "dumpNode": ["dump", "layer"],
-      "state": ["phase", "testId"]
+      "state": ["phase", "testId"],
+      "cleanup": ["phase", "testId", "failed"]
     },
-    "_state_comment": "state: one sample of the app's own stores, written by StateProbe at each test's start and end. `phase` is start|end, and consumers pair by testId and diff --- the harness deliberately does not compute the diff itself. The remaining keys are counts (tabs, tabsPrivate, history, bookmarks, logins, addresses, creditCards, topSites, downloads) plus launcherIcon, which is a name. A value that is a string beginning 'unreadable:' could not be sampled; treat it as absent rather than as a change.",
+    "_state_comment": "state: one sample of the app's own stores, written by StateProbe. `phase` is arrival|start|end --- arrival is taken outside every cleanup rule and is the only one that shows what the device inherited, start is taken after the harness has cleared what it clears, end is taken when the test finishes. and consumers pair by testId and diff --- the harness deliberately does not compute the diff itself. The remaining keys are counts (tabs, tabsPrivate, history, bookmarks, logins, addresses, creditCards, topSites, downloads) plus launcherIcon, which is a name. A value that is a string beginning 'unreadable:' could not be sampled; treat it as absent rather than as a change.",
+    "_cleanup_comment": "cleanup: emitted by AppDataCleaner once per phase. `phase` is before|after and `failed` is a comma-separated list of the clears that errored, empty when all succeeded. A failed clear and a genuine state leak otherwise look identical --- both present as a later test starting with state it did not create --- so this is what distinguishes them.",
     "scope_types": ["STEP", "CMD", "LOC"],
     "outcomes": ["OK", "FAIL", "SKIP"],
     "test_statuses": ["PASS", "FAIL", "SKIP"],

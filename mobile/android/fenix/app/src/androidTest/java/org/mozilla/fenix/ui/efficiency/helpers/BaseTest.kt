@@ -4,17 +4,12 @@
 
 package org.mozilla.fenix.ui.efficiency.helpers
 
-import android.content.ComponentName
-import android.content.pm.PackageManager
 import android.util.Log
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.v2.AndroidComposeTestRule as AndroidComposeTestRuleV2
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.base.DefaultFailureHandler
 import androidx.test.platform.app.InstrumentationRegistry
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import leakcanary.NoLeakAssertionFailedError
 import org.junit.After
 import org.junit.Before
@@ -24,8 +19,6 @@ import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
 import org.mozilla.fenix.ext.components
-import org.mozilla.fenix.helpers.AppAndSystemHelper.deleteBookmarksStorage
-import org.mozilla.fenix.helpers.AppAndSystemHelper.deletePinnedSitesStorage
 import org.mozilla.fenix.helpers.FenixTestRule
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.IdlingResourceHelper.unregisterAllIdlingResources
@@ -107,37 +100,7 @@ abstract class BaseTest(private val defaultLaunchConfig: LaunchConfig = LaunchCo
                         it.activity
                     }
                 try {
-                    runBlocking {
-                        deleteBookmarksStorage()
-                        deletePinnedSitesStorage()
-                        withContext(Dispatchers.IO) {
-                            appContext.components.core.sessionStorage.clear()
-                            // Clear saved autofill addresses so every test starts from a clean screen. A leftover
-                            // address changes the Autofill settings layout and can push "Add address" off-screen.
-                            // Best-effort: a storage error must not fail the test on its own, but it is logged — a
-                            // silent failure here looks identical to a state leak.
-                            runCatching {
-                                val autofill = appContext.components.core.autofillStorage
-                                autofill.getAllAddresses().forEach { autofill.deleteAddress(it.guid) }
-                                // Same for cards: a leftover card replaces "Add card" with "Manage cards" on the
-                                // Autofill screen, so a card test would start on a different screen than it expects.
-                                autofill.getAllCreditCards().forEach { autofill.deleteCreditCard(it.guid) }
-                            }
-                                .onFailure {
-                                    Log.i("BaseTest", "BaseTest: autofill clear failed: ${it.message}")
-                                }
-                            // Clear saved logins for the same reason: inherited logins mean a re-submit of the same
-                            // credentials shows no save prompt, which reads as a spurious failure.
-                            runCatching {
-                                appContext.components.core.passwordsStorage.wipeLocal()
-                            }
-                                .onFailure {
-                                    Log.i("BaseTest", "BaseTest: logins clear failed: ${it.message}")
-                                }
-                        }
-                    }
-                    appContext.components.useCases.tabsUseCases.removeAllTabs()
-                    resetLauncherIconAliases()
+                    AppDataCleaner.clear("before", description.displayName)
                     // Dump on ANY failure, not only those raised through a page-object verb.
                     // BasePage.dumpFailure covers navigateToPage and mozVerifyElementsByGroup, but
                     // a page object asserting with a bare JUnit assertTrue --- BrowserPage
@@ -306,46 +269,6 @@ abstract class BaseTest(private val defaultLaunchConfig: LaunchConfig = LaunchCo
             // Logging must never fail a test.
         }
     }
-}
-
-/**
- * Put the launcher icon back to the manifest default.
- *
- * The app icon is not app data --- changing it calls PackageManager.setComponentEnabledSetting on activity-aliases,
- * which lives in the package manager's own state. `pm clear` wipes /data/data/<pkg> and runtime permissions and does
- * not touch it, so an icon a test switched stays switched for every later test on that device.
- *
- * That is not theoretical: verifyTheChangeAppIconButtonTest sets the icon to Dark, and
- * verifyTheDefaultAppIconSettingTest then asserts it reads Default. Whether that fails depends on which order the work
- * queue happens to hand them to the same device, so it is an intermittent failure with no intermittent cause.
- *
- * COMPONENT_ENABLED_STATE_DEFAULT restores whatever the manifest declares, which is the default icon enabled and the
- * alternatives disabled --- so this is a reset, not a guess at the right state.
- */
-private fun resetLauncherIconAliases() {
-    runCatching {
-        val pm = appContext.packageManager
-        val pkg = appContext.packageName
-        val info =
-            pm.getPackageInfo(
-                pkg,
-                PackageManager.GET_ACTIVITIES or PackageManager.MATCH_DISABLED_COMPONENTS,
-            )
-        info.activities
-            .orEmpty()
-            .map { it.name }
-            .filter { it.startsWith("$pkg.App") || it == "$pkg.AlternativeApp" }
-            .forEach { name ->
-                pm.setComponentEnabledSetting(
-                    ComponentName(pkg, name),
-                    PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
-                    PackageManager.DONT_KILL_APP,
-                )
-            }
-    }
-        .onFailure {
-            Log.i("BaseTest", "BaseTest: launcher icon reset failed: ${it.message}")
-        }
 }
 
 private fun cleanup(removeTabs: Boolean = false) {
