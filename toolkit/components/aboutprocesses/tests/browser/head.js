@@ -397,7 +397,28 @@ async function setupAudioTab() {
     audio.setAttribute("loop", true);
     audio.src = `${ROOT}/small-shot.mp3`;
     content.document.body.appendChild(audio);
-    await audio.play();
+
+    // play() sometimes never settles on Windows, which would stall the test
+    // until the harness kills it after several minutes with no output. Bound
+    // the wait so the failure is reported with the element's state instead.
+    const PLAY_TIMEOUT_MS = 10000;
+    let timer;
+    await Promise.race([
+      audio.play().then(() => content.clearTimeout(timer)),
+      new Promise((resolve, reject) => {
+        timer = content.setTimeout(
+          () =>
+            reject(
+              new Error(
+                `audio.play() did not resolve within ${PLAY_TIMEOUT_MS}ms ` +
+                  `(readyState=${audio.readyState}, networkState=${audio.networkState}, ` +
+                  `paused=${audio.paused}, currentTime=${audio.currentTime})`
+              )
+            ),
+          PLAY_TIMEOUT_MS
+        );
+      }),
+    ]);
   });
   return tab;
 }
