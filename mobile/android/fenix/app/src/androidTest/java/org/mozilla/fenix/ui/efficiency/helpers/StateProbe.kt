@@ -78,10 +78,11 @@ object StateProbe {
      */
     fun record(phase: String, testId: String) {
         runCatching {
-            TestLogging.reporter.record(
-                "state",
-                mapOf("phase" to phase, "testId" to testId) + sample(),
-            )
+            TestLogging.installed()
+                .record(
+                    "state",
+                    mapOf("phase" to phase, "testId" to testId) + sample(),
+                )
         }
             .onFailure { Log.i(TAG, "state probe failed at $phase: ${it.message}") }
     }

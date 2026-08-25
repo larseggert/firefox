@@ -30,7 +30,6 @@ import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.IdlingResourceHelper.unregisterAllIdlingResources
 import org.mozilla.fenix.helpers.TestHelper.appContext
 import org.mozilla.fenix.helpers.TestHelper.exitMenu
-import org.mozilla.fenix.ui.efficiency.logging.LoggingBridge
 import org.mozilla.fenix.ui.efficiency.logging.TestLogging
 import org.mozilla.fenix.ui.efficiency.logging.TestStatus
 import org.mozilla.fenix.ui.efficiency.logging.TimedReporter
@@ -239,12 +238,7 @@ abstract class BaseTest(
      * nothing rather than crashing or logging into a void. Called from both the watcher and setUp because rule ordering
      * decides which runs first and neither should care.
      */
-    private fun installedReporter(): TimedReporter {
-        if (TestLogging.reporter === TimedReporter.Silent) {
-            TestLogging.reporter = LoggingBridge.createReporter()
-        }
-        return TestLogging.reporter
-    }
+    private fun installedReporter(): TimedReporter = TestLogging.installed()
 
     @Before
     fun setUp() {
