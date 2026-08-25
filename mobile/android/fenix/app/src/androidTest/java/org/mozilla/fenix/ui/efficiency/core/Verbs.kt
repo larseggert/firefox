@@ -14,6 +14,10 @@ import org.mozilla.fenix.ui.efficiency.logging.TimedReporter
  * the target, reports, dumps the screen and throws with the selector named - so no verb has to, and no two verbs can
  * disagree about it.
  *
+ * Every verb reports, because the structured log stream is the source of truth for what a test actually did - it is
+ * what effpretty renders and what effverify grades, so the shape of what is emitted here is a consumed interface, not
+ * an implementation detail.
+ *
  * Seven shapes:
  *
  * - [require] one element must satisfy something; then act on it

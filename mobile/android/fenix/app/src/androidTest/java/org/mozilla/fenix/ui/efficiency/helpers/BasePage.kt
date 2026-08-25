@@ -55,20 +55,15 @@ import org.mozilla.fenix.ui.efficiency.navigation.NavigationRegistry
 import org.mozilla.fenix.ui.efficiency.navigation.NavigationStep
 
 /**
- * Logging philosophy (why BasePage owns logging):
+ * What every page object is.
  *
- * - Tests should be minimal, expressing *what* is being validated.
- * - Helpers/framework code is responsible for *how* actions happen (navigation, locators, retries), and that's why I
- *   think this is the correct place to instrument structured logs and timings.
+ * Three things live here and nothing else should. **Navigation**: how to get to this page from wherever the last test
+ * step left off, via [NavigationRegistry]. **Host wiring**: the handful of methods the verb executor in `core/` needs
+ * from a page, so that the verbs themselves - reporting, polling, overlay retries, failure dumps - can live outside
+ * this file. And the **verb vocabulary**, where each verb is one expression naming a primitive from `core/Verbs.kt`.
  *
- * This becomes critical as we evolve toward:
- * - test factories that generate many permutations (pages x states) at runtime,
- * - CI-configurable runs (feature flags, onboarding modes, user types),
- * - reflection-based enumeration of all pages/components,
- * - and eventually AI-assisted test planning, generation, and self-healing.
- *
- * In all of those models, the structured log stream is the human-readable source of truth describing what actually
- * executed, independent of how the test was defined (code/spec/CI).
+ * A verb that is more than an expression is a sign the primitive is missing, not that the verb is special. See
+ * docs/guides/extending-basepage.md.
  */
 abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *>) : VerbHost {
 
