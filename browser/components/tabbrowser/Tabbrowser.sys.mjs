@@ -7343,6 +7343,10 @@ export class Tabbrowser {
     const notifyAll = Ci.nsIWebProgress.NOTIFY_ALL;
     filter.addProgressListener(tabListener, notifyAll);
     ourBrowser.webProgress.addProgressListener(filter, notifyAll);
+
+    // The swap gave this tab a different browsing context, and therefore a
+    // different media controller to listen to.
+    aOurTab.registerAudibleChangeHandler();
   }
 
   #swapRegisteredOpenURIs(aOurBrowser, aOtherBrowser) {
