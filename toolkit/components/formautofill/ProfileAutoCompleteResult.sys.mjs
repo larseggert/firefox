@@ -421,6 +421,15 @@ export class CreditCardResult extends ProfileAutoCompleteResult {
   }
 
   _getSecondaryLabel(focusedFieldName, allFieldNames, profile) {
+    // A form can ask for the security code on its own, in which case there is
+    // no other credit card field to match against below. The card number is
+    // the only thing keeping those entries distinguishable, so always use it.
+    if (focusedFieldName == "cc-csc") {
+      return profile["cc-number"]
+        ? lazy.CreditCard.formatMaskedNumber(profile["cc-number"])
+        : "";
+    }
+
     const GROUP_FIELDS = {
       "cc-name": [
         "cc-name",
@@ -505,7 +514,14 @@ export class CreditCardResult extends ProfileAutoCompleteResult {
 
         if (focusedFieldName == "cc-number") {
           primary = lazy.CreditCard.formatMaskedNumber(primary);
+        } else if (focusedFieldName == "cc-csc") {
+          // The security code must never be displayed, so name the entry after
+          // the field instead.
+          primary = lazy.l10n.formatValueSync(
+            "autofill-card-security-code-label"
+          );
         }
+
         const secondary = this._getSecondaryLabel(
           focusedFieldName,
           allFieldNames,
