@@ -146,6 +146,11 @@ export class QueryParameter {
  *   The full URI to use for the search query.
  * @property {?nsIMIMEInputStream} postData
  *   The post data to use when opening the search query (if any).
+ * @property {string} partnerCode
+ *   The partner code that is used within the search query. This should be
+ *   used when recording telemetry.
+ * @property {string} telemetryId
+ *   The telemetry id for recording in legacy telemetry.
  */
 
 /**
@@ -405,7 +410,13 @@ export class EngineURL {
       sapSource
     );
 
-    return { uri: templateURI.URI, postData };
+    let telemetryData = this.#getPartnerCodeFromSap(sapSource);
+    return {
+      uri: templateURI.URI,
+      postData,
+      partnerCode: telemetryData?.partnerCode,
+      telemetryId: telemetryData?.telemetryId,
+    };
   }
 
   /**
@@ -484,10 +495,7 @@ export class EngineURL {
 
       // {partnerCode} is also frequent.
       if (name == "partnerCode") {
-        if (this.#partnerCodeMap.has(sapSource)) {
-          return this.#partnerCodeMap.get(sapSource).partnerCode;
-        }
-        return this.#partnerCodeMap.get("default").partnerCode;
+        return this.#getPartnerCodeFromSap(sapSource).partnerCode;
       }
 
       // {inputEncoding} is probably the next most common param.
@@ -566,6 +574,19 @@ export class EngineURL {
     }
 
     return json;
+  }
+
+  /**
+   * Returns the partner code and telemetry id to use for the SAP.
+   *
+   * @param {string} sapSource
+   * @returns {{partnerCode: ?string, telemetryId: ?string}}
+   */
+  #getPartnerCodeFromSap(sapSource) {
+    if (this.#partnerCodeMap.has(sapSource)) {
+      return this.#partnerCodeMap.get(sapSource);
+    }
+    return this.#partnerCodeMap.get("default");
   }
 
   /** @type {Map<string, {partnerCode: ?string, telemetryId: ?string}>} */

@@ -716,7 +716,7 @@ export class ConfigSearchEngine extends SearchEngine {
     let partnerCodeMap = new Map([
       [
         "default",
-        { partnerCode: this.#partnerCode, telemetryId: this.#telemetryId },
+        { partnerCode: this.#partnerCode, telemetryId: this.telemetryId },
       ],
     ]);
     if (this.id == "google") {

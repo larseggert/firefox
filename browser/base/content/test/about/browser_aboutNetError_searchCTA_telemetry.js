@@ -16,6 +16,10 @@ const { SearchUITestUtils } = ChromeUtils.importESModule(
 );
 SearchUITestUtils.init(this);
 
+const { TelemetryTestUtils } = ChromeUtils.importESModule(
+  "resource://testing-common/TelemetryTestUtils.sys.mjs"
+);
+
 const CTA_PREF = "browser.netError.searchCTA.enabled";
 
 // Test engines report isGeneralPurposeEngine=false, so force the CTA's engine
@@ -59,9 +63,6 @@ add_setup(async function () {
       // guard is a no-op and this test doesn't depend on captive-portal state.
       ["browser.netError.searchCTA.connectivityFreshnessMs", 2147483647],
     ],
-  });
-  registerCleanupFunction(async () => {
-    await SearchTestUtils.updateRemoteSettingsConfig();
   });
 });
 
@@ -199,6 +200,7 @@ add_task(async function test_engineNotGeneralOutcome() {
 });
 
 add_task(async function test_clickedCount() {
+  TelemetryTestUtils.getAndClearKeyedHistogram("SEARCH_COUNTS");
   Services.fog.testResetFOG();
   const engineStub = stubEngineSupported(true);
   try {
@@ -224,6 +226,14 @@ add_task(async function test_clickedCount() {
     );
     BrowserTestUtils.removeTab(searchTab);
     BrowserTestUtils.removeTab(tab);
+
+    await SearchUITestUtils.assertSAPTelemetry({
+      engineId: "google",
+      engineName: "google",
+      source: "errorpage",
+      count: 1,
+      telemetrySuffix: "-com-nocodes",
+    });
   } finally {
     engineStub.restore();
   }

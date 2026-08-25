@@ -474,7 +474,7 @@ export var SearchUIUtils = {
       window.gBrowser.selectedBrowser,
       engine,
       sapSource,
-      { searchUrlType }
+      { searchUrlType, submission }
     );
   },
 
