@@ -250,8 +250,8 @@ static AVPixelFormat ChooseV4L2PixelFormat(AVCodecContext* aCodecContext,
 
 #  ifdef MOZ_USE_HWDECODE_VULKAN
 static bool VulkanDirectDecodeExportEnabled() {
-  // Bundled ffvpx still lacks the DMA-BUF map fix; keep direct export off
-  // until its lavc is past MOZ_FFMPEG_MIN_LAVC_FOR_VULKAN_DMABUF.
+  // Keep direct export disabled on bundled ffvpx until lavc is greater than
+  // MOZ_FFMPEG_MIN_LAVC_FOR_VULKAN_DMABUF (62.29.101); then remove this #if.
 #    if defined(FFVPX_VERSION) && \
         LIBAVCODEC_VERSION_INT <= MOZ_FFMPEG_MIN_LAVC_FOR_VULKAN_DMABUF
   return false;
