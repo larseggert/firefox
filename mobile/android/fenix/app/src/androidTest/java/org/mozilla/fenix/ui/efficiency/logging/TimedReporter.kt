@@ -157,6 +157,14 @@ class TimedReporter(
     }
 
     /**
+     * A structured event that is not a scope: a screen dump, a captured artifact. Goes to the record only - whatever
+     * produced it has already said its piece on the console, and repeating it there would bury the narrative.
+     */
+    fun record(type: String, fields: Map<String, Any?>) {
+        if (enabled) forwarder?.record(type, fields)
+    }
+
+    /**
      * Clear counters between tests. Parameterized tests and retries reuse the same reporter, so without this a summary
      * describes every run so far rather than this one.
      */

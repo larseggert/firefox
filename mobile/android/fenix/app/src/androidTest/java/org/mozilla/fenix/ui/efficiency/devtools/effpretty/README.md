@@ -55,6 +55,13 @@ effpretty capture --mode watch --out run-report.txt --events run-events.jsonl
 describe the same events as the `[CMD]`/`[LOC]` lines beside them, so printing both would bury the
 narrative. `efftriage` reads that sidecar in preference to the rendered report.
 
+`--events` works on `view` as well as `capture`, which is how a Firebase run gets the same treatment:
+there is no effpretty on the CI device, but the downloaded logcat still contains the `EffJson` lines.
+
+```bash
+effpretty view firebase-logcat.txt --out run-report.txt --events run-events.jsonl
+```
+
 Why bother, when the rendered report says the same thing: triage rules that match rendered English
 break silently. Rewording a harness message leaves every test passing and the rules quietly matching
 nothing -- which happened to one rule in August 2026, and to eight more at once during the BasePage

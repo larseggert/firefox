@@ -80,21 +80,8 @@ class CombinedLogger(
         )
     }
 
-    override fun info(msg: String, kv: Map<String, Any?>) =
-        emit("info", "[INFO] $msg $kv", mapOf("msg" to msg, "kv" to kv))
-
-    override fun warn(msg: String, kv: Map<String, Any?>) =
-        emit("warn", "[WARN] $msg $kv", mapOf("msg" to msg, "kv" to kv))
-
-    override fun error(msg: String, kv: Map<String, Any?>, throwable: Throwable?) =
-        emit(
-            "error",
-            "[ERROR] $msg $kv ${throwable?.message ?: ""}",
-            mapOf("msg" to msg, "kv" to kv, "error" to throwable?.stackTraceToString()),
-        )
-
-    override fun attachScreenshot(step: StepDescriptor, path: String) =
-        emit("screenshot", "[SHOT] ${step.name} → $path", mapOf("stepId" to step.id, "path" to path))
+    override fun record(type: String, fields: Map<String, Any?>) =
+        emit(type, "[${type.uppercase()}] " + fields.entries.joinToString(" ") { "${it.key}=${it.value}" }, fields)
 }
 
 /**
