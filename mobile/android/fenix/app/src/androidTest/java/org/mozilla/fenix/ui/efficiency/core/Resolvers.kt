@@ -5,6 +5,7 @@
 package org.mozilla.fenix.ui.efficiency.core
 
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.SemanticsNodeInteractionCollection
 import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyChild
@@ -13,6 +14,9 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.matcher.ViewMatchers.hasSibling
@@ -26,6 +30,7 @@ import androidx.test.uiautomator.UiSelector
 import org.hamcrest.Matchers.allOf
 import org.hamcrest.Matchers.containsString
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
+import org.mozilla.fenix.ui.efficiency.helpers.SelectorStrategy
 
 /**
  * One resolver per UI toolkit, each interpreting a [Locator].
@@ -133,5 +138,59 @@ object Resolvers {
                 else -> return null
             }
         return device.findObject(by)
+    }
+
+    /**
+     * Resolve a Compose selector to the *displayed* match, hiding the merged-vs-unmerged tree distinction from callers.
+     *
+     * The other resolvers answer "which node does this selector name". This one answers "which of them is the one on
+     * screen", which is what an interaction needs: text that renders in a panel and again in the address bar produces
+     * two matches, and only one of them can be tapped.
+     *
+     * Tries the strategy's historical primary tree first (text -> unmerged; tag and content-description -> merged),
+     * then the other, so a caller supplies a testTag/text/description and gets the node wherever it lives. The
+     * merged/unmerged mismatch on COMPOSE_BY_TEXT is what broke navigation when this path was first introduced, and
+     * content-description had the same latent trap.
+     *
+     * Returns null for non-Compose strategies; those go through [compose]/[espresso]/[uiAutomator].
+     */
+    fun displayed(
+        rule: AndroidComposeTestRule<*, *>,
+        selector: Selector,
+    ): UiElement? {
+        fun candidates(unmerged: Boolean): SemanticsNodeInteractionCollection? =
+            when (selector.strategy) {
+                SelectorStrategy.COMPOSE_BY_TAG -> rule.onAllNodesWithTag(selector.value, useUnmergedTree = unmerged)
+                // Tag AND the node's own text. For an element whose text also renders elsewhere on screen,
+                // the tag disambiguates while the text still asserts the content - neither alone is enough.
+                SelectorStrategy.COMPOSE_BY_TAG_AND_TEXT ->
+                    rule.onAllNodes(
+                        hasTestTag(selector.value) and hasText(selector.secondaryValue ?: ""),
+                        useUnmergedTree = unmerged,
+                    )
+                SelectorStrategy.COMPOSE_BY_TEXT,
+                SelectorStrategy.COMPOSE_BY_TEXT_MERGED ->
+                    rule.onAllNodesWithText(selector.value, useUnmergedTree = unmerged)
+                SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION ->
+                    rule.onAllNodesWithContentDescription(selector.value, useUnmergedTree = unmerged)
+                else -> null
+            }
+
+        val primaryUnmerged = selector.strategy == SelectorStrategy.COMPOSE_BY_TEXT
+        val node =
+            candidates(primaryUnmerged)?.let { firstDisplayed(it) }
+                ?: candidates(!primaryUnmerged)?.let { firstDisplayed(it) }
+        return node?.let { ComposeUiElement(it) }
+    }
+
+    /** The first *displayed* node in a collection, else the first node, else null. */
+    private fun firstDisplayed(collection: SemanticsNodeInteractionCollection): SemanticsNodeInteraction? {
+        val count = runCatching { collection.fetchSemanticsNodes().size }.getOrDefault(0)
+        if (count == 0) return null
+        for (i in 0 until count) {
+            val node = collection[i]
+            if (ElementState.probe(node, ElementState.Trait.DISPLAYED)) return node
+        }
+        return collection[0]
     }
 }

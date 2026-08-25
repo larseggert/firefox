@@ -21,10 +21,10 @@ import org.mozilla.fenix.ui.efficiency.logging.TimedReporter
  * Here it exists once, in six shapes:
  *
  * - [require] one element must satisfy something; then act on it
- * - [check] the same question, answered rather than thrown
  * - [requireAbsent] one element must not be there, now or for a while
  * - [requireAll] something must hold across every match for a selector
  * - [driveUntil] repeat an action until the screen changes the way you want
+ * - [groupPresent] are all of a group's selectors on screen? answered, not thrown
  * - [requireState] poll a condition that has no selector behind it
  * - [reportAround] put the reporting around a call that throws on its own
  *
@@ -34,7 +34,6 @@ import org.mozilla.fenix.ui.efficiency.logging.TimedReporter
 /**
  * Resolve [selector], satisfy [predicate], then run [action]. Throws AssertionError naming the selector if it cannot,
  * having dumped the screen first.
- *
  */
 fun VerbHost.require(
     verb: String,
@@ -91,23 +90,12 @@ fun VerbHost.require(
     }
 }
 
-/** Like [require], but answers rather than throwing. Nothing is dumped: absence is a valid answer. */
-fun VerbHost.check(
-    verb: String,
-    selector: Selector,
-    policy: WaitPolicy = WaitPolicy.Immediate,
-    applyPreconditions: Boolean = false,
-    via: ((Selector, Boolean) -> Any?)? = null,
-    predicate: (Any) -> Boolean = { true },
-): Boolean = seek(selector, policy, applyPreconditions, predicate, reporter(), via).matched != null
-
 /**
  * The inverse of [require]: assert [selector] is *not* on screen.
  *
  * Three verbs asked this three ways - an instant probe, "wait for it to go away", and "it must never appear" - and each
  * rebuilt its own poll loop and message. They differ only in the policy and whether absence has to hold for the whole
  * window.
- *
  */
 fun VerbHost.requireAbsent(
     verb: String,
@@ -157,7 +145,6 @@ fun VerbHost.requireAbsent(
  * under a given parent - each fetched the collection, each rebuilt the same poll loop, and each wrote its own "strategy
  * not supported" error. Only Compose tag selectors can produce a collection at all, which is the one fact worth
  * reporting when a caller picks another.
- *
  */
 fun VerbHost.requireAll(
     verb: String,
@@ -209,7 +196,6 @@ fun VerbHost.requireAll(
  * whether to check before or after the last step, so two of them could take one more action than they were asked for.
  *
  * Checks first, acts second: if the screen is already how the caller wants it, nothing happens.
- *
  */
 fun VerbHost.driveUntil(
     verb: String,
@@ -311,6 +297,53 @@ fun VerbHost.reportAround(
         if (dumpOnFailure) dumpFailure("$verb failed: $description")
         throw e
     }
+}
+
+/**
+ * Are all of [selectors] on screen? Reports each one, answers rather than throwing.
+ *
+ * Three page-level functions were this loop: "am I already here", "wait until I am here", and "verify this group of
+ * elements". Each iterated the group, wrote its own per-selector LOC line, and folded the results with `all {}` - and
+ * the polling one restarted its CMD on every tick, so a ten-second wait wrote a hundred command pairs into the report
+ * for one question.
+ *
+ * @return true when every selector is present before the policy expires
+ */
+fun VerbHost.groupPresent(
+    verb: String,
+    label: String,
+    selectors: List<Selector>,
+    policy: WaitPolicy = WaitPolicy.Immediate,
+    applyPreconditions: Boolean = false,
+): Boolean {
+    val rep = reporter()
+    rep?.startCmd(stepId(verb, label), "Checking '$label'...", 1)
+
+    fun allPresent(): Boolean = selectors.all { sel ->
+        rep?.startLoc(stepId("loc", "${label}_${sel.description}"), "Attempting to locate '${sel.description}'...", 2)
+        val present =
+            runCatching { locate(sel, applyPreconditions) }
+                .getOrNull()
+                ?.let { ElementState.probe(it, ElementState.Trait.DISPLAYED) } == true
+        rep?.endLoc(
+            success = present,
+            message = if (present) "'${sel.description}' found" else "'${sel.description}' not found",
+        )
+        present
+    }
+
+    val timeout = (policy as? WaitPolicy.Poll)?.timeout ?: 0
+    val deadline = SystemClock.uptimeMillis() + timeout
+    var wait = policy.firstGap()
+    var here = allPresent()
+    while (!here && SystemClock.uptimeMillis() < deadline) {
+        SystemClock.sleep(wait)
+        wait = (policy as WaitPolicy.Poll).next(wait)
+        here = allPresent()
+    }
+
+    rep?.endCmd(success = here, message = if (here) "'$label' present" else "'$label' not present")
+    return here
 }
 
 /**

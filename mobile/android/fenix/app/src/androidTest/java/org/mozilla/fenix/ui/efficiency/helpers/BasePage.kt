@@ -10,15 +10,12 @@ import android.view.accessibility.AccessibilityWindowInfo
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.SemanticsNodeInteractionCollection
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasParent
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.longClick as composeLongClick
-import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -28,21 +25,16 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.espresso.Espresso.closeSoftKeyboard
-import androidx.test.espresso.ViewInteraction
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.longClick
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.UiObject
-import androidx.test.uiautomator.UiObject2
 import org.hamcrest.CoreMatchers.not
 import org.mozilla.fenix.helpers.AppAndSystemHelper
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.TestAssetHelper
 import org.mozilla.fenix.helpers.TestHelper.mDevice
 import org.mozilla.fenix.helpers.TestHelper.packageName
-import org.mozilla.fenix.ui.efficiency.core.ComposeUiElement
 import org.mozilla.fenix.ui.efficiency.core.ElementState
-import org.mozilla.fenix.ui.efficiency.core.EspressoUiElement
 import org.mozilla.fenix.ui.efficiency.core.Gestures
 import org.mozilla.fenix.ui.efficiency.core.Layer
 import org.mozilla.fenix.ui.efficiency.core.Relations
@@ -50,11 +42,10 @@ import org.mozilla.fenix.ui.efficiency.core.Resolvers
 import org.mozilla.fenix.ui.efficiency.core.STRATEGY_LOCATORS
 import org.mozilla.fenix.ui.efficiency.core.UiActions
 import org.mozilla.fenix.ui.efficiency.core.UiElement
-import org.mozilla.fenix.ui.efficiency.core.UiObject2UiElement
-import org.mozilla.fenix.ui.efficiency.core.UiObjectUiElement
 import org.mozilla.fenix.ui.efficiency.core.VerbHost
 import org.mozilla.fenix.ui.efficiency.core.WaitPolicy
 import org.mozilla.fenix.ui.efficiency.core.driveUntil
+import org.mozilla.fenix.ui.efficiency.core.groupPresent
 import org.mozilla.fenix.ui.efficiency.core.reportAround
 import org.mozilla.fenix.ui.efficiency.core.require
 import org.mozilla.fenix.ui.efficiency.core.requireAbsent
@@ -125,10 +116,6 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         val cleaned = raw.replace(Regex("[^A-Za-z0-9_\\-]"), "_")
         return "'$prefix'_$cleaned".take(120)
     }
-
-    private fun found(desc: String) = "'$desc' found"
-
-    private fun notFound(desc: String) = "'$desc' not found"
 
     // ------------------------------------------------------------
     // Navigation (STEP)
@@ -202,114 +189,49 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
     // ------------------------------------------------------------
 
     private fun mozWaitForPageToLoad(timeout: Long = 10_000, interval: Long = 100): Boolean {
-        if (pollForPageReady(timeout, interval)) return true
-        // The destination may be covered by a known blocking overlay in its own window (e.g. the
-        // "Secure your saved passwords" system dialog) that the arrival poll cannot see past. Unlike a
-        // moz* verb, this poll has no built-in overlay handling, so dismiss any known overlay and poll
-        // once more before declaring navigation failed.
-        if (dismissKnownOverlaysIfPresent()) {
-            return pollForPageReady(timeout, interval)
-        }
-        return false
-    }
-
-    private fun pollForPageReady(timeout: Long, interval: Long): Boolean {
-        val rep = rep()
-        val requiredSelectors = mozGetSelectorsByGroup("requiredForPage")
-        val deadline = System.currentTimeMillis() + timeout
-
-        while (System.currentTimeMillis() < deadline) {
-            rep?.startCmd("wait_$pageName", "Attempting to verify $pageName loads...", 1)
-
-            val allPresent = requiredSelectors.all { sel ->
-                rep?.startLoc(
-                    safeId("loc", "${pageName}_${sel.description}"),
-                    "Attempting to locate '${sel.description}'...",
-                    2,
-                )
-                val present = mozVerifyElement(sel, applyPreconditions = false)
-                rep?.endLoc(
-                    success = present,
-                    message = if (present) found(sel.description) else notFound(sel.description),
-                )
-                present
-            }
-
-            rep?.endCmd(
-                success = allPresent,
-                message = if (allPresent) "'$pageName' loaded" else "'$pageName' not ready yet",
+        val selectors = mozGetSelectorsByGroup("requiredForPage")
+        if (
+            groupPresent(
+                verb = "wait",
+                label = pageName,
+                selectors = selectors,
+                policy = WaitPolicy.Poll(timeout, interval),
             )
-
-            if (allPresent) return true
-            SystemClock.sleep(interval)
+        ) {
+            return true
         }
-
-        return false
+        if (!dismissKnownOverlaysIfPresent()) return false
+        return groupPresent(
+            verb = "wait",
+            label = pageName,
+            selectors = selectors,
+            policy = WaitPolicy.Poll(timeout, interval),
+        )
     }
 
     /**
-     * Fast "already here?" check.
+     * Fast "already here?" check: one pass, no polling.
      *
-     * Why:
-     * - We do NOT want to spend seconds waiting to verify a destination page before we even start navigating.
-     * - This is intentionally a single-pass check (no polling / no sleeping).
-     *
-     * Pattern:
-     * - navigateToPage() uses mozIsOnPageNow() first.
-     * - After executing navigation steps, we use mozWaitForPageToLoad() to wait/poll for readiness.
+     * navigateToPage() asks this before doing anything, so it must not spend seconds confirming a destination it has
+     * not started navigating to yet. Waiting for readiness is [mozWaitForPageToLoad]'s job, after the steps have run.
      */
-    private fun mozIsOnPageNow(): Boolean {
-        val rep = rep()
-        val requiredSelectors = mozGetSelectorsByGroup("requiredForPage")
-
-        // This is a *fast check* — no retries, no sleeping.
-        rep?.startCmd("is_on_'$pageName'", "Checking if '$pageName' is already visible...", 1)
-
-        val allPresent = requiredSelectors.all { sel ->
-            rep?.startLoc(
-                safeId("loc", "${pageName}_${sel.description}_now"),
-                "Attempting to locate '${sel.description}'...",
-                2,
-            )
-            val found = mozVerifyElement(sel, applyPreconditions = false)
-            rep?.endLoc(success = found, message = if (found) found(sel.description) else notFound(sel.description))
-            found
-        }
-
-        rep?.endCmd(
-            success = allPresent,
-            message = if (allPresent) "'$pageName' already visible" else "'$pageName' not visible yet",
-        )
-        return allPresent
-    }
+    private fun mozIsOnPageNow(): Boolean = groupPresent("is_on", pageName, mozGetSelectorsByGroup("requiredForPage"))
 
     abstract fun mozGetSelectorsByGroup(group: String = "requiredForPage"): List<Selector>
 
     fun mozVerifyElementsByGroup(group: String = "requiredForPage"): BasePage {
-        val rep = rep()
-        rep?.startCmd(safeId("verify_group", "${pageName}_$group"), "Attempting to verify group '$group' loads...", 1)
-
-        val selectors = mozGetSelectorsByGroup(group)
-        val allPresent = selectors.all { sel ->
-            rep?.startLoc(
-                safeId("loc", "${pageName}_${group}_${sel.description}"),
-                "Attempting to locate '${sel.description}'...",
-                2,
+        val present =
+            groupPresent(
+                verb = "verify_group",
+                label = "${pageName}_$group",
+                selectors = mozGetSelectorsByGroup(group),
+                applyPreconditions = true,
             )
-            val present = mozVerifyElement(sel, applyPreconditions = true)
-            rep?.endLoc(success = present, message = if (present) found(sel.description) else notFound(sel.description))
-            present
-        }
-
-        rep?.endCmd(
-            success = allPresent,
-            message = if (allPresent) "Group '$group' verified" else "Group '$group' missing required elements",
-        )
-
-        if (!allPresent) {
-            // Dump for the same reason mozVerify does. A group failure names only the group, and the
-            // per-selector log stops at the first miss (the check is an `all {}`), so without this there
-            // is nothing to tell you whether the missing element is absent, renamed, or just off-screen.
+        if (!present) {
+            // Dump for the same reason the element verbs do. A group failure names only the group, and
+            // the per-selector log stops at the first miss (the check is an `all {}`), so without this
+            // there is nothing to tell you whether the missing element is absent, renamed, or just
+            // off-screen.
             ScreenDump.dump(composeRule, "mozVerifyElementsByGroup failed: $pageName group '$group'")
             assertionFailure("Not all elements in group '$group' are present")
         }
@@ -505,96 +427,19 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         return this
     }
 
-    // --- Resolution facade (pilot: used by mozClick; other verbs migrate onto this over time) -------
-    //
-    // resolve() is the single seam between "locate" and "interact": it fetches the candidate node(s)
-    // for a selector and applies ONE consistent selection policy — prefer the *displayed* match, else
-    // the first — then returns a backend-agnostic UiElement. Verbs just call element.click()/etc. and
-    // never switch on the underlying Compose/Espresso/UiAutomator node type. This replaces the
-    // one-off, text-only mozClickDisplayed with a general rule that works for tag and text selectors
-    // (and is easy to extend to more strategies).
+    /**
+     * The single seam between "locate" and "interact" for the click path: fetch the candidates for a selector, apply
+     * one selection policy - prefer the displayed match, else the first - and return a backend-agnostic [UiElement].
+     * Verbs call element.click() and never switch on the node type.
+     */
     private fun resolve(selector: Selector, applyPreconditions: Boolean = true): UiElement? {
         if (selector.value.isBlank()) return null
         if (applyPreconditions && requiresScroll(selector.groups)) {
             ensureReachable(selector)
         }
-        // Compose: resolve tag/text/content-description to the displayed match, trying BOTH the
-        // merged and unmerged semantics trees so callers never have to know which one an element
-        // lives in. (The merged/unmerged mismatch on COMPOSE_BY_TEXT is what broke navigation after
-        // the resolve() pilot; content-description had the same latent trap.)
-        resolveComposeNode(selector)?.let {
-            return ComposeUiElement(it)
-        }
-        // Everything else (Espresso / UiAutomator, plus exotic compose strategies): reuse the existing
-        // single-node fetch (preconditions already applied above) and wrap it in the facade.
-        return toUiElement(mozGetElement(selector, applyPreconditions = false))
+        return Resolvers.displayed(composeRule, selector)
+            ?: UiElement.wrap(mozGetElement(selector, applyPreconditions = false))
     }
-
-    /** Return the first *displayed* node in the collection, else the first node, else null. */
-    private fun pickDisplayed(collection: SemanticsNodeInteractionCollection): SemanticsNodeInteraction? {
-        val count =
-            try {
-                collection.fetchSemanticsNodes().size
-            } catch (_: Throwable) {
-                0
-            }
-        if (count == 0) return null
-        for (i in 0 until count) {
-            val node = collection[i]
-            try {
-                node.assertIsDisplayed()
-                return node
-            } catch (_: AssertionError) {
-                // not the on-screen match; keep looking
-            }
-        }
-        return collection[0]
-    }
-
-    /**
-     * Resolve a Compose selector (tag / text / content-description) to the displayed match, hiding the
-     * merged-vs-unmerged tree distinction from callers. Tries the strategy's historical primary tree first (text ->
-     * unmerged; tag/content-description -> merged), then the OTHER tree as a fallback, so a caller just supplies a
-     * testTag/text/description and the facade finds it wherever it lives. Returns null for non-Compose strategies
-     * (handled via mozGetElement).
-     */
-    private fun resolveComposeNode(selector: Selector): SemanticsNodeInteraction? {
-        fun candidates(unmerged: Boolean): SemanticsNodeInteractionCollection? =
-            when (selector.strategy) {
-                SelectorStrategy.COMPOSE_BY_TAG ->
-                    composeRule.onAllNodesWithTag(selector.value, useUnmergedTree = unmerged)
-                // Tag AND the node's own text. For elements whose text also renders elsewhere on screen
-                // (e.g. a host shown both in a panel and in the address bar), the tag disambiguates while
-                // the text still asserts the content — neither alone is sufficient.
-                SelectorStrategy.COMPOSE_BY_TAG_AND_TEXT ->
-                    composeRule.onAllNodes(
-                        hasTestTag(selector.value) and hasText(selector.secondaryValue ?: ""),
-                        useUnmergedTree = unmerged,
-                    )
-                SelectorStrategy.COMPOSE_BY_TEXT,
-                SelectorStrategy.COMPOSE_BY_TEXT_MERGED ->
-                    composeRule.onAllNodesWithText(selector.value, useUnmergedTree = unmerged)
-                SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION ->
-                    composeRule.onAllNodesWithContentDescription(selector.value, useUnmergedTree = unmerged)
-                else -> null
-            }
-        // COMPOSE_BY_TEXT historically resolved on the unmerged tree; tag/content-description on the
-        // merged tree. Try each strategy's proven primary tree first (no behavior change), then the
-        // other tree only if the primary yields nothing.
-        val primaryUnmerged = selector.strategy == SelectorStrategy.COMPOSE_BY_TEXT
-        return candidates(primaryUnmerged)?.let { pickDisplayed(it) }
-            ?: candidates(!primaryUnmerged)?.let { pickDisplayed(it) }
-    }
-
-    /** Wrap a raw located node (from mozGetElement) into the backend-agnostic UiElement facade. */
-    private fun toUiElement(any: Any?): UiElement? =
-        when (any) {
-            is SemanticsNodeInteraction -> ComposeUiElement(any)
-            is ViewInteraction -> EspressoUiElement(any)
-            is UiObject -> UiObjectUiElement(any)
-            is UiObject2 -> UiObject2UiElement(any)
-            else -> null
-        }
 
     fun mozLongClick(selector: Selector): BasePage {
         require(
