@@ -15,6 +15,7 @@
   }
   --tab-group-label-size: var(--tab-min-height);
   &[uidensity="touch"] {
+    --tab-min-height: 41px;
     --tab-group-label-size: var(--tab-min-height);
   }
 
@@ -30,7 +31,6 @@
       --tab-min-height: 29px;
     }
     &[uidensity="touch"] {
-      --tab-min-height: 41px;
       --tab-group-label-size: 27px;
     }
   }
