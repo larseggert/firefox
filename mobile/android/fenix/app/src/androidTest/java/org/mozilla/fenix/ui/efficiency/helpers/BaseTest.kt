@@ -17,6 +17,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TestRule
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
 import org.junit.runners.model.Statement
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.helpers.AppAndSystemHelper.deleteBookmarksStorage
@@ -28,6 +30,7 @@ import org.mozilla.fenix.helpers.TestHelper.appContext
 import org.mozilla.fenix.helpers.TestHelper.exitMenu
 import org.mozilla.fenix.ui.efficiency.logging.LoggingBridge
 import org.mozilla.fenix.ui.efficiency.logging.TestLogging
+import org.mozilla.fenix.ui.efficiency.logging.TestStatus
 import org.mozilla.fenix.ui.efficiency.logging.TimedReporter
 import org.mozilla.fenix.ui.efficiency.navigation.LaunchConfig
 import org.mozilla.fenix.ui.efficiency.navigation.NavigationRegistry
@@ -167,6 +170,44 @@ abstract class BaseTest(
      * - Keeps construction cheap and avoids wiring churn if we later attach file sinks.
      * - Makes it easier to evolve toward a more formal "test context" object later.
      */
+    /**
+     * Test boundaries in the artifact stream. Without them details.jsonl is a flat run of steps with no way to say
+     * which test any of them belonged to, which is the first thing triage asks.
+     *
+     * A watcher rather than @Before/@After because only a watcher sees the outcome.
+     */
+    @get:Rule(order = 2)
+    val recordTestBoundaries: TestRule =
+        object : TestWatcher() {
+            override fun starting(description: Description) {
+                installedReporter().testStart(description.displayName)
+            }
+
+            override fun succeeded(description: Description) {
+                installedReporter().testEnd(description.displayName, TestStatus.PASS)
+            }
+
+            override fun failed(e: Throwable, description: Description) {
+                installedReporter().testEnd(description.displayName, TestStatus.FAIL)
+            }
+
+            override fun skipped(e: org.junit.AssumptionViolatedException, description: Description) {
+                installedReporter().testEnd(description.displayName, TestStatus.SKIP)
+            }
+        }
+
+    /**
+     * Silent until a test installs a real one, so page objects driven outside a test - the inspector, tooling - narrate
+     * nothing rather than crashing or logging into a void. Called from both the watcher and setUp because rule ordering
+     * decides which runs first and neither should care.
+     */
+    private fun installedReporter(): TimedReporter {
+        if (TestLogging.reporter === TimedReporter.Silent) {
+            TestLogging.reporter = LoggingBridge.createReporter()
+        }
+        return TestLogging.reporter
+    }
+
     @Before
     fun setUp() {
         // Disable Espresso's screenshot-on-failure locally.
@@ -182,12 +223,7 @@ abstract class BaseTest(
         // Second arg is captureScreenshotOnFailure = false.
         Espresso.setFailureHandler(DefaultFailureHandler(appContext, false))
 
-        // Silent until a test installs a real one, so page objects driven outside a test - the
-        // inspector, tooling - narrate nothing rather than crashing or logging into a void.
-        if (TestLogging.reporter === TimedReporter.Silent) {
-            TestLogging.reporter = LoggingBridge.createReporter()
-        }
-        TestLogging.reporter.reset()
+        installedReporter().reset()
         if (java.lang.Boolean.getBoolean("logNavigationSummary")) {
             NavigationRegistry.logPathSummary()
         }

@@ -48,11 +48,11 @@ class TimedReporter(
     /** How a scope ended: which line it writes, which counter it bumps, what the sinks are told. */
     private enum class Outcome(
         val announce: (Int, String) -> Unit,
-        val result: (String) -> StepResult,
+        val result: (String, Throwable?) -> StepResult,
     ) {
-        OK(ConsoleLogger::ok, { StepResult.Ok }),
-        FAIL(ConsoleLogger::err, { StepResult.Fail(it) }),
-        SKIP(ConsoleLogger::skip, { StepResult.Ok }),
+        OK(ConsoleLogger::ok, { _, _ -> StepResult.Ok }),
+        FAIL(ConsoleLogger::err, { reason, cause -> StepResult.Fail(reason, cause) }),
+        SKIP(ConsoleLogger::skip, { _, _ -> StepResult.Ok }),
     }
 
     /**
@@ -68,20 +68,27 @@ class TimedReporter(
     ) {
         private var closed = false
 
-        fun ok(message: String = "") = finish(Outcome.OK, message)
+        fun ok(message: String = "", facts: Map<String, Any?> = emptyMap()) = finish(Outcome.OK, message, facts)
 
-        fun fail(message: String = "") = finish(Outcome.FAIL, message)
+        fun fail(message: String = "", cause: Throwable? = null, facts: Map<String, Any?> = emptyMap()) =
+            finish(Outcome.FAIL, message, facts, cause)
 
-        fun skip(message: String = "") = finish(Outcome.SKIP, message)
+        fun skip(message: String = "", facts: Map<String, Any?> = emptyMap()) = finish(Outcome.SKIP, message, facts)
 
         /** `ok(...)` or `fail(...)` on a boolean, which is what most verbs actually have. */
-        fun done(success: Boolean, message: String = "") = if (success) ok(message) else fail(message)
+        fun done(success: Boolean, message: String = "", facts: Map<String, Any?> = emptyMap()) =
+            if (success) ok(message, facts) else fail(message, facts = facts)
 
         /** The LOC completion every lookup writes. */
-        fun found(description: String, present: Boolean) =
-            done(present, if (present) "'$description' found" else "'$description' not found")
+        fun found(description: String, present: Boolean, facts: Map<String, Any?> = emptyMap()) =
+            done(present, if (present) "'$description' found" else "'$description' not found", facts)
 
-        private fun finish(outcome: Outcome, message: String) {
+        private fun finish(
+            outcome: Outcome,
+            message: String,
+            facts: Map<String, Any?> = emptyMap(),
+            cause: Throwable? = null,
+        ) {
             if (closed || !enabled) return
             closed = true
 
@@ -100,7 +107,18 @@ class TimedReporter(
 
             counts[outcome] = (counts[outcome] ?: 0) + 1
             elapsed[type] = (elapsed[type] ?: 0.0) + elapsedMs
-            forwarder?.stepEnd(StepDescriptor(id, name, mapOf("type" to type.name)), outcome.result(message))
+
+            // The console line is prose for a human; these fields are the same event for a machine.
+            // Triage rules that regex the prose break silently whenever the wording is reworded -
+            // which is how eight of efftriage's rules died in one afternoon.
+            val args =
+                facts +
+                    mapOf(
+                        "type" to type.name,
+                        "outcome" to outcome.name,
+                        "elapsedMs" to elapsedMs,
+                    )
+            forwarder?.stepEnd(StepDescriptor(id, name, args), outcome.result(message, cause))
         }
     }
 
@@ -123,6 +141,19 @@ class TimedReporter(
             starts[type] = (starts[type] ?: 0) + 1
         }
         return Scope(id, name, type, level, System.nanoTime())
+    }
+
+    /**
+     * Test boundaries, for the artifact only. The console already gets these from the TestRunner tag, and duplicating
+     * them there would change a stream that effpretty and effverify parse; the JSONL has no other way to know which
+     * test a step belongs to.
+     */
+    fun testStart(testId: String, meta: Map<String, Any?> = emptyMap()) {
+        if (enabled) forwarder?.testStart(testId, meta)
+    }
+
+    fun testEnd(testId: String, status: TestStatus) {
+        if (enabled) forwarder?.testEnd(testId, status)
     }
 
     /**

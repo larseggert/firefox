@@ -56,26 +56,37 @@ fun <T : VerbHost> T.require(
     val element = probe.matched
     if (element == null) {
         if (optional) {
-            cmd.skip("'${selector.description}' not present; skipped")
+            cmd.skip("'${selector.description}' not present; skipped", facts(verb, selector, Failure.NOT_FOUND))
             return this
         }
         // Keep "not on screen" and "on screen but wrong state" distinguishable. The verbs this
         // replaced threw two different errors for the two cases, and collapsing them into one
         // predicate would have made every state failure read as a missing element.
+        val notFound = probe.located == null
         val message =
-            if (probe.located == null) {
+            if (notFound) {
                 "'${selector.description}' not found"
             } else {
                 "'${selector.description}' was found but $expectation was false"
             }
-        cmd.fail(message)
+        cmd.fail(
+            message,
+            facts =
+                facts(
+                    verb,
+                    selector,
+                    if (notFound) Failure.NOT_FOUND else Failure.WRONG_STATE,
+                    expectation,
+                    dumpRef(dumpOnFailure, verb, selector),
+                ),
+        )
         if (dumpOnFailure) dumpFailure("$verb failed: ${selector.description}")
         throw AssertionError("$message (${selector.strategy} -> ${selector.value})")
     }
 
     try {
         action(element)
-        cmd.ok("$verb '${selector.description}' ok")
+        cmd.ok("$verb '${selector.description}' ok", facts(verb, selector))
         return this
     } catch (e: Throwable) {
         // Optional means best-effort all the way through, not just at the lookup: the element can be
@@ -83,10 +94,17 @@ fun <T : VerbHost> T.require(
         // "was added" dialog is the standing example - and a failed click on something we were
         // willing not to find at all is not a test failure.
         if (optional) {
-            cmd.skip("'${selector.description}' went away mid-$verb; skipped")
+            cmd.skip(
+                "'${selector.description}' went away mid-$verb; skipped",
+                facts(verb, selector, Failure.ACTION_FAILED),
+            )
             return this
         }
-        cmd.fail("$verb '${selector.description}' failed: ${e.message ?: "exception"}")
+        cmd.fail(
+            "$verb '${selector.description}' failed: ${e.message ?: "exception"}",
+            cause = e,
+            facts = facts(verb, selector, Failure.ACTION_FAILED, expectation, dumpRef(dumpOnFailure, verb, selector)),
+        )
         if (dumpOnFailure) dumpFailure("$verb failed: ${selector.description}")
         throw e
     }
@@ -130,11 +148,20 @@ fun <T : VerbHost> T.requireAbsent(
                     "'${selector.description}' was expected to disappear but is still visible after ${timeout}ms"
                 else -> "'${selector.description}' was expected to be absent but is visible"
             }
-        cmd.fail(message)
+        cmd.fail(
+            message,
+            facts =
+                facts(
+                    verb,
+                    selector,
+                    if (sustain) Failure.APPEARED else Failure.STILL_PRESENT,
+                    extra = dumpRef(dumpOnFailure, verb, selector),
+                ),
+        )
         if (dumpOnFailure) dumpFailure("$verb failed: ${selector.description}")
         throw AssertionError(message)
     }
-    cmd.ok("'${selector.description}' absent")
+    cmd.ok("'${selector.description}' absent", facts(verb, selector))
     return this
 }
 
@@ -166,14 +193,14 @@ fun <T : VerbHost> T.requireAll(
         val all = locateAll(selector)
         if (all == null) {
             val message = "${selector.strategy} cannot match more than one element; $verb needs a Compose tag selector"
-            cmd.fail(message)
+            cmd.fail(message, facts = facts(verb, selector, Failure.UNSUPPORTED_STRATEGY, expectation))
             throw AssertionError(message)
         }
         if (runCatching { satisfied(all) }.getOrDefault(false)) {
             // Outside the runCatching above: a failing action is a real error to propagate, not a
             // "the expectation was false".
             action(all)
-            cmd.ok("'${selector.description}' $expectation")
+            cmd.ok("'${selector.description}' $expectation", facts(verb, selector, expectation = expectation))
             return this
         }
         if (SystemClock.uptimeMillis() >= deadline) break
@@ -182,7 +209,11 @@ fun <T : VerbHost> T.requireAll(
     }
 
     val message = "'${selector.description}' $expectation was false" + if (timeout > 0) " after ${timeout}ms" else ""
-    cmd.fail(message)
+    cmd.fail(
+        message,
+        facts =
+            facts(verb, selector, Failure.COLLECTION_UNSATISFIED, expectation, dumpRef(dumpOnFailure, verb, selector)),
+    )
     if (dumpOnFailure) dumpFailure("$verb failed: ${selector.description}")
     throw AssertionError(message)
 }
@@ -217,7 +248,7 @@ fun <T : VerbHost> T.driveUntil(
 
     for (attempt in 0..attempts) {
         if (matches(attempt + 1)) {
-            cmd.ok("'${selector.description}' $goal after $attempt $verb(s)")
+            cmd.ok("'${selector.description}' $goal after $attempt $verb(s)", facts(verb, selector))
             return this
         }
         if (attempt == attempts) break
@@ -226,7 +257,18 @@ fun <T : VerbHost> T.driveUntil(
     }
 
     val message = "'${selector.description}' still not $goal after $attempts $verb(s)"
-    cmd.fail(message)
+    cmd.fail(
+        message,
+        facts =
+            facts(
+                verb,
+                selector,
+                // "it never went away" and "it never showed up" are the same loop but not the same bug.
+                if (want) Failure.NEVER_SETTLED else Failure.STILL_PRESENT,
+                expectation = goal,
+                extra = mapOf("attempts" to attempts) + dumpRef(dumpOnFailure, verb, selector),
+            ),
+    )
     if (dumpOnFailure) dumpFailure("$verb failed: ${selector.description}")
     throw AssertionError(message)
 }
@@ -249,7 +291,7 @@ fun <T : VerbHost> T.requireState(
     var wait = policy.firstGap()
     while (true) {
         if (runCatching { condition() }.getOrDefault(false)) {
-            cmd.ok("$description: yes")
+            cmd.ok("$description: yes", facts(verb))
             return this
         }
         if (SystemClock.uptimeMillis() >= deadline) break
@@ -258,7 +300,7 @@ fun <T : VerbHost> T.requireState(
     }
 
     val message = if (timeout > 0) "$description: no, after ${timeout}ms" else "$description: no"
-    cmd.fail(message)
+    cmd.fail(message, facts = facts(verb, failure = Failure.CONDITION_TIMEOUT, expectation = description))
     if (dumpOnFailure) dumpFailure(verb)
     throw AssertionError(message)
 }
@@ -279,10 +321,14 @@ fun <T : VerbHost> T.reportAround(
     val cmd = cmd(verb, description, "$description...")
     try {
         block()
-        cmd.ok("$description: done")
+        cmd.ok("$description: done", facts(verb))
         return this
     } catch (e: Throwable) {
-        cmd.fail("$description failed: ${e.message ?: "exception"}")
+        cmd.fail(
+            "$description failed: ${e.message ?: "exception"}",
+            cause = e,
+            facts = facts(verb, failure = Failure.ACTION_FAILED, expectation = description),
+        )
         if (dumpOnFailure) dumpFailure("$verb failed: $description")
         throw e
     }
@@ -300,6 +346,7 @@ fun VerbHost.groupPresent(
     selectors: List<Selector>,
     policy: WaitPolicy = WaitPolicy.Immediate,
     applyPreconditions: Boolean = false,
+    whenPresent: String = "'$label' present",
 ): Boolean {
     val cmd = cmd(verb, label, "Checking '$label'...")
 
@@ -309,7 +356,7 @@ fun VerbHost.groupPresent(
             runCatching { locate(sel, applyPreconditions) }
                 .getOrNull()
                 ?.let { ElementState.probe(it, ElementState.Trait.DISPLAYED) } == true
-        loc.found(sel.description, present)
+        loc.found(sel.description, present, facts(verb, sel, if (present) null else Failure.NOT_FOUND))
         present
     }
 
@@ -323,9 +370,20 @@ fun VerbHost.groupPresent(
         here = allPresent()
     }
 
-    cmd.done(here, if (here) "'$label' present" else "'$label' not present")
+    cmd.done(
+        here,
+        if (here) whenPresent else "'$label' not present",
+        facts(verb, failure = if (here) null else Failure.NOT_ARRIVED, extra = mapOf("page" to label)),
+    )
     return here
 }
+
+/**
+ * Which screen dump belongs to this failure. [dumpFailure] labels its output; recording the same label here is what
+ * lets a consumer pair the two up, since the dump goes to logcat under its own tag and carries no step id of its own.
+ */
+private fun dumpRef(dumping: Boolean, verb: String, selector: Selector): Map<String, Any?> =
+    if (dumping) mapOf("dump" to "$verb failed: ${selector.description}") else emptyMap()
 
 /**
  * What a lookup saw: [located] is the element if it resolved at all, [matched] only if it also satisfied the predicate.
@@ -354,7 +412,7 @@ private fun VerbHost.seek(
             .getOrNull()
         if (found != null) seen = found
         val ok = found != null && runCatching { predicate(found) }.getOrDefault(false)
-        loc.found(selector.description, ok)
+        loc.found(selector.description, ok, facts("locate", selector, if (ok) null else Failure.NOT_FOUND))
         return if (ok) found else null
     }
 

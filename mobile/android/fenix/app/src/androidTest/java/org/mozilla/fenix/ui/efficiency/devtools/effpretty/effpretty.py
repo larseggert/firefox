@@ -99,6 +99,7 @@ LEVEL_STYLE = {
 # Structured stream is on "Eff"; "System.out" kept for logs from before the consolidation.
 LOGCAT_TAGS = [
     "Eff:I",
+    "EffJson:I",
     "TestRunner:I",
     "System.out:I",
     "EffScreenDump:I",
@@ -170,7 +171,7 @@ def strip_ansi(s: str) -> str:
 
 
 def parse(line: str):
-    """Return (kind, tag, payload). kind in {structured, testrunner, androidruntime, other}."""
+    """Return (kind, tag, payload). kind in {structured, events, testrunner, androidruntime, other}."""
     line = strip_ansi(line.rstrip("\n"))
     m = LOGCAT_RE.match(line)
     if m:
@@ -186,6 +187,8 @@ def parse(line: str):
     # older logs captured before the logging-consolidation change.
     if tag in ("Eff", "System.out", None) and STRUCT_RE.match(payload):
         return "structured", tag, payload
+    if tag == "EffJson":
+        return "events", tag, payload
     if tag == "TestRunner":
         return "testrunner", tag, payload
     if tag == "AndroidRuntime":
@@ -267,8 +270,17 @@ def plain(line: str) -> str | None:
     return payload
 
 
-def process(lines, painter: Painter, color_scope: str, out_f) -> None:
+def process(lines, painter: Painter, color_scope: str, out_f, events_f=None) -> None:
     for raw in lines:
+        kind, _tag, payload = parse(raw)
+        if kind == "events":
+            # Structured records go to the sidecar only. They describe the same events as the
+            # [CMD]/[LOC] lines beside them, so rendering them would bury the narrative.
+            if events_f is not None:
+                events_f.write(payload.strip() + "\n")
+                events_f.flush()
+            continue
+
         colored = render(raw, painter, color_scope)
         if colored is not None:
             print(colored, flush=True)
@@ -340,6 +352,12 @@ def add_common(sp):
         help="'tag' (default) colors the level tag, keeps message high-contrast; "
         "'line' colors the whole line.",
     )
+    sp.add_argument(
+        "--events",
+        metavar="PATH",
+        help="write the structured EffJson records to PATH, one JSON object per line. This is what "
+        "efftriage reads: matching fields cannot break the way matching rendered prose does.",
+    )
     sp.add_argument("--no-color", action="store_true", help="disable terminal color.")
     sp.add_argument(
         "--color-mode",
@@ -393,6 +411,11 @@ def main() -> int:
     painter = Painter(color_mode(sys.stdout, forced))
 
     out_f = open(args.out, "w", encoding="utf-8") if args.out else None
+    events_f = (
+        open(args.events, "w", encoding="utf-8")
+        if getattr(args, "events", None)
+        else None
+    )
     close_src = None
     try:
         if args.cmd == "capture":
@@ -402,12 +425,13 @@ def main() -> int:
             lines = close_src
         else:
             lines = sys.stdin
-        process(lines, painter, args.color_scope, out_f)
+        process(lines, painter, args.color_scope, out_f, events_f)
     except (BrokenPipeError, KeyboardInterrupt):
         pass
     finally:
-        if out_f is not None:
-            out_f.close()
+        for f in (out_f, events_f):
+            if f is not None:
+                f.close()
         if close_src is not None:
             close_src.close()
     return 0

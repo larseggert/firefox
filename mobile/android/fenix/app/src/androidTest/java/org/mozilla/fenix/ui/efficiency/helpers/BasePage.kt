@@ -35,6 +35,7 @@ import org.mozilla.fenix.helpers.TestAssetHelper
 import org.mozilla.fenix.helpers.TestHelper.mDevice
 import org.mozilla.fenix.helpers.TestHelper.packageName
 import org.mozilla.fenix.ui.efficiency.core.ElementState
+import org.mozilla.fenix.ui.efficiency.core.Failure
 import org.mozilla.fenix.ui.efficiency.core.Gestures
 import org.mozilla.fenix.ui.efficiency.core.Layer
 import org.mozilla.fenix.ui.efficiency.core.Relations
@@ -45,6 +46,7 @@ import org.mozilla.fenix.ui.efficiency.core.UiElement
 import org.mozilla.fenix.ui.efficiency.core.VerbHost
 import org.mozilla.fenix.ui.efficiency.core.WaitPolicy
 import org.mozilla.fenix.ui.efficiency.core.driveUntil
+import org.mozilla.fenix.ui.efficiency.core.facts
 import org.mozilla.fenix.ui.efficiency.core.groupPresent
 import org.mozilla.fenix.ui.efficiency.core.reportAround
 import org.mozilla.fenix.ui.efficiency.core.require
@@ -122,7 +124,7 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         try {
             if (!forceNavigation && mozIsOnPageNow()) {
                 PageStateTracker.currentPageName = pageName
-                step.ok("'$pageName' already loaded")
+                step.ok("'$pageName' already loaded", facts("navigate", extra = mapOf("page" to pageName)))
                 return this
             }
 
@@ -133,7 +135,15 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
 
             if (path == null) {
                 NavigationRegistry.logGraph()
-                step.fail("No navigation path found to '$pageName'")
+                step.fail(
+                    "No navigation path found to '$pageName'",
+                    facts =
+                        facts(
+                            "navigate",
+                            failure = Failure.NO_PATH,
+                            extra = mapOf("page" to pageName, "from" to fromPage),
+                        ),
+                )
                 assertionFailure("No navigation path found from '$fromPage' to '$pageName'")
             } else {
                 Log.i("PageNavigation", "Navigation path found from '$fromPage' to '$pageName':")
@@ -161,15 +171,22 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             }
 
             if (!mozWaitForPageToLoad()) {
-                step.fail("'$pageName' did not load")
+                step.fail(
+                    "'$pageName' did not load",
+                    facts = facts("navigate", failure = Failure.NOT_ARRIVED, extra = mapOf("page" to pageName)),
+                )
                 assertionFailure("Failed to navigate to $pageName")
             }
 
             PageStateTracker.currentPageName = pageName
-            step.ok("Navigation to '$pageName' completed")
+            step.ok("Navigation to '$pageName' completed", facts("navigate", extra = mapOf("page" to pageName)))
             return this
         } catch (t: Throwable) {
-            step.fail("Navigation to '$pageName' failed: ${t.message ?: "exception"}")
+            step.fail(
+                "Navigation to '$pageName' failed: ${t.message ?: "exception"}",
+                cause = t,
+                facts = facts("navigate", failure = Failure.ACTION_FAILED, extra = mapOf("page" to pageName)),
+            )
             // Without this a nav failure says only "did not arrive" - not which page we landed on.
             ScreenDump.dump(composeRule, "navigateToPage failed: $pageName")
             throw t
@@ -180,7 +197,13 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
      * One pass, no polling: navigateToPage() asks before it has navigated anywhere, so waiting here would spend seconds
      * confirming a page it has not tried to reach. Readiness is [mozWaitForPageToLoad]'s job, afterwards.
      */
-    private fun mozIsOnPageNow(): Boolean = groupPresent("is_on", pageName, mozGetSelectorsByGroup("requiredForPage"))
+    private fun mozIsOnPageNow(): Boolean =
+        groupPresent(
+            verb = "is_on",
+            label = pageName,
+            selectors = mozGetSelectorsByGroup("requiredForPage"),
+            whenPresent = "'$pageName' already visible",
+        )
 
     private fun mozWaitForPageToLoad(timeout: Long = 10_000, interval: Long = 100): Boolean {
         val selectors = mozGetSelectorsByGroup("requiredForPage")
