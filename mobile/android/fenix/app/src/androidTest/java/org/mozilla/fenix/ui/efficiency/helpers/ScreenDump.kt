@@ -446,6 +446,12 @@ object ScreenDump {
                 JSONObject()
                     .put("screen", JSONObject().put("width", w).put("height", h))
                     .put("screenshot", "eff-screendump.png")
+                    // Which page the HARNESS believed it was on. Distinct from the page a consumer
+                    // infers from the elements: that inference is a guess from selectors, and when
+                    // the two disagree the disagreement is the finding. A dump taken on a failure
+                    // where the harness thought it was on HomePage and the elements say otherwise
+                    // is a navigation bug; one where they agree is not.
+                    .put("harnessPage", PageStateTracker.currentPageName)
                     .put("elements", elements)
             File(filesDir, "eff-screendump.json").writeText(root.toString())
             Log.i(TAG, "DONE: wrote ${elements.length()} elements to $filesDir")
