@@ -1,10 +1,17 @@
-use ffi;
+use crate::{channel::WatchFd, ffi};
 use libc;
-use super::Connection;
+use crate::ffidisp::Connection;
 
 use std::mem;
 use std::sync::{Mutex, RwLock};
+#[cfg(unix)]
 use std::os::unix::io::{RawFd, AsRawFd};
+#[cfg(windows)]
+use std::os::windows::io::{RawSocket, AsRawSocket};
+#[cfg(unix)]
+use libc::{POLLIN, POLLOUT, POLLERR, POLLHUP};
+#[cfg(windows)]
+use windows_sys::Win32::Networking::WinSock::{WSAPOLLFD, POLLIN, POLLOUT, POLLERR, POLLHUP, SOCKET};
 use std::os::raw::{c_void, c_uint};
 
 /// A file descriptor to watch for incoming events (for async I/O).
@@ -14,7 +21,7 @@ use std::os::raw::{c_void, c_uint};
 /// extern crate libc;
 /// extern crate dbus;
 /// fn main() {
-///     use dbus::{Connection, BusType, WatchEvent};
+///     use dbus::ffidisp::{Connection, BusType, WatchEvent};
 ///     let c = Connection::get_private(BusType::Session).unwrap();
 ///
 ///     // Get a list of fds to poll for
@@ -44,7 +51,7 @@ pub enum WatchEvent {
     Readable = ffi::DBUS_WATCH_READABLE as isize,
     /// The fd is writable
     Writable = ffi::DBUS_WATCH_WRITABLE as isize,
-    /// An error occured on the fd
+    /// An error occurred on the fd
     Error = ffi::DBUS_WATCH_ERROR as isize,
     /// The fd received a hangup.
     Hangup = ffi::DBUS_WATCH_HANGUP as isize,
@@ -54,73 +61,78 @@ impl WatchEvent {
     /// After running poll, this transforms the revents into a parameter you can send into `Connection::watch_handle`
     pub fn from_revents(revents: libc::c_short) -> c_uint {
         0 +
-        if (revents & libc::POLLIN) != 0 { WatchEvent::Readable as c_uint } else { 0 } +
-        if (revents & libc::POLLOUT) != 0 { WatchEvent::Writable as c_uint } else { 0 } +
-        if (revents & libc::POLLERR) != 0 { WatchEvent::Error as c_uint } else { 0 } +
-        if (revents & libc::POLLHUP) != 0 { WatchEvent::Hangup as c_uint } else { 0 }
+        if (revents & POLLIN) != 0 { WatchEvent::Readable as c_uint } else { 0 } +
+        if (revents & POLLOUT) != 0 { WatchEvent::Writable as c_uint } else { 0 } +
+        if (revents & POLLERR) != 0 { WatchEvent::Error as c_uint } else { 0 } +
+        if (revents & POLLHUP) != 0 { WatchEvent::Hangup as c_uint } else { 0 }
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 /// A file descriptor, and an indication whether it should be read from, written to, or both.
 pub struct Watch {
-    fd: RawFd,
+    fd: WatchFd,
     read: bool,
     write: bool,
 }
 
 impl Watch {
     /// Get the RawFd this Watch is for
-    pub fn fd(&self) -> RawFd { self.fd }
+    pub fn fd(&self) -> WatchFd { self.fd }
     /// Add POLLIN to events to listen for
     pub fn readable(&self) -> bool { self.read }
     /// Add POLLOUT to events to listen for
     pub fn writable(&self) -> bool { self.write }
     /// Returns the current watch as a libc::pollfd, to use with libc::poll
+    #[cfg(unix)]
     pub fn to_pollfd(&self) -> libc::pollfd {
-        libc::pollfd { fd: self.fd, revents: 0, events: libc::POLLERR + libc::POLLHUP + 
-            if self.readable() { libc::POLLIN } else { 0 } +
-            if self.writable() { libc::POLLOUT } else { 0 },
+        libc::pollfd { fd: self.fd, revents: 0, events: POLLERR + POLLHUP +
+            if self.readable() { POLLIN } else { 0 } +
+            if self.writable() { POLLOUT } else { 0 },
         }
     }
-/*
-    pub (crate) unsafe fn from_raw(watch: *mut ffi::DBusWatch) -> Self {
-        let mut w = Watch { fd: ffi::dbus_watch_get_unix_fd(watch), read: false, write: false};
-        let enabled = ffi::dbus_watch_get_enabled(watch) != 0;
-        if enabled {
-            let flags = ffi::dbus_watch_get_flags(watch);
-            w.read = (flags & WatchEvent::Readable as c_uint) != 0;
-            w.write = (flags & WatchEvent::Writable as c_uint) != 0;
+    /// Returns the current watch as a WSAPOLLFD, to use with WSAPoll
+    #[cfg(windows)]
+    pub fn to_pollfd(&self) -> WSAPOLLFD {
+        WSAPOLLFD {
+            fd: self.fd as SOCKET,
+            revents: 0, events: 0 +
+            if self.readable() { POLLIN } else { 0 } +
+            if self.writable() { POLLOUT } else { 0 },
         }
-        w
     }
-*/
 }
 
+#[cfg(unix)]
 impl AsRawFd for Watch {
     fn as_raw_fd(&self) -> RawFd { self.fd }
+}
+
+#[cfg(windows)]
+impl AsRawSocket for Watch {
+    fn as_raw_socket(&self) -> RawSocket { self.fd }
 }
 
 /// Note - internal struct, not to be used outside API. Moving it outside its box will break things.
 pub struct WatchList {
     watches: RwLock<Vec<*mut ffi::DBusWatch>>,
     enabled_fds: Mutex<Vec<Watch>>,
-    on_update: Mutex<Box<Fn(Watch) + Send>>,
+    on_update: Mutex<Box<dyn Fn(Watch) + Send>>,
 }
 
 impl WatchList {
-    pub fn new(c: &Connection, on_update: Box<Fn(Watch) + Send>) -> Box<WatchList> {
+    pub fn new(c: &Connection, on_update: Box<dyn Fn(Watch) + Send>) -> Box<WatchList> {
         let w = Box::new(WatchList { on_update: Mutex::new(on_update), watches: RwLock::new(vec!()), enabled_fds: Mutex::new(vec!()) });
-        if unsafe { ffi::dbus_connection_set_watch_functions(super::connection::conn_handle(c),
+        if unsafe { ffi::dbus_connection_set_watch_functions(crate::ffidisp::connection::conn_handle(c),
             Some(add_watch_cb), Some(remove_watch_cb), Some(toggled_watch_cb), &*w as *const _ as *mut _, None) } == 0 {
             panic!("dbus_connection_set_watch_functions failed");
         }
         w
     }
 
-    pub fn set_on_update(&self, on_update: Box<Fn(Watch) + Send>) { *self.on_update.lock().unwrap() = on_update; }
+    pub fn set_on_update(&self, on_update: Box<dyn Fn(Watch) + Send>) { *self.on_update.lock().unwrap() = on_update; }
 
-    pub fn watch_handle(&self, fd: RawFd, flags: c_uint) {
+    pub fn watch_handle(&self, fd: WatchFd, flags: c_uint) {
         // println!("watch_handle {} flags {}", fd, flags);
         for &q in self.watches.read().unwrap().iter() {
             let w = self.get_watch(q);
@@ -137,7 +149,10 @@ impl WatchList {
     }
 
     fn get_watch(&self, watch: *mut ffi::DBusWatch) -> Watch {
+        #[cfg(unix)]
         let mut w = Watch { fd: unsafe { ffi::dbus_watch_get_unix_fd(watch) }, read: false, write: false};
+        #[cfg(windows)]
+        let mut w = Watch { fd: unsafe { ffi::dbus_watch_get_socket(watch) as RawSocket }, read: false, write: false};
         let enabled = self.watches.read().unwrap().contains(&watch) && unsafe { ffi::dbus_watch_get_enabled(watch) != 0 };
         let flags = unsafe { ffi::dbus_watch_get_flags(watch) };
         if enabled {
@@ -199,11 +214,15 @@ extern "C" fn toggled_watch_cb(watch: *mut ffi::DBusWatch, data: *mut c_void) {
 
 #[cfg(test)]
 mod test {
+    #[cfg(unix)]
     use libc;
+    #[cfg(windows)]
+    use windows_sys::Win32::Networking::WinSock::WSAPoll;
     use super::super::{Connection, Message, BusType, WatchEvent, ConnectionItem, MessageType};
+    use super::{POLLIN, POLLOUT};
 
     #[test]
-    fn async() {
+    fn test_async() {
         let c = Connection::get_private(BusType::Session).unwrap();
         c.register_object_path("/test").unwrap();
         let m = Message::new_method_call(&c.unique_name(), "/test", "com.example.asynctest", "AsyncTest").unwrap();
@@ -220,25 +239,36 @@ mod test {
 
             for f in fds.iter_mut() { f.revents = 0 };
 
+            #[cfg(unix)]
             assert!(unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, 1000) } > 0);
+
+            #[cfg(windows)]
+            assert!(unsafe { WSAPoll(fds.as_mut_ptr(), fds.len() as u32, 1000) } > 0);
 
             for f in fds.iter().filter(|pfd| pfd.revents != 0) {
                 let m = WatchEvent::from_revents(f.revents);
                 println!("Async: fd {}, revents {} -> {}", f.fd, f.revents, m);
-                assert!(f.revents & libc::POLLIN != 0 || f.revents & libc::POLLOUT != 0);
+                assert!(f.revents & POLLIN != 0 || f.revents & POLLOUT != 0);
 
-                for e in c.watch_handle(f.fd, m) {
+                #[cfg(unix)]
+                let fd = f.fd;
+                #[cfg(windows)]
+                let fd = f.fd as std::os::windows::io::RawSocket;
+
+                for e in c.watch_handle(fd, m) {
                     println!("Async: got {:?}", e);
                     match e {
                         ConnectionItem::MethodCall(m) => {
-                            assert_eq!(m.headers(), (MessageType::MethodCall, Some("/test".to_string()),
-                                Some("com.example.asynctest".into()), Some("AsyncTest".to_string())));
+                            assert_eq!(m.msg_type(), MessageType::MethodCall);
+                            assert_eq!(&*m.path().unwrap(), "/test");
+                            assert_eq!(&*m.interface().unwrap(), "com.example.asynctest");
+                            assert_eq!(&*m.member().unwrap(), "AsyncTest");
                             let mut mr = Message::new_method_return(&m).unwrap();
                             mr.append_items(&["Goodies".into()]);
                             c.send(mr).unwrap();
                         }
                         ConnectionItem::MethodReturn(m) => {
-                            assert_eq!(m.headers().0, MessageType::MethodReturn);
+                            assert_eq!(m.msg_type(), MessageType::MethodReturn);
                             assert_eq!(m.get_reply_serial().unwrap(), serial);
                             let i = m.get_items();
                             let s: &str = i[0].inner().unwrap();

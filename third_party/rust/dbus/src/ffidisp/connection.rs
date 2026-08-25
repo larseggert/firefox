@@ -1,182 +1,14 @@
-use super::{Error, ffi, to_c_str, c_str_to_slice, Watch, Message, MessageType, BusName, Path, ConnPath};
-use super::{RequestNameReply, ReleaseNameReply, BusType};
-use super::watch::WatchList;
+//! Contains structs and traits relevant to the connection itself, and dispatching incoming messages.
+
+use crate::{Error, Message, MessageType, c_str_to_slice, channel::WatchFd, ffi, to_c_str};
+use crate::ffidisp::ConnPath;
 use std::{fmt, mem, ptr, thread, panic, ops};
-use std::collections::VecDeque;
+use std::{collections::VecDeque, time::Duration};
 use std::cell::{Cell, RefCell};
-use std::os::unix::io::RawFd;
 use std::os::raw::{c_void, c_char, c_int, c_uint};
+use crate::strings::{BusName, Path};
+use super::{Watch, WatchList, MessageCallback, ConnectionItem, MsgHandler, MsgHandlerList, MessageReply, BusType};
 
-/// The type of function to use for replacing the message callback.
-///
-/// See the documentation for Connection::replace_message_callback for more information.
-pub type MessageCallback = Box<FnMut(&Connection, Message) -> bool + 'static>;
-
-#[repr(C)]
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
-/// Flags to use for Connection::register_name.
-///
-/// More than one flag can be specified, if so just add their values.
-pub enum DBusNameFlag {
-    /// Allow another service to become the primary owner if requested
-    AllowReplacement = ffi::DBUS_NAME_FLAG_ALLOW_REPLACEMENT as isize,
-    /// Request to replace the current primary owner
-    ReplaceExisting = ffi::DBUS_NAME_FLAG_REPLACE_EXISTING as isize,
-    /// If we can not become the primary owner do not place us in the queue
-    DoNotQueue = ffi::DBUS_NAME_FLAG_DO_NOT_QUEUE as isize,
-}
-
-impl DBusNameFlag {
-    /// u32 value of flag.
-    pub fn value(self) -> u32 { self as u32 }
-}
-
-/// When listening for incoming events on the D-Bus, this enum will tell you what type
-/// of incoming event has happened.
-#[derive(Debug)]
-pub enum ConnectionItem {
-    /// No event between now and timeout
-    Nothing,
-    /// Incoming method call
-    MethodCall(Message),
-    /// Incoming signal
-    Signal(Message),
-    /// Incoming method return, including method return errors (mostly used for Async I/O)
-    MethodReturn(Message),
-}
-
-impl From<Message> for ConnectionItem {
-    fn from(m: Message) -> Self {
-        let mtype = m.msg_type();
-        match mtype {
-            MessageType::Signal => ConnectionItem::Signal(m),
-            MessageType::MethodReturn => ConnectionItem::MethodReturn(m),
-            MessageType::Error => ConnectionItem::MethodReturn(m),
-            MessageType::MethodCall => ConnectionItem::MethodCall(m),
-            _ => panic!("unknown message type {:?} received from D-Bus", mtype),
-        }
-    }
-}
-
-
-/// ConnectionItem iterator
-pub struct ConnectionItems<'a> {
-    c: &'a Connection,
-    timeout_ms: Option<i32>,
-    end_on_timeout: bool,
-    handlers: MsgHandlerList,
-}
-
-impl<'a> ConnectionItems<'a> {
-    /// Builder method that adds a new msg handler.
-    ///
-    /// Note: Likely to changed/refactored/removed in next release
-    pub fn with<H: 'static + MsgHandler>(mut self, h: H) -> Self {
-        self.handlers.push(Box::new(h)); self
-    }
-
-    // Returns true if processed, false if not
-    fn process_handlers(&mut self, ci: &ConnectionItem) -> bool {
-        let m = match *ci {
-            ConnectionItem::MethodReturn(ref msg) => msg,
-            ConnectionItem::Signal(ref msg) => msg,
-            ConnectionItem::MethodCall(ref msg) => msg,
-            ConnectionItem::Nothing => return false,
-        };
-
-        msghandler_process(&mut self.handlers, m, &self.c)
-    }
-
-    /// Access and modify message handlers 
-    ///
-    /// Note: Likely to changed/refactored/removed in next release
-    pub fn msg_handlers(&mut self) -> &mut Vec<Box<MsgHandler>> { &mut self.handlers }
-
-    /// Creates a new ConnectionItems iterator
-    ///
-    /// For io_timeout, setting None means the fds will not be read/written. I e, only pending 
-    /// items in libdbus's internal queue will be processed.
-    ///
-    /// For end_on_timeout, setting false will means that the iterator will never finish (unless
-    /// the D-Bus server goes down). Instead, ConnectionItem::Nothing will be returned in case no
-    /// items are in queue.
-    pub fn new(conn: &'a Connection, io_timeout: Option<i32>, end_on_timeout: bool) -> Self {
-        ConnectionItems {
-            c: conn,
-            timeout_ms: io_timeout,
-            end_on_timeout: end_on_timeout,
-            handlers: Vec::new(),
-        }
-    }
-}
-
-impl<'a> Iterator for ConnectionItems<'a> {
-    type Item = ConnectionItem;
-    fn next(&mut self) -> Option<ConnectionItem> {
-        loop {
-            if self.c.i.filter_cb.borrow().is_none() { panic!("ConnectionItems::next called recursively or with a MessageCallback set to None"); }
-            let i: Option<ConnectionItem> = self.c.next_msg().map(|x| x.into());
-            if let Some(ci) = i {
-                if !self.process_handlers(&ci) { return Some(ci); }
-            }
-
-            if let Some(t) = self.timeout_ms {
-		let r = unsafe { ffi::dbus_connection_read_write_dispatch(self.c.conn(), t as c_int) };
-		self.c.check_panic();
-		if !self.c.i.pending_items.borrow().is_empty() { continue };
-		if r == 0 { return None; }
-            }
-
-            let r = unsafe { ffi::dbus_connection_dispatch(self.c.conn()) };
-            self.c.check_panic();
-
-            if !self.c.i.pending_items.borrow().is_empty() { continue };
-            if r == ffi::DBusDispatchStatus::DataRemains { continue };
-            if r == ffi::DBusDispatchStatus::Complete { return if self.end_on_timeout { None } else { Some(ConnectionItem::Nothing) } };
-            panic!("dbus_connection_dispatch failed");
-        }
-    }
-}
-
-/// Iterator over incoming messages on a connection.
-#[derive(Debug, Clone)]
-pub struct ConnMsgs<C> {
-    /// The connection or some reference to it.
-    pub conn: C,
-    /// How many ms dbus should block, waiting for incoming messages until timing out.
-    ///
-    /// If set to None, the dbus library will not read/write from file descriptors at all.
-    /// Instead the iterator will end when there's nothing currently in the queue.
-    pub timeout_ms: Option<u32>,
-}
-
-impl<C: ops::Deref<Target = Connection>> Iterator for ConnMsgs<C> {
-    type Item = Message;
-    fn next(&mut self) -> Option<Self::Item> {
-        
-        loop {
-            let iconn = &self.conn.i;
-            if iconn.filter_cb.borrow().is_none() { panic!("ConnMsgs::next called recursively or with a MessageCallback set to None"); }
-            let i = self.conn.next_msg();
-            if let Some(ci) = i { return Some(ci); }
-
-            if let Some(t) = self.timeout_ms {
-		let r = unsafe { ffi::dbus_connection_read_write_dispatch(self.conn.conn(), t as c_int) };
-		self.conn.check_panic();
-		if !iconn.pending_items.borrow().is_empty() { continue };
-		if r == 0 { return None; }
-            }
-
-            let r = unsafe { ffi::dbus_connection_dispatch(self.conn.conn()) };
-            self.conn.check_panic();
-
-            if !iconn.pending_items.borrow().is_empty() { continue };
-            if r == ffi::DBusDispatchStatus::DataRemains { continue };
-            if r == ffi::DBusDispatchStatus::Complete { return None }
-            panic!("dbus_connection_dispatch failed");
-        }
-    }
-}
 
 /* Since we register callbacks with userdata pointers,
    we need to make sure the connection pointer does not move around.
@@ -185,7 +17,7 @@ struct IConnection {
     conn: Cell<*mut ffi::DBusConnection>,
     pending_items: RefCell<VecDeque<Message>>,
     watches: Option<Box<WatchList>>,
-    handlers: RefCell<MsgHandlerList>,
+    handlers: RefCell<super::MsgHandlerList>,
 
     filter_cb: RefCell<Option<MessageCallback>>,
     filter_cb_panic: RefCell<thread::Result<()>>,
@@ -196,7 +28,7 @@ pub struct Connection {
     i: Box<IConnection>,
 }
 
-pub fn conn_handle(c: &Connection) -> *mut ffi::DBusConnection {
+pub (crate) fn conn_handle(c: &Connection) -> *mut ffi::DBusConnection {
     c.i.conn.get()
 }
 
@@ -226,8 +58,8 @@ extern "C" fn filter_message_cb(conn: *mut ffi::DBusConnection, msg: *mut ffi::D
     });
 
     match r {
-        Ok(false) => ffi::DBusHandlerResult::NotYetHandled, 
-        Ok(true) => ffi::DBusHandlerResult::Handled, 
+        Ok(false) => ffi::DBusHandlerResult::NotYetHandled,
+        Ok(true) => ffi::DBusHandlerResult::Handled,
         Err(e) => {
             *i.filter_cb_panic.borrow_mut() = Err(e);
             ffi::DBusHandlerResult::Handled
@@ -243,7 +75,7 @@ fn default_filter_callback(c: &Connection, m: Message) -> bool {
 
 extern "C" fn object_path_message_cb(_conn: *mut ffi::DBusConnection, _msg: *mut ffi::DBusMessage,
     _user_data: *mut c_void) -> ffi::DBusHandlerResult {
-    /* Already pushed in filter_message_cb, so we just set the handled flag here to disable the 
+    /* Already pushed in filter_message_cb, so we just set the handled flag here to disable the
        "default" handler. */
     ffi::DBusHandlerResult::Handled
 }
@@ -274,11 +106,21 @@ impl Connection {
         Ok(c)
     }
 
+    /// Creates a new connection to the session bus.
+    ///
+    /// Just a shortcut for `get_private(BusType::Session)`.
+    pub fn new_session() -> Result<Connection, Error> { Self::get_private(BusType::Session) }
+
+    /// Creates a new connection to the system bus.
+    ///
+    /// Just a shortcut for `get_private(BusType::System)`.
+    pub fn new_system() -> Result<Connection, Error> { Self::get_private(BusType::System) }
+
     /// Creates a new D-Bus connection.
     pub fn get_private(bus: BusType) -> Result<Connection, Error> {
         let mut e = Error::empty();
         let conn = unsafe { ffi::dbus_bus_get_private(bus, e.get_mut()) };
-        if conn == ptr::null_mut() {
+        if conn.is_null() {
             return Err(e)
         }
         Self::conn_from_ptr(conn)
@@ -290,7 +132,7 @@ impl Connection {
     pub fn open_private(address: &str) -> Result<Connection, Error> {
         let mut e = Error::empty();
         let conn = unsafe { ffi::dbus_connection_open_private(to_c_str(address).as_ptr(), e.get_mut()) };
-        if conn == ptr::null_mut() {
+        if conn.is_null() {
             return Err(e)
         }
         Self::conn_from_ptr(conn)
@@ -321,7 +163,7 @@ impl Connection {
             ffi::dbus_connection_send_with_reply_and_block(self.conn(), msg.ptr(),
                 timeout_ms as c_int, e.get_mut())
         };
-        if response == ptr::null_mut() {
+        if response.is_null() {
             return Err(e);
         }
         Ok(Message::from_ptr(response, false))
@@ -350,15 +192,15 @@ impl Connection {
     ///
     /// ```
     /// use std::{cell, rc};
-    /// use dbus::{Connection, Message, BusType};
+    /// use dbus::{ffidisp::Connection, Message};
     ///
-    /// let c = Connection::get_private(BusType::Session).unwrap();
+    /// let c = Connection::new_session().unwrap();
     /// let m = Message::new_method_call("org.freedesktop.DBus", "/", "org.freedesktop.DBus", "ListNames").unwrap();
     ///
     /// let done: rc::Rc<cell::Cell<bool>> = Default::default();
     /// let done2 = done.clone();
     /// c.add_handler(c.send_with_reply(m, move |reply| {
-    ///     let v: Vec<&str> = reply.unwrap().read1().unwrap(); 
+    ///     let v: Vec<&str> = reply.unwrap().read1().unwrap();
     ///     println!("The names on the D-Bus are: {:?}", v);
     ///     done2.set(true);
     /// }).unwrap());
@@ -375,8 +217,8 @@ impl Connection {
     ///
     /// There might be more methods added later on, which give better ways to deal
     /// with the list of MsgHandler currently on the connection. If this would help you,
-    /// please [file an issue](https://github.com/diwic/dbus-rs/issues). 
-    pub fn extract_handler(&self) -> Option<Box<MsgHandler>> {
+    /// please [file an issue](https://github.com/diwic/dbus-rs/issues).
+    pub fn extract_handler(&self) -> Option<Box<dyn MsgHandler>> {
         self.i.handlers.borrow_mut().pop()
     }
 
@@ -390,7 +232,7 @@ impl Connection {
     ///
     /// If there are no incoming events, ConnectionItems::Nothing will be returned.
     /// See ConnectionItems::new if you want to customize this behaviour.
-    pub fn iter(&self, timeout_ms: i32) -> ConnectionItems {
+    pub fn iter(&self, timeout_ms: i32) -> ConnectionItems<'_> {
         ConnectionItems::new(self, Some(timeout_ms), false)
     }
 
@@ -449,7 +291,7 @@ impl Connection {
     }
 
     /// Register a name.
-    pub fn register_name(&self, name: &str, flags: u32) -> Result<RequestNameReply, Error> {
+    pub fn register_name(&self, name: &str, flags: u32) -> Result<super::RequestNameReply, Error> {
         let mut e = Error::empty();
         let n = to_c_str(name);
         let r = unsafe { ffi::dbus_bus_request_name(self.conn(), n.as_ptr(), flags, e.get_mut()) };
@@ -457,7 +299,7 @@ impl Connection {
     }
 
     /// Release a name.
-    pub fn release_name(&self, name: &str) -> Result<ReleaseNameReply, Error> {
+    pub fn release_name(&self, name: &str) -> Result<super::ReleaseNameReply, Error> {
         let mut e = Error::empty();
         let n = to_c_str(name);
         let r = unsafe { ffi::dbus_bus_release_name(self.conn(), n.as_ptr(), e.get_mut()) };
@@ -467,6 +309,7 @@ impl Connection {
     /// Add a match rule to match messages on the message bus.
     ///
     /// See the `unity_focused_window` example for how to use this to catch signals.
+    /// You can use MatchRule to construct the "rule" string.
     /// (The syntax of the "rule" string is specified in the [D-Bus specification](https://dbus.freedesktop.org/doc/dbus-specification.html#message-bus-routing-match-rules).)
     pub fn add_match(&self, rule: &str) -> Result<(), Error> {
         let mut e = Error::empty();
@@ -495,11 +338,10 @@ impl Connection {
     /// The returned iterator will return pending items only, never block for new events.
     ///
     /// See the `Watch` struct for an example.
-    pub fn watch_handle(&self, fd: RawFd, flags: c_uint) -> ConnectionItems {
+    pub fn watch_handle(&self, fd: WatchFd, flags: c_uint) -> ConnectionItems<'_> {
         self.i.watches.as_ref().unwrap().watch_handle(fd, flags);
         ConnectionItems::new(self, None, true)
     }
-
 
     /// Create a convenience struct for easier calling of many methods on the same destination and path.
     pub fn with_path<'a, D: Into<BusName<'a>>, P: Into<Path<'a>>>(&'a self, dest: D, path: P, timeout_ms: i32) ->
@@ -510,7 +352,7 @@ impl Connection {
     /// Replace the default message callback. Returns the previously set callback.
     ///
     /// By default, when you call ConnectionItems::next, all relevant incoming messages
-    /// are returned through the ConnectionItems iterator, and 
+    /// are returned through the ConnectionItems iterator, and
     /// irrelevant messages are passed on to libdbus's default handler.
     /// If you need to customize this behaviour (i e, to handle all incoming messages yourself),
     /// you can set this message callback yourself. A few caveats apply:
@@ -534,8 +376,8 @@ impl Connection {
     /// Replace the default callback with our own:
     ///
     /// ```ignore
-    /// use dbus::{Connection, BusType};
-    /// let c = Connection::get_private(BusType::Session).unwrap();
+    /// use dbus::ffidisp::Connection;
+    /// let c = Connection::new_session().unwrap();
     /// // Set our callback
     /// c.replace_message_callback(Some(Box::new(move |conn, msg| {
     ///     println!("Got message: {:?}", msg.get_items());
@@ -552,8 +394,8 @@ impl Connection {
     /// Chain our callback to filter out some messages before `iter().next()`:
     ///
     /// ```
-    /// use dbus::{Connection, BusType, MessageType};
-    /// let c = Connection::get_private(BusType::Session).unwrap();
+    /// use dbus::{ffidisp::Connection, MessageType};
+    /// let c = Connection::new_session().unwrap();
     /// // Take the previously set callback
     /// let mut old_cb = c.replace_message_callback(None).unwrap();
     /// // Set our callback
@@ -585,13 +427,13 @@ impl Connection {
     /// If this ever happens, you'll get a callback. The watch changed is provided as a parameter.
     ///
     /// In rare cases this might not even happen in the thread calling anything on the connection,
-    /// so the callback needs to be `Send`. 
+    /// so the callback needs to be `Send`.
     /// A mutex is held during the callback. If you try to call set_watch_callback from a callback,
     /// you will deadlock.
     ///
     /// (Previously, this was instead put in a ConnectionItem queue, but this was not working correctly.
     /// see https://github.com/diwic/dbus-rs/issues/99 for additional info.)
-    pub fn set_watch_callback(&self, f: Box<Fn(Watch) + Send>) { self.i.watches.as_ref().unwrap().set_on_update(f); }
+    pub fn set_watch_callback(&self, f: Box<dyn Fn(Watch) + Send>) { self.i.watches.as_ref().unwrap().set_on_update(f); }
 
     fn check_panic(&self) {
         let p = mem::replace(&mut *self.i.filter_cb_panic.borrow_mut(), Ok(()));
@@ -627,61 +469,21 @@ impl fmt::Debug for Connection {
     }
 }
 
-#[derive(Clone, Debug)]
-/// Type of messages to be handled by a MsgHandler.
-///
-/// Note: More variants can be added in the future; but unless you're writing your own D-Bus engine
-/// you should not have to match on these anyway.
-pub enum MsgHandlerType {
-    /// Handle all messages
-    All,
-    /// Handle only messages of a specific type
-    MsgType(MessageType),
-    /// Handle only method replies with this serial number
-    Reply(u32),
+impl crate::channel::Sender for Connection {
+    fn send(&self, msg: Message) -> Result<u32, ()> { Connection::send(self, msg) }
 }
 
-impl MsgHandlerType {
-    fn matches_msg(&self, m: &Message) -> bool {
-        match *self {
-            MsgHandlerType::All => true,
-            MsgHandlerType::MsgType(t) => m.msg_type() == t,
-            MsgHandlerType::Reply(serial) => {
-                let t = m.msg_type();
-                ((t == MessageType::MethodReturn) || (t == MessageType::Error)) && (m.get_reply_serial() == Some(serial))
-            }
-        }
+impl crate::blocking::BlockingSender for Connection {
+    fn send_with_reply_and_block(&self, msg: Message, timeout: Duration) -> Result<Message, Error> {
+        Connection::send_with_reply_and_block(self, msg, timeout.as_millis() as i32)
     }
 }
 
-/// A trait for handling incoming messages.
-pub trait MsgHandler {
-    /// Type of messages for which the handler will be called
-    ///
-    /// Note: The return value of this function might be cached, so it must return the same value all the time.
-    fn handler_type(&self) -> MsgHandlerType;
-
-    /// Function to be called if the message matches the MsgHandlerType
-    fn handle_msg(&mut self, _msg: &Message) -> Option<MsgHandlerResult> { None }
-}
-
-/// The result from MsgHandler::handle.
-#[derive(Debug, Default)]
-pub struct MsgHandlerResult {
-    /// Indicates that the message has been dealt with and should not be processed further.
-    pub handled: bool,
-    /// Indicates that this MsgHandler no longer wants to receive messages and should be removed.
-    pub done: bool,
-    /// Messages to send (e g, a reply to a method call)
-    pub reply: Vec<Message>,
-}
-
-type MsgHandlerList = Vec<Box<MsgHandler>>;
 
 fn msghandler_process(v: &mut MsgHandlerList, m: &Message, c: &Connection) -> bool {
     let mut ii: isize = -1;
     loop {
-        ii += 1; 
+        ii += 1;
         let i = ii as usize;
         if i >= v.len() { return false };
 
@@ -694,25 +496,124 @@ fn msghandler_process(v: &mut MsgHandlerList, m: &Message, c: &Connection) -> bo
     }
 }
 
-/// The struct returned from `Connection::send_and_reply`.
-///
-/// It implements the `MsgHandler` trait so you can use `Connection::add_handler`.
-pub struct MessageReply<F>(Option<F>, u32);
+/// ConnectionItem iterator
+pub struct ConnectionItems<'a> {
+    c: &'a Connection,
+    timeout_ms: Option<i32>,
+    end_on_timeout: bool,
+    handlers: MsgHandlerList,
+}
 
-impl<'a, F: FnOnce(Result<&Message, Error>) + 'a> MsgHandler for MessageReply<F> {
-    fn handler_type(&self) -> MsgHandlerType { MsgHandlerType::Reply(self.1) }
-    fn handle_msg(&mut self, msg: &Message) -> Option<MsgHandlerResult> {
-        let e = match msg.msg_type() {
-            MessageType::MethodReturn => Ok(msg),
-            MessageType::Error => Err(msg.set_error_from_msg().unwrap_err()),
-            _ => unreachable!(),
+impl<'a> ConnectionItems<'a> {
+    /// Builder method that adds a new msg handler.
+    ///
+    /// Note: Likely to changed/refactored/removed in next release
+    pub fn with<H: 'static + MsgHandler>(mut self, h: H) -> Self {
+        self.handlers.push(Box::new(h)); self
+    }
+
+    // Returns true if processed, false if not
+    fn process_handlers(&mut self, ci: &ConnectionItem) -> bool {
+        let m = match *ci {
+            ConnectionItem::MethodReturn(ref msg) => msg,
+            ConnectionItem::Signal(ref msg) => msg,
+            ConnectionItem::MethodCall(ref msg) => msg,
+            ConnectionItem::Nothing => return false,
         };
-        debug_assert_eq!(msg.get_reply_serial(), Some(self.1));
-        self.0.take().unwrap()(e);
-        return Some(MsgHandlerResult { handled: true, done: true, reply: Vec::new() })
+
+        msghandler_process(&mut self.handlers, m, &self.c)
+    }
+
+    /// Access and modify message handlers
+    ///
+    /// Note: Likely to changed/refactored/removed in next release
+    pub fn msg_handlers(&mut self) -> &mut Vec<Box<dyn MsgHandler>> { &mut self.handlers }
+
+    /// Creates a new ConnectionItems iterator
+    ///
+    /// For io_timeout, setting None means the fds will not be read/written. I e, only pending
+    /// items in libdbus's internal queue will be processed.
+    ///
+    /// For end_on_timeout, setting false will means that the iterator will never finish (unless
+    /// the D-Bus server goes down). Instead, ConnectionItem::Nothing will be returned in case no
+    /// items are in queue.
+    pub fn new(conn: &'a Connection, io_timeout: Option<i32>, end_on_timeout: bool) -> Self {
+        ConnectionItems {
+            c: conn,
+            timeout_ms: io_timeout,
+            end_on_timeout: end_on_timeout,
+            handlers: Vec::new(),
+        }
     }
 }
 
+impl<'a> Iterator for ConnectionItems<'a> {
+    type Item = ConnectionItem;
+    fn next(&mut self) -> Option<ConnectionItem> {
+        loop {
+            if self.c.i.filter_cb.borrow().is_none() { panic!("ConnectionItems::next called recursively or with a MessageCallback set to None"); }
+            let i: Option<ConnectionItem> = self.c.next_msg().map(|x| x.into());
+            if let Some(ci) = i {
+                if !self.process_handlers(&ci) { return Some(ci); }
+            }
+
+            if let Some(t) = self.timeout_ms {
+                let r = unsafe { ffi::dbus_connection_read_write_dispatch(self.c.conn(), t as c_int) };
+                self.c.check_panic();
+                if !self.c.i.pending_items.borrow().is_empty() { continue };
+                if r == 0 { return None; }
+            }
+
+            let r = unsafe { ffi::dbus_connection_dispatch(self.c.conn()) };
+            self.c.check_panic();
+
+            if !self.c.i.pending_items.borrow().is_empty() { continue };
+            if r == ffi::DBusDispatchStatus::DataRemains { continue };
+            if r == ffi::DBusDispatchStatus::Complete { return if self.end_on_timeout { None } else { Some(ConnectionItem::Nothing) } };
+            panic!("dbus_connection_dispatch failed");
+        }
+    }
+}
+
+/// Iterator over incoming messages on a connection.
+#[derive(Debug, Clone)]
+pub struct ConnMsgs<C> {
+    /// The connection or some reference to it.
+    pub conn: C,
+    /// How many ms dbus should block, waiting for incoming messages until timing out.
+    ///
+    /// If set to None, the dbus library will not read/write from file descriptors at all.
+    /// Instead the iterator will end when there's nothing currently in the queue.
+    pub timeout_ms: Option<u32>,
+}
+
+impl<C: ops::Deref<Target = Connection>> Iterator for ConnMsgs<C> {
+    type Item = Message;
+    fn next(&mut self) -> Option<Self::Item> {
+
+        loop {
+            let iconn = &self.conn.i;
+            if iconn.filter_cb.borrow().is_none() { panic!("ConnMsgs::next called recursively or with a MessageCallback set to None"); }
+            let i = self.conn.next_msg();
+            if let Some(ci) = i { return Some(ci); }
+
+            if let Some(t) = self.timeout_ms {
+                let r = unsafe { ffi::dbus_connection_read_write_dispatch(self.conn.conn(), t as c_int) };
+                self.conn.check_panic();
+                if !iconn.pending_items.borrow().is_empty() { continue };
+                if r == 0 { return None; }
+            }
+
+            let r = unsafe { ffi::dbus_connection_dispatch(self.conn.conn()) };
+            self.conn.check_panic();
+
+            if !iconn.pending_items.borrow().is_empty() { continue };
+            if r == ffi::DBusDispatchStatus::DataRemains { continue };
+            if r == ffi::DBusDispatchStatus::Complete { return None }
+            panic!("dbus_connection_dispatch failed");
+        }
+    }
+}
 
 #[test]
 fn message_reply() {
@@ -724,10 +625,9 @@ fn message_reply() {
     let quit2 = quit.clone();
     let reply = c.send_with_reply(m, move |result| {
         let r = result.unwrap();
-        let _: ::arg::Array<&str, _>  = r.get1().unwrap();
+        let _: crate::arg::Array<&str, _>  = r.get1().unwrap();
         quit2.set(true);
     }).unwrap();
     for _ in c.iter(1000).with(reply) { if quit.get() { return; } }
     assert!(false);
 }
-

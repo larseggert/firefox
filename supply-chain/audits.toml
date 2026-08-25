@@ -2305,6 +2305,14 @@ who = "Mike Hommey <mh+mozilla@glandium.org>"
 criteria = "safe-to-deploy"
 delta = "2.3.2 -> 2.3.3"
 
+[[audits.dbus]]
+who = "Kagami Sascha Rosylight <krosylight@proton.me>"
+criteria = "safe-to-deploy"
+version = "0.9.12"
+notes = """
+Unsafe blocks are to call FFI functions, and to pass strings and callback functions through FFI boundary, which are inherently unsafe.
+"""
+
 [[audits.debug_tree]]
 who = "Benjamin Beurdouche <beurdouche@mozilla.com>"
 criteria = "safe-to-deploy"
@@ -4281,6 +4289,17 @@ version = "0.0.3"
 who = "Dana Keeler <dkeeler@mozilla.com>"
 criteria = "safe-to-deploy"
 version = "0.0.3"
+
+[[audits.libdbus-sys]]
+who = "Kagami Sascha Rosylight <krosylight@proton.me>"
+criteria = "safe-to-deploy"
+version = "0.2.7"
+importable = false
+notes = """
+The crate includes ffi declarations, which are inherently unsafe.
+
+The crate also includes an optional vendored libdbus, but this audit does not cover that.
+"""
 
 [[audits.libloading]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"

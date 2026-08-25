@@ -5,7 +5,9 @@
 use std::cell::{Cell, RefCell, RefMut};
 use std::ffi::c_void;
 
-use dbus::{BusType, Connection, Message, MessageItem};
+use dbus::arg::messageitem::MessageItem;
+use dbus::ffidisp::{BusType, Connection};
+use dbus::Message;
 use log::warn;
 
 use nserror::{
