@@ -11,6 +11,7 @@ import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.v2.AndroidComposeTestRule as AndroidComposeTestRuleV2
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.base.DefaultFailureHandler
+import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -229,6 +230,19 @@ abstract class BaseTest(private val defaultLaunchConfig: LaunchConfig = LaunchCo
      */
     private fun installedReporter(): TimedReporter = TestLogging.installed()
 
+    /**
+     * An opt-in diagnostic, read from the instrumentation arguments.
+     *
+     * These two were gated on `java.lang.Boolean.getBoolean`, which reads a JVM system property. Instrumentation
+     * arguments do not set system properties --- they arrive through InstrumentationRegistry --- and nothing in the
+     * tree calls System.setProperty for either name, so both hooks were unreachable and the page-catalog one did real
+     * reflective work that nobody could trigger. Same mechanism SnapshotPrimer already uses:
+     *
+     * am instrument -e logPageCatalog true ...
+     */
+    private fun flagArg(name: String): Boolean =
+        InstrumentationRegistry.getArguments().getString(name)?.toBooleanStrictOrNull() ?: false
+
     @Before
     fun setUp() {
         // Disable Espresso's screenshot-on-failure locally.
@@ -245,10 +259,10 @@ abstract class BaseTest(private val defaultLaunchConfig: LaunchConfig = LaunchCo
         Espresso.setFailureHandler(DefaultFailureHandler(appContext, false))
 
         installedReporter().reset()
-        if (java.lang.Boolean.getBoolean("logNavigationSummary")) {
+        if (flagArg("logNavigationSummary")) {
             NavigationRegistry.logPathSummary()
         }
-        if (java.lang.Boolean.getBoolean("logPageCatalog")) {
+        if (flagArg("logPageCatalog")) {
             val pages = PageCatalog.discoverPages()
 
             Log.i("PageCatalog", "Discovered ${pages.size} pages from PageContext")
