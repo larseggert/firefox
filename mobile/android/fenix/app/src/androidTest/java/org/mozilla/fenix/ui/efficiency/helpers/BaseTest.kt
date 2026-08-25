@@ -180,7 +180,10 @@ abstract class BaseTest(
     val recordTestBoundaries: TestRule =
         object : TestWatcher() {
             override fun starting(description: Description) {
-                installedReporter().testStart(description.displayName)
+                // The launch configuration goes on the record, because "was this test even running the
+                // app it expects?" is otherwise unanswerable after the fact. testStart has always taken
+                // meta; nothing was filling it, so every trace claimed a default launch.
+                installedReporter().testStart(description.displayName, launchConfig().asMeta())
             }
 
             override fun succeeded(description: Description) {
