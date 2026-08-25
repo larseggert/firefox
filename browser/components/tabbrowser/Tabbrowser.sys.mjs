@@ -7714,18 +7714,20 @@ export class Tabbrowser {
   }
 
   /**
+   * Whether the element is a `<tab>`.
+   *
    * @param {Element} element
-   * @returns {boolean}
-   *   `true` if element is a `<tab>`
+   * @returns {element is MozTabbrowserTab}
    */
   isTab(element) {
     return !!(element?.tagName == "tab");
   }
 
   /**
+   * Whether the element is a `<tab-group>`.
+   *
    * @param {Element} element
-   * @returns {boolean}
-   *   `true` if element is a `<tab-group>`
+   * @returns {element is MozTabbrowserTabGroup}
    */
   isTabGroup(element) {
     return !!(element?.tagName == "tab-group");
@@ -7741,9 +7743,10 @@ export class Tabbrowser {
   }
 
   /**
+   * Whether the element is a `<tab-split-view-wrapper>`.
+   *
    * @param {Element} element
-   * @returns {boolean}
-   *   `true` if element is a `<tab-split-view-wrapper>`
+   * @returns {element is MozTabSplitViewWrapper}
    */
   isSplitViewWrapper(element) {
     return !!(element?.tagName == "tab-split-view-wrapper");
