@@ -1187,7 +1187,6 @@ security.ui.protections:
   show:
     objects: [
       "protection_report",
-      "vpn_banner",
     ]
     bug_numbers:
       - 1557050
@@ -1199,7 +1198,7 @@ security.ui.protections:
       - 1739287
       - 1787249
     description: >
-      User arrived on the protection report. This also includes a 'value' attribute which defaults to 'direct' or will be the value that a referring website addds to the url. This also indicates if the vpn banner has been seen.
+      User arrived on the protection report. This also includes a 'value' attribute which defaults to 'direct' or will be the value that a referring website adds to the url.
     expiry_version: never
     record_in_processes: ["content"]
     release_channel_collection: opt-out
@@ -1259,9 +1258,6 @@ security.ui.protections:
       "trackers_about_link",
       "mobile_app_link",
       "settings_link",
-      "vpn_banner_link",
-      "vpn_banner_close",
-      "vpn_card_link",
       "vpn_app_link_android",
       "vpn_app_link_ios",
     ]
