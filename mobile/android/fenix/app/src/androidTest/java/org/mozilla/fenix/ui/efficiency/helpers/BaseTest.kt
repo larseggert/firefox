@@ -4,6 +4,8 @@
 
 package org.mozilla.fenix.ui.efficiency.helpers
 
+import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.util.Log
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.v2.AndroidComposeTestRule as AndroidComposeTestRuleV2
@@ -146,6 +148,7 @@ abstract class BaseTest(
                         }
                     }
                     appContext.components.useCases.tabsUseCases.removeAllTabs()
+                    resetLauncherIconAliases()
                     // Dump on ANY failure, not only those raised through a page-object verb.
                     // BasePage.dumpFailure covers navigateToPage and mozVerifyElementsByGroup, but
                     // a page object asserting with a bare JUnit assertTrue --- BrowserPage
@@ -299,6 +302,46 @@ abstract class BaseTest(
             // Logging must never fail a test.
         }
     }
+}
+
+/**
+ * Put the launcher icon back to the manifest default.
+ *
+ * The app icon is not app data --- changing it calls PackageManager.setComponentEnabledSetting on activity-aliases,
+ * which lives in the package manager's own state. `pm clear` wipes /data/data/<pkg> and runtime permissions and does
+ * not touch it, so an icon a test switched stays switched for every later test on that device.
+ *
+ * That is not theoretical: verifyTheChangeAppIconButtonTest sets the icon to Dark, and
+ * verifyTheDefaultAppIconSettingTest then asserts it reads Default. Whether that fails depends on which order the work
+ * queue happens to hand them to the same device, so it is an intermittent failure with no intermittent cause.
+ *
+ * COMPONENT_ENABLED_STATE_DEFAULT restores whatever the manifest declares, which is the default icon enabled and the
+ * alternatives disabled --- so this is a reset, not a guess at the right state.
+ */
+private fun resetLauncherIconAliases() {
+    runCatching {
+        val pm = appContext.packageManager
+        val pkg = appContext.packageName
+        val info =
+            pm.getPackageInfo(
+                pkg,
+                PackageManager.GET_ACTIVITIES or PackageManager.MATCH_DISABLED_COMPONENTS,
+            )
+        info.activities
+            .orEmpty()
+            .map { it.name }
+            .filter { it.startsWith("$pkg.App") || it == "$pkg.AlternativeApp" }
+            .forEach { name ->
+                pm.setComponentEnabledSetting(
+                    ComponentName(pkg, name),
+                    PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
+                    PackageManager.DONT_KILL_APP,
+                )
+            }
+    }
+        .onFailure {
+            Log.i("BaseTest", "BaseTest: launcher icon reset failed: ${it.message}")
+        }
 }
 
 private fun cleanup(removeTabs: Boolean = false) {
