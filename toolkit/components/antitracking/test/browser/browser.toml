@@ -163,9 +163,6 @@ support-files = ["localStorageEvents.html"]
 ["browser_partitionedLockManager.js"]
 
 ["browser_partitionedMessaging.js"]
-skip-if = [
-  "true", # Bug 1588241
-]
 
 ["browser_partitionedServiceWorkers.js"]
 skip-if = [
