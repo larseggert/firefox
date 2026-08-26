@@ -3,6 +3,12 @@
 
 import { UrlbarInputBaseTestUtils } from "resource://testing-common/UrlbarTestUtils.sys.mjs";
 
+const lazy = {};
+
+ChromeUtils.defineESModuleGetters(lazy, {
+  ContentTaskUtils: "resource://testing-common/ContentTaskUtils.sys.mjs",
+});
+
 /**
  * Drives the `<moz-urlbar>` that New Tab's component registry mounts on
  * about:newtab. The element lives in the page's realm in a privilegedabout
@@ -10,6 +16,9 @@ import { UrlbarInputBaseTestUtils } from "resource://testing-common/UrlbarTestUt
  * the element is reachable without crossing a process boundary.
  * `NewtabSearchbarTestUtils` is the parent-side facade tests call; this is what it
  * forwards to.
+ *
+ * Where the inherited methods take a chrome window, the ones here take the
+ * task's `content`. The chrome-only ones this class excludes outright.
  */
 class NewtabContentTestUtils extends UrlbarInputBaseTestUtils {
   constructor() {
@@ -37,33 +46,143 @@ class NewtabContentTestUtils extends UrlbarInputBaseTestUtils {
   }
 
   /**
-   * The window holding the element, which the content task sets before handing
-   * over.
+   * The window holding the element, for the duration of a {@link run} task.
    *
    * @type {Window}
    */
   contentWindow = null;
 
   /**
-   * Runs a task against the newtab address bar, bound to the content task's
-   * scope for its duration.
+   * Runs a task against the newtab address bar, taking the assertion and event
+   * helpers it needs from the task's own globals.
+   * {@link NewtabSearchbarTestUtils.spawn} is how a test gets here.
    *
-   * @param {Window} contentWindow
-   *   The task's `content`.
-   * @param {object} scope
-   *   The content task's globals: `Assert`, `info` and `EventUtils`.
-   * @param {(win: Window) => any} fn
-   *   Gets the window to pass on to this class's methods.
+   * @param {() => any} fn
    * @returns {Promise<any>}
    *   What `fn` returns.
    */
-  async withContentScope(contentWindow, scope, fn) {
-    this.contentWindow = contentWindow;
+  async run(fn) {
+    let scope = Cu.getGlobalForObject(fn);
+    this.contentWindow = scope.content;
     try {
-      return await this.withScope(scope, () => fn(contentWindow));
+      return await this.withScope(
+        // Focusing the window is the parent side's business, and the tab is
+        // foreground by the time a task runs.
+        { SimpleTest: { promiseFocus: () => Promise.resolve() }, ...scope },
+        fn
+      );
     } finally {
       this.contentWindow = null;
     }
+  }
+
+  /**
+   * What the bar is showing, in one round trip.
+   *
+   * @param {ChromeWindow} win
+   * @returns {{focused: boolean, value: string, viewOpen: boolean}}
+   */
+  getState(win) {
+    let bar = this.getUrlbar(win);
+    return {
+      focused: bar.focused,
+      value: bar.value,
+      viewOpen: bar.view.isOpen,
+    };
+  }
+
+  /**
+   * {@link UrlbarInputBaseTestUtils.promiseAutocompleteResultPopup} with the
+   * window as its own argument, which is the shape a forwarded call arrives in.
+   * The query context stays here; what the query produced is readable through
+   * the other methods.
+   *
+   * @param {ChromeWindow} win
+   * @param {object} options
+   *   As that method takes them, minus `window`.
+   */
+  async search(win, options) {
+    await this.promiseAutocompleteResultPopup({ ...options, window: win });
+  }
+
+  /**
+   * Waits for the results view to open, whatever opened it.
+   * `promisePopupOpen` insists on being given the thing that opens it.
+   *
+   * @param {ChromeWindow} win
+   */
+  waitForResults(win) {
+    return this.promisePopupOpen(win, () => {});
+  }
+
+  /**
+   * Waits for the results view to close, leaving whatever closes it alone.
+   * `promisePopupClose` closes it itself when given no closer.
+   *
+   * @param {ChromeWindow} win
+   */
+  async waitForViewClosed(win) {
+    let bar = this.getUrlbar(win);
+    if (!bar.view.isOpen) {
+      return;
+    }
+    await new Promise(resolve => {
+      this.addControllerListener(bar.controller, {
+        onViewClose() {
+          bar.controller.removeListener(this);
+          resolve();
+        },
+      });
+    });
+  }
+
+  /**
+   * {@link UrlbarInputBaseTestUtils.getDetailsOfResultAt} in a form that
+   * survives a structured clone: the result travels as its wire form, and the
+   * live nodes are dropped in favour of what `displayed` says they showed.
+   *
+   * @param {ChromeWindow} win
+   * @param {number} index
+   * @returns {Promise<object>}
+   */
+  async snapshotDetailsOfResultAt(win, index) {
+    let details = await this.getDetailsOfResultAt(win, index);
+    return { ...details, result: details.result.toWire(), element: null };
+  }
+
+  /**
+   * Waits for the favicon of the row showing a given title, which arrives after
+   * the row itself, and reports whether it loaded.
+   *
+   * @param {ChromeWindow} win
+   * @param {string} title
+   * @param {object} until
+   *   Which src to wait for: `{ src }` for that one, `{ notSrc }` for anything
+   *   but.
+   * @param {string} [until.src]
+   * @param {string} [until.notSrc]
+   * @returns {Promise<{src: string, loaded: boolean}>}
+   */
+  async waitForRowIcon(win, title, until) {
+    let img = await lazy.ContentTaskUtils.waitForCondition(() => {
+      let row = [
+        ...this.getUrlbar(win).querySelectorAll(".urlbarView-row"),
+      ].find(r => r.textContent.includes(title));
+      let candidate = row?.querySelector("img.urlbarView-favicon");
+      let matches =
+        candidate &&
+        (until.src
+          ? candidate.src == until.src
+          : candidate.src != until.notSrc);
+      return matches ? candidate : false;
+    }, `waiting for the icon of the row titled "${title}"`);
+    if (!img.complete) {
+      await new Promise(resolve => {
+        img.addEventListener("load", resolve, { once: true });
+        img.addEventListener("error", resolve, { once: true });
+      });
+    }
+    return { src: img.src, loaded: img.naturalWidth > 0 };
   }
 
   /**
