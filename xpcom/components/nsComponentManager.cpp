@@ -59,10 +59,6 @@ using namespace mozilla::xpcom;
 
 static LazyLogModule nsComponentManagerLog("nsComponentManager");
 
-#if 0
-#  define SHOW_CI_ON_EXISTING_SERVICE
-#endif
-
 namespace {
 
 class AutoIDString : public nsAutoCStringN<NSID_LENGTH> {
@@ -688,15 +684,6 @@ nsComponentManagerImpl::CreateInstance(const nsCID& aClass, const nsIID& aIID,
     return NS_ERROR_NOT_IMPLEMENTED;
   }
 
-#ifdef SHOW_CI_ON_EXISTING_SERVICE
-  if (entry->ServiceInstance()) {
-    nsAutoCString message;
-    message = "You are calling CreateInstance \""_ns + AutoIDString(aClass) +
-              "\" when a service for this CID already exists!"_ns;
-    NS_ERROR(message.get());
-  }
-#endif
-
   nsresult rv;
   nsCOMPtr<nsIFactory> factory = entry->GetFactory();
   if (factory) {
@@ -762,19 +749,6 @@ nsComponentManagerImpl::CreateInstanceByContractID(const char* aContractID,
              aContractID));
     return NS_ERROR_NOT_IMPLEMENTED;
   }
-
-#ifdef SHOW_CI_ON_EXISTING_SERVICE
-  if (entry->ServiceInstance()) {
-    nsAutoCString message;
-    message =
-        "You are calling CreateInstance \""_ns +
-        nsDependentCString(aContractID) +
-        nsLiteralCString(
-            "\" when a service for this CID already exists! "
-            "Add it to abusedContracts to track down the service consumer.");
-    NS_ERROR(message.get());
-  }
-#endif
 
   nsresult rv;
   nsCOMPtr<nsIFactory> factory = entry->GetFactory();
