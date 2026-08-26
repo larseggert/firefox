@@ -1,86 +1,59 @@
-From: Michael Froman <mfroman@mozilla.com>
-Date: Thu, 20 Aug 2026 15:17:00 +0000
-Subject: Bug 1996020 - add AlignedMallocOrNull to allow low-mem alloc attempts
- without crashing. r=bwc
+From: Jan Grulich <jgrulich@redhat.com>
+Date: Tue, 18 Aug 2026 05:47:00 +0000
+Subject: Bug 2054624 - WebRTC backport: Video capture: cap resolution and
+ null-check header metadata r=pehrsons
 
-Differential Revision: https://phabricator.services.mozilla.com/D318846
-Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/d79be5854fe56d92642014904c4079643e86ace0
+Reject video dimensions that could overflow frame size calculations.
+Handle missing SPA_META_Header which is optional.
+
+This is a simple backport of an WebRTC upstream change.
+
+Upstream commit: 01455efea7797cff42c5228b14c85ab3cdb4bdac
+
+Differential Revision: https://phabricator.services.mozilla.com/D319163
+Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/582ab1bf7371ba83dfa2ed7d186a22ef744aaf2e
 ---
- rtc_base/memory/aligned_malloc.cc | 21 +++++++++++++++++++--
- rtc_base/memory/aligned_malloc.h  |  9 ++++++++-
- 2 files changed, 27 insertions(+), 3 deletions(-)
+ .../linux/video_capture_pipewire.cc              | 16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
 
-diff --git a/rtc_base/memory/aligned_malloc.cc b/rtc_base/memory/aligned_malloc.cc
-index 36aa749898..6399264d22 100644
---- a/rtc_base/memory/aligned_malloc.cc
-+++ b/rtc_base/memory/aligned_malloc.cc
-@@ -50,7 +50,7 @@ void* GetRightAlign(const void* pointer, size_t alignment) {
-   return reinterpret_cast<void*>(GetRightAlign(start_pos, alignment));
- }
+diff --git a/modules/video_capture/linux/video_capture_pipewire.cc b/modules/video_capture/linux/video_capture_pipewire.cc
+index 5ca96108e9..54586e2673 100644
+--- a/modules/video_capture/linux/video_capture_pipewire.cc
++++ b/modules/video_capture/linux/video_capture_pipewire.cc
+@@ -52,6 +52,10 @@
+ namespace webrtc {
+ namespace videocapturemodule {
  
--void* AlignedMalloc(size_t size, size_t alignment) {
-+void* AlignedMallocOrNull(size_t size, size_t alignment) {
-   if (size == 0) {
-     return nullptr;
-   }
-@@ -63,7 +63,9 @@ void* AlignedMalloc(size_t size, size_t alignment) {
-   // A pointer to the start of the memory must be stored so that it can be
-   // retreived for deletion, ergo the sizeof(uintptr_t).
-   void* memory_pointer = malloc(size + sizeof(uintptr_t) + alignment - 1);
--  RTC_CHECK(memory_pointer) << "Couldn't allocate memory in AlignedMalloc";
-+  if (memory_pointer == nullptr) {
-+    return nullptr;
-+  }
- 
-   // Aligning after the sizeof(uintptr_t) bytes will leave room for the header
-   // in the same memory block.
-@@ -82,6 +84,21 @@ void* AlignedMalloc(size_t size, size_t alignment) {
-   return aligned_pointer;
- }
- 
-+void* AlignedMalloc(size_t size, size_t alignment) {
-+  // Do these checks first so the same checks in AlignedMallocOrNull
-+  // don't trip the RTC_CHECK below.
-+  if (size == 0) {
-+    return nullptr;
-+  }
-+  if (!ValidAlignment(alignment)) {
-+    return nullptr;
-+  }
++// A reasonable maximum size so "width * height * kBytesPerPixel" doesn't
++// overflow
++constexpr int32_t kMaxVideoCaptureDimension = 16384;
 +
-+  void* aligned_pointer = AlignedMallocOrNull(size, alignment);
-+  RTC_CHECK(aligned_pointer) << "Couldn't allocate memory in AlignedMalloc";
-+  return aligned_pointer;
-+}
-+
- void AlignedFree(void* mem_block) {
-   if (mem_block == nullptr) {
+ struct {
+   uint32_t spa_format;
+   VideoType video_type;
+@@ -351,6 +355,14 @@ void VideoCaptureModulePipeWire::OnFormatChanged(const struct spa_pod* format) {
      return;
-diff --git a/rtc_base/memory/aligned_malloc.h b/rtc_base/memory/aligned_malloc.h
-index 1c7d303885..914c221276 100644
---- a/rtc_base/memory/aligned_malloc.h
-+++ b/rtc_base/memory/aligned_malloc.h
-@@ -29,8 +29,11 @@ void* GetRightAlign(const void* ptr, size_t alignment);
+   }
  
- // Allocates memory of `size` bytes aligned on an `alignment` boundry.
- // The return value is a pointer to the memory. Note that the memory must
--// be de-allocated using AlignedFree.
-+// be de-allocated using AlignedFree. Crashes if the allocation fails.
- void* AlignedMalloc(size_t size, size_t alignment);
-+// Same as AlignedMalloc, but returns nullptr instead of crashing when the
-+// allocation fails.
-+void* AlignedMallocOrNull(size_t size, size_t alignment);
- // De-allocates memory created using the AlignedMalloc() API.
- void AlignedFree(void* mem_block);
++  if (configured_capability_.width <= 0 || configured_capability_.height <= 0 ||
++      configured_capability_.width > kMaxVideoCaptureDimension ||
++      configured_capability_.height > kMaxVideoCaptureDimension) {
++    RTC_LOG(LS_ERROR) << "Unsupported video resolution.";
++    configured_capability_.videoType = VideoType::kUnknown;
++    return;
++  }
++
+   RTC_LOG(LS_VERBOSE) << "Configured capture format = "
+                       << static_cast<int>(configured_capability_.videoType);
  
-@@ -45,6 +48,10 @@ template <typename T>
- T* AlignedMalloc(size_t size, size_t alignment) {
-   return reinterpret_cast<T*>(AlignedMalloc(size, alignment));
- }
-+template <typename T>
-+T* AlignedMallocOrNull(size_t size, size_t alignment) {
-+  return reinterpret_cast<T*>(AlignedMallocOrNull(size, alignment));
-+}
+@@ -441,8 +453,8 @@ void VideoCaptureModulePipeWire::ProcessBuffers() {
+     h = static_cast<struct spa_meta_header*>(
+         spa_buffer_find_meta_data(spaBuffer, SPA_META_Header, sizeof(*h)));
  
- // Deleter for use with unique_ptr. E.g., use as
- //   std::unique_ptr<Foo, AlignedFreeDeleter> foo;
+-    if (h->flags & SPA_META_HEADER_FLAG_CORRUPTED) {
+-      RTC_LOG(LS_INFO) << "Dropping corruped frame.";
++    if (h && (h->flags & SPA_META_HEADER_FLAG_CORRUPTED)) {
++      RTC_LOG(LS_INFO) << "Dropping corrupted frame.";
+       pw_stream_queue_buffer(stream_, buffer);
+       continue;
+     }
