@@ -2706,10 +2706,14 @@ tab-group {
     border-radius: var(--border-radius-medium);
   }
 
-  @media -moz-pref("sidebar.visibility", "expand-on-hover") {
-    #tabbrowser-tabs[expanded] > &:not(:hover) {
-      background-image: none;
-      border-top: var(--tabstrip-inner-border);
+  #tabbrowser-tabs[expanded] > & {
+    background-image: none;
+
+    /* Expand on hover keeps the full width line, with the hover state on top. */
+    @media -moz-pref("sidebar.visibility", "expand-on-hover") {
+      &:not(:hover) {
+        border-top: var(--tabstrip-inner-border);
+      }
     }
   }
 

@@ -59,6 +59,9 @@ skip-if = [
 
 ["browser_history_sidebar_glean.js"]
 
+["browser_launcher_dividers.js"]
+tags = "vertical-tabs"
+
 ["browser_launcher_hidden_restore.js"]
 tags = "vertical-tabs"
 
