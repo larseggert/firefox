@@ -31,7 +31,7 @@ task-defaults:
     worker:
         env:
             BRANCH: main
-            TEST_SET: nightly
+            TEST_SET: ci
             WORKFLOW_ID: main.yml
             BUILD_TASK_ID: {task-reference: '<build>'}
         max-run-time: 4800
