@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import { SUPPORTED_INPUT_TYPES } from "chrome://browser/content/aiwindow/modules/SmartFormFillConstants.mjs";
+import { SUPPORTED_INPUT_TYPES } from "moz-src:///browser/components/aiwindow/ui/modules/SmartFormFillDocument.sys.mjs";
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
@@ -99,7 +99,7 @@ class SmartFormFillAutocompleteItem {
 
       secondaryAction: {
         type: "edit",
-        fillMessageName: "SmartFormFill:EditSources",
+        fillMessageName: "FormAutofill:EditSmartFormFillSources",
         fillMessageData: {},
       },
     });
@@ -177,7 +177,7 @@ export const SmartFormFillAutocomplete = {
     const relevantTabsReady = sffActor.areRelevantTabsReady(formId);
 
     const hasSources =
-      relevantTabsReady && sffActor.getSelectedTabSources(formId).length;
+      relevantTabsReady && sffActor.getRelevantTabSources(formId).length;
 
     const loading = !relevantTabsReady;
     const emptySourcesLabel =
