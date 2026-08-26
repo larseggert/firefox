@@ -41,8 +41,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
   8000
 );
 
-const BUTTON_ITEM_ID = "smartwindow-group-tabs-button";
-const BUTTON_ID = "smartwindow-group-tabs-button-inner";
+const BUTTON_ID = "smartwindow-group-tabs-button";
 const PANEL_ID = "smartwindow-group-tabs-panel";
 const FLYOUT_ID = "smartwindow-group-tabs-flyout";
 const CARD_TAG = "smartwindow-group-tabs-card";
@@ -176,10 +175,9 @@ export const AutoTabGrouping = {
       return;
     }
     const doc = win.document;
-    const anchor = doc.getElementById(BUTTON_ITEM_ID);
     const button = doc.getElementById(BUTTON_ID);
     const popupSet = doc.getElementById("mainPopupSet");
-    if (!anchor || !popupSet) {
+    if (!button || !popupSet) {
       return;
     }
 
@@ -200,7 +198,7 @@ export const AutoTabGrouping = {
       if (
         panel.contains(target) ||
         panel._flyoutPanel?.contains(target) ||
-        anchor.contains(target)
+        button.contains(target)
       ) {
         return;
       }
@@ -223,7 +221,7 @@ export const AutoTabGrouping = {
     panel.addEventListener(
       "popupshown",
       () => {
-        button?.setAttribute("aria-expanded", "true");
+        button.setAttribute("aria-expanded", "true");
         panel._card.focus();
         win.addEventListener("mousedown", onMouseDown, true);
         win.addEventListener("keydown", onKeyDown, true);
@@ -233,7 +231,7 @@ export const AutoTabGrouping = {
     panel.addEventListener(
       "popuphidden",
       () => {
-        button?.setAttribute("aria-expanded", "false");
+        button.setAttribute("aria-expanded", "false");
         win.removeEventListener("mousedown", onMouseDown, true);
         win.removeEventListener("keydown", onKeyDown, true);
         this._cancelHideFlyout(panel);
@@ -244,13 +242,13 @@ export const AutoTabGrouping = {
         }
         panel.remove();
         if (panel._restoreFocus) {
-          button?.focus();
+          button.focus();
         }
       },
       { once: true }
     );
 
-    panel.openPopup(anchor, "after_end", 0, 6, false, false);
+    panel.openPopup(button, "after_end", 0, 6, false, false);
 
     const state = this._getState(win);
     if (!state.computing) {

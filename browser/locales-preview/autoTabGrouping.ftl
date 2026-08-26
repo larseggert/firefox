@@ -22,7 +22,8 @@ smartwindow-group-tabs-empty = No tab groups to suggest right now. Check again l
 # Shown in place of suggestions when every group the model found has already
 # been created.
 smartwindow-group-tabs-all-sorted = Nice work organizing your tabs
-smartwindow-group-tabs-create-all = Create Groups
+# Creates every suggested group at once.
+smartwindow-group-tabs-create-all = Create All Groups
 smartwindow-group-tabs-suggested-heading = Suggested groups
 # Accessible name for the flyout that lists the tabs of one suggested group.
 # Activating a tab in the list switches to it. $groupLabel is the suggested
