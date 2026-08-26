@@ -47,6 +47,8 @@ add_task(async function modifierOpensNewTab() {
     "about:newtab",
     "the newtab tab stayed where it was"
   );
+  let { value } = await NewtabSearchbarTestUtils.getState(tab.linkedBrowser);
+  Assert.equal(value, TEST_URL, "the bar kept what was typed");
 
   BrowserTestUtils.removeTab(newTab);
   BrowserTestUtils.removeTab(tab);
