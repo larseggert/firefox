@@ -210,17 +210,17 @@
   "button/background/color/primary": {
     "light": "{Theme$color/accent/primary}",
     "dark": "{Theme$color/accent/primary}",
-    "forcedColors": "{Theme$color/accent/primary}"
+    "forcedColors": "{HCM Theme$ButtonText}"
   },
   "button/background/color/primary/hover": {
     "light": "{Theme$color/accent/primary/hover}",
     "dark": "{Theme$color/accent/primary/hover}",
-    "forcedColors": "{Theme$color/accent/primary/hover}"
+    "forcedColors": "{HCM Theme$SelectedItem}"
   },
   "button/background/color/primary/active": {
     "light": "{Theme$color/accent/primary/active}",
     "dark": "{Theme$color/accent/primary/active}",
-    "forcedColors": "{Theme$color/accent/primary/active}"
+    "forcedColors": "{Theme$button/background/color/primary/hover}"
   },
   "button/background/color/primary/disabled": {
     "light": "{Theme$button/background/color/primary}",

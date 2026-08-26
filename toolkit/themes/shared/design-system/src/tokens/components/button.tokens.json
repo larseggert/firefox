@@ -49,13 +49,22 @@
       },
       "primary": {
         "@base": {
-          "value": "{color.accent.primary.@base}"
+          "value": {
+            "default": "{color.accent.primary.@base}",
+            "forcedColors": "ButtonText"
+          }
         },
         "hover": {
-          "value": "{color.accent.primary.hover}"
+          "value": {
+            "default": "{color.accent.primary.hover}",
+            "forcedColors": "SelectedItem"
+          }
         },
         "active": {
-          "value": "{color.accent.primary.active}"
+          "value": {
+            "default": "{color.accent.primary.active}",
+            "forcedColors": "{button.background.color.primary.hover}"
+          }
         },
         "disabled": {
           "value": {

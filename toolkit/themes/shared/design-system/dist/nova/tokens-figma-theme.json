@@ -154,6 +154,21 @@
     "dark": "{Theme$button/background/color}",
     "forcedColors": "{Theme$button/background/color}"
   },
+  "button/background/color/primary": {
+    "light": "{Theme$color/accent/primary}",
+    "dark": "{Theme$color/accent/primary}",
+    "forcedColors": "{Theme$color/accent/primary}"
+  },
+  "button/background/color/primary/hover": {
+    "light": "{Theme$color/accent/primary/hover}",
+    "dark": "{Theme$color/accent/primary/hover}",
+    "forcedColors": "{Theme$color/accent/primary/hover}"
+  },
+  "button/background/color/primary/active": {
+    "light": "{Theme$color/accent/primary/active}",
+    "dark": "{Theme$color/accent/primary/active}",
+    "forcedColors": "{Theme$color/accent/primary/active}"
+  },
   "button/background/color/primary/disabled": {
     "light": "{Colors$color/violet-desaturated/50}",
     "dark": "{Colors$color/violet-desaturated/40}",

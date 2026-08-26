@@ -191,15 +191,24 @@ export const tokensTable = {
       name: "--button-background-color-disabled",
     },
     {
-      value: "var(--color-accent-primary)",
+      value: {
+        default: "var(--color-accent-primary)",
+        forcedColors: "ButtonText",
+      },
       name: "--button-background-color-primary",
     },
     {
-      value: "var(--color-accent-primary-hover)",
+      value: {
+        default: "var(--color-accent-primary-hover)",
+        forcedColors: "SelectedItem",
+      },
       name: "--button-background-color-primary-hover",
     },
     {
-      value: "var(--color-accent-primary-active)",
+      value: {
+        default: "var(--color-accent-primary-active)",
+        forcedColors: "var(--button-background-color-primary-hover)",
+      },
       name: "--button-background-color-primary-active",
     },
     {
@@ -3976,10 +3985,18 @@ export const variableLookupTable = {
     default: "var(--button-background-color)",
     forcedColors: "ButtonFace",
   },
-  "button-background-color-primary": "var(--color-accent-primary)",
-  "button-background-color-primary-hover": "var(--color-accent-primary-hover)",
-  "button-background-color-primary-active":
-    "var(--color-accent-primary-active)",
+  "button-background-color-primary": {
+    default: "var(--color-accent-primary)",
+    forcedColors: "ButtonText",
+  },
+  "button-background-color-primary-hover": {
+    default: "var(--color-accent-primary-hover)",
+    forcedColors: "SelectedItem",
+  },
+  "button-background-color-primary-active": {
+    default: "var(--color-accent-primary-active)",
+    forcedColors: "var(--button-background-color-primary-hover)",
+  },
   "button-background-color-primary-disabled": {
     default: "var(--button-background-color-primary)",
     forcedColors: "var(--button-text-color-disabled)",

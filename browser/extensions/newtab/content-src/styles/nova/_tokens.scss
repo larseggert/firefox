@@ -64,6 +64,9 @@
   --button-background-color-muted-active: light-dark(var(--color-gray-40), var(--color-gray-35));
   --button-background-color-muted-disabled: var(--button-background-color-muted);
   --button-background-color-muted-selected: var(--button-background-color-muted-active);
+  --button-background-color-primary: var(--color-accent-primary);
+  --button-background-color-primary-hover: var(--color-accent-primary-hover);
+  --button-background-color-primary-active: var(--color-accent-primary-active);
   --button-background-color-primary-disabled: light-dark(var(--color-violet-desaturated-50), var(--color-violet-desaturated-40));
   --button-background-color-selected: var(--button-background-color-active);
   --button-border-color: var(--color-accent-primary);

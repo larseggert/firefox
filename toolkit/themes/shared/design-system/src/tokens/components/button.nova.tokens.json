@@ -29,6 +29,15 @@
         "value": "{button.background.color.@base}"
       },
       "primary": {
+        "@base": {
+          "value": "{color.accent.primary.@base}"
+        },
+        "hover": {
+          "value": "{color.accent.primary.hover}"
+        },
+        "active": {
+          "value": "{color.accent.primary.active}"
+        },
         "disabled": {
           "value": {
             "light": "{color.violet-desaturated.50}",
