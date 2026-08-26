@@ -3535,9 +3535,9 @@ export class Tabbrowser {
    *   Whether this tab was opened from a URL supplied to Firefox from an
    *   external application.
    * @param {boolean} [options.inBackground=true]
-   *   Whether the tab is being opened in the background. This does not
-   *   select the tab - it only decides whether the selected tab becomes the
-   *   new tab's owner, i.e. the tab to select when the new tab is closed.
+   *   Whether to open the tab in the background. A foreground tab is
+   *   selected, and takes the previously selected tab as its owner, i.e. the
+   *   tab to select when this one is closed.
    * @param {boolean} [options.isCaptivePortalTab]
    *   Whether the tab loads a captive portal login page, whose load must not
    *   use DNS over HTTPS.
