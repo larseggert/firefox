@@ -4,6 +4,8 @@
 // The globals a `SpecialPowers.spawn` task runs with.
 /* global content, NewtabSearchbarContentTestUtils */
 
+import { UrlbarInputBaseTestUtils } from "resource://testing-common/UrlbarTestUtils.sys.mjs";
+
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -165,6 +167,10 @@ class NewtabTestUtils {
     return { ...details, result: lazy.UrlbarResult.fromWire(details.result) };
   }
 }
+
+// Form history is the profile's, reachable from the parent process only.
+NewtabTestUtils.prototype.formHistory =
+  UrlbarInputBaseTestUtils.prototype.formHistory;
 
 for (let method of FORWARDED) {
   NewtabTestUtils.prototype[method] = function (browser, ...args) {

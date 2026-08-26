@@ -20,3 +20,5 @@ ChromeUtils.defineLazyGetter(this, "NewtabSearchbarTestUtils", () => {
   module.init(this, window);
   return module;
 });
+
+registerCleanupFunction(() => NewtabSearchbarTestUtils.formHistory.clear());

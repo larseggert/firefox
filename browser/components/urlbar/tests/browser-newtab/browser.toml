@@ -19,4 +19,6 @@ skip-if = ["debug"]
 
 ["browser_resultIcon.js"]
 
+["browser_resultMenu.js"]
+
 ["browser_searchModeSwitcher.js"]
