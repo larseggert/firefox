@@ -77,10 +77,13 @@ class NewtabContentTestUtils extends UrlbarInputBaseTestUtils {
   }
 
   /**
-   * What the bar is showing, in one round trip.
+   * What the bar is showing, in one round trip. `viewOpen` is the state the
+   * view keeps, `viewVisible` whether it is painted; the element stays in the
+   * top layer between queries, so the two can disagree.
    *
    * @param {ChromeWindow} win
-   * @returns {{focused: boolean, value: string, viewOpen: boolean}}
+   * @returns {{focused: boolean, value: string, viewOpen: boolean,
+   *   viewVisible: boolean}}
    */
   getState(win) {
     let bar = this.getUrlbar(win);
@@ -88,6 +91,7 @@ class NewtabContentTestUtils extends UrlbarInputBaseTestUtils {
       focused: bar.focused,
       value: bar.value,
       viewOpen: bar.view.isOpen,
+      viewVisible: bar.view.panel.checkVisibility(),
     };
   }
 
@@ -103,6 +107,15 @@ class NewtabContentTestUtils extends UrlbarInputBaseTestUtils {
    */
   async search(win, options) {
     await this.promiseAutocompleteResultPopup({ ...options, window: win });
+  }
+
+  /**
+   * Takes focus off the bar, as clicking elsewhere in the page would.
+   *
+   * @param {ChromeWindow} win
+   */
+  blur(win) {
+    this.getUrlbar(win).blur();
   }
 
   /**

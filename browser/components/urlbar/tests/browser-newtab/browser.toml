@@ -10,6 +10,8 @@ prefs = ["browser.urlbar.newtab.featureGate=true"]
 # wrapper, asserts in a debug build. Bug 2065180.
 skip-if = ["debug"]
 
+["browser_blur.js"]
+
 ["browser_escape.js"]
 
 ["browser_pickResult.js"]

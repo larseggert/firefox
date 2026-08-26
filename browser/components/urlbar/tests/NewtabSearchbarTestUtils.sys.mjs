@@ -21,6 +21,7 @@ const CONTENT_UTILS_URL =
  * a structured clone.
  */
 const FORWARDED = [
+  "blur",
   "fireInputEvent",
   "getResultCount",
   "getSelectedElementIndex",
@@ -104,7 +105,10 @@ class NewtabTestUtils {
   }
 
   /**
-   * Opens about:newtab and waits for its address bar to be in the document.
+   * Opens about:newtab, waits for its address bar to be in the document, and
+   * gives the window focus. Focus and blur events only fire while the content
+   * document has it, and the bar reacts to those rather than to the active
+   * element.
    *
    * @returns {Promise<MozTabbrowserTab>}
    */
@@ -124,6 +128,7 @@ class NewtabTestUtils {
         ),
       "waiting for <moz-urlbar> on about:newtab"
     );
+    await this.scope.SimpleTest.promiseFocus(tab.linkedBrowser);
     return tab;
   }
 

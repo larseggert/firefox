@@ -36,6 +36,7 @@ add_task(async function escapeWalksBackOut() {
       escape();
       await waitFor(state => !state.viewOpen, "the view closes");
       let state = utils.getState(content);
+      Assert.ok(!state.viewVisible, "the view stops being painted");
       Assert.equal(state.value, value, "the value is still there");
       Assert.ok(state.focused, "the bar keeps focus");
 
