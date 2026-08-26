@@ -256,6 +256,16 @@ export class UrlbarQueryContext {
   sapName;
 
   /**
+   * Whether the query runs in a bar dedicated to search.
+   *
+   * @see {UrlbarShared.isSearchbarSAP}
+   * @type {boolean}
+   */
+  get isSearchbarSAP() {
+    return UrlbarShared.isSearchbarSAP(this.sapName);
+  }
+
+  /**
    * @type {UrlbarSearchModeData}
    *   Details about the search mode associated with this context.
    */

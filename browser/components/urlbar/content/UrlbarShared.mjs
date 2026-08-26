@@ -650,6 +650,20 @@ export const UrlbarShared = {
   },
 
   /**
+   * Whether a SAP is an input dedicated to querying a search engine -- the
+   * toolbar search bar and New Tab's -- as opposed to the address bar and its
+   * variants, whose search also covers history and bookmarks.
+   *
+   * @param {string} sapName
+   *   The SAP name to check.
+   * @returns {boolean}
+   *   Whether the SAP is dedicated to search-engine queries.
+   */
+  isSearchbarSAP(sapName) {
+    return sapName == "searchbar" || sapName == "newtab_searchbar";
+  },
+
+  /**
    * Gets a default icon for a URL.
    *
    * @param {string|URL} url
