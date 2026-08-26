@@ -188,7 +188,15 @@ export class UrlbarInputBaseTestUtils {
    * @returns {Promise<Event>}
    */
   #waitForEvent(target, eventName) {
-    return this.#domTestUtils(target).waitForEvent(target, eventName);
+    return this.#domTestUtils(target).waitForEvent(
+      target,
+      eventName,
+      false,
+      null,
+      // A custom element in a content document dispatches untrusted events, and
+      // a privileged listener is given those only when it asks for them.
+      true
+    );
   }
 
   /**
@@ -1168,7 +1176,7 @@ export class UrlbarInputBaseTestUtils {
       let keywordEnabled = Services.prefs.getBoolPref("keyword.enabled");
 
       let expectedPlaceholder;
-      if (this.#urlbar(window).sapName == "searchbar") {
+      if (this.#urlbar(window).isSearchbarSAP) {
         expectedPlaceholder = { id: "searchbar-input" };
       } else if (keywordEnabled && engineName) {
         expectedPlaceholder = {
@@ -1203,13 +1211,16 @@ export class UrlbarInputBaseTestUtils {
       expectedSearchMode.isPreview = false;
     }
 
-    let isGeneralPurposeEngine = false;
-    if (expectedSearchMode.engineName) {
+    // The search service is parent-only, so a content-process caller
+    // supplies this itself.
+    if (
+      expectedSearchMode.engineName &&
+      !expectedSearchMode.hasOwnProperty("isGeneralPurposeEngine")
+    ) {
       let engine = lazy.SearchService.getEngineByName(
         expectedSearchMode.engineName
       );
-      isGeneralPurposeEngine = engine.isGeneralPurposeEngine;
-      expectedSearchMode.isGeneralPurposeEngine = isGeneralPurposeEngine;
+      expectedSearchMode.isGeneralPurposeEngine = engine.isGeneralPurposeEngine;
     }
 
     // expectedSearchMode may come from UrlbarShared.LOCAL_SEARCH_MODES.  The
@@ -1275,15 +1286,15 @@ export class UrlbarInputBaseTestUtils {
 
     // Check the input's placeholder.
     let expectedPlaceholderL10n;
-    if (this.#urlbar(window).sapName == "searchbar") {
-      // Placeholder stays constant in searchbar.
+    if (this.#urlbar(window).isSearchbarSAP) {
+      // A search bar's placeholder stays constant.
       expectedPlaceholderL10n = {
         id: "searchbar-input",
         args: null,
       };
     } else if (expectedSearchMode.engineName) {
       expectedPlaceholderL10n = {
-        id: isGeneralPurposeEngine
+        id: expectedSearchMode.isGeneralPurposeEngine
           ? "urlbar-placeholder-search-mode-web-2"
           : "urlbar-placeholder-search-mode-other-engine",
         args: { name: expectedSearchMode.engineName },

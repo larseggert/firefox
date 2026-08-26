@@ -2,6 +2,7 @@
 tags = "urlbar"
 support-files = [
   "../browser/head-common.js",
+  "../browser/print_postdata.sjs",
   "head.js",
   "richSuggestionEngine.sjs",
 ]
@@ -17,3 +18,5 @@ skip-if = ["debug"]
 ["browser_pickResult.js"]
 
 ["browser_resultIcon.js"]
+
+["browser_searchModeSwitcher.js"]

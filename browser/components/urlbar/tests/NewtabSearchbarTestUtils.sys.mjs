@@ -119,13 +119,15 @@ class NewtabTestUtils {
       "about:newtab",
       false
     );
+    // Swapping in the preloaded page replaces the frame loader, taking the
+    // actor a query is in flight over with it.
     await lazy.TestUtils.waitForCondition(
       () =>
         this.window.SpecialPowers.spawn(
           tab.linkedBrowser,
           [],
           () => !!content.document.querySelector("moz-urlbar")
-        ),
+        ).catch(() => false),
       "waiting for <moz-urlbar> on about:newtab"
     );
     await this.scope.SimpleTest.promiseFocus(tab.linkedBrowser);
