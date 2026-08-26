@@ -32,6 +32,10 @@ function shouldButtonBeVisible(buttonId, isShareable) {
       return true;
     }
     case OS_SHARE_BUTTON_ID: {
+      if (AppConstants.platform === "macosx") {
+        // Bug 2058695: Make this visible onces bug 2009747 lands.
+        return false;
+      }
       return AppConstants.platform !== "linux" && isShareable;
     }
     case MAIL_SHARE_BUTTON_ID: {
