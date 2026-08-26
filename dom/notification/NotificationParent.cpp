@@ -98,23 +98,11 @@ class NotificationObserver final : public nsIAlertCallbacks {
             .action = Some(aAction ? "action-button"_ns : "body"_ns),
             .siteCategory = mCategory}));
 
-    nsCOMPtr<nsIURI> navigate;
-    if (StaticPrefs::dom_webnotifications_navigate_enabled()) {
-      if (aAction) {
-        aAction->GetNavigate(getter_AddRefs(navigate));
-      } else {
-        navigate = mNotification.options().navigate();
-      }
-    }
-
-    // If navigation URL is set, we will navigate in RespondOnClick.
-    if (!navigate) {
-      if (RunActor([](auto* actor) { actor->FireClickEvent(); })) {
-        return NS_OK;
-      } else if (mScope.IsEmpty()) {
-        // No actor there, we need to open up a window ourselves
-        return OpenWindowFor(mPrincipal);
-      }
+    if (RunActor([](auto* actor) { actor->FireClickEvent(); })) {
+      return NS_OK;
+    } else if (mScope.IsEmpty()) {
+      // No actor there, we need to open up a window ourselves
+      return OpenWindowFor(mPrincipal);
     }
 
     nsAutoString actionName;
@@ -429,8 +417,7 @@ nsresult NotificationParent::Show(Maybe<IPCImage>&& aIcon) {
     nsTArray<RefPtr<nsIAlertAction>> actions;
     MOZ_ASSERT(options.actions().Length() <= kMaxActions);
     for (const auto& action : options.actions()) {
-      actions.AppendElement(
-          new AlertAction(action.name(), action.title(), action.navigate()));
+      actions.AppendElement(new AlertAction(action.name(), action.title()));
     }
     alert->SetActions(actions);
   }

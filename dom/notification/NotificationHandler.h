@@ -7,7 +7,7 @@
 
 #include "ErrorList.h"
 #include "nsINotificationHandler.h"
-#include "nsReadableUtils.h"
+#include "nsStringFwd.h"
 
 class nsIPrincipal;
 namespace mozilla::dom {
@@ -20,8 +20,7 @@ nsresult RespondOnClick(nsIPrincipal* aPrincipal, const nsAString& aScope,
                         const IPCNotification& aNotification,
                         const nsAString& aActionName);
 
-nsresult OpenWindowFor(nsIPrincipal* aPrincipal,
-                       const nsCString& aURL = EmptyCString());
+nsresult OpenWindowFor(nsIPrincipal* aPrincipal);
 
 class NotificationHandler final : public nsINotificationHandler {
  public:
