@@ -77,6 +77,8 @@ skip-if = [
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64'", # Bug 1946263
 ]
 
+["browser_sidebar_animation.js"]
+
 ["browser_sidebar_collapsed_close_tab_button.js"]
 
 ["browser_sidebar_context_menu.js"]
