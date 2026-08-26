@@ -1876,10 +1876,6 @@ void WindowGlobalParent::ActorDestroy(ActorDestroyReason aWhy) {
 
   if (GetBrowsingContext()->IsTopContent() &&
       !mDocumentPrincipal->SchemeIs("about")) {
-    // Record the page load
-    uint32_t pageLoaded = 1;
-    glean::mixed_content::unblock_counter.AccumulateSingleSample(pageLoaded);
-
     // Record the mixed content status of the docshell in Telemetry
     enum {
       NO_MIXED_CONTENT = 0,  // There is no Mixed Content on the page
