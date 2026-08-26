@@ -80,7 +80,7 @@ class CollectionsToTabGroupsMigrationIntegrationTest {
             tabCollectionStorage = tabCollectionStorage,
             restoreUseCase = TabsUseCases(browserStore).restore,
             tabGroupRepository = tabGroupRepository,
-            settings = settings,
+            collectionsMigrationRepository = DefaultCollectionsMigrationRepository(settings = settings),
             engine = FakeEngine(),
             filesDir = testContext.filesDir,
             dateTimeProvider = dateTimeProvider,

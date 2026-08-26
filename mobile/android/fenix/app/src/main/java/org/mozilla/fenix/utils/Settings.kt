@@ -255,7 +255,9 @@ class Settings(
 
     /** Indicates whether or not the "Collections" section should be shown on the home screen. */
     val collections: Boolean
-        get() = FxNimbus.features.homescreen.value().sectionsEnabled[HomeScreenSection.COLLECTIONS] == true
+        get() =
+            !hideCollectionsUi &&
+                FxNimbus.features.homescreen.value().sectionsEnabled[HomeScreenSection.COLLECTIONS] == true
 
     /** Whether the Collections UI should be hidden. */
     var hideCollectionsUi by
@@ -283,6 +285,13 @@ class Settings(
         stringSetPreference(
             appContext.getPreferenceKey(R.string.pref_key_migrated_collection_ids),
             default = setOf(),
+        )
+
+    /** Indicates whether the collections migration card should be shown. */
+    var shouldShowCollectionsMigrationCard by
+        booleanPreference(
+            appContext.getPreferenceKey(R.string.pref_key_show_collections_migration_card),
+            default = false,
         )
 
     /** Indicates whether or not the Firefox Japan Guide default site should be shown. */

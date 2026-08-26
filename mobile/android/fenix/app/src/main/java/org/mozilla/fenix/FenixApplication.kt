@@ -550,7 +550,7 @@ open class FenixApplication : Application(), Provider, ThemeProvider {
 
                 CollectionsToTabGroupsMigrationWorker.enqueueIfNeeded(
                     context = this@FenixApplication,
-                    settings = components.settings,
+                    collectionsMigrationRepository = components.collectionsMigrationRepository,
                 )
             }
             // Account manager initialization needs to happen on the main thread.
