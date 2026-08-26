@@ -31,7 +31,7 @@ async function test() {
   });
 
   // Disable the default gestures support during this part of the test
-  gGestureSupport.uninit();
+  gGestureSupport.init(false);
 
   test_utils = window.windowUtils;
 
@@ -42,7 +42,7 @@ async function test() {
 
   // Reenable the default gestures support. The remaining tests target
   // the Firefox gesture functionality.
-  gGestureSupport.init();
+  gGestureSupport.init(true);
 
   const aPage = "about:about";
   test_normalTab = await BrowserTestUtils.openNewForegroundTab(
