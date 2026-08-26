@@ -261,7 +261,7 @@ nsresult ConnectionEstablisher::ActivateConnectionWithTransaction(
   mTransaction->SetConnectedCallback(
       [self = RefPtr{this},
        onActivated = std::move(aOnActivated)](nsresult aResult) {
-        NS_DispatchToCurrentThread(NS_NewRunnableFunction(
+        DispatchToCurrent(NS_NewRunnableFunction(
             "ConnectionEstablisher::ActivateCallback",
             [self, aResult, onActivated = std::move(onActivated)]() {
               if (NS_FAILED(aResult)) {
