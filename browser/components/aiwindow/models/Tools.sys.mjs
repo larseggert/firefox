@@ -903,6 +903,30 @@ export class GetPageContent {
    *  with a descriptive header, or an error message if extraction fails.
    */
   static async getPageContent({ url_list, signal }, conversation) {
+    // Sanitize the inputs from the language model:
+    if (!Array.isArray(url_list)) {
+      return "Error: the url_list argument must be an array of strings.";
+    }
+
+    const results = await GetPageContent.getPageContentResults(
+      { url_list, signal },
+      conversation
+    );
+    return results.map(result => result.content);
+  }
+
+  /**
+   * Like getPageContent, but returns one structured result per URL so callers
+   * can tell failed extractions apart from actual page content. Used by the
+   * monitor agent to report "couldn't check" instead of "no match".
+   *
+   * @param {object} toolParams
+   * @param {string[]} toolParams.url_list
+   * @param {AbortSignal} [toolParams.signal]
+   * @param {ChatConversation} conversation
+   * @returns {Promise<Array<{url: string, ok: boolean, content: string}>>}
+   */
+  static async getPageContentResults({ url_list, signal }, conversation) {
     // This is a decision table for allowing and blocking fetches on the configuration of the
     // SecurityProperties and the URLs. Tab URLs don't do any new page loads. Mention urls
     // have been added by the user so they should be allowed. SERP urls came from a
@@ -915,11 +939,6 @@ export class GetPageContent {
     // │ Untrusted only      │ ALLOW    │ ALLOW        │ ALLOW              │ ALLOW    │
     // │ Private + Untrusted │ ALLOW    │ ALLOW        │ ALLOW (anonymous)  │ BLOCK    │
 
-    // Sanitize the inputs from the language model:
-    if (!Array.isArray(url_list)) {
-      return "Error: the url_list argument must be an array of strings.";
-    }
-
     // Collect these one time before the loop below since it must iterate through
     // all of the conversations and collect a new Set of mentions.
     const mentionedUrls = conversation.getAllMentionURLs();
@@ -927,32 +946,45 @@ export class GetPageContent {
     const results = await Promise.all(
       url_list.map(async (url, index) => {
         if (!isAllowedURL(url)) {
-          return "This URL is not allowed: " + url;
+          return { url, ok: false, content: "This URL is not allowed: " + url };
         }
         const startTime = ChromeUtils.now();
         try {
-          const text = await GetPageContent.#getPageContentsForSingleURL(
-            url,
-            mentionedUrls,
-            conversation,
-            signal
-          );
+          const { ok, content } =
+            await GetPageContent.#getPageContentsForSingleURL(
+              url,
+              mentionedUrls,
+              conversation,
+              signal
+            );
           ChromeUtils.addProfilerMarker(
             "SmartWindow",
             { startTime },
             `Tool:get_page_content(${url})`
           );
-          return text;
+          return { url, ok, content };
         } catch (error) {
           if (signal?.aborted) {
-            return `Content from ${url_list[index]}:\n\n(Page read canceled after a timeout — answer using the results you have.)`;
+            return {
+              url,
+              ok: false,
+              content: `Content from ${url_list[index]}:\n\n(Page read canceled after a timeout — answer using the results you have.)`,
+            };
           }
           if (error?.name === "TimeoutError") {
             lazy.console.log("[Tool] getPageContent timed out", error);
-            return `The page at ${url_list[index]} did not finish loading in time, so its content is unavailable. Do not retry it.`;
+            return {
+              url,
+              ok: false,
+              content: `The page at ${url_list[index]} did not finish loading in time, so its content is unavailable. Do not retry it.`,
+            };
           }
           console.error(error);
-          return `Could not retrieve the content for the page: ${url_list[index]}`;
+          return {
+            url,
+            ok: false,
+            content: `Could not retrieve the content for the page: ${url_list[index]}`,
+          };
         }
       })
     );
@@ -990,7 +1022,8 @@ export class GetPageContent {
    * @param {AbortSignal} [signal] - Cancels the extraction (and tears down any
    *   headless browser) when it aborts.
    *
-   * @returns {Promise<string>}
+   * @returns {Promise<{ok: boolean, content: string}>}
+   *   ok is false when content is a failure description rather than page text.
    */
   static async #getPageContentsForSingleURL(
     url,
@@ -1011,7 +1044,10 @@ export class GetPageContent {
         tab.linkedBrowser.browsingContext?.currentWindowContext;
 
       if (!currentWindowContext) {
-        return `Cannot access content from the following webpage:\n - Title: ${sanitizeUntrustedContent(tab.label)}\n - URL: ${url}.`;
+        return {
+          ok: false,
+          content: `Cannot access content from the following webpage:\n - Title: ${sanitizeUntrustedContent(tab.label)}\n - URL: ${url}.`,
+        };
       }
 
       // Extract page content using PageExtractor
@@ -1053,10 +1089,12 @@ export class GetPageContent {
           anonymousFetch: true,
         });
       }
-      return (
-        `Access is not allowed for ${url} because of untrusted and private content ` +
-        "in the conversation."
-      );
+      return {
+        ok: false,
+        content:
+          `Access is not allowed for ${url} because of untrusted and private content ` +
+          "in the conversation.",
+      };
     }
 
     return PageExtractorParent.getHeadlessExtractor({
@@ -1082,9 +1120,10 @@ export class GetPageContent {
    * @param {string} sourceUrl
    * @param {AbortSignal} [signal] - Rejects the extraction early if it aborts,
    *   which lets the headless browser hosting the read be torn down promptly.
-   * @returns {Promise<string>}
+   * @returns {Promise<{ok: boolean, content: string}>}
    *  A promise resolving to a formatted string containing the page content
-   *  with mode and label information, or an error message if no content is available.
+   *  with mode and label information, or (with ok false) a failure message
+   *  if no content is available.
    */
   static async #runExtraction(
     pageExtractor,
@@ -1104,7 +1143,10 @@ export class GetPageContent {
     );
 
     if (!extraction) {
-      return `get_page_content returned no content for ${label}.`;
+      return {
+        ok: false,
+        content: `get_page_content returned no content for ${label}.`,
+      };
     }
 
     const { text, links } = extraction;
@@ -1116,7 +1158,14 @@ export class GetPageContent {
     conversation.securityProperties.setPrivateData();
     conversation.securityProperties.setUntrustedInput();
 
-    return `Content from ${label}:\n\n${text}`;
+    if (!text?.trim()) {
+      return {
+        ok: false,
+        content: `get_page_content returned no content for ${label}.`,
+      };
+    }
+
+    return { ok: true, content: `Content from ${label}:\n\n${text}` };
   }
 }
 
