@@ -114,13 +114,13 @@ index 87974ada5c..d8543e0ba2 100644
    absl::InlinedVector<uint32_t, 4> new_continuous_temporal_units_;
  };
 diff --git a/call/video_receive_stream.h b/call/video_receive_stream.h
-index c00a7efa51..5236029055 100644
+index 8cdaad680b..fd3eda6ff2 100644
 --- a/call/video_receive_stream.h
 +++ b/call/video_receive_stream.h
-@@ -120,6 +120,8 @@ class VideoReceiveStreamInterface : public MediaReceiveStreamInterface {
-     // Key/delta split of `frames_decoded`.
+@@ -119,6 +119,8 @@ class VideoReceiveStreamInterface : public MediaReceiveStreamInterface {
+     uint32_t frames_decoded = 0;
      // https://w3c.github.io/webrtc-stats/#dom-rtcinboundrtpstreamstats-keyframesdecoded
-     FrameCounts decoded_frame_counts;
+     uint32_t key_frames_decoded = 0;
 +    // https://w3c.github.io/webrtc-stats/#dom-rtcreceivedrtpstreamstats-packetsdiscarded
 +    uint64_t packets_discarded = 0;
      // https://w3c.github.io/webrtc-stats/#dom-rtcinboundrtpstreamstats-totaldecodetime
@@ -186,10 +186,10 @@ index 7f4b99efcb..ac0e6f6c29 100644
  
    void ForceSpsPpsIdrIsH264Keyframe();
 diff --git a/video/receive_statistics_proxy.cc b/video/receive_statistics_proxy.cc
-index d9cc72f4e8..ac28eac910 100644
+index eb8ba32702..8b61f6bf0d 100644
 --- a/video/receive_statistics_proxy.cc
 +++ b/video/receive_statistics_proxy.cc
-@@ -814,6 +814,11 @@ void ReceiveStatisticsProxy::OnDroppedFrames(uint32_t frames_dropped) {
+@@ -812,6 +812,11 @@ void ReceiveStatisticsProxy::OnDroppedFrames(uint32_t frames_dropped) {
        }));
  }
  
