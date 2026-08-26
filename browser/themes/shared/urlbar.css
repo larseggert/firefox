@@ -1416,7 +1416,7 @@ toolbar[inactive="true"] .urlbar,
     top: -999px;
   }
 
-  .urlbar:not(#searchbar-new) & {
+  .urlbar:not([sap-name="searchbar"], [sap-name="newtab_searchbar"]) & {
     @media (not -moz-pref("browser.urlbar.searchModeSwitcher.featureGate")) and (not -moz-pref("browser.urlbar.scotchBonnet.enableOverride")) {
       display: none;
     }

@@ -118,7 +118,7 @@ export class SearchModeSwitcher {
   #isEnabled() {
     return (
       UrlbarPrefs.get("scotchBonnet.enableOverride") ||
-      this.#input.sapName == "searchbar"
+      this.#input.isSearchbarSAP
     );
   }
 
