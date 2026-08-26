@@ -53,7 +53,7 @@ XPCOMUtils.defineLazyServiceGetter(
  * Utility class for testing a `UrlbarInputBase` implementation, whichever
  * element hosts it and whichever process the element lives in.
  */
-class UrlbarInputBaseTestUtils {
+export class UrlbarInputBaseTestUtils {
   /**
    * @param {(window: ChromeWindow) => UrlbarInput} getUrlbarInputForWindow
    */
@@ -146,6 +146,22 @@ class UrlbarInputBaseTestUtils {
     } finally {
       Object.assign(this, saved);
     }
+  }
+
+  /**
+   * Registers a listener with a controller and hands back the listener as
+   * registered, which is what `removeListener` matches on. A subclass driving a
+   * controller in another realm overrides this to hand over something that
+   * realm can read.
+   *
+   * @param {UrlbarChildController} controller
+   * @param {object} listener
+   * @returns {object}
+   *   The registered listener.
+   */
+  addControllerListener(controller, listener) {
+    controller.addListener(listener);
+    return listener;
   }
 
   /**
@@ -825,13 +841,12 @@ class UrlbarInputBaseTestUtils {
   promiseProviderEngagement(win) {
     let { controller } = this.#urlbar(win);
     let { promise, resolve } = Promise.withResolvers();
-    let listener = {
+    let registered = this.addControllerListener(controller, {
       onProviderEngagement() {
-        controller.removeListener(listener);
+        controller.removeListener(registered);
         resolve();
       },
-    };
-    controller.addListener(listener);
+    });
     return promise;
   }
 
@@ -906,7 +921,7 @@ class UrlbarInputBaseTestUtils {
     }
     this.info("Waiting for the urlbar view to open");
     await new Promise(resolve => {
-      urlbar.controller.addListener({
+      this.addControllerListener(urlbar.controller, {
         onViewOpen() {
           urlbar.controller.removeListener(this);
           resolve();
@@ -931,7 +946,7 @@ class UrlbarInputBaseTestUtils {
         resolve();
         return;
       }
-      urlbar.controller.addListener({
+      this.addControllerListener(urlbar.controller, {
         onViewClose() {
           urlbar.controller.removeListener(this);
           resolve();
@@ -966,13 +981,12 @@ class UrlbarInputBaseTestUtils {
   promiseControllerNotification(win, notification) {
     let { controller } = this.#urlbar(win);
     return new Promise(resolve => {
-      let listener = {
+      let registered = this.addControllerListener(controller, {
         [notification](...args) {
-          controller.removeListener(listener);
+          controller.removeListener(registered);
           resolve(args);
         },
-      };
-      controller.addListener(listener);
+      });
     });
   }
 
