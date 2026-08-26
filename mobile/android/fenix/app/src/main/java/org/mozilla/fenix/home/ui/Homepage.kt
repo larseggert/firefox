@@ -451,11 +451,7 @@ private fun RecentTabsSection(
     Spacer(modifier = Modifier.height(topSpacing))
 
     Column(modifier = Modifier.padding(horizontal = horizontalMargin)) {
-        HomeSectionHeader(
-            headerText = stringResource(R.string.recent_tabs_header),
-            description = stringResource(R.string.recent_tabs_show_all_content_description_2),
-            onButtonClick = interactor::onRecentTabShowAllClicked,
-        )
+        HomeSectionHeader(headerText = stringResource(R.string.recent_tabs_header_2))
 
         Spacer(Modifier.height(16.dp))
 
