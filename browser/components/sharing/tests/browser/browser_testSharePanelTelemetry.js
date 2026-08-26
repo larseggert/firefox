@@ -28,7 +28,7 @@ add_task(async function test_shareablePage() {
       { id: "share-panel-copy-link", visible: true },
       {
         id: "share-panel-os-share",
-        visible: AppConstants.platform === "win", // Bug 2058695: Make this visible onces bug 2009747 lands.
+        visible: AppConstants.platform !== "linux",
       },
       {
         id: "share-panel-mail",
