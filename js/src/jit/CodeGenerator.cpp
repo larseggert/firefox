@@ -2596,8 +2596,7 @@ static void EmitInitDependentStringBase(MacroAssembler& masm,
     //
     //   flags |= ~(flags | ~ATOM_BIT) << (DEPENDED_ON_BIT - ATOM_BIT)
     //
-    masm.or32(Imm32(~StringFlags::ATOM_BIT), temp1, temp2);
-    masm.not32(temp2);
+    masm.nor32(Imm32(~StringFlags::ATOM_BIT), temp1, temp2);
     ShiftFlag32<StringFlags::ATOM_BIT, StringFlags::DEPENDED_ON_BIT>(masm,
                                                                      temp2);
     masm.or32(temp2, temp1);
