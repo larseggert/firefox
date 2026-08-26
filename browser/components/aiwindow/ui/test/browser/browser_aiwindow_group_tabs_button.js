@@ -103,9 +103,7 @@ async function assertButtonHiddenOnContent(win, reason) {
     () => BrowserTestUtils.isVisible(askButton),
     "Left the immersive view (the Ask button is shown)"
   );
-  const button = win.document.getElementById(
-    "smartwindow-group-tabs-button-inner"
-  );
+  const button = win.document.getElementById("smartwindow-group-tabs-button");
   Assert.ok(
     !AutoTabGroupingSuggestions.isAvailable,
     `Feature is unavailable: ${reason}`
@@ -164,19 +162,67 @@ describe("Auto Tab Grouping toolbar button", () => {
   });
 
   describe("visibility gating", () => {
-    it("is hidden when the feature pref is off", async () => {
+    it("is not registered when the feature pref is off", async () => {
       await SpecialPowers.pushPrefEnv({
         set: [["browser.smartwindow.autoTabGrouping.enabled", false]],
       });
 
       win = await openAIWindow();
+      Assert.equal(
+        win.document.getElementById("smartwindow-group-tabs-button"),
+        null,
+        "Group tabs button is absent while the feature pref is off"
+      );
+      Assert.ok(
+        !CustomizableUI.getUnusedWidgets(win.gNavToolbox.palette).some(
+          widget => widget.id == "smartwindow-group-tabs-button"
+        ),
+        "Group tabs button is not in the customize palette either"
+      );
+    });
+
+    it("follows the feature pref while a window is open", async () => {
+      win = await openGroupingWindowWithTabs();
+      const buttonId = "smartwindow-group-tabs-button";
+      Assert.ok(
+        win.document.getElementById(buttonId),
+        "Group tabs button exists while the feature pref is on"
+      );
+
+      try {
+        Services.prefs.setBoolPref(
+          "browser.smartwindow.autoTabGrouping.enabled",
+          false
+        );
+        Assert.equal(
+          win.document.getElementById(buttonId),
+          null,
+          "Turning the feature pref off takes the button out of the toolbar"
+        );
+      } finally {
+        Services.prefs.clearUserPref(
+          "browser.smartwindow.autoTabGrouping.enabled"
+        );
+      }
+      Assert.ok(
+        win.document.getElementById(buttonId),
+        "Turning the feature pref back on puts the button back"
+      );
+    });
+
+    it("is hidden in a classic window", async () => {
+      await SpecialPowers.pushPrefEnv({
+        set: [["browser.smartwindow.autoTabGrouping.enabled", true]],
+      });
+
+      win = await BrowserTestUtils.openNewBrowserWindow();
       const button = win.document.getElementById(
-        "smartwindow-group-tabs-button-inner"
+        "smartwindow-group-tabs-button"
       );
       Assert.ok(button, "Group tabs button exists in the toolbar");
       Assert.ok(
         BrowserTestUtils.isHidden(button),
-        "Group tabs button is hidden while the feature pref is off"
+        "Group tabs button is hidden in a window that is not a Smart Window"
       );
     });
 
@@ -385,7 +431,7 @@ describe("Auto Tab Grouping toolbar button", () => {
       win = await openGroupingWindowWithTabs();
 
       const button = win.document.getElementById(
-        "smartwindow-group-tabs-button-inner"
+        "smartwindow-group-tabs-button"
       );
       await TestUtils.waitForCondition(
         () => BrowserTestUtils.isVisible(button),
@@ -422,6 +468,28 @@ describe("Auto Tab Grouping toolbar button", () => {
         "true",
         "Button is still marked expanded"
       );
+    });
+
+    it("opens the panel when the button is clicked", async () => {
+      win = await openGroupingWindowWithTabs();
+
+      const button = win.document.getElementById(
+        "smartwindow-group-tabs-button"
+      );
+      await TestUtils.waitForCondition(() =>
+        BrowserTestUtils.isVisible(button)
+      );
+
+      EventUtils.synthesizeMouseAtCenter(button, {}, win);
+      await TestUtils.waitForCondition(
+        () => win.document.getElementById("smartwindow-group-tabs-panel"),
+        "Clicking the button opens the panel"
+      );
+      await TestUtils.waitForCondition(
+        () => button.getAttribute("aria-expanded") === "true",
+        "The clicked button is marked expanded"
+      );
+      await closePanel(win);
     });
 
     it("records the clustering pipeline, and asks again when reopened", async () => {
@@ -553,6 +621,10 @@ describe("Auto Tab Grouping toolbar button", () => {
         return rows.length === 1 ? rows[0] : null;
       }, "The other suggestion is still offered");
       Assert.ok(
+        !panel.querySelector(".swgt-create-all"),
+        "With one suggestion left, its own row is the only way to create it"
+      );
+      Assert.ok(
         win.document.getElementById("smartwindow-group-tabs-panel"),
         "Panel stays open so the next group can be created"
       );
@@ -593,6 +665,24 @@ describe("Auto Tab Grouping toolbar button", () => {
       await TestUtils.waitForCondition(
         () => panel.querySelectorAll(".swgt-recent-row").length === 2,
         "Both created groups are listed under 'Just created'"
+      );
+      const groupIcons = [
+        ...panel.querySelectorAll(".swgt-recent-row .swgt-group-icon"),
+      ];
+      Assert.ok(
+        groupIcons.every(icon =>
+          icon.src.endsWith("tabbrowser/tab-group-chicklet.svg")
+        ),
+        "Created groups are marked with the shared tab group chicklet"
+      );
+      Assert.deepEqual(
+        groupIcons
+          .map(icon =>
+            icon.style.getPropertyValue("--tab-group-background-color")
+          )
+          .sort(),
+        win.gBrowser.tabGroups.map(g => `var(--tab-group-${g.color})`).sort(),
+        "Each chicklet is tinted with its own group's color"
       );
       Assert.ok(
         panel.querySelector(".swgt-ungroup"),
@@ -779,7 +869,7 @@ describe("Auto Tab Grouping toolbar button", () => {
       const { target: hint } = await hintShown;
       Assert.equal(
         hint.anchorNode?.id,
-        "smartwindow-group-tabs-button-inner",
+        "smartwindow-group-tabs-button",
         "The hint points at our button, not the All Tabs button which may be absent"
       );
       await TestUtils.waitForCondition(
@@ -1382,7 +1472,7 @@ describe("Auto Tab Grouping toolbar button", () => {
       await addWebTabs(win);
 
       const button = win.document.getElementById(
-        "smartwindow-group-tabs-button-inner"
+        "smartwindow-group-tabs-button"
       );
       const popupSet = win.document.getElementById("mainPopupSet");
 
@@ -1417,7 +1507,7 @@ describe("Auto Tab Grouping toolbar button", () => {
       );
       const createAll = panel.querySelector(".swgt-create-all");
       Assert.equal(
-        createAll.getAttribute("data-l10n-id"),
+        createAll.querySelector(".swgt-row-label").getAttribute("data-l10n-id"),
         "smartwindow-group-tabs-create-all",
         "'Create all' label is localized via Fluent"
       );
@@ -1594,7 +1684,7 @@ describe("Auto Tab Grouping toolbar button", () => {
       await addWebTabs(win);
 
       const button = win.document.getElementById(
-        "smartwindow-group-tabs-button-inner"
+        "smartwindow-group-tabs-button"
       );
       await TestUtils.waitForCondition(() =>
         BrowserTestUtils.isVisible(button)

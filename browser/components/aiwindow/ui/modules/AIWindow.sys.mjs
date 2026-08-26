@@ -32,6 +32,7 @@ const PREF_FIRSTRUN_HAS_COMPLETED = "browser.smartwindow.firstrun.hasCompleted";
 const PREF_AGENT = "browser.smartwindow.agent.enabled";
 const PREF_AGENT_TOOLBAR = "browser.smartwindow.agent.toolbar.enabled";
 const MONITOR_WIDGET_ID = "smartwindow-monitor-button";
+const GROUP_TABS_BUTTON_ID = "smartwindow-group-tabs-button";
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -100,6 +101,14 @@ XPCOMUtils.defineLazyPreferenceGetter(
   () => AIWindow._updateMonitorWidgetRegistration()
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "autoTabGroupingEnabled",
+  PREF_AUTO_TAB_GROUPING,
+  true,
+  () => AIWindow._updateGroupTabsWidgetRegistration()
+);
+
 /**
  * AI Window Service
  */
@@ -110,6 +119,7 @@ export const AIWindow = {
   _aiWindowMenu: null,
   _switcherWidgetCreated: false,
   _monitorWidgetCreated: false,
+  _groupTabsWidgetCreated: false,
 
   /**
    * A WeakMap<window, AIWindowTabStatesManager> that keeps references
@@ -126,7 +136,6 @@ export const AIWindow = {
       this._windowStates.set(win, {});
       this._updateHamburgerMenuPosition(win);
       this._initializeAskButtonOnToolbox(win);
-      this._initializeGroupTabsButtonOnToolbox(win);
       this._updateMonitorButtonForWindow(win);
       const windowArgs = win?.arguments?.[1];
       if (
@@ -173,6 +182,7 @@ export const AIWindow = {
     lazy.getAllModelsData(); // loads model data into cache for about:preferences
     lazy.NimbusFeatures.smartWindow.onUpdate(this.onNimbusUpdate);
     this._initialized = true;
+    this._updateGroupTabsWidgetRegistration();
     this._updateSwitcherWidgetRegistration();
     this._updateMonitorWidgetRegistration();
   },
@@ -317,6 +327,7 @@ export const AIWindow = {
   },
 
   _onAIWindowEnabledPrefChange() {
+    this._updateGroupTabsWidgetRegistration();
     this._updateSwitcherWidgetRegistration();
     this._updateMonitorWidgetRegistration();
     const widget = lazy.CustomizableUI.getWidget("ai-window-toggle");
@@ -384,24 +395,21 @@ export const AIWindow = {
   },
 
   /**
-   * Initializes the toolbox button that opens the "Organize Tabs" panel, and
-   * starts fetching the models it needs once it is shown. The whole Auto Tab
-   * Grouping feature is gated behind a default-off pref.
+   * Shows the "Organize Tabs" button only in a Smart Window.
    *
-   * @param {Window} win
+   * @param {Element} [node] This window's button, if it has one: the user can
+   *   remove it from the toolbar.
    */
-  _initializeGroupTabsButtonOnToolbox(win) {
-    const button = win.document.getElementById("smartwindow-group-tabs-button");
-    if (!button) {
+  _updateGroupTabsButtonVisibility(node) {
+    if (!node) {
       return;
     }
-    const enabled = Services.prefs.getBoolPref(PREF_AUTO_TAB_GROUPING, false);
-    button.hidden = !(
-      enabled &&
-      this.isAIWindowActive(win) &&
+    node.hidden = !(
+      lazy.autoTabGroupingEnabled &&
+      this.isAIWindowActive(node.documentGlobal) &&
       lazy.AutoTabGroupingSuggestions.isAvailable
     );
-    if (!button.hidden) {
+    if (!node.hidden) {
       lazy.AutoTabGroupingSuggestions.preloadModels();
     }
   },
@@ -933,8 +941,10 @@ export const AIWindow = {
       this._reconcileNewTabPages(win, newTabPref, homePagePref);
       this._updateHamburgerMenuPosition(win, { isToggling: true });
       this._initializeAskButtonOnToolbox(win);
-      this._initializeGroupTabsButtonOnToolbox(win);
       this._updateMonitorButtonForWindow(win);
+      this._updateGroupTabsButtonVisibility(
+        win.document.getElementById(GROUP_TABS_BUTTON_ID)
+      );
       Services.obs.notifyObservers(
         win,
         "ai-window-state-changed",
@@ -1182,18 +1192,6 @@ export const AIWindow = {
 
     this._updateMonitorButtonForWindow(win);
 
-    const groupTabsButton = win.document.getElementById(
-      "smartwindow-group-tabs-button"
-    );
-    if (groupTabsButton) {
-      const groupTabsEnabled = Services.prefs.getBoolPref(
-        PREF_AUTO_TAB_GROUPING,
-        false
-      );
-      groupTabsButton.hidden =
-        !groupTabsEnabled || !lazy.AutoTabGroupingSuggestions.isAvailable;
-    }
-
     // Set attr on the specific browser that has content to override color scheme
     win.gBrowser.selectedBrowser?.toggleAttribute(
       "smartwindow-content",
@@ -1265,6 +1263,55 @@ export const AIWindow = {
       },
     });
     this._switcherWidgetCreated = true;
+  },
+
+  _createGroupTabsWidget() {
+    if (this._groupTabsWidgetCreated) {
+      return;
+    }
+
+    lazy.CustomizableUI.createWidget({
+      id: GROUP_TABS_BUTTON_ID,
+      l10nId: "smartwindow-organize-tabs-button",
+      defaultArea: lazy.CustomizableUI.AREA_TABSTRIP,
+      // Profiles that already have a saved tab strip only get a new default
+      // widget put in its default spot if it is marked as newly introduced;
+      // without this it lands at the end of the toolbar instead.
+      _introducedByPref: PREF_AUTO_TAB_GROUPING,
+      removable: true,
+      showInPrivateBrowsing: false,
+      onCreated: node => {
+        node.setAttribute("aria-haspopup", "dialog");
+        node.setAttribute("aria-expanded", "false");
+        this._updateGroupTabsButtonVisibility(node);
+      },
+      onCommand: event => {
+        lazy.AIWindowUI.toggleGroupTabsPanel(event.target.documentGlobal);
+      },
+    });
+    this._groupTabsWidgetCreated = true;
+  },
+
+  _destroyGroupTabsWidget() {
+    if (!this._groupTabsWidgetCreated) {
+      return;
+    }
+
+    lazy.CustomizableUI.destroyWidget(GROUP_TABS_BUTTON_ID);
+    this._groupTabsWidgetCreated = false;
+  },
+
+  /**
+   * The "Organize Tabs" button is a CustomizableUI button, it must not exist
+   * when the feature is off or when Smart Window is blocked by
+   * browser.ai.control.
+   */
+  _updateGroupTabsWidgetRegistration() {
+    if (lazy.autoTabGroupingEnabled && !this.isBlocked) {
+      this._createGroupTabsWidget();
+      return;
+    }
+    this._destroyGroupTabsWidget();
   },
 
   _destroySwitcherWidget() {
