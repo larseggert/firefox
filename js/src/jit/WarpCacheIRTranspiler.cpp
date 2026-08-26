@@ -6838,7 +6838,8 @@ bool WarpCacheIRTranspiler::emitSpecializedBindFunctionResult(
   MOZ_ASSERT_IF(callInfo_, callInfo_->argc() == argc);
   MOZ_ASSERT_IF(!callInfo_, argc == 0);
 
-  auto* bound = MNewBoundFunction::New(alloc(), templateObj);
+  auto* templateConst = constant(ObjectValue(*templateObj));
+  auto* bound = MNewBoundFunction::New(alloc(), templateConst);
   add(bound);
 
   size_t numBoundArgs = argc > 0 ? argc - 1 : 0;

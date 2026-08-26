@@ -6444,6 +6444,8 @@ JSObject* MObjectState::templateObjectOf(MDefinition* obj) {
     return obj->toNewCallObject()->templateObject();
   } else if (obj->isNewIterator()) {
     return obj->toNewIterator()->templateObject();
+  } else if (obj->isNewBoundFunction()) {
+    return obj->toNewBoundFunction()->templateObj();
   }
 
   MOZ_CRASH("unreachable");
