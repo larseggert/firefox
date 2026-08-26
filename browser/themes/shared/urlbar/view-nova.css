@@ -218,6 +218,13 @@
   display: flex;
   align-items: baseline;
   max-width: 100%;
+
+  /* For rows with result explanations but no URL (e.g., "Visit" actions like
+     bookmark keywords), let the title start to overflow more quickly than usual
+     so there's room for the explanation. Normally the URL overflows instead. */
+  .urlbarView-row[has-explanation]:not([has-url]) & {
+    min-width: 0;
+  }
 }
 
 .urlbarView-row-body-description,
@@ -852,7 +859,17 @@
   display: flex;
   align-items: baseline;
   margin-inline: calc(var(--urlbarView-row-padding-inline) + var(--urlbarView-icon-margin-start));
-  flex: 0 0 auto;
+  flex: 1 0 auto;
+  justify-content: end;
+
+  /* For rows with no URL (e.g., "Visit" actions like bookmark keywords), add
+     plenty of space between the explanation and action or title. In this case
+     the separator character doesn't appear like it does when the explanation is
+     next to an overflowed URL. Even `--space-xxlarge` is too small, so we use a
+     larger literal value. */
+  .urlbarView-url:empty + & {
+    margin-inline-start: 3em;
+  }
 
   .urlbarView-row[has-menu-button] & {
     margin-inline-end: 0;

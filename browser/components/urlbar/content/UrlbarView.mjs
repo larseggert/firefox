@@ -1632,10 +1632,7 @@ export class UrlbarView {
     }
 
     let explanation = this.#createElement("span");
-    explanation.classList.add(
-      "urlbarView-explanation",
-      "urlbarView-overflowable"
-    );
+    explanation.classList.add("urlbarView-explanation");
     parentNode.appendChild(explanation);
     item._elements.set("explanation", explanation);
 
@@ -3192,10 +3189,6 @@ export class UrlbarView {
       let tagsContainer = row._elements.get("tagsContainer");
       if (tagsContainer) {
         this.#setElementOverflowing(tagsContainer, false);
-      }
-      let explanation = row._elements.get("explanation");
-      if (explanation) {
-        this.#setElementOverflowing(explanation, false);
       }
     }
   }
