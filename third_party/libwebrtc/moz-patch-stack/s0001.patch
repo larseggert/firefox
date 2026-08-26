@@ -1409,7 +1409,7 @@ index 276a878ffc..391fec9870 100644
      # Dependency on chromium's logging (in //base).
      deps += [ "//base" ]
 diff --git a/rtc_base/logging.cc b/rtc_base/logging.cc
-index dea1035afc..22cca54623 100644
+index 0be1b8fc42..30747536fc 100644
 --- a/rtc_base/logging.cc
 +++ b/rtc_base/logging.cc
 @@ -26,6 +26,7 @@
