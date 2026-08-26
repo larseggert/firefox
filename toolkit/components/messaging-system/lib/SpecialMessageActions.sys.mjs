@@ -1058,7 +1058,11 @@ export const SpecialMessageActions = {
         return this.fxaSignInFlow(action.data, browser);
       case "FXA_AIWINDOW_SIGNIN_FLOW":
         /** @returns {Promise<boolean>} */
-        return lazy.AIWindow.launchWindow(browser);
+        return lazy.AIWindow.launchWindow(
+          browser,
+          false,
+          action.data?.source ?? "asrouter"
+        );
       case "OPEN_PROTECTION_PANEL": {
         let { gProtectionsHandler } = window;
         gProtectionsHandler.showProtectionsPopup({});

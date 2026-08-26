@@ -515,6 +515,8 @@ export const AIWindow = {
       return;
     }
 
+    this.recordLaunchCommandTelemetry("startup", false);
+
     if (this.isAIWindowActive(win)) {
       // Window already opened as Smart via the BrowserContentHandler
       // startup gate, which uses ToS consentTime as a synchronous proxy for
@@ -854,6 +856,16 @@ export const AIWindow = {
     }
   },
 
+  /**
+   * Records that a Smart Window was opened.
+   *
+   * @param {string} trigger - The reason the Smart Window was opened: switch,
+   *   menu, new_window, open_browser, undo_close, keyboard_shortcut, settings,
+   *   bedrock, asrouter, or other. Messaging surfaces may supply their own
+   *   value instead of asrouter
+   * @param {ChromeWindow} [win] - The window that was opened. Omit when it is
+   *   not available yet, in which case the tab count is reported as 0
+   */
   recordOpenWindowTelemetry(trigger, win) {
     let signedIn = false;
     const opened_tabs = win?.gBrowser?.tabs.length ?? 0;
@@ -867,6 +879,30 @@ export const AIWindow = {
           fxa: signedIn,
           onboarding: !lazy.hasFirstrunCompleted,
           opened_tabs,
+        });
+      });
+  },
+
+  /**
+   * Records the intent to launch a Smart Window, before the sign-in flow that
+   * launchWindow may trigger.
+   *
+   * @param {string} trigger - The entry point requesting the launch: switch,
+   *   menu, keyboard_shortcut, startup, settings, bedrock, asrouter, or other.
+   *   Messaging surfaces may supply their own value instead of asrouter
+   * @param {boolean} openNewWindow - Whether a new window will be opened
+   */
+  recordLaunchCommandTelemetry(trigger, openNewWindow) {
+    let signedIn = false;
+    lazy.AIWindowAccountAuth.isSignedIn()
+      .then(result => {
+        signedIn = result;
+      })
+      .finally(() => {
+        Glean.smartWindow.launchCommandInvoked.record({
+          trigger,
+          fxa: signedIn,
+          new_window: openNewWindow,
         });
       });
   },
@@ -1034,6 +1070,8 @@ export const AIWindow = {
       if (this.isBlocked) {
         return false;
       }
+
+      this.recordLaunchCommandTelemetry(trigger, openNewWindow);
 
       // if browser.smartwindow.enabled is false
       // set the pref explicitly true
