@@ -34,6 +34,7 @@ const lazy = XPCOMUtils.declareLazy({
   Progress: "chrome://global/content/ml/Utils.sys.mjs",
   OPFS: "chrome://global/content/ml/OPFS.sys.mjs",
   BACKENDS: "chrome://global/content/ml/EngineProcess.sys.mjs",
+  EngineProcess: "chrome://global/content/ml/EngineProcess.sys.mjs",
   stringifyForLog: "chrome://global/content/ml/Utils.sys.mjs",
   console: () =>
     console.createInstance({
@@ -412,6 +413,11 @@ export class MLEngineParent extends JSProcessActorParent {
 
       case "MLEngine:GetWorkerConfig":
         return MLEngineParent.getWorkerConfig();
+
+      case "MLEngine:GetNativeOnnxRuntimeAvailability":
+        // Routed through EngineProcess so the child shares the parent's single
+        // cached probe result instead of running its own.
+        return lazy.EngineProcess.requestIsNativeOnnxRuntimeAvailable();
 
       case "MLEngine:DestroyEngineProcess":
         if (this.processKeepAlive) {
