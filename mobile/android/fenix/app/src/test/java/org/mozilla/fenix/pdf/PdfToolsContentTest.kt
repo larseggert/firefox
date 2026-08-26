@@ -28,12 +28,15 @@ import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mozilla.fenix.helpers.FenixGleanTestRule
 import org.mozilla.fenix.theme.FirefoxTheme
 import org.mozilla.fenix.theme.Theme
 
 @RunWith(AndroidJUnit4::class)
 class PdfToolsContentTest {
     @get:Rule val composeTestRule = createComposeRule()
+
+    @get:Rule val gleanTestRule = FenixGleanTestRule(testContext)
 
     private val tabId = "1"
     private val otherTabId = "2"

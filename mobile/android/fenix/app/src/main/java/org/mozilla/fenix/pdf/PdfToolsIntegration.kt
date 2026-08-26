@@ -104,17 +104,24 @@ class PdfToolsIntegration(
     /** Opens the dialog for adding a signature to the PDF. */
     internal fun handleSignClick() {
         isSigning = true
+        PdfViewer.signTapped.record(NoExtras())
     }
 
     /** Erases the signature that was typed. */
     internal fun handleSignClearClick() {
         signature.clearText()
+        PdfViewer.signDialogClearTapped.record(
+            PdfViewer.SignDialogClearTappedExtra(signatureType = SignatureType.Typed.telemetryName)
+        )
     }
 
     /** Adds the typed signature to the PDF and closes the dialog. */
     internal fun handleSignAddClick() {
         isSigning = false
         signature.clearText()
+        PdfViewer.signDialogAddTapped.record(
+            PdfViewer.SignDialogAddTappedExtra(signatureType = SignatureType.Typed.telemetryName)
+        )
         // Bug 2061298 will make the behavior available.
     }
 
@@ -122,6 +129,9 @@ class PdfToolsIntegration(
     internal fun handleSignCloseClick() {
         isSigning = false
         signature.clearText()
+        PdfViewer.signDialogCloseTapped.record(
+            PdfViewer.SignDialogCloseTappedExtra(signatureType = SignatureType.Typed.telemetryName)
+        )
     }
 
     /** Clears out the state if the user navigates away. */
