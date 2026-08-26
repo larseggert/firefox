@@ -69,7 +69,7 @@ play-services-fido = "21.3.0"
 protobuf = "4.36.0"
 
 # Gradle plugins
-dependency-analysis = "3.18.0"
+dependency-analysis = "3.19.1"
 jacoco = "0.8.15"
 kaml = "0.104.0"
 protobuf-plugin = "0.10.0"
