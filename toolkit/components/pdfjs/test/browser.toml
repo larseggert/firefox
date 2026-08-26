@@ -173,6 +173,12 @@ support-files = [
 
 ["browser_pdfjs_signature_telemetry.js"]
 
+["browser_pdfjs_slow_script.js"]
+support-files = [
+  "file_pdfjs_slow_script.html",
+  "file_pdfjs_slow_script.pdf",
+]
+
 ["browser_pdfjs_stamp_telemetry.js"]
 support-files = ["moz.png"]
 
