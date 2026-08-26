@@ -6,14 +6,10 @@
 
 #include <stdlib.h>
 
-#include <new>  // for placement new
-
 #include "LogModulePrefWatcher.h"
 #include "ManifestParser.h"
 #include "StaticComponents.h"
 #include "mozilla/DebugOnly.h"
-#include "mozilla/FileUtils.h"
-#include "mozilla/GenericFactory.h"
 #include "mozilla/Logging.h"
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/Omnijar.h"
@@ -26,7 +22,6 @@
 #include "mozilla/Variant.h"
 #include "nsArray.h"
 #include "nsCOMPtr.h"
-#include "nsCRT.h"  // for atoll
 #include "nsCategoryManager.h"
 #include "nsDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
@@ -34,23 +29,12 @@
 #include "nsIObserverService.h"
 #include "nsIStringEnumerator.h"
 #include "nsISupports.h"
-#include "nsISupportsPrimitives.h"
 #include "nsLayoutModule.h"
-#include "nsLocalFile.h"
 #include "nsNetUtil.h"
-#include "nsReadableUtils.h"
 #include "nsString.h"
-#include "nsSupportsPrimitives.h"
 #include "nsTArray.h"
-#include "nsThreadManager.h"
-#include "nsThreadUtils.h"
 #include "nsXPCOM.h"
-#include "nsXPCOMPrivate.h"
 #include "nscore.h"
-#include "nspr.h"
-#include "prcmon.h"
-#include "prio.h"
-#include "private/pprthred.h"
 #include "prthread.h"
 #include "xpcpublic.h"
 
