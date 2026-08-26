@@ -7464,6 +7464,7 @@ MDefinition* MGuardIsNotArrayBufferMaybeShared::foldsTo(TempAllocator& alloc) {
     case KnownClass::Array:
     case KnownClass::Function:
     case KnownClass::RegExp:
+    case KnownClass::Date:
     case KnownClass::ArrayIterator:
     case KnownClass::StringIterator:
     case KnownClass::RegExpStringIterator: {
