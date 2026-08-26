@@ -22,7 +22,7 @@ customElements.define("shadow-input", class extends HTMLElement {
 <script type="application/javascript" src="chrome://global/content/editMenuOverlay.js"/>
 <script>
 // A consumer of EditContextMenu.addItems(), for the test to check against.
-EditContextMenu.addItems({
+window.testItemSet = EditContextMenu.addItems({
   matches: input => input.localName == "textarea",
   createItems() {
     let fragment = document.createDocumentFragment();

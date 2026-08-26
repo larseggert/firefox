@@ -123,6 +123,8 @@ var EditContextMenu = {
    *   the menu opens on another input.
    * @param {string} [itemSet.after]
    *   Id of the item to insert the items after. They go last by default.
+   * @returns {object}
+   *   The set, to pass to removeItems().
    */
   addItems({ matches, createItems, onShowing, after }) {
     let itemSet = { matches, createItems, onShowing, after, items: [] };
@@ -132,6 +134,21 @@ var EditContextMenu = {
     if (popup) {
       this._insertItems(popup, itemSet);
     }
+    return itemSet;
+  },
+
+  /**
+   * Removes items from the menu.
+   *
+   * @param {object} itemSet
+   *   The set addItems() returned.
+   */
+  removeItems(itemSet) {
+    this._itemSets = this._itemSets.filter(set => set != itemSet);
+    for (let item of itemSet.items) {
+      item.remove();
+    }
+    itemSet.items = [];
   },
 
   /**
