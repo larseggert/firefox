@@ -1694,12 +1694,15 @@ var gSync = {
     const state = UIState.get();
     if (state.status == UIState.STATUS_SIGNED_IN && state.syncEnabled) {
       this._showSecureSyncSubpanel(anchor, event);
-    } else if (state.status == UIState.STATUS_SIGNED_IN) {
-      // Signed in with sync off: open preferences to turn sync on.
-      this.openPrefsFromFxaMenu("sync_settings", anchor);
     } else {
-      // Needs (re-)authentication: open the sign-in page.
-      this.openFxAEmailFirstPageFromFxaMenu(anchor);
+      if (state.status == UIState.STATUS_SIGNED_IN) {
+        // Signed in with sync off: open preferences to turn sync on.
+        this.openPrefsFromFxaMenu("sync_settings", anchor);
+      } else {
+        // Needs (re-)authentication: open the sign-in page.
+        this.openFxAEmailFirstPageFromFxaMenu(anchor);
+      }
+      CustomizableUI.hidePanelForNode(anchor);
     }
   },
 
