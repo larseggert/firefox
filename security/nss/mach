@@ -1034,13 +1034,11 @@ class clangTidyAction(argparse.Action):
 class docLintAction(argparse.Action):
 
     def __call__(self, parser, args, values, option_string=None):
-        env = os.environ.copy()
-        env["VCS_PATH"] = os.path.dirname(cwd)
         script = os.path.join(
             cwd, "automation", "taskcluster", "scripts", "check_doc_lint.sh"
         )
         try:
-            subprocess.check_call([script], env=env)
+            subprocess.check_call([script])
         except subprocess.CalledProcessError as e:
             print(
                 "doc-lint failed with exit status {}".format(e.returncode),
@@ -1117,6 +1115,11 @@ def _tc_try_options():
                 groups.add(m.group(1).lower())
             else:
                 syms.add(sym.lower())
+
+    # The fuzz kind is selected as a whole rather than per target (see
+    # filter_try_syntax in target_tasks.py), so it contributes one token.
+    if os.path.isdir(os.path.join(tc, "kinds", "fuzz")):
+        groups.add("fuzz")
 
     tests = sorted(groups) + sorted(syms)
 
