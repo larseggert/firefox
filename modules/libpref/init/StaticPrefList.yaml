@@ -11476,7 +11476,7 @@
 # See https://github.com/w3c/csswg-drafts/issues/14190
 - name: layout.forms.button-input-align-content-block.enabled
   type: bool
-  value: true
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
 
 # If enabled, textareas won't include 'overflow:auto' scrollbars in their
