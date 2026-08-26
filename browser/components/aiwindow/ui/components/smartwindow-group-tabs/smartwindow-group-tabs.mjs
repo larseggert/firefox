@@ -6,7 +6,6 @@ import {
   html,
   keyed,
   nothing,
-  styleMap,
 } from "chrome://global/content/vendor/lit.all.mjs";
 import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
 // eslint-disable-next-line import/no-unassigned-import
@@ -15,8 +14,10 @@ import "chrome://browser/content/tabbrowser/tab-groups-list.mjs";
 const HEADING_ID = "smartwindow-group-tabs-heading";
 const DEFAULT_FAVICON_URL = "chrome://global/skin/icons/defaultFavicon.svg";
 const ROW_SELECTOR = ".swgt-flyout-tab, .tab-group-row";
-const GROUP_ICON_URL =
-  "chrome://browser/skin/tabbrowser/tab-group-chicklet.svg";
+
+function colorVar(colorName) {
+  return `var(--tab-group-${colorName})`;
+}
 
 function favicon(info) {
   return html`<img
@@ -166,23 +167,18 @@ export class SmartwindowGroupTabsCard extends MozLitElement {
       @keydown=${e => this.#onRowKeyDown(e, { id: suggestion.id })}
       @click=${() => this.#emit("create-one", { id: suggestion.id })}
     >
-      <span class="swgt-row-label">${suggestion.label}</span>
       ${this.#favicons(suggestion.tabInfos)}
+      <span class="swgt-row-label">${suggestion.label}</span>
     </button>`;
   }
 
   #recentRow(entry) {
     return html`<div class="swgt-recent-row">
-      <img
-        class="swgt-group-icon"
-        src=${GROUP_ICON_URL}
-        alt=""
-        style=${styleMap({
-          "--tab-group-color": `var(--tab-group-${entry.color})`,
-          "--tab-group-color-invert": `var(--tab-group-${entry.color}-invert)`,
-          "--tab-group-background-color": `var(--tab-group-${entry.color})`,
-        })}
-      />
+      <span
+        class="swgt-swatch"
+        aria-hidden="true"
+        style="--swgt-swatch-color:${colorVar(entry.color)}"
+      ></span>
       <span class="swgt-row-label">${entry.label}</span>
     </div>`;
   }
@@ -221,19 +217,12 @@ export class SmartwindowGroupTabsCard extends MozLitElement {
               class="swgt-section"
               data-l10n-id="smartwindow-group-tabs-suggested-heading"
             ></h2>
-            ${this.suggestions.length > 1
-              ? html`<button
-                  type="button"
-                  class="swgt-row swgt-create-all"
-                  @click=${() => this.#emit("create-all")}
-                >
-                  <span class="swgt-create-all-icon" aria-hidden="true"></span>
-                  <span
-                    class="swgt-row-label"
-                    data-l10n-id="smartwindow-group-tabs-create-all"
-                  ></span>
-                </button>`
-              : nothing}
+            <button
+              type="button"
+              class="swgt-row swgt-create-all"
+              data-l10n-id="smartwindow-group-tabs-create-all"
+              @click=${() => this.#emit("create-all")}
+            ></button>
             ${this.suggestions.map(s => this.#suggestionRow(s))}`
         : nothing,
       hasRecent

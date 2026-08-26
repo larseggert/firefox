@@ -478,7 +478,7 @@
   }
 }
 
-#smartwindow-group-tabs-button {
+#smartwindow-group-tabs-button-inner {
   list-style-image: url("chrome://browser/skin/grid-sparkle.svg");
 }
 
