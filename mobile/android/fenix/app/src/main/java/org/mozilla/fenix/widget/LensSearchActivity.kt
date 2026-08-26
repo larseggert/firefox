@@ -31,6 +31,8 @@ import org.mozilla.fenix.IntentReceiverActivity
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.LensImageUploader
 import org.mozilla.fenix.components.lens.LensCameraActivity
+import org.mozilla.fenix.components.showQrScanConfirmationDialog
+import org.mozilla.fenix.components.showQrScanInvalidUrlDialog
 import org.mozilla.fenix.ext.components
 
 /**
@@ -82,11 +84,7 @@ class LensSearchActivity : AppCompatActivity() {
         val data = result.data
         val qrString = data?.getStringExtra(LensCameraActivity.EXTRA_SCAN_RESULT_DATA)
         if (!qrString.isNullOrEmpty()) {
-            val normalizedUrl = qrString.toNormalizedUrl()
-            if (normalizedUrl.toUri().isHttpOrHttps) {
-                forwardToBrowser(normalizedUrl)
-            }
-            finish()
+            handleQrScanResult(qrString)
             return
         }
 
@@ -100,6 +98,26 @@ class LensSearchActivity : AppCompatActivity() {
             imageUri = imageUri,
             source = data.getStringExtra(LensCameraActivity.EXTRA_IMAGE_SOURCE) ?: SOURCE_UNKNOWN,
         )
+    }
+
+    /**
+     * QR content is attacker controlled physical input, so the scan goes through the same confirmation gate as the
+     * toolbar QR scanner instead of navigating on its own.
+     */
+    private fun handleQrScanResult(qrString: String) {
+        val normalizedUrl = qrString.toNormalizedUrl()
+        if (!normalizedUrl.toUri().isHttpOrHttps) {
+            showQrScanInvalidUrlDialog(onDismiss = ::finish)
+        } else {
+            showQrScanConfirmationDialog(
+                url = normalizedUrl,
+                onConfirm = {
+                    forwardToBrowser(normalizedUrl)
+                    finish()
+                },
+                onDeny = ::finish,
+            )
+        }
     }
 
     private fun uploadAndForward(imageUri: Uri, source: String) {

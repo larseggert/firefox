@@ -7,10 +7,13 @@ package org.mozilla.fenix.widget
 import android.app.Activity.RESULT_CANCELED
 import android.app.Activity.RESULT_OK
 import android.content.ComponentName
+import android.content.DialogInterface
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Looper
 import androidx.activity.result.ActivityResult
+import androidx.appcompat.app.AlertDialog
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlin.test.assertNotNull
@@ -37,6 +40,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.shadows.ShadowActivity
+import org.robolectric.shadows.ShadowDialog
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -140,14 +144,20 @@ class LensSearchActivityTest {
     }
 
     @Test
-    fun `GIVEN a QR scan result WHEN handling it THEN it forwards the scanned value to the browser`() {
+    fun `GIVEN a QR scan result WHEN the user allows the confirmation dialog THEN it forwards the scanned value to the browser`() {
         controller.create()
+        shadow.clearNextStartedActivities()
 
         val resultIntent =
             Intent().apply {
                 putExtra(LensCameraActivity.EXTRA_SCAN_RESULT_DATA, "https://qr.example.com")
             }
         activity.handleCameraResult(ActivityResult(RESULT_OK, resultIntent))
+
+        assertNull(shadow.peekNextStartedActivity())
+        val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
 
         val browserIntent = shadow.peekNextStartedActivity()
         assertEquals(
@@ -160,7 +170,26 @@ class LensSearchActivityTest {
     }
 
     @Test
-    fun `GIVEN a non-http QR scan result WHEN handling it THEN it finishes without forwarding`() {
+    fun `GIVEN a QR scan result WHEN the user denies the confirmation dialog THEN it finishes without forwarding`() {
+        controller.create()
+        shadow.clearNextStartedActivities()
+
+        val resultIntent =
+            Intent().apply {
+                putExtra(LensCameraActivity.EXTRA_SCAN_RESULT_DATA, "https://qr.example.com")
+            }
+        activity.handleCameraResult(ActivityResult(RESULT_OK, resultIntent))
+
+        val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+        dialog.getButton(DialogInterface.BUTTON_NEGATIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertNull(shadow.peekNextStartedActivity())
+        assertTrue(activity.isFinishing)
+    }
+
+    @Test
+    fun `GIVEN a non-http QR scan result WHEN handling it THEN it shows the invalid url dialog and finishes without forwarding`() {
         controller.create()
         shadow.clearNextStartedActivities()
 
@@ -169,6 +198,10 @@ class LensSearchActivityTest {
                 putExtra(LensCameraActivity.EXTRA_SCAN_RESULT_DATA, "javascript:alert(document.cookie)")
             }
         activity.handleCameraResult(ActivityResult(RESULT_OK, resultIntent))
+
+        val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
 
         assertNull(shadow.peekNextStartedActivity())
         assertTrue(activity.isFinishing)
