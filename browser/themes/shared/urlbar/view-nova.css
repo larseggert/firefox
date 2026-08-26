@@ -254,7 +254,6 @@
     grid-template-areas:
       "title title"
       "url   explanation";
-    row-gap: 2px;
 
     @container (width >= 450px) {
       grid-template-columns: minmax(0, 1fr) minmax(0, max-content);
