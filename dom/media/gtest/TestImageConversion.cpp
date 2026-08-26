@@ -24,8 +24,11 @@ using mozilla::Maybe;
 using mozilla::Nothing;
 using mozilla::Some;
 using mozilla::dom::ImageBitmapFormat;
+using mozilla::gfx::ChromaSize;
 using mozilla::gfx::ChromaSubsampling;
 using mozilla::gfx::DataSourceSurface;
+using mozilla::gfx::IntPoint;
+using mozilla::gfx::IntRect;
 using mozilla::gfx::IntSize;
 using mozilla::gfx::SourceSurfaceAlignedRawData;
 using mozilla::gfx::SurfaceFormat;
@@ -415,7 +418,7 @@ struct YCbCrValue {
 class OffsetPictureRectI420Image final : public PlanarYCbCrImage {
  public:
   OffsetPictureRectI420Image(const IntSize& aCodedSize,
-                             const gfx::IntRect& aPictureRect,
+                             const IntRect& aPictureRect,
                              const YCbCrValue& aBorder,
                              const YCbCrValue& aContent) {
     MOZ_ASSERT(!aCodedSize.IsEmpty(), "coded size must not be empty");
@@ -423,13 +426,13 @@ class OffsetPictureRectI420Image final : public PlanarYCbCrImage {
     MOZ_ASSERT(aPictureRect.x % 2 == 0 && aPictureRect.y % 2 == 0 &&
                    aPictureRect.width % 2 == 0 && aPictureRect.height % 2 == 0,
                "picture rect must be even for 4:2:0 chroma alignment");
-    MOZ_ASSERT(gfx::IntRect(gfx::IntPoint(), aCodedSize).Contains(aPictureRect),
+    MOZ_ASSERT(IntRect(IntPoint(), aCodedSize).Contains(aPictureRect),
                "picture rect must fit inside the coded buffer");
 
     // ChromaSize rounds up, so an odd coded buffer is representable; only the
     // picture rect has to be even, for chroma alignment.
     const IntSize codedChroma =
-        gfx::ChromaSize(aCodedSize, ChromaSubsampling::HALF_WIDTH_AND_HEIGHT);
+        ChromaSize(aCodedSize, ChromaSubsampling::HALF_WIDTH_AND_HEIGHT);
     const CheckedInt<size_t> ySize =
         CheckedInt<size_t>(aCodedSize.width) * aCodedSize.height;
     const CheckedInt<size_t> cSize =
@@ -493,7 +496,7 @@ TEST(MediaImageConversion, ConvertToI420HonorsPictureRectOrigin)
   // Odd coded extents on purpose: the picture rect has to be even for chroma
   // alignment, but the buffer around it does not.
   const IntSize coded(65, 63);
-  const gfx::IntRect picture(16, 8, 32, 32);
+  const IntRect picture(16, 8, 32, 32);
   const YCbCrValue border{0x10, 0x20, 0x30};
   const YCbCrValue content{0x80, 0xA0, 0xC0};
   auto image =
@@ -528,7 +531,7 @@ TEST(MediaImageConversion, ConvertToNV12HonorsPictureRectOrigin)
   // Odd coded extents on purpose: the picture rect has to be even for chroma
   // alignment, but the buffer around it does not.
   const IntSize coded(65, 63);
-  const gfx::IntRect picture(16, 8, 32, 32);
+  const IntRect picture(16, 8, 32, 32);
   const YCbCrValue border{0x10, 0x20, 0x30};
   const YCbCrValue content{0x80, 0xA0, 0xC0};
   auto image =
