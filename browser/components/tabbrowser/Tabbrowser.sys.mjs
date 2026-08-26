@@ -8878,7 +8878,9 @@ export class Tabbrowser {
       tabCount: tabs.length,
     });
     for (let tab of tabs) {
-      this.pinTab(tab, this.TabMetrics.decomposedContext(metricsContext));
+      this.pinTab(tab, {
+        metricsContext: this.TabMetrics.decomposedContext(metricsContext),
+      });
     }
   }
 
