@@ -116,6 +116,39 @@ class UrlbarInputBaseTestUtils {
   }
 
   /**
+   * Runs a task with this instance bound to a test scope, restoring whatever
+   * binding it had afterwards. A content task gets a fresh sandbox per spawn
+   * while the module is cached for the process, so an `Assert` kept past its
+   * task would report into a finished one; binding for the task's duration
+   * makes that window no wider than the task.
+   *
+   * @param {object} scope
+   *   The scope to bind, as {@link init} takes it. Whatever it lacks is unbound
+   *   for the duration.
+   * @param {Function} fn
+   *   The task to run.
+   * @returns {Promise<any>}
+   *   What `fn` returns.
+   */
+  async withScope(scope, fn) {
+    const fields = [
+      "Assert",
+      "EventUtils",
+      "SimpleTest",
+      "info",
+      "registerCleanupFunction",
+    ];
+    let saved = Object.fromEntries(fields.map(f => [f, this[f]]));
+    Object.assign(this, Object.fromEntries(fields.map(f => [f, scope[f]])));
+    this.info ??= console.log;
+    try {
+      return await fn();
+    } finally {
+      Object.assign(this, saved);
+    }
+  }
+
+  /**
    * The DOM test helpers to use on a node. A node in a content document gets the
    * content-task copy, since `BrowserTestUtils` registers window actors as it
    * loads and only a parent-process caller may do that.
