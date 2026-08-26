@@ -11,8 +11,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   GetPageContent: "moz-src:///browser/components/aiwindow/models/Tools.sys.mjs",
-  MAX_SELECTED_TABS:
-    "chrome://browser/content/aiwindow/modules/SmartFormFillConstants.mjs",
   Region: "resource://gre/modules/Region.sys.mjs",
   NonPrivateTabs: "resource:///modules/OpenTabs.sys.mjs",
   SmartFormFillController:
@@ -35,10 +33,10 @@ XPCOMUtils.defineLazyPreferenceGetter(
 );
 
 /** @typedef {import("moz-src:///browser/components/aiwindow/ui/modules/SmartFormFillController.sys.mjs").SmartFormFillController} Controller */
-/** @typedef {import("moz-src:///browser/components/aiwindow/ui/modules/SmartFormFillController.sys.mjs").SelectedTab} SelectedTab */
 /** @typedef {import("moz-src:///browser/components/aiwindow/ui/modules/SmartFormFillDocument.sys.mjs").FormData} FormData */
 /** @typedef {import("moz-src:///browser/components/aiwindow/ui/modules/SmartFormFillDocument.sys.mjs").FocusedForm} FocusedForm  */
 /** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").PageInfo} PageInfo */
+/** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").RelevantTab} RelevantTab */
 /** @typedef {import("moz-src:///browser/components/aiwindow/ui/modules/SmartFormFillAutocomplete.sys.mjs").SmartFormFillAutocompleteSource} SmartFormFillAutocompleteSource */
 
 /** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").ClassificationResponse} ClassificationResponse */
@@ -118,9 +116,6 @@ const METADATA_STATUS = Object.freeze({
   FAILED: "failed",
 });
 
-const TAB_SELECTOR_URL =
-  "chrome://browser/content/aiwindow/smartformfill-tab-select.html";
-
 /**
  * Parent actor for SmartFormFill
  */
@@ -138,20 +133,6 @@ export class SmartFormFillParent extends JSWindowActorParent {
    * @type {string | null}
    */
   #autocompleteFormId;
-
-  /**
-   * Current tab-selector dialog.
-   *
-   * @type {object | null}
-   */
-  #tabSelectorDialog;
-
-  /**
-   * User-selected tabs by form ID.
-   *
-   * @type {Map<string, Array<SelectedTab>>}
-   */
-  #userSelectedTabsByFormId;
 
   /**
    * IDs of the Smart Windows known during the previous tab event.
@@ -216,8 +197,6 @@ export class SmartFormFillParent extends JSWindowActorParent {
     this.#controller = null;
     this.#autocompleteFormId = null;
     this.#destroyed = false;
-    this.#tabSelectorDialog = null;
-    this.#userSelectedTabsByFormId = new Map();
     this.#smartWindowIds = new Set();
     this.#autofillGeneration = 0;
     this.#formMetadataById = new Map();
@@ -259,9 +238,6 @@ export class SmartFormFillParent extends JSWindowActorParent {
       return;
     }
 
-    this.#tabSelectorDialog?.abort();
-    this.#userSelectedTabsByFormId.clear();
-
     for (const metadata of this.#formMetadataById.values()) {
       ++metadata.relevantTabsRevision;
       metadata.relevantTabsPromise = null;
@@ -269,20 +245,6 @@ export class SmartFormFillParent extends JSWindowActorParent {
     }
 
     this.#controller?.invalidateTabs();
-  }
-
-  /**
-   * Gets the effective tab selection for a form.
-   *
-   * @param {string} formId
-   * @returns {Array<SelectedTab>}
-   */
-  #getSelectedTabsFor(formId) {
-    const selectedTabs =
-      this.#userSelectedTabsByFormId.get(formId) ??
-      this.#controller.getRelevantTabsFor(formId);
-
-    return selectedTabs.map(({ id }) => ({ id }));
   }
 
   /**
@@ -316,141 +278,15 @@ export class SmartFormFillParent extends JSWindowActorParent {
       return;
     }
 
-    const selectedTabs = this.#getSelectedTabsFor(focusedForm.id);
-    await this.#performAutofill(focusedForm, selectedTabs);
-  }
+    const relevantTabs = this.#controller.getRelevantTabsFor(focusedForm.id);
 
-  /**
-   * Opens the source editor for the focused form.
-   *
-   * @returns {Promise<void>}
-   */
-  async #editSources() {
-    const focusedForm = await this.#getFocusedForm();
-    if (!focusedForm) {
-      return;
-    }
+    // TODO: Present the UI to select relevant tabs from list
+    // of tabs, up to 5
 
-    const metadata = this.#getFormMetadataState(focusedForm);
-    this.#startFormMetadataRequests(metadata);
-    await metadata.relevantTabsPromise;
+    // NOTE: this userSelectedTabs would from the user choosing from UI
+    const userSelectedTabs = relevantTabs;
 
-    if (
-      metadata.relevantTabsStatus !== METADATA_STATUS.READY ||
-      this.#cannotAutofill()
-    ) {
-      return;
-    }
-
-    try {
-      const selectedTabs = await this.#selectTabs(focusedForm.id);
-      if (this.#destroyed) {
-        return;
-      }
-
-      if (selectedTabs) {
-        this.#userSelectedTabsByFormId.set(focusedForm.id, selectedTabs);
-      }
-    } finally {
-      if (!this.#destroyed) {
-        const browser = this.browsingContext?.embedderElement;
-        if (browser?.isConnected) {
-          browser.focus();
-        }
-
-        this.sendAsyncMessage("SmartFormFill:ShowAutocompletePopup");
-      }
-    }
-  }
-
-  /**
-   * Presents the tab selector and returns the user's selected tabs.
-   *
-   * @param {string} formId
-   *
-   * @returns {Promise<Array<SelectedTab> | null>}
-   */
-  async #selectTabs(formId) {
-    if (this.#tabSelectorDialog) {
-      return null;
-    }
-
-    const relevantTabs = this.#controller.getRelevantTabsFor(formId);
-    const initiallySelectedTabIds = new Set(
-      this.#getSelectedTabsFor(formId).map(({ id }) => id)
-    );
-    const tabsById = new Map(
-      this.#controller.getTabs().map(tab => [tab.id, tab])
-    );
-    const toDialogTab = (tab, pressed) => ({
-      ...tab,
-      favicon: `page-icon:${tab.url}`,
-      pressed,
-    });
-
-    const suggestedTabs = relevantTabs
-      .map(({ id }) => tabsById.get(id))
-      .filter(Boolean)
-      .map(tab => toDialogTab(tab, initiallySelectedTabIds.has(tab.id)));
-    const suggestedTabIds = new Set(suggestedTabs.map(({ id }) => id));
-    const otherTabs = [...tabsById.values()]
-      .filter(
-        tab =>
-          !suggestedTabIds.has(tab.id) &&
-          tab.url !== this.manager.documentURI.spec
-      )
-      .map(tab => toDialogTab(tab, initiallySelectedTabIds.has(tab.id)));
-    const selectableTabIds = new Set(
-      [...suggestedTabs, ...otherTabs].map(({ id }) => id)
-    );
-
-    const browser = this.browsingContext.embedderElement;
-    const chromeWindow = this.browsingContext.topChromeWindow;
-    if (!browser || !chromeWindow?.gBrowser) {
-      return null;
-    }
-
-    const dialogArguments = {
-      suggestedTabs,
-      otherTabs,
-      result: null,
-    };
-    const { dialog, closedPromise } = chromeWindow.gBrowser
-      .getTabDialogBox(browser)
-      .open(
-        TAB_SELECTOR_URL,
-        {
-          features: "resizable=no",
-          allowDuplicateDialogs: false,
-        },
-        dialogArguments
-      );
-
-    if (!dialog) {
-      return null;
-    }
-
-    this.#tabSelectorDialog = dialog;
-    try {
-      await closedPromise;
-    } finally {
-      if (this.#tabSelectorDialog === dialog) {
-        this.#tabSelectorDialog = null;
-      }
-    }
-
-    const selectedTabIds = dialogArguments.result?.selectedTabIds;
-    if (
-      !Array.isArray(selectedTabIds) ||
-      !selectedTabIds.length ||
-      selectedTabIds.length > lazy.MAX_SELECTED_TABS ||
-      new Set(selectedTabIds).size !== selectedTabIds.length ||
-      selectedTabIds.some(id => !selectableTabIds.has(id))
-    ) {
-      return null;
-    }
-
-    return selectedTabIds.map(id => ({ id }));
+    await this.#performAutofill(focusedForm, userSelectedTabs);
   }
 
   /**
@@ -485,9 +321,6 @@ export class SmartFormFillParent extends JSWindowActorParent {
    */
   didDestroy() {
     lazy.NonPrivateTabs.removeEventListener("TabChange", this);
-    this.#tabSelectorDialog?.abort();
-    this.#tabSelectorDialog = null;
-    this.#userSelectedTabsByFormId.clear();
     this.#smartWindowIds.clear();
     this.#destroyed = true;
     this.#formMetadataById.clear();
@@ -690,7 +523,7 @@ export class SmartFormFillParent extends JSWindowActorParent {
    * Triggers the autofill for the focused form with chosen tabs
    *
    * @param {FocusedForm} focusedForm
-   * @param {Array<SelectedTab>} selectedTabs
+   * @param {Array<RelevantTab>} selectedTabs
    *
    * @returns {Promise<void>}
    */
@@ -744,7 +577,7 @@ export class SmartFormFillParent extends JSWindowActorParent {
   /**
    * Gets the page content for each tab
    *
-   * @param {Array<SelectedTab>} selectedTabs
+   * @param {Array<RelevantTab>} selectedTabs
    * @param {number} textCharLimitPerTab
    *
    * @returns {Promise<Map<string, string>>}
@@ -753,7 +586,7 @@ export class SmartFormFillParent extends JSWindowActorParent {
     const tabContentById = new Map();
 
     const promises = selectedTabs.map(selectedTab => {
-      const tabData = this.#controller.getTabData(selectedTab.id);
+      const tabData = this.#controller.getRelevantTabData(selectedTab.id);
 
       if (tabData) {
         return this.#getPageText(tabData.url, textCharLimitPerTab).then(
@@ -920,7 +753,6 @@ export class SmartFormFillParent extends JSWindowActorParent {
         this.#formMetadataById.delete(formId);
         this.#flowIdByFormId.delete(formId);
         this.#fieldDecisionsByFormId.delete(formId);
-        this.#userSelectedTabsByFormId.delete(formId);
         continue;
       }
 
@@ -998,7 +830,7 @@ export class SmartFormFillParent extends JSWindowActorParent {
 
     lazy.SmartFormFillAutocomplete.updatePopupSources({
       browser: this.browsingContext.top.embedderElement,
-      sources: this.getSelectedTabSources(formId),
+      sources: this.getRelevantTabSources(formId),
     });
   }
 
@@ -1015,31 +847,28 @@ export class SmartFormFillParent extends JSWindowActorParent {
    *   unsupported action.
    */
   onAutoCompleteEntrySelected(message) {
-    switch (message) {
-      case "SmartFormFill:Start":
-        return this.triggerAutofill();
-
-      case "SmartFormFill:EditSources":
-        return this.#editSources();
+    if (message == "SmartFormFill:Start") {
+      return this.triggerAutofill();
     }
 
     return undefined;
   }
 
   /**
-   * Gets display data for tabs selected for a form.
+   * Gets display names for relevant tabs associated with a form.
    *
    * @param {string} formId Stable form identifier.
    * @returns {Array<SmartFormFillAutocompleteSource>}
-   *   Display data for selected tabs, or an empty array when unavailable.
+   *   Display data for relevant tabs, or an empty array when unavailable.
    */
-  getSelectedTabSources(formId) {
+  getRelevantTabSources(formId) {
     if (!this.#controller) {
       return [];
     }
 
-    return this.#getSelectedTabsFor(formId)
-      .map(({ id }) => this.#controller.getTabData(id))
+    return this.#controller
+      .getRelevantTabsFor(formId)
+      .map(({ id }) => this.#controller.getRelevantTabData(id))
       .filter(Boolean)
       .map(tab => ({
         label: tab.title || tab.url,

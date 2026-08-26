@@ -39,10 +39,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
  * {
  *  data?: undefined,
  *  name: "SmartFormFill:RefreshAutocomplete"
- * } |
- * {
- *  data?: undefined,
- *  name: "SmartFormFill:ShowAutocompletePopup"
  * }} SmartFormFillMessage
  */
 
@@ -63,14 +59,6 @@ export class SmartFormFillChild extends JSWindowActorChild {
    * @type {boolean}
    */
   #destroyed = false;
-
-  /**
-   * Cancels a pending attempt to reopen the autocomplete popup after focus
-   * returns from a tab-modal dialog.
-   *
-   * @type {AbortController | null}
-   */
-  #autocompletePopupFocusAbortController = null;
 
   /**
    * Current document preparation request.
@@ -200,11 +188,6 @@ export class SmartFormFillChild extends JSWindowActorChild {
       case "SmartFormFill:RefreshAutocomplete":
         this.#refreshAutocomplete();
         return undefined;
-
-      case "SmartFormFill:ShowAutocompletePopup": {
-        this.#showAutocompletePopup();
-        return undefined;
-      }
     }
 
     return null;
@@ -214,8 +197,6 @@ export class SmartFormFillChild extends JSWindowActorChild {
    * Destroys document state.
    */
   didDestroy() {
-    this.#autocompletePopupFocusAbortController?.abort();
-    this.#autocompletePopupFocusAbortController = null;
     this.#smartFormFillDocument?.destroy();
     this.#smartFormFillDocument = null;
     this.#documentPreparationPromise = null;
@@ -235,87 +216,6 @@ export class SmartFormFillChild extends JSWindowActorChild {
 
     this.#registerAutocompleteFields();
     this.sendAsyncMessage("SmartFormFill:FormUpdate", formDataList);
-  }
-
-  /**
-   * Reopens the autocomplete popup once focus has returned from a dialog.
-   */
-  #showAutocompletePopup() {
-    if (this.#tryShowAutocompletePopup()) {
-      return;
-    }
-
-    this.#autocompletePopupFocusAbortController?.abort();
-
-    const abortController = new AbortController();
-    this.#autocompletePopupFocusAbortController = abortController;
-
-    const clearPendingAttempt = () => {
-      abortController.abort();
-      if (this.#autocompletePopupFocusAbortController === abortController) {
-        this.#autocompletePopupFocusAbortController = null;
-      }
-    };
-
-    const retryAfterFocus = () => {
-      Services.tm.dispatchToMainThread(() => {
-        if (abortController.signal.aborted || this.#destroyed) {
-          return;
-        }
-
-        clearPendingAttempt();
-        this.#tryShowAutocompletePopup();
-      });
-    };
-
-    this.document.addEventListener("focusin", retryAfterFocus, {
-      capture: true,
-      once: true,
-      signal: abortController.signal,
-    });
-
-    Services.tm.dispatchToMainThread(() => {
-      if (abortController.signal.aborted || this.#destroyed) {
-        return;
-      }
-
-      if (this.#tryShowAutocompletePopup()) {
-        clearPendingAttempt();
-      }
-    });
-  }
-
-  /**
-   * Attempts to open the autocomplete popup for the focused field.
-   *
-   * @returns {boolean} Whether the popup was opened.
-   */
-  #tryShowAutocompletePopup() {
-    if (this.#destroyed || !this.#smartFormFillDocument) {
-      return false;
-    }
-
-    let autocompleteActor;
-    try {
-      autocompleteActor = this.manager.getActor("AutoComplete");
-    } catch {
-      return false;
-    }
-
-    if (!autocompleteActor || autocompleteActor.popupOpen) {
-      return false;
-    }
-
-    const focusedElement = this.document.activeElement;
-    if (
-      !this.#smartFormFillDocument.isSupportedField(focusedElement) ||
-      lazy.formFillController.controlledElement !== focusedElement
-    ) {
-      return false;
-    }
-
-    lazy.formFillController.showPopup();
-    return true;
   }
 
   /**
