@@ -310,6 +310,7 @@ treeherder:
         'feature-fxsuggest': 'feature-fxsuggest'
         'feature-importer': 'feature-importer'
         'feature-password-importer': 'feature-password-importer'
+        'feature-listentopage': 'feature-listentopage'
         'feature-intent': 'feature-intent'
         'feature-ipprotection': 'feature-ipprotection'
         'feature-logins': 'feature-logins'
