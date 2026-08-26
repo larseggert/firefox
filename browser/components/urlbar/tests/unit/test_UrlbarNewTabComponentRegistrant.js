@@ -24,6 +24,7 @@ async function setFeatureGate(registry, enabled) {
 }
 
 add_task(async function test_featureGate() {
+  UrlbarPrefs.set("newtab.featureGate", false);
   let registry = new AboutNewTabComponentRegistry();
   registerCleanupFunction(() => {
     registry.destroy();
