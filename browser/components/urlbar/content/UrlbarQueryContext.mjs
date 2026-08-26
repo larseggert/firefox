@@ -266,6 +266,16 @@ export class UrlbarQueryContext {
   }
 
   /**
+   * Whether a string that isn't a URL may be searched for.
+   *
+   * @see {UrlbarShared.keywordEnabled}
+   * @type {boolean}
+   */
+  get keywordEnabled() {
+    return UrlbarShared.keywordEnabled(this.sapName);
+  }
+
+  /**
    * @type {UrlbarSearchModeData}
    *   Details about the search mode associated with this context.
    */
