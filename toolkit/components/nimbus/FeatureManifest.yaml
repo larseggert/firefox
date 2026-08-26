@@ -375,6 +375,12 @@ urlbar:
       type: int
       fallbackPref: browser.urlbar.merino.timeoutMs
       description: Timeout for Merino fetches (ms)
+    newtabFeatureGate:
+      type: boolean
+      fallbackPref: browser.urlbar.newtab.featureGate
+      description: >-
+        Feature gate that controls whether about:newtab and about:home show the
+        address bar in place of the handoff search bar.
     exposureResults:
       type: string
       setPref:
