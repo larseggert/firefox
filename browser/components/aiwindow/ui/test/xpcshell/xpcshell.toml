@@ -17,6 +17,8 @@ run-if = [
 
 ["test_ChatStore.js"]
 
+["test_ChatStoreStreaming.js"]
+
 ["test_ChatStoreToolResults.js"]
 
 ["test_ChatSwitchModel.js"]
