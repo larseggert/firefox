@@ -1075,19 +1075,25 @@ class UrlbarInputBaseTestUtils {
    *   The result the view presented.
    * @param {Element} expectedElement
    *   The element the view presented.
+   * @param {object} [options]
+   * @param {boolean} [options.usesMessagePath]
+   *   Whether the input took the message path. Defaults to what the pref says,
+   *   which is the answer for an input in a chrome window; one in a content
+   *   document takes that path whatever the pref.
    */
   assertPickedResult(
     pickedResult,
     pickedElement,
     expectedResult,
-    expectedElement
+    expectedElement,
+    { usesMessagePath = lazy.UrlbarPrefs.get("ipc.chromeMessagePassing") } = {}
   ) {
     this.Assert.equal(
       pickedResult.id,
       expectedResult.id,
       "Picked result has the expected id"
     );
-    if (lazy.UrlbarPrefs.get("ipc.chromeMessagePassing")) {
+    if (usesMessagePath) {
       this.Assert.equal(
         pickedElement,
         null,
