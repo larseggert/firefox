@@ -919,7 +919,12 @@ class HomeFragment : Fragment() {
                             private = (requireActivity() as HomeActivity).browsingModeManager.mode.isPrivate
                         )
                     } else {
-                        sessionControlInteractor.onNavigateSearch()
+                        findNavController()
+                            .navigate(
+                                NavGraphDirections.actionGlobalHome(
+                                    focusOnAddressBar = !requireComponents.settings.enableHomepageTrendingRecentSearch
+                                )
+                            )
                     }
                 },
                 onSelectedTabClick = { url ->
