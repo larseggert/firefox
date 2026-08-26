@@ -20,6 +20,7 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   BrowserTestUtils: "resource://testing-common/BrowserTestUtils.sys.mjs",
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
+  ContentTaskUtils: "resource://testing-common/ContentTaskUtils.sys.mjs",
   DEFAULT_FORM_HISTORY_PARAM:
     "moz-src:///toolkit/components/search/SearchSuggestionController.sys.mjs",
   ExperimentAPI: "resource://nimbus/ExperimentAPI.sys.mjs",
@@ -49,9 +50,10 @@ XPCOMUtils.defineLazyServiceGetter(
 );
 
 /**
- * Utility class for testing <html:moz-urlbar> elements.
+ * Utility class for testing a `UrlbarInputBase` implementation, whichever
+ * element hosts it and whichever process the element lives in.
  */
-class UrlbarInputTestUtils {
+class UrlbarInputBaseTestUtils {
   /**
    * @param {(window: ChromeWindow) => UrlbarInput} getUrlbarInputForWindow
    */
@@ -87,7 +89,9 @@ class UrlbarInputTestUtils {
    */
   init(scope) {
     if (!scope) {
-      throw new Error("Must initialize UrlbarInputTestUtils with a test scope");
+      throw new Error(
+        "Must initialize UrlbarInputBaseTestUtils with a test scope"
+      );
     }
     // If you add other properties to `this`, null them in uninit().
     this.Assert = scope.Assert;
@@ -109,6 +113,41 @@ class UrlbarInputTestUtils {
       this.EventUtils = null;
       this.SimpleTest = null;
     });
+  }
+
+  /**
+   * The DOM test helpers to use on a node. A node in a content document gets the
+   * content-task copy, since `BrowserTestUtils` registers window actors as it
+   * loads and only a parent-process caller may do that.
+   *
+   * `nodePrincipal` is ChromeOnly, so a waiver hides it -- and a waived node is
+   * by construction one in a content document, so falling through is right.
+   *
+   * @param {Node} node
+   * @returns {{waitForEvent: Function, isVisible: Function}}
+   */
+  #domTestUtils(node) {
+    let doc = node.ownerDocument ?? node;
+    return doc.nodePrincipal?.isSystemPrincipal
+      ? lazy.BrowserTestUtils
+      : lazy.ContentTaskUtils;
+  }
+
+  /**
+   * @param {EventTarget} target
+   * @param {string} eventName
+   * @returns {Promise<Event>}
+   */
+  #waitForEvent(target, eventName) {
+    return this.#domTestUtils(target).waitForEvent(target, eventName);
+  }
+
+  /**
+   * @param {Element} element
+   * @returns {boolean}
+   */
+  #isVisible(element) {
+    return this.#domTestUtils(element).isVisible(element);
   }
 
   /**
@@ -352,7 +391,7 @@ class UrlbarInputTestUtils {
       menuButton,
       `found the menu button at result index ${resultIndex}`
     );
-    let promiseMenuOpen = lazy.BrowserTestUtils.waitForEvent(
+    let promiseMenuOpen = this.#waitForEvent(
       this.#urlbar(win).view.resultMenu,
       "shown"
     );
@@ -433,7 +472,7 @@ class UrlbarInputTestUtils {
         throw new Error("Submenu item not found for selector: " + selector);
       }
 
-      let promisePopup = lazy.BrowserTestUtils.waitForEvent(
+      let promisePopup = this.#waitForEvent(
         this.#urlbar(window).view.resultMenu,
         "shown"
       );
@@ -543,7 +582,7 @@ class UrlbarInputTestUtils {
       throw new Error("Menu item not found for command: " + command);
     }
 
-    let promiseCommand = lazy.BrowserTestUtils.waitForEvent(
+    let promiseCommand = this.#waitForEvent(
       this.#urlbar(win).view.resultMenu,
       "click"
     );
@@ -913,7 +952,7 @@ class UrlbarInputTestUtils {
    */
   async withContextMenu(win, task) {
     let cxmenu = win.EditContextMenu.popup;
-    let openPromise = lazy.BrowserTestUtils.waitForEvent(cxmenu, "popupshown");
+    let openPromise = this.#waitForEvent(cxmenu, "popupshown");
     this.EventUtils.synthesizeMouseAtCenter(
       this.#urlbar(win).inputField,
       {
@@ -930,10 +969,7 @@ class UrlbarInputTestUtils {
     } finally {
       // Close the context menu if the task didn't pick anything.
       if (cxmenu.state == "open" || cxmenu.state == "showing") {
-        let closePromise = lazy.BrowserTestUtils.waitForEvent(
-          cxmenu,
-          "popuphidden"
-        );
+        let closePromise = this.#waitForEvent(cxmenu, "popuphidden");
         cxmenu.hidePopup();
         await closePromise;
       }
@@ -956,10 +992,7 @@ class UrlbarInputTestUtils {
       // The menu is shared between inputs and an item set outlives the input
       // that added it (bug 2066238), so a hidden duplicate can come first.
       let menuitem = popup.querySelector(`[anonid="${anonid}"]:not([hidden])`);
-      this.Assert.ok(
-        lazy.BrowserTestUtils.isVisible(menuitem),
-        "Menu item is visible"
-      );
+      this.Assert.ok(this.#isVisible(menuitem), "Menu item is visible");
       this.Assert.ok(!menuitem.disabled, "Menu item enabled");
       menuitem.closest("menupopup").activateItem(menuitem);
     });
@@ -1452,7 +1485,7 @@ class UrlbarInputTestUtils {
   fireInputEvent(win) {
     // Set event.data to the last character in the input, for a couple of
     // reasons: It simulates the user typing, and it's necessary for autofill.
-    let event = new InputEvent("input", {
+    let event = new win.InputEvent("input", {
       data: this.#urlbar(win).value[this.#urlbar(win).value.length - 1] || null,
     });
     this.#urlbar(win).inputField.dispatchEvent(event);
@@ -1678,9 +1711,12 @@ class UrlbarInputTestUtils {
     } = {}
   ) {
     await new Promise(resolve => win.requestAnimationFrame(resolve));
-    let selectionController = this.#urlbar(win).editor.selectionController;
+    // `inputField` is waived because the input is and a waiver is transitive,
+    // so it hides `editor` along with every other ChromeOnly member.
+    let editor = Cu.unwaiveXrays(this.#urlbar(win).inputField).editor;
+    let selectionController = editor.selectionController;
     let selection = selectionController.getSelection(selectionType);
-    let value = this.#urlbar(win).editor.rootElement.textContent;
+    let value = editor.rootElement.textContent;
     let result = "";
     for (let i = 0; i < selection.rangeCount; i++) {
       let range = selection.getRangeAt(i).toString();
@@ -1721,11 +1757,11 @@ class UrlbarInputTestUtils {
   async openSearchModeSwitcher(win, openFn = null) {
     let popup = this.searchModeSwitcherPopup(win);
     let button = this.#urlbar(win).querySelector(".searchmode-switcher");
-    this.Assert.ok(lazy.BrowserTestUtils.isVisible(button));
+    this.Assert.ok(this.#isVisible(button));
     await this.EventUtils.promiseElementReadyForUserInput(button, win);
 
-    let promisePanelOpen = lazy.BrowserTestUtils.waitForEvent(popup, "shown");
-    let rebuildPromise = lazy.BrowserTestUtils.waitForEvent(popup, "rebuild");
+    let promisePanelOpen = this.#waitForEvent(popup, "shown");
+    let rebuildPromise = this.#waitForEvent(popup, "rebuild");
     // In XUL windows the panel-list is wrapped in a XUL panel, which it opens
     // asynchronously, so its "shown" event can fire before the panel is open
     // and its contents are interactive. Bug 2063011 will fix this in
@@ -1756,10 +1792,7 @@ class UrlbarInputTestUtils {
    *   Resolved when the search mode switcher popup is hidden.
    */
   searchModeSwitcherPopupClosed(win) {
-    return lazy.BrowserTestUtils.waitForEvent(
-      this.searchModeSwitcherPopup(win),
-      "hidden"
-    );
+    return this.#waitForEvent(this.searchModeSwitcherPopup(win), "hidden");
   }
 
   /**
@@ -1857,17 +1890,14 @@ class UrlbarInputTestUtils {
     if (!btn.checkVisibility()) {
       btn = win.document.getElementById("identity-icon-box");
     }
-    let popupShown = lazy.BrowserTestUtils.waitForEvent(
-      win.document,
-      "popupshown"
-    );
+    let popupShown = this.#waitForEvent(win.document, "popupshown");
     this.EventUtils.synthesizeMouseAtCenter(btn, {}, win);
     await popupShown;
   }
 
   async openTrustPanelSubview(win, viewId) {
     let view = win.document.getElementById(viewId);
-    let shown = lazy.BrowserTestUtils.waitForEvent(view, "ViewShown");
+    let shown = this.#waitForEvent(view, "ViewShown");
     this.EventUtils.synthesizeMouseAtCenter(
       win.document.getElementById("trustpanel-popup-connection"),
       {},
@@ -1877,10 +1907,7 @@ class UrlbarInputTestUtils {
   }
 
   async closeTrustPanel(win) {
-    let popupHidden = lazy.BrowserTestUtils.waitForEvent(
-      win.document,
-      "popuphidden"
-    );
+    let popupHidden = this.#waitForEvent(win.document, "popuphidden");
     this.EventUtils.synthesizeKey("VK_ESCAPE", {}, win);
     await popupHidden;
   }
@@ -1937,34 +1964,34 @@ class UrlbarInputTestUtils {
   selectWithMouseDrag(fromX, toX, win) {
     let target = this.#urlbar(win).inputField;
     let rect = target.getBoundingClientRect();
-    let promise = lazy.BrowserTestUtils.waitForEvent(target, "mouseup");
+    let promise = this.#waitForEvent(target, "mouseup");
     this.EventUtils.synthesizeMouse(
       target,
       fromX,
       rect.height / 2,
       { type: "mousemove" },
-      target.documentGlobal
+      win
     );
     this.EventUtils.synthesizeMouse(
       target,
       fromX,
       rect.height / 2,
       { type: "mousedown" },
-      target.documentGlobal
+      win
     );
     this.EventUtils.synthesizeMouse(
       target,
       toX,
       rect.height / 2,
       { type: "mousemove" },
-      target.documentGlobal
+      win
     );
     this.EventUtils.synthesizeMouse(
       target,
       toX,
       rect.height / 2,
       { type: "mouseup" },
-      target.documentGlobal
+      win
     );
     return promise;
   }
@@ -1981,13 +2008,21 @@ class UrlbarInputTestUtils {
   selectWithDoubleClick(offsetX, win) {
     let target = this.#urlbar(win).inputField;
     let rect = target.getBoundingClientRect();
-    let promise = lazy.BrowserTestUtils.waitForEvent(target, "dblclick");
-    this.EventUtils.synthesizeMouse(target, offsetX, rect.height / 2, {
-      clickCount: 1,
-    });
-    this.EventUtils.synthesizeMouse(target, offsetX, rect.height / 2, {
-      clickCount: 2,
-    });
+    let promise = this.#waitForEvent(target, "dblclick");
+    this.EventUtils.synthesizeMouse(
+      target,
+      offsetX,
+      rect.height / 2,
+      { clickCount: 1 },
+      win
+    );
+    this.EventUtils.synthesizeMouse(
+      target,
+      offsetX,
+      rect.height / 2,
+      { clickCount: 2 },
+      win
+    );
     return promise;
   }
 
@@ -2016,7 +2051,7 @@ class UrlbarInputTestUtils {
    */
   isSeparatorVisible(separatorElement) {
     if (!Services.prefs.getBoolPref("browser.nova.enabled", false)) {
-      return lazy.BrowserTestUtils.isVisible(separatorElement);
+      return this.#isVisible(separatorElement);
     }
 
     let before = separatorElement.documentGlobal.getComputedStyle(
@@ -2102,7 +2137,7 @@ class UrlbarInputTestUtils {
   #zonedDateTimeISOStub;
 }
 
-UrlbarInputTestUtils.prototype.formHistory = {
+UrlbarInputBaseTestUtils.prototype.formHistory = {
   /**
    * Adds values to the urlbar's form history.
    *
@@ -2328,9 +2363,11 @@ class TestProvider extends UrlbarProvider {
   }
 }
 
-UrlbarInputTestUtils.prototype.TestProvider = TestProvider;
+UrlbarInputBaseTestUtils.prototype.TestProvider = TestProvider;
 
-export var UrlbarTestUtils = new UrlbarInputTestUtils(window => window.gURLBar);
-export var SearchbarTestUtils = new UrlbarInputTestUtils(window =>
+export var UrlbarTestUtils = new UrlbarInputBaseTestUtils(
+  window => window.gURLBar
+);
+export var SearchbarTestUtils = new UrlbarInputBaseTestUtils(window =>
   window.document.getElementById("searchbar-new")
 );
