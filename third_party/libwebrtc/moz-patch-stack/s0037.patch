@@ -15,10 +15,10 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/edac9d01a9ac7594f
  3 files changed, 24 insertions(+)
 
 diff --git a/video/rtp_video_stream_receiver2.cc b/video/rtp_video_stream_receiver2.cc
-index 9000ca9b8d..fc62d06610 100644
+index 65155ff041..3236a1768f 100644
 --- a/video/rtp_video_stream_receiver2.cc
 +++ b/video/rtp_video_stream_receiver2.cc
-@@ -1153,6 +1153,16 @@ std::optional<int64_t> RtpVideoStreamReceiver2::LastReceivedKeyframePacketMs()
+@@ -1156,6 +1156,16 @@ std::optional<int64_t> RtpVideoStreamReceiver2::LastReceivedKeyframePacketMs()
    return std::nullopt;
  }
  
@@ -36,12 +36,12 @@ index 9000ca9b8d..fc62d06610 100644
  RtpVideoStreamReceiver2::GetSenderReportStats() const {
    RTC_DCHECK_RUN_ON(worker_queue_);
 diff --git a/video/rtp_video_stream_receiver2.h b/video/rtp_video_stream_receiver2.h
-index a533e604a8..b34b6fa18e 100644
+index 7ce72994fa..aa2391c9e5 100644
 --- a/video/rtp_video_stream_receiver2.h
 +++ b/video/rtp_video_stream_receiver2.h
-@@ -246,6 +246,12 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
-                           /*times_nacked=*/0);
-   }
+@@ -243,6 +243,12 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
+                                        const RtpPacketReceived& rtp_packet,
+                                        const RTPVideoHeader& video);
  
 +  // Mozilla modification: VideoReceiveStream2 and friends do not surface RTCP
 +  // stats at all, and even on the most recent libwebrtc code there does not
