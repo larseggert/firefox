@@ -232,6 +232,9 @@ js_source_paths:
     - browser/components/uitour
     - browser/components/urlbar
     - browser/components/urlbar/content
+    # Limited to URILoadingHelper.sys.mjs: the rest of the directory holds
+    # modules which do not currently run cleanly for jsdoc.
+    - browser/modules/URILoadingHelper.sys.mjs
     - js/xpconnect/loader
     - remote/marionette
     - testing/mochitest/BrowserTestUtils
