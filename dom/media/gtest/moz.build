@@ -8,6 +8,7 @@ DEFINES["VISIBLE_TIMEUNIT_INTERNALS"] = True
 
 LOCAL_INCLUDES += [
     "!/dist/include/libwebrtc_overrides",
+    "!/media/libsoundtouch/src",
     "!/xpcom/components",
     "/dom/media/driftcontrol",
     "/dom/media/mediasink",
