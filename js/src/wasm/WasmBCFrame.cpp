@@ -167,6 +167,16 @@ bool BaseCompiler::createStackMap(
          (!stackMap || stackMaps_->add(masm.currentOffset(), stackMap));
 }
 
+bool BaseCompiler::createStackMap(
+    Maybe<Trap> reason, FaultingCodeRange insnRange,
+    HasDebugFrameWithLiveRefs debugFrameWithLiveRefs) {
+  const ExitStubMapVector noExtras;
+  StackMap* stackMap;
+  return stackMapGenerator_.createStackMap(
+             reason, noExtras, debugFrameWithLiveRefs, stk_, &stackMap) &&
+         (!stackMap || stackMaps_->add(insnRange.resumeOffset(), stackMap));
+}
+
 bool BaseCompiler::createDebugOnlyStackMapForNonResumingTrap(StackMap** result,
                                                              Trap t1, Trap t2) {
   // `t1`, and, if specified `t2`, definitely won't resume.
