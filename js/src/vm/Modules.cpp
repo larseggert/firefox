@@ -344,8 +344,19 @@ JS_PUBLIC_API JSObject* JS::CompileWasmModuleAsSource(
   CHECK_THREAD(cx);
 
   wasm::BytecodeSource source(srcBuf.begin(), srcBuf.length());
+
+  wasm::SharedCompileArgs compileArgs =
+      wasm::BuildCompileArgsForESM(cx, options);
+  if (!compileArgs) {
+    return nullptr;
+  }
+
+  wasm::ESMCompileResult compileResult =
+      wasm::CompileForESM(*compileArgs, source);
+
   RootedObject wasmModuleObject(cx);
-  if (!wasm::CompileForESM(cx, options, source, &wasmModuleObject)) {
+  if (!wasm::FinishCompileForESM(cx, *compileArgs, compileResult,
+                                 &wasmModuleObject)) {
     return nullptr;
   }
 

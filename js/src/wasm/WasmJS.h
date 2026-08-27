@@ -38,6 +38,7 @@
 #include "vm/JSFunction.h"    // JSFunction
 #include "vm/NativeObject.h"  // NativeObject
 #include "wasm/WasmCodegenTypes.h"
+#include "wasm/WasmCompileArgs.h"
 #include "wasm/WasmConstants.h"
 #include "wasm/WasmException.h"
 #include "wasm/WasmExprType.h"
@@ -100,10 +101,33 @@ struct ImportValues;
 
 bool IsSharedWasmMemoryObject(JSObject* obj);
 
-[[nodiscard]] bool CompileForESM(JSContext* cx,
-                                 const JS::ReadOnlyCompileOptions& options,
-                                 const BytecodeSource& source,
-                                 MutableHandleObject moduleObj);
+[[nodiscard]] SharedCompileArgs BuildCompileArgsForESM(
+    JSContext* cx, const JS::ReadOnlyCompileOptions& options);
+
+struct ESMCompileResult {
+  enum class Status {
+    Success,
+    Failed,
+    OutOfMemory,
+  };
+
+  Status status = Status::OutOfMemory;
+  SharedModule module;
+  UniqueChars error;
+  UniqueCharsVector warnings;
+};
+
+// Compiles a wasm module for ES module integration.
+[[nodiscard]] ESMCompileResult CompileForESM(const CompileArgs& compileArgs,
+                                             const BytecodeSource& source);
+
+// Finishes compilation, producing a WebAssembly.Module object suitable for
+// ES module integration, reporting any warnings and throwing a CompileError
+// if compilation failed.
+[[nodiscard]] bool FinishCompileForESM(JSContext* cx,
+                                       const CompileArgs& compileArgs,
+                                       const ESMCompileResult& compileResult,
+                                       MutableHandleObject moduleObj);
 
 }  // namespace wasm
 
