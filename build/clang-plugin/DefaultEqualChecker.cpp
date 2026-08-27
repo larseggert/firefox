@@ -25,23 +25,24 @@ void DefaultEqualChecker::registerMatchers(MatchFinder *AstMatcher) {
       this);
 }
 
-static bool hasDefaultCompareOperatorSignature(const CXXMethodDecl * MD, const CXXRecordDecl *RD) {
-    if (MD->getTemplatedKind() != FunctionDecl::TemplatedKind::TK_NonTemplate)
-      return false;
-    const ParmVarDecl *PD = MD->getParamDecl(0);
-    QualType PT = PD->getOriginalType();
-    if (!PT.isConstQualified() && !PT->isReferenceType())
-      return false;
+static bool hasDefaultCompareOperatorSignature(const CXXMethodDecl *MD,
+                                               const CXXRecordDecl *RD) {
+  if (MD->getTemplatedKind() != FunctionDecl::TemplatedKind::TK_NonTemplate)
+    return false;
+  const ParmVarDecl *PD = MD->getParamDecl(0);
+  QualType PT = PD->getOriginalType();
+  if (!PT.isConstQualified() && !PT->isReferenceType())
+    return false;
 
-    const clang::Type *PDT = PD->getOriginalType()
-                                 .getNonReferenceType()
-                                 .getCanonicalType()
-                                 .getUnqualifiedType()
-                                 .getTypePtr();
-    if (PDT != RD->getASTContext().getCanonicalTagType(RD)->getTypePtr())
-      return false;
+  const clang::Type *PDT = PD->getOriginalType()
+                               .getNonReferenceType()
+                               .getCanonicalType()
+                               .getUnqualifiedType()
+                               .getTypePtr();
+  if (PDT != RD->getASTContext().getCanonicalTagType(RD)->getTypePtr())
+    return false;
 
-    return true;
+  return true;
 }
 
 void DefaultEqualChecker::check(const MatchFinder::MatchResult &Result) {
