@@ -18,6 +18,7 @@
         "value": {
           "default": "4px",
           "nova": {
+            "comment": "There is no equivalent value for this token in Figma",
             "value": "0"
           }
         }

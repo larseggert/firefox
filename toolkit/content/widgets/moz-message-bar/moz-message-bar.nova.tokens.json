@@ -15,6 +15,13 @@
       }
     }
   },
+  "container": {
+    "padding": {
+      "inline": {
+        "value": "8px"
+      }
+    }
+  },
   "icon": {
     "container": {
       "border": {

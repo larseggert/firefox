@@ -29,6 +29,7 @@
       "value": {
         "default": "unset",
         "nova": {
+          "comment": "This linear-gradient cannot be expressed in Figma",
           "value": {
             "default": "linear-gradient(96deg, color-mix({toolbox.background.color.gradient-leading} 50%, transparent) 39.84%, color-mix({toolbox.background.color.gradient-trailing} 50%, transparent) 101.72%)",
             "nativeTheme": "image(transparent)",
