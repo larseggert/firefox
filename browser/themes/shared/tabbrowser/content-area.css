@@ -878,6 +878,8 @@ split-view-footer {
     width: auto;
     max-height: none;
     max-width: none;
+    border-radius: inherit;
+    overflow: clip;
 
     > .dialogOverlay {
       width: 100%;
