@@ -16,12 +16,15 @@ import androidx.fragment.compose.content
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import mozilla.components.ExperimentalAndroidComponentsApi
+import mozilla.components.feature.ipprotection.IPProtectionWarningBinding
 import mozilla.components.feature.ipprotection.store.IPProtectionAction
 import mozilla.components.lib.state.ext.observeAsComposableState
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
+import org.mozilla.fenix.GleanMetrics.Vpn
 import org.mozilla.fenix.components.components
 import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
 import org.mozilla.fenix.ext.requireComponents
+import org.mozilla.fenix.home.HomeFragmentDirections
 import org.mozilla.fenix.ipprotection.ui.IPProtectionSnackbarBinding
 import org.mozilla.fenix.snackbar.FenixSnackbarDelegate
 import org.mozilla.fenix.theme.FirefoxTheme
@@ -30,6 +33,7 @@ import org.mozilla.fenix.theme.FirefoxTheme
 class IPProtectionLocationsFragment : Fragment(), SystemInsetsPaddedFragment {
 
     private val ipProtectionSnackbarBinding = ViewBoundFeatureWrapper<IPProtectionSnackbarBinding>()
+    private val ipProtectionWarningBinding = ViewBoundFeatureWrapper<IPProtectionWarningBinding>()
     private val snackbarHostState = SnackbarHostState()
 
     override fun onCreateView(
@@ -67,6 +71,19 @@ class IPProtectionLocationsFragment : Fragment(), SystemInsetsPaddedFragment {
                             scope = viewLifecycleOwner.lifecycleScope,
                             context = requireContext(),
                         ),
+                ),
+            owner = this,
+            view = view,
+        )
+
+        ipProtectionWarningBinding.set(
+            feature =
+                IPProtectionWarningBinding(
+                    store = requireComponents.ipProtection.store,
+                    proxyUnavailable = {
+                        Vpn.proxyUnavailable.record()
+                        findNavController().navigate(HomeFragmentDirections.actionGlobalIpProtectionUnavailableDialog())
+                    },
                 ),
             owner = this,
             view = view,
