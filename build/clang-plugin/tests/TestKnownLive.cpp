@@ -18,7 +18,8 @@ class Bar {
   ~Bar() { mFoo = nullptr; }
 
   void Baz() {
-    mFoo = nullptr; // expected-error {{MOZ_KNOWN_LIVE members can only be modified by constructors and destructors}}
+    mFoo = nullptr; // expected-error {{MOZ_KNOWN_LIVE members can only be
+                    // modified by constructors and destructors}}
   }
 };
 
@@ -28,6 +29,7 @@ class Bar2 {
   ~Bar2() { mFoo = nullptr; }
 
   void Baz() {
-    mFoo = nullptr; // expected-error {{MOZ_KNOWN_LIVE members can only be modified by constructors and destructors}}
+    mFoo = nullptr; // expected-error {{MOZ_KNOWN_LIVE members can only be
+                    // modified by constructors and destructors}}
   }
 };

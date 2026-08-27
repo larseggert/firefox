@@ -18,34 +18,53 @@ public:
 class MockCDMParent : public mozilla::ipc::IProtocol {
 public:
   void RecvDecryptFailed(unsigned aStatus) {
-    ScopedEnum e = static_cast<ScopedEnum>(aStatus); // expected-error {{static_cast from builtin type 'unsigned int' to enum type 'ScopedEnum' in an IPC actor method}} expected-note {{consider using the enum type directly}}
+    ScopedEnum e = static_cast<ScopedEnum>(
+        aStatus); // expected-error {{static_cast from builtin type 'unsigned
+                  // int' to enum type 'ScopedEnum' in an IPC actor method}}
+                  // expected-note {{consider using the enum type directly}}
   }
 
   void RecvOnRejectPromise(unsigned aException) {
-    UnscopedEnum e = static_cast<UnscopedEnum>(aException); // expected-error {{static_cast from builtin type 'unsigned int' to enum type 'UnscopedEnum' in an IPC actor method}} expected-note {{consider using the enum type directly}}
+    UnscopedEnum e = static_cast<UnscopedEnum>(
+        aException); // expected-error {{static_cast from builtin type 'unsigned
+                     // int' to enum type 'UnscopedEnum' in an IPC actor
+                     // method}} expected-note {{consider using the enum type
+                     // directly}}
   }
 
   void RecvDecoderInit(unsigned aStatus) {
-    TypedEnum e = static_cast<TypedEnum>(aStatus); // expected-error {{static_cast from builtin type 'unsigned int' to enum type 'TypedEnum' in an IPC actor method}} expected-note {{consider using the enum type directly}}
+    TypedEnum e = static_cast<TypedEnum>(
+        aStatus); // expected-error {{static_cast from builtin type 'unsigned
+                  // int' to enum type 'TypedEnum' in an IPC actor method}}
+                  // expected-note {{consider using the enum type directly}}
   }
 
   void RecvCStyleCast(unsigned aStatus) {
-    ScopedEnum e = (ScopedEnum)aStatus; // expected-error {{C-style cast from builtin type 'unsigned int' to enum type 'ScopedEnum' in an IPC actor method}} expected-note {{consider using the enum type directly}}
+    ScopedEnum e = (ScopedEnum)
+        aStatus; // expected-error {{C-style cast from builtin type 'unsigned
+                 // int' to enum type 'ScopedEnum' in an IPC actor method}}
+                 // expected-note {{consider using the enum type directly}}
   }
 
   void RecvFunctionalCast(unsigned aStatus) {
-    UnscopedEnum e = UnscopedEnum(aStatus); // expected-error {{functional cast from builtin type 'unsigned int' to enum type 'UnscopedEnum' in an IPC actor method}} expected-note {{consider using the enum type directly}}
+    UnscopedEnum e = UnscopedEnum(
+        aStatus); // expected-error {{functional cast from builtin type
+                  // 'unsigned int' to enum type 'UnscopedEnum' in an IPC actor
+                  // method}} expected-note {{consider using the enum type
+                  // directly}}
   }
 
   // Casts inside a lambda body (e.g. a promise callback) must also be caught.
   void RecvInLambda(unsigned aStatus) {
     auto callback = [](unsigned aValue) {
-      ScopedEnum e = static_cast<ScopedEnum>(aValue); // expected-error {{static_cast from builtin type 'unsigned int' to enum type 'ScopedEnum' in an IPC actor method}} expected-note {{consider using the enum type directly}}
+      ScopedEnum e = static_cast<ScopedEnum>(
+          aValue); // expected-error {{static_cast from builtin type 'unsigned
+                   // int' to enum type 'ScopedEnum' in an IPC actor method}}
+                   // expected-note {{consider using the enum type directly}}
       return e;
     };
     callback(aStatus);
   }
-
 };
 
 // Simulates a non-IPC class — no warnings expected.

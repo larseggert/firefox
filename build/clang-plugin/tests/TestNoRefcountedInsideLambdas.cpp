@@ -13,26 +13,26 @@ struct RefCountedBase {
   void Release();
 };
 
-template <class T>
-struct SmartPtr {
+template <class T> struct SmartPtr {
   SmartPtr();
-  MOZ_IMPLICIT SmartPtr(T*);
-  T* MOZ_STRONG_REF t;
-  T* operator->() const;
+  MOZ_IMPLICIT SmartPtr(T *);
+  T *MOZ_STRONG_REF t;
+  T *operator->() const;
 };
 
 struct R : RefCountedBase {
   void method();
+
 private:
   void privateMethod();
 };
 
 void take(...);
 void foo() {
-  R* ptr;
+  R *ptr;
   SmartPtr<R> sp;
-  take([&](R* argptr) {
-    R* localptr;
+  take([&](R *argptr) {
+    R *localptr;
     ptr->method();
     argptr->method();
     localptr->method();
@@ -43,8 +43,8 @@ void foo() {
     argsp->method();
     localsp->method();
   });
-  take([&](R* argptr) {
-    R* localptr;
+  take([&](R *argptr) {
+    R *localptr;
     take(ptr);
     take(argptr);
     take(localptr);
@@ -55,8 +55,8 @@ void foo() {
     take(argsp);
     take(localsp);
   });
-  take([=](R* argptr) {
-    R* localptr;
+  take([=](R *argptr) {
+    R *localptr;
     ptr->method();
     argptr->method();
     localptr->method();
@@ -67,8 +67,8 @@ void foo() {
     argsp->method();
     localsp->method();
   });
-  take([=](R* argptr) {
-    R* localptr;
+  take([=](R *argptr) {
+    R *localptr;
     take(ptr);
     take(argptr);
     take(localptr);
@@ -79,8 +79,8 @@ void foo() {
     take(argsp);
     take(localsp);
   });
-  take([ptr](R* argptr) {
-    R* localptr;
+  take([ptr](R *argptr) {
+    R *localptr;
     ptr->method();
     argptr->method();
     localptr->method();
@@ -91,8 +91,8 @@ void foo() {
     argsp->method();
     localsp->method();
   });
-  take([ptr](R* argptr) {
-    R* localptr;
+  take([ptr](R *argptr) {
+    R *localptr;
     take(ptr);
     take(argptr);
     take(localptr);
@@ -103,8 +103,8 @@ void foo() {
     take(argsp);
     take(localsp);
   });
-  take([&ptr](R* argptr) {
-    R* localptr;
+  take([&ptr](R *argptr) {
+    R *localptr;
     ptr->method();
     argptr->method();
     localptr->method();
@@ -115,8 +115,8 @@ void foo() {
     argsp->method();
     localsp->method();
   });
-  take([&ptr](R* argptr) {
-    R* localptr;
+  take([&ptr](R *argptr) {
+    R *localptr;
     take(ptr);
     take(argptr);
     take(localptr);
@@ -130,10 +130,10 @@ void foo() {
 }
 
 void b() {
-  R* ptr;
+  R *ptr;
   SmartPtr<R> sp;
-  std::function<void(R*)>([&](R* argptr) {
-    R* localptr;
+  std::function<void(R *)>([&](R *argptr) {
+    R *localptr;
     ptr->method();
     argptr->method();
     localptr->method();
@@ -144,8 +144,8 @@ void b() {
     argsp->method();
     localsp->method();
   });
-  std::function<void(R*)>([&](R* argptr) {
-    R* localptr;
+  std::function<void(R *)>([&](R *argptr) {
+    R *localptr;
     take(ptr);
     take(argptr);
     take(localptr);
@@ -156,9 +156,11 @@ void b() {
     take(argsp);
     take(localsp);
   });
-  std::function<void(R*)>([=](R* argptr) {
-    R* localptr;
-    ptr->method(); // expected-error{{Refcounted variable 'ptr' of type 'R' cannot be captured by a lambda}} expected-note{{Please consider using a smart pointer}}
+  std::function<void(R *)>([=](R *argptr) {
+    R *localptr;
+    ptr->method(); // expected-error{{Refcounted variable 'ptr' of type 'R'
+                   // cannot be captured by a lambda}} expected-note{{Please
+                   // consider using a smart pointer}}
     argptr->method();
     localptr->method();
   });
@@ -168,9 +170,11 @@ void b() {
     argsp->method();
     localsp->method();
   });
-  std::function<void(R*)>([=](R* argptr) {
-    R* localptr;
-    take(ptr); // expected-error{{Refcounted variable 'ptr' of type 'R' cannot be captured by a lambda}} expected-note{{Please consider using a smart pointer}}
+  std::function<void(R *)>([=](R *argptr) {
+    R *localptr;
+    take(ptr); // expected-error{{Refcounted variable 'ptr' of type 'R' cannot
+               // be captured by a lambda}} expected-note{{Please consider using
+               // a smart pointer}}
     take(argptr);
     take(localptr);
   });
@@ -180,32 +184,40 @@ void b() {
     take(argsp);
     take(localsp);
   });
-  std::function<void(R*)>([ptr](R* argptr) { // expected-error{{Refcounted variable 'ptr' of type 'R' cannot be captured by a lambda}} expected-note{{Please consider using a smart pointer}}
-    R* localptr;
-    ptr->method();
-    argptr->method();
-    localptr->method();
-  });
+  std::function<void(R *)>(
+      [ptr](
+          R *argptr) { // expected-error{{Refcounted variable 'ptr' of type 'R'
+                       // cannot be captured by a lambda}} expected-note{{Please
+                       // consider using a smart pointer}}
+        R *localptr;
+        ptr->method();
+        argptr->method();
+        localptr->method();
+      });
   std::function<void(SmartPtr<R>)>([sp](SmartPtr<R> argsp) {
     SmartPtr<R> localsp;
     sp->method();
     argsp->method();
     localsp->method();
   });
-  std::function<void(R*)>([ptr](R* argptr) { // expected-error{{Refcounted variable 'ptr' of type 'R' cannot be captured by a lambda}} expected-note{{Please consider using a smart pointer}}
-    R* localptr;
-    take(ptr);
-    take(argptr);
-    take(localptr);
-  });
+  std::function<void(R *)>(
+      [ptr](
+          R *argptr) { // expected-error{{Refcounted variable 'ptr' of type 'R'
+                       // cannot be captured by a lambda}} expected-note{{Please
+                       // consider using a smart pointer}}
+        R *localptr;
+        take(ptr);
+        take(argptr);
+        take(localptr);
+      });
   std::function<void(SmartPtr<R>)>([sp](SmartPtr<R> argsp) {
     SmartPtr<R> localsp;
     take(sp);
     take(argsp);
     take(localsp);
   });
-  std::function<void(R*)>([&ptr](R* argptr) {
-    R* localptr;
+  std::function<void(R *)>([&ptr](R *argptr) {
+    R *localptr;
     ptr->method();
     argptr->method();
     localptr->method();
@@ -216,8 +228,8 @@ void b() {
     argsp->method();
     localsp->method();
   });
-  std::function<void(R*)>([&ptr](R* argptr) {
-    R* localptr;
+  std::function<void(R *)>([&ptr](R *argptr) {
+    R *localptr;
     take(ptr);
     take(argptr);
     take(localptr);
@@ -398,12 +410,14 @@ auto d17() {
 
 void e() {
   auto e1 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
-    return ([&](R* argptr) { // expected-error{{address of stack memory associated with local variable 'ptr' returned}}
-      R* localptr;
+    return ([&](R *argptr) { // expected-error{{address of stack memory
+                             // associated with local variable 'ptr' returned}}
+      R *localptr;
 #if __clang_major__ >= 12
-      ptr->method(); // expected-note{{implicitly captured by reference due to use here}}
+      ptr->method(); // expected-note{{implicitly captured by reference due to
+                     // use here}}
 #else
       ptr->method();
 #endif
@@ -412,12 +426,15 @@ void e() {
     });
   };
   auto e2 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
-    return ([&](SmartPtr<R> argsp) { // expected-error{{address of stack memory associated with local variable 'sp' returned}}
+    return ([&](SmartPtr<R>
+                    argsp) { // expected-error{{address of stack memory
+                             // associated with local variable 'sp' returned}}
       SmartPtr<R> localsp;
 #if __clang_major__ >= 12
-      sp->method(); // expected-note{{implicitly captured by reference due to use here}}
+      sp->method(); // expected-note{{implicitly captured by reference due to
+                    // use here}}
 #else
       sp->method();
 #endif
@@ -426,12 +443,14 @@ void e() {
     });
   };
   auto e3 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
-    return ([&](R* argptr) { // expected-error{{address of stack memory associated with local variable 'ptr' returned}}
-      R* localptr;
+    return ([&](R *argptr) { // expected-error{{address of stack memory
+                             // associated with local variable 'ptr' returned}}
+      R *localptr;
 #if __clang_major__ >= 12
-      take(ptr); // expected-note{{implicitly captured by reference due to use here}}
+      take(ptr); // expected-note{{implicitly captured by reference due to use
+                 // here}}
 #else
       take(ptr);
 #endif
@@ -440,12 +459,15 @@ void e() {
     });
   };
   auto e4 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
-    return ([&](SmartPtr<R> argsp) { // expected-error{{address of stack memory associated with local variable 'sp' returned}}
+    return ([&](SmartPtr<R>
+                    argsp) { // expected-error{{address of stack memory
+                             // associated with local variable 'sp' returned}}
       SmartPtr<R> localsp;
 #if __clang_major__ >= 12
-      take(sp); // expected-note{{implicitly captured by reference due to use here}}
+      take(sp); // expected-note{{implicitly captured by reference due to use
+                // here}}
 #else
       take(sp);
 #endif
@@ -454,17 +476,19 @@ void e() {
     });
   };
   auto e5 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
-    return ([=](R* argptr) {
-      R* localptr;
-      ptr->method(); // expected-error{{Refcounted variable 'ptr' of type 'R' cannot be captured by a lambda}} expected-note{{Please consider using a smart pointer}}
+    return ([=](R *argptr) {
+      R *localptr;
+      ptr->method(); // expected-error{{Refcounted variable 'ptr' of type 'R'
+                     // cannot be captured by a lambda}} expected-note{{Please
+                     // consider using a smart pointer}}
       argptr->method();
       localptr->method();
     });
   };
   auto e6 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
     return ([=](SmartPtr<R> argsp) {
       SmartPtr<R> localsp;
@@ -474,17 +498,19 @@ void e() {
     });
   };
   auto e8 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
-    return ([=](R* argptr) {
-      R* localptr;
-      take(ptr); // expected-error{{Refcounted variable 'ptr' of type 'R' cannot be captured by a lambda}} expected-note{{Please consider using a smart pointer}}
+    return ([=](R *argptr) {
+      R *localptr;
+      take(ptr); // expected-error{{Refcounted variable 'ptr' of type 'R' cannot
+                 // be captured by a lambda}} expected-note{{Please consider
+                 // using a smart pointer}}
       take(argptr);
       take(localptr);
     });
   };
   auto e9 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
     return ([=](SmartPtr<R> argsp) {
       SmartPtr<R> localsp;
@@ -494,17 +520,20 @@ void e() {
     });
   };
   auto e10 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
-    return ([ptr](R* argptr) { // expected-error{{Refcounted variable 'ptr' of type 'R' cannot be captured by a lambda}} expected-note{{Please consider using a smart pointer}}
-      R* localptr;
+    return ([ptr](R *argptr) { // expected-error{{Refcounted variable 'ptr' of
+                               // type 'R' cannot be captured by a lambda}}
+                               // expected-note{{Please consider using a smart
+                               // pointer}}
+      R *localptr;
       ptr->method();
       argptr->method();
       localptr->method();
     });
   };
   auto e11 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
     return ([sp](SmartPtr<R> argsp) {
       SmartPtr<R> localsp;
@@ -514,17 +543,20 @@ void e() {
     });
   };
   auto e12 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
-    return ([ptr](R* argptr) { // expected-error{{Refcounted variable 'ptr' of type 'R' cannot be captured by a lambda}} expected-note{{Please consider using a smart pointer}}
-      R* localptr;
+    return ([ptr](R *argptr) { // expected-error{{Refcounted variable 'ptr' of
+                               // type 'R' cannot be captured by a lambda}}
+                               // expected-note{{Please consider using a smart
+                               // pointer}}
+      R *localptr;
       take(ptr);
       take(argptr);
       take(localptr);
     });
   };
   auto e13 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
     return ([sp](SmartPtr<R> argsp) {
       SmartPtr<R> localsp;
@@ -534,36 +566,46 @@ void e() {
     });
   };
   auto e14 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
 #if __clang_major__ >= 12
-    return ([&ptr](R* argptr) { // expected-error{{address of stack memory associated with local variable 'ptr' returned}} expected-note{{captured by reference here}}
-      R* localptr;
-      ptr->method();
-      argptr->method();
-      localptr->method();
-    });
+    return (
+        [&ptr](R *argptr) { // expected-error{{address of stack memory
+                            // associated with local variable 'ptr' returned}}
+                            // expected-note{{captured by reference here}}
+          R *localptr;
+          ptr->method();
+          argptr->method();
+          localptr->method();
+        });
 #else
-    return ([&ptr](R* argptr) { // expected-error{{address of stack memory associated with local variable 'ptr' returned}}
-      R* localptr;
-      ptr->method();
-      argptr->method();
-      localptr->method();
-    });
+    return (
+        [&ptr](R *argptr) { // expected-error{{address of stack memory
+                            // associated with local variable 'ptr' returned}}
+          R *localptr;
+          ptr->method();
+          argptr->method();
+          localptr->method();
+        });
 #endif
   };
   auto e15 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
 #if __clang_major__ >= 12
-    return ([&sp](SmartPtr<R> argsp) { // expected-error{{address of stack memory associated with local variable 'sp' returned}} expected-note{{captured by reference here}}
+    return ([&sp](SmartPtr<R>
+                      argsp) { // expected-error{{address of stack memory
+                               // associated with local variable 'sp' returned}}
+                               // expected-note{{captured by reference here}}
       SmartPtr<R> localsp;
       sp->method();
       argsp->method();
       localsp->method();
     });
 #else
-    return ([&sp](SmartPtr<R> argsp) { // expected-error{{address of stack memory associated with local variable 'sp' returned}}
+    return ([&sp](SmartPtr<R>
+                      argsp) { // expected-error{{address of stack memory
+                               // associated with local variable 'sp' returned}}
       SmartPtr<R> localsp;
       sp->method();
       argsp->method();
@@ -572,36 +614,46 @@ void e() {
 #endif
   };
   auto e16 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
 #if __clang_major__ >= 12
-    return ([&ptr](R* argptr) { // expected-error{{address of stack memory associated with local variable 'ptr' returned}} expected-note{{captured by reference here}}
-      R* localptr;
-      take(ptr);
-      take(argptr);
-      take(localptr);
-    });
+    return (
+        [&ptr](R *argptr) { // expected-error{{address of stack memory
+                            // associated with local variable 'ptr' returned}}
+                            // expected-note{{captured by reference here}}
+          R *localptr;
+          take(ptr);
+          take(argptr);
+          take(localptr);
+        });
 #else
-    return ([&ptr](R* argptr) { // expected-error{{address of stack memory associated with local variable 'ptr' returned}}
-      R* localptr;
-      take(ptr);
-      take(argptr);
-      take(localptr);
-    });
+    return (
+        [&ptr](R *argptr) { // expected-error{{address of stack memory
+                            // associated with local variable 'ptr' returned}}
+          R *localptr;
+          take(ptr);
+          take(argptr);
+          take(localptr);
+        });
 #endif
   };
   auto e17 = []() {
-    R* ptr;
+    R *ptr;
     SmartPtr<R> sp;
 #if __clang_major__ >= 12
-    return ([&sp](SmartPtr<R> argsp) { // expected-error{{address of stack memory associated with local variable 'sp' returned}} expected-note{{captured by reference here}}
+    return ([&sp](SmartPtr<R>
+                      argsp) { // expected-error{{address of stack memory
+                               // associated with local variable 'sp' returned}}
+                               // expected-note{{captured by reference here}}
       SmartPtr<R> localsp;
       take(sp);
       take(argsp);
       take(localsp);
     });
 #else
-    return ([&sp](SmartPtr<R> argsp) { // expected-error{{address of stack memory associated with local variable 'sp' returned}}
+    return ([&sp](SmartPtr<R>
+                      argsp) { // expected-error{{address of stack memory
+                               // associated with local variable 'sp' returned}}
       SmartPtr<R> localsp;
       take(sp);
       take(argsp);
@@ -611,51 +663,39 @@ void e() {
   };
 }
 
-void
-R::privateMethod() {
+void R::privateMethod() {
   SmartPtr<R> self = this;
-  std::function<void()>([&]() {
-    self->method();
-  });
-  std::function<void()>([&]() {
-    self->privateMethod();
-  });
-  std::function<void()>([&]() {
-    this->method();
-  });
-  std::function<void()>([&]() {
-    this->privateMethod();
-  });
-  std::function<void()>([=]() {
-    self->method();
-  });
-  std::function<void()>([=]() {
-    self->privateMethod();
-  });
-  std::function<void()>([self]() {
-    self->method();
-  });
-  std::function<void()>([self]() {
-    self->privateMethod();
+  std::function<void()>([&]() { self->method(); });
+  std::function<void()>([&]() { self->privateMethod(); });
+  std::function<void()>([&]() { this->method(); });
+  std::function<void()>([&]() { this->privateMethod(); });
+  std::function<void()>([=]() { self->method(); });
+  std::function<void()>([=]() { self->privateMethod(); });
+  std::function<void()>([self]() { self->method(); });
+  std::function<void()>([self]() { self->privateMethod(); });
+  std::function<void()>([this]() {
+    this->method(); // expected-error{{Refcounted variable 'this' of type 'R'
+                    // cannot be captured by a lambda}} expected-note{{Please
+                    // consider using a smart pointer}}
   });
   std::function<void()>([this]() {
-    this->method(); // expected-error{{Refcounted variable 'this' of type 'R' cannot be captured by a lambda}} expected-note{{Please consider using a smart pointer}}
+    this->privateMethod(); // expected-error{{Refcounted variable 'this' of type
+                           // 'R' cannot be captured by a lambda}}
+                           // expected-note{{Please consider using a smart
+                           // pointer}}
   });
   std::function<void()>([this]() {
-    this->privateMethod(); // expected-error{{Refcounted variable 'this' of type 'R' cannot be captured by a lambda}} expected-note{{Please consider using a smart pointer}}
+    method(); // expected-error{{Refcounted variable 'this' of type 'R' cannot
+              // be captured by a lambda}} expected-note{{Please consider using
+              // a smart pointer}}
   });
   std::function<void()>([this]() {
-    method(); // expected-error{{Refcounted variable 'this' of type 'R' cannot be captured by a lambda}} expected-note{{Please consider using a smart pointer}}
+    privateMethod(); // expected-error{{Refcounted variable 'this' of type 'R'
+                     // cannot be captured by a lambda}} expected-note{{Please
+                     // consider using a smart pointer}}
   });
-  std::function<void()>([this]() {
-    privateMethod(); // expected-error{{Refcounted variable 'this' of type 'R' cannot be captured by a lambda}} expected-note{{Please consider using a smart pointer}}
-  });
-  std::function<void()>([&]() {
-    method();
-  });
-  std::function<void()>([&]() {
-    privateMethod();
-  });
+  std::function<void()>([&]() { method(); });
+  std::function<void()>([&]() { privateMethod(); });
 
   std::function<void()>(
       [instance = MOZ_KnownLive(this)]() { instance->privateMethod(); });
