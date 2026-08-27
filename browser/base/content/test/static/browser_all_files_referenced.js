@@ -205,6 +205,11 @@ var allowlist = [
     file: "moz-src:///browser/components/aiwindow/ui/modules/AITabStore.sys.mjs",
   },
 
+  // TODO Bug 2064553: Integrate ConversationStore into the Conversation model
+  {
+    file: "moz-src:///browser/components/aiwindow/ui/modules/ConversationStore.sys.mjs",
+  },
+
   // extensions/pref/autoconfig/src/nsReadConfig.cpp
   { file: "resource://gre/defaults/autoconfig/prefcalls.js" },
 
