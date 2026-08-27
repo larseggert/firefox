@@ -496,12 +496,8 @@ class EdgePool {
       }
       return mPointer->ptrInfo;
     }
-    bool operator==(const Iterator& aOther) const {
-      return mPointer == aOther.mPointer;
-    }
-    bool operator!=(const Iterator& aOther) const {
-      return mPointer != aOther.mPointer;
-    }
+    bool operator==(const Iterator& aOther) const = default;
+    bool operator!=(const Iterator& aOther) const = default;
 
 #ifdef DEBUG_CC_GRAPH
     bool Initialized() const { return mPointer != nullptr; }

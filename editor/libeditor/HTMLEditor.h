@@ -3033,12 +3033,8 @@ class HTMLEditor final : public EditorBase,
     MOZ_CAN_RUN_SCRIPT void Update(HTMLEditor& aHTMLEditor,
                                    Selection& aSelection);
 
-    bool operator==(const CellIndexes& aOther) const {
-      return mRow == aOther.mRow && mColumn == aOther.mColumn;
-    }
-    bool operator!=(const CellIndexes& aOther) const {
-      return mRow != aOther.mRow || mColumn != aOther.mColumn;
-    }
+    bool operator==(const CellIndexes& aOther) const = default;
+    bool operator!=(const CellIndexes& aOther) const = default;
 
     [[nodiscard]] bool isErr() const { return mRow < 0 || mColumn < 0; }
 
