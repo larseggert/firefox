@@ -50,18 +50,6 @@
         "value": {
           "default": "{message-bar.icon.size}"
         }
-      },
-      "margin": {
-        "block-start": {
-          "value": {
-            "default": "0"
-          }
-        }
-      },
-      "padding": {
-        "value": {
-          "default": "calc({space.small} - 1px)"
-        }
       }
     }
   },

@@ -96,12 +96,44 @@
         "value": "min-content"
       },
       "margin": {
-        "block-start": {
-          "value": "calc({space.small} + 2px)"
+        "block": {
+          "start": {
+            "@base": {
+              "value": {
+                "default": "{space.small}",
+                "nova": {
+                  "value": "0px"
+                }
+              }
+            },
+            "offset": {
+              "value": {
+                "default": "2px",
+                "nova": {
+                  "value": "0px"
+                }
+              }
+            }
+          }
         }
       },
       "padding": {
-        "value": "0"
+        "@base": {
+          "value": {
+            "default": "0px",
+            "nova": {
+              "value": "{space.small}"
+            }
+          }
+        },
+        "offset": {
+          "value": {
+            "default": "0px",
+            "nova": {
+              "value": "1px"
+            }
+          }
+        }
       }
     },
     "size": {

@@ -26,11 +26,6 @@
       "padding": {
         "@base": {
           "value": "{panel-menuitem.padding.@base}"
-        },
-        "inline": {
-          "start": {
-            "value": "calc({panel-menuitem.padding.inline} + {icon.size.@base} + {space.small})"
-          }
         }
       }
     }
@@ -64,7 +59,22 @@
       },
       "inline": {
         "start": {
-          "value": "{space.xxlarge}"
+          "@base": {
+            "value": {
+              "default": "{space.xxlarge}",
+              "nova": {
+                "value": "calc({panel-menuitem.padding.inline} + {icon.size.@base})"
+              }
+            }
+          },
+          "offset": {
+            "value": {
+              "default": "0px",
+              "nova": {
+                "value": "{space.small}"
+              }
+            }
+          }
         }
       }
     }
