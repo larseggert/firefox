@@ -60,6 +60,20 @@ const utcDayKey = () => new Date().toISOString().slice(0, 10);
 
 const PRIVACY_ENTRY = WIDGET_REGISTRY.find(w => w.id === "privacy");
 
+// Platform prefs that together decide whether Enhanced Tracking Protection is
+// blocking anything at all (see isEtpOff). The feed observes them itself so a
+// toggle in about:preferences#privacy reaches open tabs; PrefsFeed only
+// forwards New Tab's own prefs.
+const ETP_PREFS = [
+  "network.cookie.cookieBehavior",
+  "privacy.fingerprintingProtection",
+  "privacy.socialtracking.block_cookies.enabled",
+  "privacy.trackingprotection.cryptomining.enabled",
+  "privacy.trackingprotection.enabled",
+  "privacy.trackingprotection.fingerprinting.enabled",
+  "privacy.trackingprotection.socialtracking.enabled",
+];
+
 // Prefs that can flip the widget's registry enablement (incl. trainhop config).
 // A change to any of these should re-evaluate whether to start fetching.
 const ENABLEMENT_PREFS = new Set([
@@ -85,6 +99,9 @@ export class PrivacyFeed {
     this._profileCreatedMs = null;
     // Serializes updateMessage across concurrent new tabs (see updateMessage).
     this._messageQueue = null;
+    // Last broadcast ETP state, so observe() can tell a real flip from one of
+    // the several pref writes a single category change makes. Seeded in init().
+    this._etpOff = null;
   }
 
   get enabled() {
@@ -341,6 +358,37 @@ export class PrivacyFeed {
     return state.pending;
   }
 
+  /**
+   * Whether the user has turned Enhanced Tracking Protection off entirely.
+   * There is no "off" switch to read:
+   * about:preferences#privacy only offers standard/strict/custom, so "off" means Custom with every blocking option unchecked.
+   *
+   * @returns {boolean}
+   */
+  isEtpOff() {
+    const isPrefOn = pref => Services.prefs.getBoolPref(pref, false);
+    const blockingCookies =
+      Services.prefs.getIntPref("network.cookie.cookieBehavior", 0) !== 0;
+    const trackingProtection = isPrefOn("privacy.trackingprotection.enabled");
+    // Social tracking only counts as blocking when its cookie pref is on AND
+    // something is actually blocked for it — cookies, or tracking content with
+    // the social list enabled.
+    const socialTracking =
+      isPrefOn("privacy.socialtracking.block_cookies.enabled") &&
+      (blockingCookies ||
+        (trackingProtection &&
+          isPrefOn("privacy.trackingprotection.socialtracking.enabled")));
+
+    return !(
+      blockingCookies ||
+      trackingProtection ||
+      socialTracking ||
+      isPrefOn("privacy.trackingprotection.cryptomining.enabled") ||
+      isPrefOn("privacy.trackingprotection.fingerprinting.enabled") ||
+      isPrefOn("privacy.fingerprintingProtection")
+    );
+  }
+
   // The headline count is the total blocked across all categories (cookies,
   // trackers, fingerprinters, cryptominers, social) — the same total
   // about:protections shows — not just the "trackers" slice.
@@ -356,8 +404,9 @@ export class PrivacyFeed {
     };
   }
 
-  // INIT/SYSTEM_TICK/enablement: keep the live count fresh without re-running
-  // the scheduler (no message fields → the reducer keeps the current message).
+  // INIT/SYSTEM_TICK/enablement/ETP toggle: keep the live count fresh without
+  // re-running the scheduler (no message fields → the reducer keeps the
+  // current message).
   async updateCounts() {
     const counts = await this.fetchTodayCounts();
     // Clear countCeiling: it's a one-render display cap set by the daily-cap
@@ -368,6 +417,7 @@ export class PrivacyFeed {
         type: at.WIDGETS_PRIVACY_UPDATE,
         data: {
           ...counts,
+          etpOff: this.isEtpOff(),
           countCeiling: null,
           celebration: this.resolveCelebration(counts.trackersToday),
         },
@@ -453,6 +503,7 @@ export class PrivacyFeed {
         type: at.WIDGETS_PRIVACY_UPDATE,
         data: {
           ...counts,
+          etpOff: this.isEtpOff(),
           variant: decision.variant,
           messageId: decision.messageId,
           category: decision.category,
@@ -479,10 +530,53 @@ export class PrivacyFeed {
     lazy.SpecialMessageActions.handleAction(smaAction, browser);
   }
 
+  // Watch the ETP prefs for the lifetime of the feed, whether or not the widget
+  // is currently enabled: `observe` re-checks enablement before broadcasting.
+  init() {
+    this._etpOff = this.isEtpOff();
+    for (const pref of ETP_PREFS) {
+      Services.prefs.addObserver(pref, this);
+    }
+  }
+
+  uninit() {
+    for (const pref of ETP_PREFS) {
+      Services.prefs.removeObserver(pref, this);
+    }
+  }
+
+  observe(subject, topic, data) {
+    if (topic !== "nsPref:changed" || !ETP_PREFS.includes(data)) {
+      return;
+    }
+    // Track the derived value, not the writes (as PrefsFeed does for
+    // recordsHistory): switching category in about:preferences#privacy rewrites
+    // most of these prefs in one go, and each write would otherwise cost a full
+    // refresh — a Places query, a tracking DB read and a broadcast.
+    const etpOff = this.isEtpOff();
+    if (etpOff === this._etpOff) {
+      return;
+    }
+    this._etpOff = etpOff;
+    if (this.enabled) {
+      // Counts-only broadcast: turning protection on or off changes the card
+      // the widget shows, not which secondary message the scheduler picked.
+      this.updateCounts();
+    }
+  }
+
   async onAction(action) {
     switch (action.type) {
-      // INIT/SYSTEM_TICK keep the count fresh across the session.
       case at.INIT:
+        this.init();
+        if (this.enabled) {
+          await this.updateCounts();
+        }
+        break;
+      case at.UNINIT:
+        this.uninit();
+        break;
+      // Keeps the count fresh across the session.
       case at.SYSTEM_TICK:
         if (this.enabled) {
           await this.updateCounts();
