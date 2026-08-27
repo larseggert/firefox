@@ -3651,39 +3651,14 @@ ThreadId CurrentThreadId() {
   return ::GetCurrentThreadId();
 #elif defined(XP_LINUX)
   return sys_gettid();
-#elif defined(XP_MACOSX)
-  // Just return an index, since Mach ports can't be directly serialized
-  thread_act_port_array_t threads_for_task;
-  mach_msg_type_number_t thread_count;
-
-  if (task_threads(mach_task_self(), &threads_for_task, &thread_count))
-    return -1;
-
-  for (unsigned int i = 0; i < thread_count; ++i) {
-    if (threads_for_task[i] == mach_thread_self()) return i;
-  }
-  abort();
+#elif defined(XP_DARWIN)
+  // Note that this will leak the mach port unless it's explicitly closed or
+  // assigned to a RAII type such as `UniqueMachSendRight`.
+  return mach_thread_self();
 #else
 #  error "Unsupported platform"
 #endif
 }
-
-#ifdef XP_MACOSX
-static mach_port_t GetChildThread(ProcessHandle childPid,
-                                  ThreadId childBlamedThread) {
-  mach_port_t childThread = MACH_PORT_NULL;
-  thread_act_port_array_t threads_for_task;
-  mach_msg_type_number_t thread_count;
-
-  if (task_threads(childPid, &threads_for_task, &thread_count) ==
-          KERN_SUCCESS &&
-      childBlamedThread < thread_count) {
-    childThread = threads_for_task[childBlamedThread];
-  }
-
-  return childThread;
-}
-#endif
 
 bool CreateMinidumpsAndPair(ProcessHandle aTargetHandle,
                             ThreadId aTargetBlamedThread,
@@ -3695,12 +3670,6 @@ bool CreateMinidumpsAndPair(ProcessHandle aTargetHandle,
   }
 
   AutoIOInterposerDisable disableIOInterposition;
-
-#ifdef XP_MACOSX
-  mach_port_t targetThread = GetChildThread(aTargetHandle, aTargetBlamedThread);
-#else
-  ThreadId targetThread = aTargetBlamedThread;
-#endif
 
   xpstring dump_path;
 #ifndef XP_LINUX
@@ -3715,7 +3684,7 @@ bool CreateMinidumpsAndPair(ProcessHandle aTargetHandle,
 
   // dump the target
   if (!google_breakpad::ExceptionHandler::WriteMinidumpForChild(
-          aTargetHandle, targetThread,
+          aTargetHandle, aTargetBlamedThread,
 #if defined(XP_LINUX) && defined(MOZ_OXIDIZED_BREAKPAD)
           /* auxvInfo */ nullptr,
 #endif  // defined(XP_LINUX) && defined(MOZ_OXIDIZED_BREAKPAD)
