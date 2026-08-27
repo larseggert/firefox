@@ -11,6 +11,7 @@
     <text dominant-baseline="hanging" x="220" y="20">Hanging</text>
     <text dominant-baseline="central" x="290" y="20">Central</text>
     <text dominant-baseline="mathematical" x="360" y="20">Mathematical</text>
+    <text dominant-baseline="text-bottom" x="430" y="20">Bottom</text>
   </g>
 
   <g fill="lime">
@@ -20,6 +21,7 @@
     <text id="hanging" dominant-baseline="text-before-edge" x="220" y="20" dx="0">Hanging</text>
     <text id="central" dominant-baseline="text-before-edge" x="290" y="20" dx="0">Central</text>
     <text id="mathematical" dominant-baseline="text-before-edge" x="360" y="20" dx="0">Mathematical</text>
+    <text id="text-bottom" dominant-baseline="text-before-edge" x="430" y="20" dx="0">Bottom</text>
   </g>
 
   <style><![CDATA[
@@ -83,6 +85,8 @@
 
       // Mirrored ascent / 2.
       cover("mathematical", ascent / 2);
+
+      cover("text-bottom", blockSize);
 
       document.documentElement.removeAttribute('class');
     });
