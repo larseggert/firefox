@@ -41,6 +41,8 @@ contentblocking:
       This scalar reports the value of the content blocking category pref
       (0 = "standard", 1 = "strict", 2 = "custom", 3 = some other value,
       this is not supported).
+      This metric was generated to correspond to the Legacy Telemetry
+      scalar contentblocking.category.
     bugs:
       - https://bugzil.la/1529425
     data_reviews:
@@ -49,11 +51,14 @@ contentblocking:
       - privacy-team@mozilla.org
     expires: never
     unit: content blocking category
+    telemetry_mirror: CONTENTBLOCKING_CATEGORY
 
   cryptomining_blocking_enabled:
     type: boolean
     description: >
       True if cryptominer blocking is enabled globally at startup.
+      This metric was generated to correspond to the Legacy Telemetry
+      scalar contentblocking.cryptomining_blocking_enabled.
     bugs:
       - https://bugzil.la/1522919
     data_reviews:
@@ -61,11 +66,14 @@ contentblocking:
     notification_emails:
       - privacy-team@mozilla.org
     expires: never
+    telemetry_mirror: CONTENTBLOCKING_CRYPTOMINING_BLOCKING_ENABLED
 
   fingerprinting_blocking_enabled:
     type: boolean
     description: >
       True if fingerprinter blocking is enabled globally at startup.
+      This metric was generated to correspond to the Legacy Telemetry
+      scalar contentblocking.fingerprinting_blocking_enabled.
     bugs:
       - https://bugzil.la/1522919
     data_reviews:
@@ -73,11 +81,14 @@ contentblocking:
     notification_emails:
       - privacy-team@mozilla.org
     expires: never
+    telemetry_mirror: CONTENTBLOCKING_FINGERPRINTING_BLOCKING_ENABLED
 
   trackers_blocked_count:
     type: counter
     description: >
       A count of the number of tracking events blocked.
+      This metric was generated to correspond to the Legacy Telemetry
+      scalar contentblocking.trackers_blocked_count.
     bugs:
       - https://bugzil.la/1577030
       - https://bugzil.la/1610894
@@ -91,6 +102,7 @@ contentblocking:
     notification_emails:
       - privacy-team@mozilla.org
     expires: never
+    telemetry_mirror: CONTENTBLOCKING_TRACKERS_BLOCKED_COUNT
 
   canvas_fingerprinting_per_tab2:
     type: labeled_counter
