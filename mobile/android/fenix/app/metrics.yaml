@@ -8388,7 +8388,8 @@ tracking_protection:
       source:
         description: |
           The surface the user opened the privacy dashboard from. Possible
-          values are: `home`, `tabs_tray`, `trust_panel` or `deeplink`.
+          values are: `home`, `tabs_tray`, `trust_panel`, `deeplink` or
+          `privacy_report_notification`.
         type: string
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2044067
