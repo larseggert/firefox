@@ -79,16 +79,20 @@
   "search": {
     "border": {
       "radius": {
-        "value": {
-          "default": "{input.text.border.radius}",
-          "nova": {
-            "value": "{border.radius.circle}"
-          }
-        }
+        "value": "{input.text.border.radius}"
       }
     }
   },
   "width": {
     "value": "{size.item.small}"
+  },
+  "nova": {
+    "search": {
+      "border": {
+        "radius": {
+          "value": "{border.radius.circle}"
+        }
+      }
+    }
   }
 }

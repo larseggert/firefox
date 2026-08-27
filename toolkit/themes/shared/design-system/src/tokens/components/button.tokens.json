@@ -161,13 +161,7 @@
         "active": {
           "value": {
             "default": "{button.background.color.ghost.active}",
-            "forcedColors": "{button.background.color.primary.@base}",
-            "nova": {
-              "comment": "The HCM value in Figma needs to be updated",
-              "value": {
-                "forcedColors": "ButtonText"
-              }
-            }
+            "forcedColors": "{button.background.color.primary.@base}"
           }
         },
         "disabled": {
@@ -176,13 +170,7 @@
         "hover": {
           "value": {
             "default": "{button.background.color.ghost.hover}",
-            "forcedColors": "{button.background.color.primary.@base}",
-            "nova": {
-              "comment": "The HCM value in Figma needs to be updated",
-              "value": {
-                "forcedColors": "ButtonText"
-              }
-            }
+            "forcedColors": "{button.background.color.primary.@base}"
           }
         },
         "selected": {
@@ -652,15 +640,7 @@
         "active": {
           "value": {
             "default": "{button.text.color.ghost.active}",
-            "forcedColors": "{button.text.color.primary.@base}",
-            "nova": {
-              "comment": "The HCM value in Figma needs to be updated",
-              "value": {
-                "light": "{button.text.color.ghost.active}",
-                "dark": "{button.text.color.active}",
-                "forcedColors": "ButtonFace"
-              }
-            }
+            "forcedColors": "{button.text.color.primary.@base}"
           }
         },
         "disabled": {
@@ -669,15 +649,7 @@
         "hover": {
           "value": {
             "default": "{button.text.color.ghost.hover}",
-            "forcedColors": "{button.text.color.primary.@base}",
-            "nova": {
-              "comment": "The HCM value in Figma needs to be updated",
-              "value": {
-                "light": "{button.text.color.ghost.hover}",
-                "dark": "{button.text.color.hover}",
-                "forcedColors": "ButtonFace"
-              }
-            }
+            "forcedColors": "{button.text.color.primary.@base}"
           }
         },
         "selected": {

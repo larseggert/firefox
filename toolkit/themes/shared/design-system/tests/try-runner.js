@@ -15,8 +15,8 @@ const { readFileSync, readdirSync, rmSync } = require("fs");
 const chalk = require("chalk");
 const path = require("path");
 const prettier = require("prettier");
-const StyleDictionary = require("style-dictionary").default;
-const config = require("../config/tokens-config.mjs").default;
+const StyleDictionary = require("style-dictionary");
+const config = require("../config/tokens-config.js");
 
 // Mirror the design-system's real depth in the source tree (toolkit/themes/
 // shared/design-system) so the relative destinations in the config (e.g.
@@ -25,7 +25,7 @@ const config = require("../config/tokens-config.mjs").default;
 const TEST_BUILD_PATH = "tests/build/toolkit/themes/shared/design-system/";
 const PROJECT_ROOT = path.resolve(__dirname, "../../../../../");
 
-async function buildFilesWithTestConfig() {
+function buildFilesWithTestConfig() {
   // Use our real config, just modify some values for the test. This prevents us
   // from re-building the CSS files that get checked in when we run the tests.
   let testConfig = Object.assign({}, config);
@@ -35,8 +35,7 @@ async function buildFilesWithTestConfig() {
 
   // This is effectively the same as running `npm run build` and allows us to
   // use the modified config.
-  const sd = new StyleDictionary(testConfig);
-  await sd.buildAllPlatforms();
+  StyleDictionary.extend(testConfig).buildAllPlatforms();
 }
 
 /**
@@ -75,15 +74,15 @@ const tests = {
     let currentCSS = {};
     let cssFiles = getBuiltCSSFiles();
 
-    try {
-      await buildFilesWithTestConfig();
-    } catch {
-      errors.push("CSS build did not run successfully");
-    }
-
     // Read the contents of our built CSS files.
     for (let { name, path: currentPath } of cssFiles) {
       currentCSS[name] = readFileSync(currentPath, "utf8");
+    }
+
+    try {
+      buildFilesWithTestConfig();
+    } catch {
+      errors.push("CSS build did not run successfully");
     }
 
     let prettierConfig = require(path.resolve(PROJECT_ROOT, ".prettierrc.js"));
@@ -111,7 +110,7 @@ const tests = {
 
       if (builtCSS.includes("/** Unspecified **/")) {
         errors.push(
-          "Tokens present in the 'Unspecified' section. Please update TOKEN_SECTIONS in tokens-config.mjs"
+          "Tokens present in the 'Unspecified' section. Please update TOKEN_SECTIONS in tokens-config.js"
         );
       }
     }

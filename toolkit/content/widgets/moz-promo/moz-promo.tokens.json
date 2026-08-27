@@ -23,14 +23,7 @@
       "@base": {
         "value": {
           "default": "color-mix(in lch, currentColor 8%, transparent)",
-          "prefersContrast": "{border.color.@base}",
-          "nova": {
-            "comment": "color-mix with currentColor cannot be expressed in Figma",
-            "value": {
-              "default": "color-mix(in lch, currentColor 12%, transparent)",
-              "forcedColors": "CanvasText"
-            }
-          }
+          "prefersContrast": "{border.color.@base}"
         }
       },
       "vibrant": {

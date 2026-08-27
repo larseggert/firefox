@@ -460,7 +460,11 @@
     --link-color-hover: var(--color-accent-primary-hover);
     --link-color-active: var(--color-accent-primary-active);
     --link-color-visited: var(--link-color);
-    /* Not using --force-outline-offset for links because that's intended for elements with a background, and we only want a slight offset here while not overlapping adjacent text */
+    /**
+     * Not using --force-outline-offset for links because that's intended for
+     * elements with a background, and we only want a slight offset here while
+     * not overlapping adjacent text
+     */
     --link-focus-outline-offset: 1px;
 
     /** opacity **/
@@ -1071,6 +1075,8 @@
       --toolbar-padding-inline: 6px;
 
       /** toolbarbutton **/
+      --toolbarbutton-background-color-hover: light-dark(rgba(117, 102, 159, 0.25), rgba(182, 170, 217, 0.25));
+      --toolbarbutton-background-color-active: light-dark(rgba(117, 102, 159, 0.4), rgba(182, 170, 217, 0.4));
       --toolbarbutton-icon-fill: light-dark(var(--color-violet-desaturated-50), var(--color-violet-desaturated-10));
       --toolbarbutton-icon-fill-attention: var(--color-accent-primary);
       --toolbarbutton-opacity-disabled: 0.4;
@@ -1141,8 +1147,6 @@
         --button-background-color-destructive-active: var(--button-background-color-primary-active);
         --button-background-color-ghost-disabled: var(--button-background-color-disabled);
         --button-background-color-menu: var(--button-background-color);
-        --button-background-color-menu-hover: ButtonText;
-        --button-background-color-menu-active: ButtonText;
         --button-background-color-muted: var(--button-background-color);
         --button-background-color-muted-hover: var(--button-background-color-hover);
         --button-background-color-muted-active: var(--button-background-color-active);
@@ -1175,8 +1179,8 @@
         --button-text-color-ghost-hover: var(--button-text-color-ghost-active);
         --button-text-color-ghost-active: var(--button-text-color-active);
         --button-text-color-ghost-disabled: GrayText;
-        --button-text-color-menu-hover: ButtonFace;
-        --button-text-color-menu-active: ButtonFace;
+        --button-text-color-menu-hover: var(--button-text-color-primary);
+        --button-text-color-menu-active: var(--button-text-color-primary-active);
         --button-text-color-menu-disabled: var(--button-text-color-disabled);
         --button-text-color-menu-selected: var(--button-text-color-primary-selected);
         --button-text-color-muted: ButtonText;
@@ -1222,6 +1226,8 @@
         --toolbar-field-text-color: var(--text-color);
 
         /** toolbarbutton **/
+        --toolbarbutton-background-color-hover: var(--button-background-color-hover);
+        --toolbarbutton-background-color-active: var(--button-background-color-active);
         --toolbarbutton-icon-fill: var(--button-text-color);
         --toolbarbutton-outline-color: var(--button-border-color);
         --toolbarbutton-outline-color-hover: var(--button-border-color-hover);

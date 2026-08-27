@@ -62,6 +62,11 @@
       "offset": {
         "value": "{focus.outline.offset}"
       }
+    },
+    "padding": {
+      "value": {
+        "default": "calc(var(--focus-outline-offset) + var(--focus-outline-width))"
+      }
     }
   },
   "hr": {

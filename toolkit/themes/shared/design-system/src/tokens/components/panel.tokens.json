@@ -51,7 +51,6 @@
   },
   "separator": {
     "color": {
-      "ignoreFigma": "color-mix with currentColor cannot be expressed in Figma",
       "value": {
         "default": "color-mix(in srgb, currentColor 25%, transparent)",
         "prefersContrast": "currentColor",
