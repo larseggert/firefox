@@ -3410,8 +3410,6 @@ with only_when(target_is_osx):
 
 # Miscellaneous options
 # ==============================================================
-option(env="MOZ_WINCONSOLE", nargs="?", help="Whether we can create a console window")
-set_define("MOZ_WINCONSOLE", True, when=depends("MOZ_WINCONSOLE")(lambda x: x))
 
 # Alternative Crashreporter setting
 option(
