@@ -165,6 +165,9 @@ Accessible* RemoteAccessible::EmbeddedChildAt(uint32_t aChildIdx) {
 
 LocalAccessible* RemoteAccessible::OuterDocOfRemoteBrowser() const {
   auto* tab = mDoc->GetBrowserParent();
+  if (NS_WARN_IF(!tab)) {
+    return nullptr;
+  }
   dom::Element* frame = tab->GetOwnerElement();
   NS_ASSERTION(frame, "why isn't the tab in a frame!");
   if (!frame) return nullptr;

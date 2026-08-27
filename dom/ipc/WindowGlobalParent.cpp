@@ -651,6 +651,18 @@ IPCResult WindowGlobalParent::RecvDestroy() {
   if (CanSend()) {
     RefPtr<BrowserParent> browserParent = GetBrowserParent();
     if (!browserParent || !browserParent->IsDestroyed()) {
+#ifdef ACCESSIBILITY
+      // Destroy the accessibility actor (if any) before we start tearing down
+      // this instance so that accessibility can still access information such
+      // as the owner element. For example, this allows us to gracefully fire
+      // accessibility events notifying of the destruction.
+      if (auto* docAcc = a11y::DocAccessibleParent::GetFrom(this)) {
+#  if defined(ANDROID)
+        MonitorAutoLock mal(nsAccessibilityService::GetAndroidMonitor());
+#  endif
+        docAcc->Destroy();
+      }
+#endif
       (void)Send__delete__(this);
     }
   }
