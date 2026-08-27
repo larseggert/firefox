@@ -41,8 +41,14 @@ internal class IPProtectionTelemetryMiddleware(
         action: IPProtectionAction,
     ) {
         // The entitled but unauthenticated error state can be only captured before the reducer processes the action.
+        // It could happen because the user might start vpn auth before their FXA account is ready. We patched the more
+        // prominent case when user is navigating into VPN auth flow from the onboarding card in bug 2057032, but there
+        // is nothing stopping them accessing the feature very quickly through the menu or settings, and running into
+        // the said problem.
         if (action is IPProtectionAction.ToggleFailed) {
             handleToggleFailedAction(store.state, action.error)
+        } else if (action is IPProtectionAction.LocationSwitchFailed) {
+            handleLocationSwitchFailed(action.error)
         }
 
         val previousStatus = store.state.accountState.status
@@ -123,6 +129,13 @@ internal class IPProtectionTelemetryMiddleware(
             Vpn.entitledAccountUnauthenticated.record()
         }
         Vpn.errorEncountered.record(Vpn.ErrorEncounteredExtra(errorCode = "${(error as? IPProxyException)?.code}"))
+    }
+
+    @androidx.annotation.OptIn(ExperimentalGeckoViewApi::class)
+    private fun handleLocationSwitchFailed(error: Throwable?) {
+        Vpn.locationSwitchError.record(
+            extra = Vpn.LocationSwitchErrorExtra(errorCode = "${(error as? IPProxyException)?.code}")
+        )
     }
 
     private fun durationSince(startMs: Long?): Int? = startMs?.let { (currentTimeInMillis() - it).toInt() }
