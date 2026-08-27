@@ -211,7 +211,6 @@ else:
         "/nsprpub/pr/src/threads/combined/prustack.c",
         "/nsprpub/pr/src/threads/combined/pruthr.c",
         "/nsprpub/pr/src/threads/prcthr.c",
-        "/nsprpub/pr/src/threads/prdump.c",
         "/nsprpub/pr/src/threads/prmon.c",
         "/nsprpub/pr/src/threads/prsem.c",
     ]
