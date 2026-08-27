@@ -6234,3 +6234,15 @@ webNotificationsPermissionUi:
         Fluent message id for the (Always) Block button, resolved in-tree.
         Takes precedence over secondaryCtaLabel; its .accesskey attribute, if
         present, sets the access key. Not applied in private browsing.
+
+editContext:
+  description: EditContext API
+  owner: ltenenbaum@mozilla.com
+  hasExposure: false
+  variables:
+    enabled:
+      type: boolean
+      setPref:
+        branch: default
+        pref: dom.editcontext.enabled
+      description: Whether the EditContext API is enabled.
