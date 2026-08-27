@@ -373,7 +373,7 @@ void RenderCompositorNativeOGL::AttachExternalImage(
   // image->Lock only uses the channel index to populate the returned
   // `WrExternalImage`. Since we don't use that, it doesn't matter
   // what channel index we pass.
-  image->Lock(0, nullptr);
+  image->Lock(0, mGL);
 
   RenderCompositorNative::AttachExternalImage(aId, aExternalImage);
 }
