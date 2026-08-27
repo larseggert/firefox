@@ -32,6 +32,7 @@
 #include "jit/JitOptions.h"
 #include "jit/Simulator.h"
 #include "js/ColumnNumber.h"  // JS::ColumnNumberOneOrigin
+#include "js/Context.h"       // js::AssertHeapIsIdle
 #include "js/ForOfIterator.h"
 #include "js/friend/ErrorMessages.h"  // js::GetErrorMessage, JSMSG_*
 #include "js/Printf.h"
@@ -46,6 +47,7 @@
 #include "vm/GlobalObject.h"       // js::GlobalObject
 #include "vm/HelperThreadState.h"  // js::PromiseHelperTask
 #include "vm/Interpreter.h"
+#include "vm/JSContext.h"  // CHECK_THREAD
 #include "vm/JSFunction.h"
 #include "vm/PlainObject.h"    // js::PlainObject
 #include "vm/PromiseObject.h"  // js::PromiseObject
@@ -592,8 +594,12 @@ static bool ReportCompileWarnings(JSContext* cx,
 }
 
 // https://webassembly.github.io/esm-integration/js-api/index.html#esm-integration
-SharedCompileArgs js::wasm::BuildCompileArgsForESM(
+JS_PUBLIC_API JS::SharedWasmCompileArgs JS::BuildCompileArgsForESM(
     JSContext* cx, const JS::ReadOnlyCompileOptions& options) {
+  MOZ_ASSERT(!cx->zone()->isAtomsZone());
+  AssertHeapIsIdle();
+  CHECK_THREAD(cx);
+
   FeatureOptions featureOptions;
   // Step 4 (reordered). Let builtinSetNames be « "js-string" ».
   featureOptions.jsStringBuiltins = true;
@@ -621,16 +627,18 @@ SharedCompileArgs js::wasm::BuildCompileArgsForESM(
                                      featureOptions, /* reportOOM */ true);
 }
 
-ESMCompileResult js::wasm::CompileForESM(
-    const CompileArgs& compileArgs, const BytecodeSource& bytecodeSource) {
+JS_PUBLIC_API JS::ESMCompileResult JS::CompileForESM(
+    const WasmCompileArgs& compileArgs, const uint8_t* bytes, size_t length) {
   // Step 1. Let stableBytes be a copy of the bytes held by the buffer bytes.
   // (Performed by caller)
+  BytecodeSource bytecodeSource(bytes, length);
 
   // Step 2. Compile the WebAssembly module stableBytes and store the result
   //         as module.
   ESMCompileResult result;
   result.module =
-      CompileModule(compileArgs, BytecodeBufferOrSource(bytecodeSource),
+      CompileModule(static_cast<const CompileArgs&>(compileArgs),
+                    BytecodeBufferOrSource(bytecodeSource),
                     &result.error, &result.warnings, nullptr);
   if (result.module) {
     result.status = ESMCompileResult::Status::Success;
@@ -642,11 +650,15 @@ ESMCompileResult js::wasm::CompileForESM(
   return result;
 }
 
-bool js::wasm::FinishCompileForESM(JSContext* cx,
-                                   const CompileArgs& compileArgs,
-                                   const ESMCompileResult& compileResult,
-                                   MutableHandleObject moduleObj) {
-  const SharedModule& module = compileResult.module;
+JS_PUBLIC_API bool JS::FinishCompileForESM(
+    JSContext* cx, const WasmCompileArgs& compileArgs,
+    const JS::ESMCompileResult& compileResult, MutableHandleObject moduleObj) {
+  MOZ_ASSERT(!cx->zone()->isAtomsZone());
+  AssertHeapIsIdle();
+  CHECK_THREAD(cx);
+
+  const Module* module =
+      static_cast<const Module*>(compileResult.module.get());
 
   if (!ReportCompileWarnings(cx, compileResult.warnings)) {
     return false;
@@ -661,7 +673,9 @@ bool js::wasm::FinishCompileForESM(JSContext* cx,
     case ESMCompileResult::Status::Failed: {
       RootedObject errorObj(cx);
       RootedObject nullStack(cx, nullptr);
-      if (!CreateCompileError(cx, compileArgs.scriptedCaller, nullStack,
+      if (!CreateCompileError(
+              cx, static_cast<const CompileArgs&>(compileArgs).scriptedCaller,
+              nullStack,
                               compileResult.error.get(), &errorObj)) {
         return false;
       }
