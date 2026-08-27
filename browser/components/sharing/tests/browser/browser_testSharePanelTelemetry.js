@@ -28,7 +28,7 @@ add_task(async function test_shareablePage() {
       { id: "share-panel-copy-link", visible: true },
       {
         id: "share-panel-os-share",
-        visible: AppConstants.platform !== "linux",
+        visible: AppConstants.platform === "win", // Bug 2058695: Make this visible onces bug 2009747 lands.
       },
       {
         id: "share-panel-mail",
@@ -68,16 +68,22 @@ add_task(async function test_shareablePage() {
 
     const expectedEvents = [
       { extra: { action: "copy-link", is_shareable: "true" } },
-      {
+    ];
+
+    if (AppConstants.platform !== "macosx") {
+      expectedEvents.push({
         extra: {
           action: AppConstants.platform === "linux" ? "mail" : "os-share",
           is_shareable: "true",
         },
-      },
+      });
+    }
+
+    expectedEvents.push(
       { extra: { action: "screenshot", is_shareable: "true" } },
       { extra: { action: "qr-code", is_shareable: "true" } },
-      { extra: { action: "", is_shareable: "true" } },
-    ];
+      { extra: { action: "", is_shareable: "true" } }
+    );
     await assertTelemetryEvents(expectedEvents);
   });
 });
