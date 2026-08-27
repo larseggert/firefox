@@ -152,8 +152,8 @@ add_task(async function test_bookmarks_shows_toolbar_folder() {
   SidebarTestUtils.closePanel(window);
 });
 
-add_task(async function test_bookmarks_shows_bookmark_in_folder() {
-  const bookmark = await addBookmark({ title: "My Test Page" });
+async function testBookmarkTitleRendering(bookmarkInfo, title, message) {
+  const bookmark = await addBookmark(bookmarkInfo);
 
   const { component } = await showBookmarksSidebar();
   const tabList = component.bookmarkList;
@@ -188,11 +188,29 @@ add_task(async function test_bookmarks_shows_bookmark_in_folder() {
     0,
     "Bookmark rows are rendered inside the folder."
   );
-  const matchingRow = [...rows].find(r => r.title === "My Test Page");
-  ok(matchingRow, "The added bookmark is visible in the panel.");
+  const matchingRow = [...rows].find(r => r.title === title);
+  ok(matchingRow, message);
 
   await PlacesUtils.bookmarks.remove(bookmark);
   SidebarTestUtils.closePanel(window);
+}
+
+add_task(async function test_bookmarks_shows_bookmark_in_folder() {
+  await testBookmarkTitleRendering(
+    { title: "My Test Page", url: "https://example.com" },
+    "My Test Page",
+    "If a bookmark has title set, use that title."
+  );
+  await testBookmarkTitleRendering(
+    { title: "", url: "https://example.com" },
+    "example.com/",
+    "If a bookmark has no title, generate one from its URI."
+  );
+  await testBookmarkTitleRendering(
+    { title: "", url: "about:robots" },
+    PlacesUIUtils.promptLocalization.formatValueSync("places-no-title"),
+    "If the URI is an about: page, use placeholder string."
+  );
 });
 
 add_task(async function test_bookmarks_search_filters_results() {
