@@ -4879,8 +4879,9 @@ enum class ComponentNameFragmentKind {
 }
 
 [[nodiscard]] static bool DecodeComponentName(Decoder& d, const char* thing,
-                                              CacheableName* name,
-                                              bool allowMethods) {
+                                              ComponentName* name) {
+  using Attr = ComponentNameAttribute;
+
   uint32_t len;
   if (!d.readVarU32(&len)) {
     return d.fail("expected name");
@@ -4892,6 +4893,7 @@ enum class ComponentNameFragmentKind {
     return d.fail("over-long name");
   }
 
+  ComponentNameAttributes attrs;
   Decoder nameDecoder(d.currentPosition(), d.currentPosition() + len,
                       d.currentOffset(), d.error(), d.warnings());
   {
@@ -4911,7 +4913,8 @@ enum class ComponentNameFragmentKind {
     // Examples of each would be:
     //
     // - Plain names: foo-BAR-baz, [constructor]FOO-BAR, [method]foo.BAR,
-    //   [static]foo-BAR.BEEP-boop
+    //   [static]foo-BAR.BEEP-boop, [get]prop, [method][get]foo.prop,
+    //   [static][set]foo.prop-2
     // - Interface names: wasi:cli/stdout,
     //   wasi:clocks/imports@0.3.0-rc-2026-03-15,
     //   foo-bar:BEEP-boop/boop-BEEP@<[a-zA-Z0-9.+-]+>
@@ -4928,12 +4931,31 @@ enum class ComponentNameFragmentKind {
     // does not recognize the symbols used to delimit namespaces, projections,
     // or versions.
 
-    if (allowMethods && d.readLiteral("[constructor]")) {
+    // [constructor]/[method]/[static] must come first and are mutually
+    // exclusive
+    if (d.readLiteral("[constructor]")) {
+      attrs += Attr::Constructor;
+    } else if (d.readLiteral("[method]")) {
+      attrs += Attr::Method;
+    } else if (d.readLiteral("[static]")) {
+      attrs += Attr::Static;
+    }
+
+    // Then we can see [get] or [set]
+    if (d.readLiteral("[get]")) {
+      attrs += Attr::Get;
+    } else if (d.readLiteral("[set]")) {
+      attrs += Attr::Set;
+    }
+
+    if (attrs.contains(Attr::Constructor)) {
+      if (attrs.contains(Attr::Get) || attrs.contains(Attr::Set)) {
+        return d.fail("cannot use [get] or [set] with [constructor]");
+      }
       if (!DecodeComponentLabel(d, thing, /*allowUppercase=*/true)) {
         return false;
       }
-    } else if (allowMethods &&
-               (d.readLiteral("[method]") || d.readLiteral("[static]"))) {
+    } else if (attrs.contains(Attr::Method) || attrs.contains(Attr::Static)) {
       if (!DecodeComponentLabel(d, thing, /*allowUppercase=*/true)) {
         return false;
       }
@@ -4960,8 +4982,23 @@ enum class ComponentNameFragmentKind {
   if (!d.readUTF8Bytes(len, &utf8Bytes)) {
     MOZ_CRASH("full name should have been decoded earlier");
   }
-  *name = CacheableName(std::move(utf8Bytes));
+  *name = ComponentName(std::move(utf8Bytes), attrs);
 
+  return true;
+}
+
+[[nodiscard]] static bool DecodeComponentNameNoAttributes(Decoder& d,
+                                                          const char* thing,
+                                                          CacheableName* name) {
+  ComponentName nameEx;
+  if (!DecodeComponentName(d, thing, &nameEx)) {
+    return false;
+  }
+  if (!nameEx.attributes.isEmpty()) {
+    return d.failf("attributes are not allowed in %s names", thing);
+  }
+
+  *name = std::move(nameEx.name);
   return true;
 }
 
@@ -5090,8 +5127,7 @@ enum class ComponentTypeKindRaw : uint8_t {
 
       for (uint32_t i = 0; i < numFields; i++) {
         CacheableName name;
-        if (!DecodeComponentName(d, "record field", &name,
-                                 /*allowMethods=*/false)) {
+        if (!DecodeComponentNameNoAttributes(d, "record field", &name)) {
           return false;
         }
         ComponentType type;
@@ -5140,8 +5176,7 @@ enum class ComponentTypeKindRaw : uint8_t {
       for (uint32_t i = 0; i < numCases; i++) {
         CacheableName name;
         bool duplicate;
-        if (!DecodeComponentName(d, "variant case", &name,
-                                 /*allowMethods=*/false)) {
+        if (!DecodeComponentNameNoAttributes(d, "variant case", &name)) {
           return false;
         }
         if (!caseNameDedup.add(name.utf8Bytes(), &duplicate)) {
@@ -5237,8 +5272,7 @@ enum class ComponentTypeKindRaw : uint8_t {
       }
       for (uint32_t i = 0; i < numLabels; i++) {
         CacheableName name;
-        if (!DecodeComponentName(d, "flag label", &name,
-                                 /*allowMethods=*/false)) {
+        if (!DecodeComponentNameNoAttributes(d, "flag label", &name)) {
           return false;
         }
         bool duplicate;
@@ -5277,8 +5311,7 @@ enum class ComponentTypeKindRaw : uint8_t {
       }
       for (uint32_t i = 0; i < numCases; i++) {
         CacheableName name;
-        if (!DecodeComponentName(d, "enum case", &name,
-                                 /*allowMethods=*/false)) {
+        if (!DecodeComponentNameNoAttributes(d, "enum case", &name)) {
           return false;
         }
         bool duplicate;
@@ -5388,8 +5421,7 @@ enum class ComponentTypeKindRaw : uint8_t {
 
       for (uint32_t i = 0; i < numParams; i++) {
         CacheableName name;
-        if (!DecodeComponentName(d, "param", &name,
-                                 /*allowMethods=*/false)) {
+        if (!DecodeComponentNameNoAttributes(d, "param", &name)) {
           return false;
         }
         ComponentType type;
@@ -6531,9 +6563,8 @@ static bool DecodeComponentImport(Decoder& d, MutableComponent& c,
       return d.failf("invalid import flags %#x", importFlags);
   }
 
-  CacheableName importName;
-  if (!DecodeComponentName(d, "import", &importName,
-                           /*allowMethods=*/true)) {
+  ComponentName importName;
+  if (!DecodeComponentName(d, "import", &importName)) {
     return false;
   }
 
@@ -6550,12 +6581,12 @@ static bool DecodeComponentImport(Decoder& d, MutableComponent& c,
   }
 
   bool duplicate;
-  if (!nameDedup.add(importName.utf8Bytes(), &duplicate)) {
+  if (!nameDedup.add(importName.name.utf8Bytes(), &duplicate)) {
     return false;
   }
   if (duplicate) {
     return d.failf("import name \"%.*s\" is not strongly-unique",
-                   ComponentName_Printf(importName));
+                   ComponentName_Printf(importName.name));
   }
 
   return c->addImport(ComponentImport(std::move(importName), externDesc));
@@ -6586,9 +6617,8 @@ enum class ComponentExportFlagsRaw : uint8_t {
       return d.failf("invalid export flags %#x", exportFlags);
   }
 
-  CacheableName exportName;
-  if (!DecodeComponentName(d, "export", &exportName,
-                           /*allowMethods=*/true)) {
+  ComponentName exportName;
+  if (!DecodeComponentName(d, "export", &exportName)) {
     return false;
   }
 
@@ -6662,12 +6692,12 @@ enum class ComponentExportFlagsRaw : uint8_t {
   // TODO(wasm-cm): Validate all the naming-related conditions
 
   bool duplicate;
-  if (!nameDedup.add(exportName.utf8Bytes(), &duplicate)) {
+  if (!nameDedup.add(exportName.name.utf8Bytes(), &duplicate)) {
     return false;
   }
   if (duplicate) {
     return d.failf("export name \"%.*s\" is not strongly-unique",
-                   ComponentName_Printf(exportName));
+                   ComponentName_Printf(exportName.name));
   }
 
   return c->addExport(ComponentExport(std::move(exportName), externDesc));
