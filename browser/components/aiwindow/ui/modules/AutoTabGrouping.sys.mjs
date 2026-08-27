@@ -46,6 +46,10 @@ const PANEL_ID = "smartwindow-group-tabs-panel";
 const FLYOUT_ID = "smartwindow-group-tabs-flyout";
 const CARD_TAG = "smartwindow-group-tabs-card";
 const FLYOUT_HIDE_DELAY_MS = 160;
+const GROUPS_CHANGED_TOPICS = [
+  "browser-tabgroup-removed-from-dom",
+  "sessionstore-saved-tab-groups-changed",
+];
 
 /**
  * Total length of the given tabs' titles. The titles are the only text the
@@ -195,10 +199,11 @@ export const AutoTabGrouping = {
     // both popups and the toolbar button.
     const onMouseDown = event => {
       const target = event.target;
+      const trigger = target.closest?.("menupopup")?.triggerNode ?? target;
       if (
-        panel.contains(target) ||
-        panel._flyoutPanel?.contains(target) ||
-        button.contains(target)
+        panel.contains(trigger) ||
+        panel._flyoutPanel?.contains(trigger) ||
+        button.contains(trigger)
       ) {
         return;
       }
@@ -220,6 +225,8 @@ export const AutoTabGrouping = {
     // The flyout is a preview of the row the user is on, so it has no business
     // floating over whatever they switched to.
     const onDeactivate = () => this._hideFlyout(panel);
+    const groupsObserver = { observe: () => this._onGroupsChanged(win, panel) };
+    let observingGroups = false;
 
     panel.addEventListener(
       "popupshown",
@@ -229,6 +236,10 @@ export const AutoTabGrouping = {
         win.addEventListener("mousedown", onMouseDown, true);
         win.addEventListener("keydown", onKeyDown, true);
         win.addEventListener("deactivate", onDeactivate);
+        observingGroups = true;
+        for (const topic of GROUPS_CHANGED_TOPICS) {
+          Services.obs.addObserver(groupsObserver, topic);
+        }
       },
       { once: true }
     );
@@ -239,6 +250,12 @@ export const AutoTabGrouping = {
         win.removeEventListener("mousedown", onMouseDown, true);
         win.removeEventListener("keydown", onKeyDown, true);
         win.removeEventListener("deactivate", onDeactivate);
+        // The panel can be hidden without ever having been shown.
+        if (observingGroups) {
+          for (const topic of GROUPS_CHANGED_TOPICS) {
+            Services.obs.removeObserver(groupsObserver, topic);
+          }
+        }
         this._cancelHideFlyout(panel);
         panel._flyoutPanel?.remove();
         this._getState(win).recent = [];
@@ -375,6 +392,7 @@ export const AutoTabGrouping = {
     }
     const flyoutPanel = this._createPanel(win, FLYOUT_ID);
     flyoutPanel.setAttribute("animate", "false");
+    flyoutPanel.setAttribute("keepopenongroupdelete", "true");
     // Slide along the block axis to stay on screen near the bottom edge, and
     // keep flipping to the panel's other side when there is no room beside it.
     flyoutPanel.setAttribute("flip", "slide");
@@ -394,9 +412,13 @@ export const AutoTabGrouping = {
     flyoutPanel.addEventListener("focusin", () =>
       this._cancelHideFlyout(panel)
     );
-    flyoutPanel.addEventListener("focusout", () =>
-      this._scheduleHideFlyout(panel)
-    );
+    flyoutPanel.addEventListener("focusout", event => {
+      // Re-rendering the flyout destroys the row focus was on, which leaves
+      // nothing behind and is not focus leaving the flyout.
+      if (event.relatedTarget) {
+        this._scheduleHideFlyout(panel);
+      }
+    });
     flyoutPanel._flyoutEl = flyoutEl;
 
     win.document.getElementById("mainPopupSet").appendChild(flyoutPanel);
@@ -424,6 +446,54 @@ export const AutoTabGrouping = {
     card.duplicates = win.gBrowser.getAllDuplicateTabsToClose().length;
     card.tabGroups = this._tabGroupCount(win);
     return hidden;
+  },
+
+  /**
+   * Catch up with a tab group that went away while the panel was open: the
+   * "Just created" list, the "View Tab Groups" row and the list it opens all
+   * name groups the user can still act on.
+   *
+   * @param {ChromeWindow} win
+   * @param {XULElement} panel
+   */
+  _onGroupsChanged(win, panel) {
+    const card = panel._card;
+    this._pruneRecent(win);
+    card.recent = [...this._getState(win).recent];
+    card.tabGroups = this._tabGroupCount(win);
+    if (!this._flyoutListsGroups(panel)) {
+      return;
+    }
+    if (!card.tabGroups) {
+      this._hideFlyout(panel);
+      return;
+    }
+    // Focus on a panel row is the user's and stays put, and _renderFlyout
+    // re-seats the flyout's own focus across the rebuild. Focus anywhere
+    // else has been dropped by the deletion (the context menu parks it on
+    // the content browser), so putting it on the rebuilt list restores it.
+    const active = win.document.activeElement;
+    const focusInUse =
+      panel.contains(active) || !!panel._flyoutPanel?.contains(active);
+    this._renderFlyout(panel, { groups: true }, true);
+    if (!focusInUse) {
+      this._focusFlyout(panel);
+    }
+  },
+
+  /**
+   * @param {XULElement} panel
+   * @returns {boolean} Whether the flyout on screen is listing tab groups.
+   */
+  _flyoutListsGroups(panel) {
+    const flyoutPanel = panel._flyoutPanel;
+    const state = flyoutPanel?.state;
+    return (
+      (state === "open" || state === "showing") &&
+      !flyoutPanel._flyoutEl.suggestion &&
+      !flyoutPanel._flyoutEl.duplicates &&
+      !!flyoutPanel._flyoutEl.groupsListId
+    );
   },
 
   /**
@@ -517,32 +587,18 @@ export const AutoTabGrouping = {
   ) {
     this._cancelHideFlyout(panel);
     const flyoutPanel = this._ensureFlyoutPanel(win, panel);
-    const flyoutEl = flyoutPanel._flyoutEl;
     const showing =
       flyoutPanel.state === "open" || flyoutPanel.state === "showing";
-    // A new id builds a fresh <tab-groups-list>, which is when it reads the
-    // groups; the list already on screen keeps its own. A suggestion's rows
-    // are only replaced when the suggestion changes, and the duplicates are
-    // read fresh on every show.
+    // A suggestion's rows are only replaced when the suggestion changes, the
+    // duplicates are read fresh on every show, and the groups list already on
+    // screen keeps its own rows.
     let rebuilding = true;
     if (groups) {
-      rebuilding = !(
-        showing &&
-        !flyoutEl.suggestion &&
-        !flyoutEl.duplicates &&
-        flyoutEl.groupsListId
-      );
+      rebuilding = !this._flyoutListsGroups(panel);
     } else if (suggestion) {
-      rebuilding = flyoutEl.suggestion !== suggestion;
+      rebuilding = flyoutPanel._flyoutEl.suggestion !== suggestion;
     }
-    const refocus = rebuilding && this._flyoutHasFocus(panel);
-    flyoutEl.suggestion = suggestion;
-    flyoutEl.duplicates = duplicates;
-    if (!groups) {
-      flyoutEl.groupsListId = 0;
-    } else if (rebuilding) {
-      flyoutEl.groupsListId = this._nextId++;
-    }
+    this._renderFlyout(panel, { suggestion, duplicates, groups }, rebuilding);
 
     if (panel._activeRow && panel._activeRow !== anchorRow) {
       panel._activeRow.classList.remove("is-active");
@@ -561,7 +617,35 @@ export const AutoTabGrouping = {
     } else {
       flyoutPanel.openPopup(anchorRow, "end_before", 0, 0, false, false);
     }
+  },
 
+  /**
+   * Put content in the flyout: one suggestion's tabs, the duplicate tabs a
+   * close would remove, or the tab groups list, which a new id rebuilds since
+   * it only reads the groups as it is connected.
+   *
+   * @param {XULElement} panel
+   * @param {object} content
+   * @param {GroupSuggestion} [content.suggestion]
+   * @param {object[]} [content.duplicates] - Tab infos for panel._duplicateTabs.
+   * @param {boolean} [content.groups] - List the existing tab groups.
+   * @param {boolean} rebuilding - Whether the rows on screen, including the
+   *   one focus is on, are being replaced rather than left alone.
+   */
+  _renderFlyout(
+    panel,
+    { suggestion = null, duplicates = null, groups = false },
+    rebuilding
+  ) {
+    const flyoutEl = panel._flyoutPanel._flyoutEl;
+    const refocus = rebuilding && this._flyoutHasFocus(panel);
+    flyoutEl.suggestion = suggestion;
+    flyoutEl.duplicates = duplicates;
+    if (!groups) {
+      flyoutEl.groupsListId = 0;
+    } else if (rebuilding) {
+      flyoutEl.groupsListId = this._nextId++;
+    }
     if (refocus) {
       this._focusFlyout(panel);
     }
