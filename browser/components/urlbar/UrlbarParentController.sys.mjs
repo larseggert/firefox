@@ -855,6 +855,18 @@ export class UrlbarParentController {
   }
 
   /**
+   * Opens the preferences page. The chrome window's `openPreferences` is a
+   * script global of the browser window, out of reach of an input hosted in a
+   * content page, so the call is made here.
+   *
+   * @param {string} paneID
+   *   The preferences pane to open, per `openPreferences`.
+   */
+  openPreferences(paneID) {
+    this.browserWindow.openPreferences(paneID);
+  }
+
+  /**
    * Returns the icon URL of the engine with the given id. This can be a blob
    * URL, which only resolves in this process, so UrlbarParent serializes it
    * before handing it to another process.

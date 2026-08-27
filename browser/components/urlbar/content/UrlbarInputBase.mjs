@@ -4319,7 +4319,7 @@ ${
     });
 
     if (element.dataset.command == "manage") {
-      this.window.openPreferences("search-locationBar");
+      this.controller.openPreferences("search-locationBar");
       return;
     }
 

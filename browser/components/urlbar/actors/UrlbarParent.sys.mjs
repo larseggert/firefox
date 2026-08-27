@@ -230,6 +230,9 @@ export class UrlbarParent extends JSWindowActorParent {
           message.data.browserId
         );
         break;
+      case "OpenPreferences":
+        controller.openPreferences(message.data.paneID);
+        break;
     }
     return undefined;
   }

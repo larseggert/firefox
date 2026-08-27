@@ -500,4 +500,12 @@ export class UrlbarParentControllerProxy {
       browserId,
     });
   }
+
+  /** @type {UrlbarParentController["openPreferences"]} */
+  openPreferences(paneID) {
+    this.#actor.sendAsyncMessage("OpenPreferences", {
+      instanceId: this.#instanceId,
+      paneID,
+    });
+  }
 }

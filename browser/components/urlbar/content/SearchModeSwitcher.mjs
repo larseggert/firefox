@@ -144,7 +144,7 @@ export class SearchModeSwitcher {
   }
 
   #openPreferences() {
-    this.#input.window.openPreferences("paneSearch");
+    this.#input.controller.openPreferences("paneSearch");
 
     if (this.#input.sapName == "urlbar") {
       Glean.urlbarUnifiedsearchbutton.picked.settings.add(1);
