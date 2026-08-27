@@ -123,6 +123,7 @@ class SharePageActionClass {
       }
       case "popuphidden": {
         this.#recordActions(event.target.documentGlobal);
+        this.#setButtonExpanded(event.target, false);
         break;
       }
     }
@@ -265,6 +266,16 @@ class SharePageActionClass {
     }
 
     this.#startActions(panel.documentGlobal, isShareable);
+
+    let mainView = panel.querySelector("#share-panel-mainView");
+    lazy.PanelMultiView.forNode(mainView).focusWhenActive = true;
+
+    this.#setButtonExpanded(panel, true);
+  }
+
+  #setButtonExpanded(panel, expanded) {
+    let button = panel.documentGlobal?.document.getElementById(BUTTON_ID);
+    button?.setAttribute("aria-expanded", String(expanded));
   }
 
   togglePanel(event) {
