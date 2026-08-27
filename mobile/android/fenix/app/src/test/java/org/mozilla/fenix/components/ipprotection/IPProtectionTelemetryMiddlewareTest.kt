@@ -122,6 +122,20 @@ class IPProtectionTelemetryMiddlewareTest {
     }
 
     @Test
+    fun `GIVEN the location list update failed THEN the error class name is recorded`() {
+        assertNull(Vpn.locationUpdateError.testGetValue())
+
+        val store = createStore(initialStatus = AccountStatus.EnrolledAndEntitled)
+
+        store.dispatch(IPProtectionAction.LocationUpdateFailed(RuntimeException("generic-error")))
+
+        val events = Vpn.locationUpdateError.testGetValue()
+        assertNotNull(events)
+        assertEquals(1, events.size)
+        assertEquals("RuntimeException", events.first().extra?.get("error_code"))
+    }
+
+    @Test
     fun `GIVEN user has already finished auth flow successfully but service is still unauthenticated WHEN the VPN toggle failed THEN a generic network error telemetry is recorded`() {
         assertNull(Vpn.entitledAccountUnauthenticated.testGetValue())
 
