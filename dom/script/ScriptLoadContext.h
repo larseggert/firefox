@@ -12,6 +12,7 @@
 #include "js/SourceText.h"
 #include "js/Transcoding.h"  // JS::TranscodeResult
 #include "js/TypeDecls.h"
+#include "js/WasmModule.h"  // JS::ESMCompileResult, JS::SharedWasmCompileArgs
 #include "js/experimental/JSStencil.h"  // JS::FrontendContext, JS::Stencil, JS::InstantiationStorage
 #include "js/loader/LoadContextBase.h"
 #include "js/loader/ScriptKind.h"
@@ -24,6 +25,7 @@
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/TaskController.h"  // mozilla::Task
 #include "mozilla/Utf8.h"            // mozilla::Utf8Unit
+#include "mozilla/Vector.h"
 #include "mozilla/dom/SRIMetadata.h"
 #include "mozilla/net/UrlClassifierCommon.h"
 #include "nsCOMPtr.h"
@@ -135,6 +137,39 @@ class StencilCompileOrDecodeTask : public CompileOrDecodeTask {
   RefPtr<JS::Stencil> mStencil;
 
   JS::InstantiationStorage mInstantiationStorage;
+};
+
+// Off-thread compile task for a wasm module used as an ES module.
+class WasmCompileTask final : public CompileOrDecodeTask {
+ public:
+  using WasmBytesBuffer = mozilla::Vector<uint8_t, 0, js::MallocAllocPolicy>;
+
+  explicit WasmCompileTask(WasmBytesBuffer&& aBytes)
+      : mBytes(std::move(aBytes)) {}
+
+  nsresult Init(JSContext* aCx, JS::CompileOptions& aOptions);
+
+  TaskResult Run() override;
+
+  // Sets aModuleOut to the module record for the compiled module.
+  // Returns false otherwise, and sets pending exception on JSContext.
+  bool StealResult(JSContext* aCx, JS::MutableHandle<JSObject*> aModuleOut);
+
+#ifdef MOZ_COLLECTING_RUNNABLE_TELEMETRY
+  bool GetName(nsACString& aName) override {
+    aName.AssignLiteral("WasmCompileTask");
+    return true;
+  }
+#endif
+
+ private:
+  JS::SharedWasmCompileArgs mCompileArgs;
+
+  // The result of the compilation, along with any error and warnings, which
+  // can only be reported once back on the main thread.
+  JS::ESMCompileResult mCompileResult;
+
+  WasmBytesBuffer mBytes;
 };
 
 class ScriptLoadContext : public JS::loader::LoadContextBase,
