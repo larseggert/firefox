@@ -113,12 +113,18 @@ private fun IPProtectionToggle(
     modifier: Modifier = Modifier,
 ) {
     val statusDescription = badgeText(state.status)
+    val role =
+        if (state.status == IPProtectionMenuStatus.AuthRequired) {
+            Role.Button
+        } else {
+            Role.Switch
+        }
 
     Row(
         modifier =
             modifier
                 .fillMaxHeight()
-                .debouncedClickable { onToggle() }
+                .debouncedClickable(role = role) { onToggle() }
                 .semantics {
                     stateDescription = statusDescription
                     liveRegion = LiveRegionMode.Polite
