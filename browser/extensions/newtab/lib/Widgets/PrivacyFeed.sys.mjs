@@ -55,6 +55,9 @@ const CELEBRATION_WINDOW_MS = 10 * 60 * 1000;
 // How far below the live count a forced (debug) celebration counts up from.
 const FORCED_COUNT_UP_SPAN = 25;
 
+// Minimum time between count re-reads when a tab is shown.
+const VIEW_REFRESH_THROTTLE_MS = 10 * 1000;
+
 // UTC to match both readouts, which key off the tracking DB's UTC date.
 const utcDayKey = () => new Date().toISOString().slice(0, 10);
 
@@ -102,6 +105,9 @@ export class PrivacyFeed {
     // Last broadcast ETP state, so observe() can tell a real flip from one of
     // the several pref writes a single category change makes. Seeded in init().
     this._etpOff = null;
+    // When fetchTodayCounts last ran, and whether one is running right now.
+    this._lastCountsAt = null;
+    this._countsFetching = false;
   }
 
   get enabled() {
@@ -397,6 +403,7 @@ export class PrivacyFeed {
       lazy.PrivacyMetricsService.getTodayStats(),
       this.getSitesVisitedToday(),
     ]);
+    this._lastCountsAt = Date.now();
     return {
       trackersToday: stats.total,
       sitesToday,
@@ -425,6 +432,32 @@ export class PrivacyFeed {
     );
   }
 
+  // Re-reads the count for a tab that was just shown. Sends counts only, so the
+  // reducer keeps that tab's message, countCeiling and celebration.
+  async refreshCountsForView() {
+    if (this._countsFetching) {
+      return;
+    }
+    if (
+      this._lastCountsAt !== null &&
+      Date.now() - this._lastCountsAt < VIEW_REFRESH_THROTTLE_MS
+    ) {
+      return;
+    }
+    this._countsFetching = true;
+    try {
+      const counts = await this.fetchTodayCounts();
+      this.store.dispatch(
+        ac.BroadcastToContent({
+          type: at.WIDGETS_PRIVACY_UPDATE,
+          data: counts,
+        })
+      );
+    } finally {
+      this._countsFetching = false;
+    }
+  }
+
   // NEW_TAB_INIT: refresh the count AND run the scheduler to pick this tab's
   // secondary message (or blank). "Seen" = rendered, so a selection counts.
   //
@@ -440,9 +473,9 @@ export class PrivacyFeed {
   // aimed at that port is therefore dropped and never re-sent, so the message
   // never appears. A broadcast reaches each tab on a later new-tab/tick once it
   // has rehydrated. Making the decision truly per-tab (Dré, D309610) requires
-  // delivering it after the tab rehydrates (e.g. off NEW_TAB_STATE_REQUEST) —
-  // tracked with the preload/view-time follow-up. The same preload timing means
-  // the throttle can also commit before a tab is viewed.
+  // delivering it after the tab rehydrates; WIDGETS_PRIVACY_VISIBLE now gives us
+  // that hook, so the follow-up could hang the decision off it. The same preload
+  // timing means the message throttle can also commit before a tab is viewed.
   updateMessage() {
     this._messageQueue = (this._messageQueue ?? Promise.resolve())
       .catch(() => {})
@@ -586,6 +619,12 @@ export class PrivacyFeed {
       case at.NEW_TAB_INIT:
         if (this.enabled) {
           await this.updateMessage();
+        }
+        break;
+      // The widget came on screen, so its count may be out of date and should be refreshed.
+      case at.WIDGETS_PRIVACY_VISIBLE:
+        if (this.enabled) {
+          await this.refreshCountsForView();
         }
         break;
       case at.PREF_CHANGED:

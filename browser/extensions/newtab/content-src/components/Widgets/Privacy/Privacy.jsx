@@ -67,6 +67,10 @@ const CELEBRATION_TIERS = {
 // readable while it climbs.
 const COUNT_UP_DURATION_MS = 1100;
 
+// How much of the widget must be in view to count as seen. Matches
+// useWidgetTelemetry's impression threshold.
+const ON_SCREEN_THRESHOLD = 0.3;
+
 const PRIVACY_ENTRY = WIDGET_REGISTRY.find(w => w.id === "privacy");
 
 const ICON_BASE_URL = "chrome://newtab/content/data/content/assets/";
@@ -207,6 +211,31 @@ function Privacy({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
   // before the user could see it. Hold until the tab is actually shown.
   const isPageVisible = usePageVisible();
 
+  // Track the article element via state so the effect below re-runs whenever
+  // React mounts a new node. celebrationRef is a stable useRef and can't drive
+  // re-runs on its own.
+  const [rootEl, setRootEl] = useState(null);
+
+  // This tab's count was read while it was preloaded, so ask for a fresh one
+  // once the widget is on screen. PrivacyFeed decides how often to re-read.
+  useEffect(() => {
+    if (!rootEl || !isPageVisible) {
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Ratio, not isIntersecting: that is true for any sliver on screen, and
+        // stays true on the way back out past the threshold.
+        if (entry.intersectionRatio >= ON_SCREEN_THRESHOLD) {
+          dispatch(ac.OnlyToMain({ type: at.WIDGETS_PRIVACY_VISIBLE }));
+        }
+      },
+      { threshold: ON_SCREEN_THRESHOLD }
+    );
+    observer.observe(rootEl);
+    return () => observer.disconnect();
+  }, [dispatch, isPageVisible, rootEl]);
+
   // Normally show the real count, only ceiling the readout at "{cap}+"
   // (default 999) so it stays a tidy few characters. On the daily-cap render
   // the selector sets countCeiling (100), so that one load shows "100+"; the
@@ -304,6 +333,9 @@ function Privacy({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
     // The empty and ETP-off layouts render no count, so celebrating would burn
     // the one-shot award on an animation nobody sees.
     if (isEtpOff || isEmptyState || (!isNewAward && !isNewMoment)) {
+      if (!awardedAt) {
+        release();
+      }
       return;
     }
 
@@ -579,6 +611,7 @@ function Privacy({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
       ref={el => {
         impressionRef(el);
         celebrationRef.current = el;
+        setRootEl(el);
       }}
     >
       <div className="privacy-title-wrapper">
