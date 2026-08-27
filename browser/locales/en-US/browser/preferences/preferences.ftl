@@ -2573,9 +2573,9 @@ preferences-ai-controls-key-points-control =
     .label = Key points in link previews
     .description = See a quick summary before opening a link.
 
-preferences-ai-controls-sidebar-chatbot-group-2 =
+preferences-ai-controls-sidebar-chatbot-group-3 =
     .label = AI chatbot providers in sidebar
-    .description = Keep a chatbot in view as you browse. Choose from Anthropic Claude, ChatGPT, Copilot, Google Gemini, and Mistral Vibe.
+    .description = Keep a chatbot in view as you browse. Choose from multiple providers and switch anytime.
 
 preferences-ai-controls-sidebar-chatbot-control =
     .label = Chatbot in sidebar
