@@ -40,10 +40,11 @@
     element.dx.baseVal[0].value = offset;
     let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     let bbox = element.getBBox();
-    rect.x.baseVal.value = bbox.x;
-    rect.y.baseVal.value = bbox.y;
-    rect.width.baseVal.value = bbox.width;
-    rect.height.baseVal.value = bbox.height;
+    // Inflate by a couple pixels, to prevent antialiasing failures.
+    rect.x.baseVal.value = bbox.x - 2;
+    rect.y.baseVal.value = bbox.y - 2;
+    rect.width.baseVal.value = bbox.width + 4;
+    rect.height.baseVal.value = bbox.height + 4;
     element.parentElement.appendChild(rect);
   }
   onload = function() {
