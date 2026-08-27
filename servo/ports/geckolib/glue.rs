@@ -3338,7 +3338,7 @@ pub extern "C" fn Servo_KeyframesRule_FindRule(
     rule.read_with(&guard)
         .find_rule(&guard, key)
         .map(|index| index as u32)
-        .unwrap_or(u32::max_value())
+        .unwrap_or(u32::MAX)
 }
 
 #[no_mangle]

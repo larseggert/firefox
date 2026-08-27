@@ -54,7 +54,7 @@ use ash::{khr, vk};
 pub const MAX_BUFFER_SIZE: wgt::BufferAddress = (1u64 << 31) - 4;
 
 // Mesa has issues with height/depth that don't fit in a 16 bits signed integers.
-const MAX_TEXTURE_EXTENT: u32 = std::i16::MAX as u32;
+const MAX_TEXTURE_EXTENT: u32 = i16::MAX as u32;
 // We have to restrict the number of bindings for any given resource type so that
 // the sum of these limits multiplied by the number of shader stages fits
 // maxBindingsPerBindGroup (1000). This restriction is arbitrary and is likely to
