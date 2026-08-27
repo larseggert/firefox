@@ -73,20 +73,39 @@ class Element;
  *
  */
 
-// Base class for the off-thread compile or off-thread decode tasks.
+// Base class for tasks which perform off-thread compilation.
 class CompileOrDecodeTask : public mozilla::Task {
  protected:
   CompileOrDecodeTask();
-  virtual ~CompileOrDecodeTask();
+  virtual ~CompileOrDecodeTask() = default;
+
+  bool IsCancelled(const MutexAutoLock& aProofOfLock) const {
+    return mIsCancelled;
+  }
+
+ public:
+  // Cancel the task.
+  // If the task is already running, this waits for the task to finish.
+  void Cancel();
+
+ protected:
+  // This mutex is locked during running the task or cancelling task.
+  mozilla::Mutex mMutex;
+
+  bool mIsCancelled = false;
+};
+
+// Base class for the off-thread compile or off-thread decode tasks which
+// produce a JS::Stencil.
+class StencilCompileOrDecodeTask : public CompileOrDecodeTask {
+ protected:
+  StencilCompileOrDecodeTask();
+  virtual ~StencilCompileOrDecodeTask();
 
   nsresult InitFrontendContext();
 
   void DidRunTask(const MutexAutoLock& aProofOfLock,
                   RefPtr<JS::Stencil>&& aStencil);
-
-  bool IsCancelled(const MutexAutoLock& aProofOfLock) const {
-    return mIsCancelled;
-  }
 
  public:
   // Returns the result of the compilation or decode if it was successful.
@@ -97,14 +116,7 @@ class CompileOrDecodeTask : public mozilla::Task {
   already_AddRefed<JS::Stencil> StealResult(
       JSContext* aCx, JS::InstantiationStorage* aInstantiationStorage);
 
-  // Cancel the task.
-  // If the task is already running, this waits for the task to finish.
-  void Cancel();
-
  protected:
-  // This mutex is locked during running the task or cancelling task.
-  mozilla::Mutex mMutex;
-
   // The result of decode task, to distinguish throwing case and decode error.
   JS::TranscodeResult mResult = JS::TranscodeResult::Ok;
 
@@ -117,8 +129,6 @@ class CompileOrDecodeTask : public mozilla::Task {
   // The context is allocated on main thread in InitFrontendContext method,
   // and is freed on any thread in the destructor.
   JS::FrontendContext* mFrontendContext = nullptr;
-
-  bool mIsCancelled = false;
 
  private:
   // The result of the compilation or decode.
@@ -330,7 +340,7 @@ class ScriptLoadContext : public JS::loader::LoadContextBase,
   //
   // Set to non-null on the task creation, and set to null when taking the
   // result or cancelling the task.
-  RefPtr<CompileOrDecodeTask> mCompileOrDecodeTask;
+  RefPtr<StencilCompileOrDecodeTask> mCompileOrDecodeTask;
 
   // Non-null if there is a document that this request is blocking from loading.
   RefPtr<Document> mLoadBlockedDocument;
