@@ -4769,6 +4769,12 @@ bool wasm::DecodeModuleTail(Decoder& d, CodeMetadata* codeMeta,
 
 #ifdef ENABLE_WASM_COMPONENTS
 
+enum class ComponentNameFragmentKind {
+  Unknown = 0,
+  Word,
+  Acronym,
+};
+
 // In the component model, names consist primarily of
 // series-OF-possibly-UPPERCASE-fragments, where each fragment is all lowercase
 // or all uppercase. A lowercase fragment is called a "word"; an uppercase
@@ -4802,19 +4808,35 @@ bool wasm::DecodeModuleTail(Decoder& d, CodeMetadata* codeMeta,
 // uppercase is allowed.
 [[nodiscard]] static bool DecodeComponentLabel(Decoder& d, const char* thing,
                                                bool allowUppercase) {
+  // The first fragment in a label must start with a letter. Other fragments can
+  // start with a digit.
+  bool isFirstFragment = true;
+  ComponentNameFragmentKind fragmentKind;
+
   while (true) {
-    uint8_t first;
-    if (!d.readFixedU8(&first)) {
+    fragmentKind = ComponentNameFragmentKind::Unknown;
+
+    uint8_t firstChar;
+    if (!d.readFixedU8(&firstChar)) {
       return d.failf("%s name ended unexpectedly", thing);
     }
-    bool firstUppercase = 'A' <= first && first <= 'Z';
-    bool firstLowercase = 'a' <= first && first <= 'z';
-
-    if (!(firstUppercase || firstLowercase)) {
+    bool firstLowercase = 'a' <= firstChar && firstChar <= 'z';
+    bool firstUppercase = 'A' <= firstChar && firstChar <= 'Z';
+    bool firstDigit = '0' <= firstChar && firstChar <= '9';
+    if (!firstLowercase && !firstUppercase && !firstDigit) {
       return d.failf("invalid character in %s name", thing);
+    }
+    if (isFirstFragment && !(firstLowercase || firstUppercase)) {
+      return d.failf("%s name must start with a letter", thing);
     }
     if (firstUppercase && !allowUppercase) {
       return d.failf("%s name had unexpected uppercase letter", thing);
+    }
+
+    if (firstLowercase) {
+      fragmentKind = ComponentNameFragmentKind::Word;
+    } else if (firstUppercase) {
+      fragmentKind = ComponentNameFragmentKind::Acronym;
     }
 
     uint8_t b;
@@ -4823,13 +4845,26 @@ bool wasm::DecodeModuleTail(Decoder& d, CodeMetadata* codeMeta,
         break;
       }
 
-      bool letter =
-          firstUppercase ? ('A' <= b && b <= 'Z') : ('a' <= b && b <= 'z');
+      bool lowercase = 'a' <= b && b <= 'z';
+      bool uppercase = 'A' <= b && b <= 'Z';
       bool digit = '0' <= b && b <= '9';
-      if (!letter && !digit) {
+      if (!lowercase && !uppercase && !digit) {
         // We are immediately done because we encountered a non-word symbol at
         // the end of something that could be valid.
         return true;
+      }
+      if ((lowercase && fragmentKind == ComponentNameFragmentKind::Acronym) ||
+          (uppercase && fragmentKind == ComponentNameFragmentKind::Word)) {
+        return d.failf("mixed case in %s name", thing);
+      }
+
+      if (fragmentKind == ComponentNameFragmentKind::Unknown) {
+        if (lowercase) {
+          fragmentKind = ComponentNameFragmentKind::Word;
+        } else if (uppercase) {
+          fragmentKind = ComponentNameFragmentKind::Acronym;
+        }
+        // If a digit, the state remains Unknown.
       }
 
       MOZ_RELEASE_ASSERT(d.readBytes(1));
@@ -4839,6 +4874,7 @@ bool wasm::DecodeModuleTail(Decoder& d, CodeMetadata* codeMeta,
     }
 
     MOZ_RELEASE_ASSERT(d.readLiteral("-"));
+    isFirstFragment = false;
   }
 }
 
