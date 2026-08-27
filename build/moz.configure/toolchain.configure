@@ -2899,7 +2899,9 @@ def security_hardening_cflags(
                     or
                      (c_compiler.version >= "18.1.0" and target.cpu == "aarch64")
                     or
-                     (c_compiler.version >= "22.1.8" and target.cpu == "riscv64"))
+                     (c_compiler.version >= "22.1.8" and target.cpu == "riscv64")
+                    or
+                     (c_compiler.version >= "23.1.0" and target.cpu == "loongarch64"))
             ):
                 flags.append("-fstack-clash-protection")
                 ldflags.append("-fstack-clash-protection")
