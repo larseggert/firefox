@@ -8202,7 +8202,7 @@ pub extern "C" fn Servo_StyleSet_MightHaveAttributeDependency(
     element: &RawGeckoElement,
     local_name: *mut nsAtom,
 ) -> bool {
-    let data = raw_data.borrow();
+    let data = unsafe { borrow_assert_main_thread(raw_data) };
     let element = GeckoElement(element);
 
     unsafe {
@@ -8220,7 +8220,7 @@ pub extern "C" fn Servo_StyleSet_MightHaveAttributeDependencyInContainer(
     element: &RawGeckoElement,
     local_name: *mut nsAtom,
 ) -> ContainerAttributeDependencyKind {
-    let data = raw_data.borrow();
+    let data = unsafe { borrow_assert_main_thread(raw_data) };
     let element = GeckoElement(element);
     unsafe {
         AtomIdent::with(local_name, |local_name| {
