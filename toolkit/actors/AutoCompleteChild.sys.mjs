@@ -118,7 +118,6 @@ export class AutoCompleteChild extends JSWindowActorChild {
     let window = element.documentGlobal;
     let rect = window.windowUtils.getElementBoundingScreenRect(element);
     let dir = window.getComputedStyle(element).direction;
-    let isDarkBackground = ChromeUtils.isDarkBackground(element);
     let results = this.getResultsFromController(input);
     let formOrigin = lazy.LoginHelper.getLoginOrigin(
       element.ownerDocument.documentURI
@@ -132,7 +131,6 @@ export class AutoCompleteChild extends JSWindowActorChild {
       results,
       rect,
       dir,
-      isDarkBackground,
       inputElementIdentifier,
       formOrigin,
       selectedIndex,

@@ -679,6 +679,8 @@ split-view-footer {
 
 #clipboardReadPasteMenuPopup,
 #contentAreaContextMenu,
+#DateTimePickerPanel,
+#PopupAutoComplete,
 #remoteBrowserTooltip,
 #aHTMLTooltip[contenttooltip] {
   color-scheme: env(-moz-content-preferred-color-scheme);

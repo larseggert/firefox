@@ -225,13 +225,7 @@ export class AutoCompleteParent extends JSWindowActorParent {
     }
   }
 
-  showPopupWithResults({
-    rect,
-    dir,
-    isDarkBackground,
-    results,
-    selectedIndex,
-  }) {
+  showPopupWithResults({ rect, dir, results, selectedIndex }) {
     if (!results.length || this.openedPopup) {
       // We shouldn't ever be showing an empty popup, and if we
       // already have a popup open, the old one needs to close before
@@ -260,7 +254,6 @@ export class AutoCompleteParent extends JSWindowActorParent {
     this.openedPopup.setAttribute("resultstyles", [...resultStyles].join(" "));
     this.openedPopup.hidden = false;
     this.openedPopup.style.direction = dir;
-    this.openedPopup.style.colorScheme = isDarkBackground ? "dark" : "light";
 
     AutoCompleteResultView.setResults(this, results);
 
@@ -453,7 +446,6 @@ export class AutoCompleteParent extends JSWindowActorParent {
           results,
           rect,
           dir,
-          isDarkBackground,
           inputElementIdentifier,
           formOrigin,
           selectedIndex,
@@ -470,7 +462,6 @@ export class AutoCompleteParent extends JSWindowActorParent {
             results,
             rect,
             dir,
-            isDarkBackground,
             selectedIndex,
           });
           this.notifyListeners();
