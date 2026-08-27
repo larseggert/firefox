@@ -15,6 +15,7 @@ import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  TelemetryController: "resource://gre/modules/TelemetryController.sys.mjs",
   TelemetryUtils: "resource://gre/modules/TelemetryUtils.sys.mjs",
 });
 
@@ -30,6 +31,7 @@ const DEFAULT_INTERVAL_SECONDS = 24 * 60 * 60; // 1 day
 const LOGGER_NAME = "Toolkit.Telemetry";
 const LOGGER_PREFIX = "TelemetryUntrustedModulesPing::";
 const TIMER_NAME = "telemetry_untrustedmodules_ping";
+const PING_SUBMISSION_NAME = "third-party-modules";
 
 export var TelemetryUntrustedModulesPing = Object.freeze({
   _log: Log.repository.getLoggerWithMessagePrefix(LOGGER_NAME, LOGGER_PREFIX),
@@ -47,7 +49,22 @@ export var TelemetryUntrustedModulesPing = Object.freeze({
 
   notify() {
     try {
-      Services.telemetry.submitAndGetUntrustedModulePayload();
+      Services.telemetry.submitAndGetUntrustedModulePayload().then(payload => {
+        try {
+          if (payload) {
+            lazy.TelemetryController.submitExternalPing(
+              PING_SUBMISSION_NAME,
+              payload,
+              {
+                addClientId: true,
+                addEnvironment: true,
+              }
+            );
+          }
+        } catch (ex) {
+          this._log.error("payload handler caught an exception", ex);
+        }
+      });
     } catch (ex) {
       this._log.error("notify() caught an exception", ex);
     }
