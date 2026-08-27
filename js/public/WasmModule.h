@@ -54,8 +54,8 @@ using WasmCompileWarnings = js::Vector<UniqueChars, 0, js::SystemAllocPolicy>;
 
 using SharedWasmCompileArgs = RefPtr<const WasmCompileArgs>;
 
-extern JS_PUBLIC_API SharedWasmCompileArgs BuildCompileArgsForESM(
-    JSContext* cx, const ReadOnlyCompileOptions& options);
+extern JS_PUBLIC_API SharedWasmCompileArgs
+BuildCompileArgsForESM(JSContext* cx, const ReadOnlyCompileOptions& options);
 
 struct ESMCompileResult {
   enum class Status {

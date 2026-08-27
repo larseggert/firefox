@@ -636,10 +636,9 @@ JS_PUBLIC_API JS::ESMCompileResult JS::CompileForESM(
   // Step 2. Compile the WebAssembly module stableBytes and store the result
   //         as module.
   ESMCompileResult result;
-  result.module =
-      CompileModule(static_cast<const CompileArgs&>(compileArgs),
-                    BytecodeBufferOrSource(bytecodeSource),
-                    &result.error, &result.warnings, nullptr);
+  result.module = CompileModule(static_cast<const CompileArgs&>(compileArgs),
+                                BytecodeBufferOrSource(bytecodeSource),
+                                &result.error, &result.warnings, nullptr);
   if (result.module) {
     result.status = ESMCompileResult::Status::Success;
   } else if (result.error) {
@@ -657,8 +656,7 @@ JS_PUBLIC_API bool JS::FinishCompileForESM(
   AssertHeapIsIdle();
   CHECK_THREAD(cx);
 
-  const Module* module =
-      static_cast<const Module*>(compileResult.module.get());
+  const Module* module = static_cast<const Module*>(compileResult.module.get());
 
   if (!ReportCompileWarnings(cx, compileResult.warnings)) {
     return false;
@@ -675,8 +673,7 @@ JS_PUBLIC_API bool JS::FinishCompileForESM(
       RootedObject nullStack(cx, nullptr);
       if (!CreateCompileError(
               cx, static_cast<const CompileArgs&>(compileArgs).scriptedCaller,
-              nullStack,
-                              compileResult.error.get(), &errorObj)) {
+              nullStack, compileResult.error.get(), &errorObj)) {
         return false;
       }
       RootedValue errorVal(cx, ObjectValue(*errorObj));

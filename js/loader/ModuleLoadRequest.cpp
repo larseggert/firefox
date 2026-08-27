@@ -8,11 +8,11 @@
 #include "mozilla/dom/ScriptLoadContext.h"
 #include "mozilla/HoldDropJSObjects.h"
 
-#include "js/Modules.h"
-
 #include "LoadContextBase.h"
 #include "LoadedScript.h"
 #include "ModuleLoaderBase.h"
+
+#include "js/Modules.h"
 
 namespace JS::loader {
 
