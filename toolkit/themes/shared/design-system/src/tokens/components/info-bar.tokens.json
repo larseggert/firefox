@@ -15,10 +15,12 @@
         "value": "4px"
       },
       "end": {
-        "value": "4px"
-      },
-      "nova-end": {
-        "value": "0"
+        "value": {
+          "default": "4px",
+          "nova": {
+            "value": "0"
+          }
+        }
       }
     },
     "inline": {
