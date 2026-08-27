@@ -22,3 +22,5 @@ skip-if = ["debug"]
 ["browser_resultMenu.js"]
 
 ["browser_searchModeSwitcher.js"]
+
+["browser_viewBounds.js"]
