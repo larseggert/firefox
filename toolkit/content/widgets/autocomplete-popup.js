@@ -209,10 +209,12 @@
 
       if (prevSelectedItem) {
         prevSelectedItem.selected = false;
+        prevSelectedItem.pointerselected = false;
       }
 
       if (selectedItem) {
         selectedItem.selected = true;
+        selectedItem.pointerselected = pointer;
       }
 
       if (changed) {
