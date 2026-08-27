@@ -9,11 +9,14 @@ void NaNExprChecker::registerMatchers(MatchFinder *AstMatcher) {
   AstMatcher->addMatcher(
       binaryOperator(
           binaryEqualityOperator(),
-          hasLHS(ignoringParenImpCasts(declRefExpr(
-              to(varDecl(hasType(qualType((isFloat())))).bind("var"))))),
-          hasRHS(ignoringParenImpCasts(
-              declRefExpr(to(varDecl(equalsBoundNode("var")))))),
-          isFirstParty(), unless(isInWhitelistForNaNExpr()))
+          hasLHS(
+            ignoringParenImpCasts(
+                    declRefExpr(to(varDecl(hasType(qualType((isFloat())))).bind("var"))))),
+          hasRHS(
+            ignoringParenImpCasts(
+                    declRefExpr(to(varDecl(equalsBoundNode("var")))))),
+          isFirstParty(),
+          unless(isInWhitelistForNaNExpr()))
           .bind("node"),
       this);
 }

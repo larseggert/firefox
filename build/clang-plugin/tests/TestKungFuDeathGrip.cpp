@@ -1,41 +1,44 @@
 #include <utility>
 
 #define MOZ_IMPLICIT __attribute__((annotate("moz_implicit")))
-#define MOZ_RUNINIT __attribute__((annotate("moz_global_var")))
+#define MOZ_RUNINIT  __attribute__((annotate("moz_global_var")))
 
-template <typename T> class already_AddRefed {
+template <typename T>
+class already_AddRefed {
 public:
   already_AddRefed();
-  T *mPtr;
+  T* mPtr;
 };
 
-template <typename T> class RefPtr {
+template <typename T>
+class RefPtr {
 public:
   RefPtr();
-  MOZ_IMPLICIT RefPtr(T *aIn);
+  MOZ_IMPLICIT RefPtr(T* aIn);
   MOZ_IMPLICIT RefPtr(already_AddRefed<T> aIn);
 
-  RefPtr(const RefPtr<T> &aOther) = default;
-  RefPtr &operator=(const RefPtr<T> &) = default;
+  RefPtr(const RefPtr<T>& aOther) = default;
+  RefPtr& operator=(const RefPtr<T>&)  = default;
 
   // We must define non-defaulted move operations as in the real RefPtr to make
   // the type non-trivially-copyable.
-  RefPtr(RefPtr<T> &&);
-  RefPtr &operator=(RefPtr<T> &&);
+  RefPtr(RefPtr<T>&&);
+  RefPtr& operator=(RefPtr<T>&&);
 
-  void swap(RefPtr<T> &aOther);
+  void swap(RefPtr<T>& aOther);
 
   ~RefPtr();
-  T *mPtr;
+  T* mPtr;
 };
 
-template <typename T> class nsCOMPtr {
+template <typename T>
+class nsCOMPtr {
 public:
   nsCOMPtr();
-  MOZ_IMPLICIT nsCOMPtr(T *aIn);
+  MOZ_IMPLICIT nsCOMPtr(T* aIn);
   MOZ_IMPLICIT nsCOMPtr(already_AddRefed<T> aIn);
   ~nsCOMPtr();
-  T *mPtr;
+  T* mPtr;
 };
 
 class Type {
@@ -48,16 +51,8 @@ public:
     nsCOMPtr<Type> kfdg_t2 = this;
     nsCOMPtr<Type> kfdg_t3 = (this);
 
-    nsCOMPtr<Type> kfdg_m1(
-        p); // expected-error {{Unused "kungFuDeathGrip" 'nsCOMPtr<Type>'
-            // objects constructed from members are prohibited}} expected-note
-            // {{Please switch all accesses to this member to go through
-            // 'kfdg_m1', or explicitly cast 'kfdg_m1' to `(void)`}}
-    nsCOMPtr<Type> kfdg_m2 =
-        p; // expected-error {{Unused "kungFuDeathGrip" 'nsCOMPtr<Type>' objects
-           // constructed from members are prohibited}} expected-note {{Please
-           // switch all accesses to this member to go through 'kfdg_m2', or
-           // explicitly cast 'kfdg_m2' to `(void)`}}
+    nsCOMPtr<Type> kfdg_m1(p); // expected-error {{Unused "kungFuDeathGrip" 'nsCOMPtr<Type>' objects constructed from members are prohibited}} expected-note {{Please switch all accesses to this member to go through 'kfdg_m1', or explicitly cast 'kfdg_m1' to `(void)`}}
+    nsCOMPtr<Type> kfdg_m2 = p; // expected-error {{Unused "kungFuDeathGrip" 'nsCOMPtr<Type>' objects constructed from members are prohibited}} expected-note {{Please switch all accesses to this member to go through 'kfdg_m2', or explicitly cast 'kfdg_m2' to `(void)`}}
     nsCOMPtr<Type> kfdg_m3(p);
     kfdg_m3.mPtr->f(nullptr, nullptr);
     nsCOMPtr<Type> kfdg_m4 = p;
@@ -69,21 +64,14 @@ public:
     nsCOMPtr<Type> kfdg_p1(param);
     nsCOMPtr<Type> kfdg_p2 = param;
 
+
     RefPtr<Type> never_referenced2;
     RefPtr<Type> kfdg_t4(this);
     RefPtr<Type> kfdg_t5 = this;
     RefPtr<Type> kfdg_t6 = (this);
 
-    RefPtr<Type> kfdg_m5(
-        p); // expected-error {{Unused "kungFuDeathGrip" 'RefPtr<Type>' objects
-            // constructed from members are prohibited}} expected-note {{Please
-            // switch all accesses to this member to go through 'kfdg_m5', or
-            // explicitly cast 'kfdg_m5' to `(void)`}}
-    RefPtr<Type> kfdg_m6 =
-        p; // expected-error {{Unused "kungFuDeathGrip" 'RefPtr<Type>' objects
-           // constructed from members are prohibited}} expected-note {{Please
-           // switch all accesses to this member to go through 'kfdg_m6', or
-           // explicitly cast 'kfdg_m6' to `(void)`}}
+    RefPtr<Type> kfdg_m5(p); // expected-error {{Unused "kungFuDeathGrip" 'RefPtr<Type>' objects constructed from members are prohibited}} expected-note {{Please switch all accesses to this member to go through 'kfdg_m5', or explicitly cast 'kfdg_m5' to `(void)`}}
+    RefPtr<Type> kfdg_m6 = p; // expected-error {{Unused "kungFuDeathGrip" 'RefPtr<Type>' objects constructed from members are prohibited}} expected-note {{Please switch all accesses to this member to go through 'kfdg_m6', or explicitly cast 'kfdg_m6' to `(void)`}}
     RefPtr<Type> kfdg_m7(p);
     kfdg_m7.mPtr->f(nullptr, nullptr);
     RefPtr<Type> kfdg_m8 = p;
@@ -100,7 +88,9 @@ public:
 };
 
 struct Type2 {
-  void f() { mWeakRef->f(nullptr, nullptr); }
+  void f() {
+    mWeakRef->f(nullptr, nullptr);
+  }
 
   void g() {
     RefPtr<Type> kfdg;
@@ -114,23 +104,15 @@ struct Type2 {
   }
 
   RefPtr<Type> mStrongRef;
-  Type *mWeakRef;
+  Type* mWeakRef;
 };
 
 void f(nsCOMPtr<Type> ignoredArgument, Type *param) {
   nsCOMPtr<Type> never_referenced;
   Type t;
   // Type *p = nullptr;
-  nsCOMPtr<Type> kfdg_m1(
-      t.p); // expected-error {{Unused "kungFuDeathGrip" 'nsCOMPtr<Type>'
-            // objects constructed from members are prohibited}} expected-note
-            // {{Please switch all accesses to this member to go through
-            // 'kfdg_m1', or explicitly cast 'kfdg_m1' to `(void)`}}
-  nsCOMPtr<Type> kfdg_m2 =
-      t.p; // expected-error {{Unused "kungFuDeathGrip" 'nsCOMPtr<Type>' objects
-           // constructed from members are prohibited}} expected-note {{Please
-           // switch all accesses to this member to go through 'kfdg_m2', or
-           // explicitly cast 'kfdg_m2' to `(void)`}}
+  nsCOMPtr<Type> kfdg_m1(t.p); // expected-error {{Unused "kungFuDeathGrip" 'nsCOMPtr<Type>' objects constructed from members are prohibited}} expected-note {{Please switch all accesses to this member to go through 'kfdg_m1', or explicitly cast 'kfdg_m1' to `(void)`}}
+  nsCOMPtr<Type> kfdg_m2 = t.p; // expected-error {{Unused "kungFuDeathGrip" 'nsCOMPtr<Type>' objects constructed from members are prohibited}} expected-note {{Please switch all accesses to this member to go through 'kfdg_m2', or explicitly cast 'kfdg_m2' to `(void)`}}
   nsCOMPtr<Type> kfdg_m3(t.p);
   kfdg_m3.mPtr->f(nullptr, nullptr);
   nsCOMPtr<Type> kfdg_m4 = t.p;
@@ -142,17 +124,10 @@ void f(nsCOMPtr<Type> ignoredArgument, Type *param) {
   nsCOMPtr<Type> kfdg_p1(param);
   nsCOMPtr<Type> kfdg_p2 = param;
 
+
   RefPtr<Type> never_referenced2;
-  RefPtr<Type> kfdg_m5(
-      t.p); // expected-error {{Unused "kungFuDeathGrip" 'RefPtr<Type>' objects
-            // constructed from members are prohibited}} expected-note {{Please
-            // switch all accesses to this member to go through 'kfdg_m5', or
-            // explicitly cast 'kfdg_m5' to `(void)`}}
-  RefPtr<Type> kfdg_m6 =
-      t.p; // expected-error {{Unused "kungFuDeathGrip" 'RefPtr<Type>' objects
-           // constructed from members are prohibited}} expected-note {{Please
-           // switch all accesses to this member to go through 'kfdg_m6', or
-           // explicitly cast 'kfdg_m6' to `(void)`}}
+  RefPtr<Type> kfdg_m5(t.p); // expected-error {{Unused "kungFuDeathGrip" 'RefPtr<Type>' objects constructed from members are prohibited}} expected-note {{Please switch all accesses to this member to go through 'kfdg_m5', or explicitly cast 'kfdg_m5' to `(void)`}}
+  RefPtr<Type> kfdg_m6 = t.p; // expected-error {{Unused "kungFuDeathGrip" 'RefPtr<Type>' objects constructed from members are prohibited}} expected-note {{Please switch all accesses to this member to go through 'kfdg_m6', or explicitly cast 'kfdg_m6' to `(void)`}}
   RefPtr<Type> kfdg_m7(t.p);
   kfdg_m7.mPtr->f(nullptr, nullptr);
   RefPtr<Type> kfdg_m8 = t.p;

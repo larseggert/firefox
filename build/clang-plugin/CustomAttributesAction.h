@@ -10,9 +10,8 @@
 
 class CustomAttributesAction : public clang::PluginASTAction {
 public:
-  std::unique_ptr<clang::ASTConsumer>
-  CreateASTConsumer(clang::CompilerInstance &CI,
-                    clang::StringRef FileName) override;
+  std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance &CI,
+                                   clang::StringRef FileName) override;
 
   bool ParseArgs(const clang::CompilerInstance &CI,
                  const std::vector<std::string> &Args) override;

@@ -8,14 +8,14 @@
 // Minimal stubs matching the real macro structure in nsISupportsImpl.h.
 // NS_DECL_CYCLE_COLLECTING_ISUPPORTS_META is the inner macro that emits
 // `override` vs `final`; the checker inspects its name on the expansion stack.
-#define NS_DECL_CYCLE_COLLECTING_ISUPPORTS_META(...)                           \
-  virtual void AddRef() __VA_ARGS__;                                           \
+#define NS_DECL_CYCLE_COLLECTING_ISUPPORTS_META(...)                    \
+  virtual void AddRef() __VA_ARGS__;                                    \
   virtual void Release() __VA_ARGS__;
 
-#define NS_DECL_CYCLE_COLLECTING_ISUPPORTS                                     \
+#define NS_DECL_CYCLE_COLLECTING_ISUPPORTS \
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS_META(override)
 
-#define NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL                               \
+#define NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL \
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS_META(final)
 
 struct Base {
@@ -24,13 +24,8 @@ struct Base {
 };
 
 // Should error: final class using the non-final macro.
-struct BadFinal final
-    : Base { // expected-error {{final class 'BadFinal' uses
-             // NS_DECL_CYCLE_COLLECTING_ISUPPORTS; use
-             // NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL instead}}
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS // expected-note {{replace
-                                     // NS_DECL_CYCLE_COLLECTING_ISUPPORTS with
-                                     // NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL}}
+struct BadFinal final : Base { // expected-error {{final class 'BadFinal' uses NS_DECL_CYCLE_COLLECTING_ISUPPORTS; use NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL instead}}
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS // expected-note {{replace NS_DECL_CYCLE_COLLECTING_ISUPPORTS with NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL}}
 };
 
 // Should not error: final class already using the final macro.

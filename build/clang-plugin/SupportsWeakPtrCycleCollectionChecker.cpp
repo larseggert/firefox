@@ -7,23 +7,24 @@
 
 void SupportsWeakPtrCycleCollectionChecker::registerMatchers(
     MatchFinder *AstMatcher) {
-  auto UnlinkMatcher =
-      cxxRecordDecl(hasName("cycleCollection"), hasDefinition(),
-                    has(cxxMethodDecl(hasName("Unlink"), hasMethodDefinition())
-                            .bind("unlink")));
-
-  AstMatcher->addMatcher(cxxRecordDecl(hasDefinition(), isFirstParty(),
-                                       hasDirectBase(hasType(cxxRecordDecl(
-                                           hasName("SupportsWeakPtr")))),
-                                       has(UnlinkMatcher))
-                             .bind("weakPtrClass"),
-                         this);
+  auto UnlinkMatcher = cxxRecordDecl(
+      hasName("cycleCollection"), hasDefinition(),
+      has(cxxMethodDecl(hasName("Unlink"), hasMethodDefinition()).bind("unlink")));
 
   AstMatcher->addMatcher(
-      cxxRecordDecl(hasDefinition(), isFirstParty(),
-                    hasDirectBase(hasType(
-                        cxxRecordDecl(hasName("nsSupportsWeakReference")))),
-                    has(UnlinkMatcher))
+      cxxRecordDecl(
+          hasDefinition(), isFirstParty(),
+          hasDirectBase(hasType(cxxRecordDecl(hasName("SupportsWeakPtr")))),
+          has(UnlinkMatcher))
+          .bind("weakPtrClass"),
+      this);
+
+  AstMatcher->addMatcher(
+      cxxRecordDecl(
+          hasDefinition(), isFirstParty(),
+          hasDirectBase(
+              hasType(cxxRecordDecl(hasName("nsSupportsWeakReference")))),
+          has(UnlinkMatcher))
           .bind("weakRefClass"),
       this);
 }
@@ -47,7 +48,7 @@ public:
 
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *CE) {
     if (const CXXMethodDecl *MD = CE->getMethodDecl()) {
-      if (IdentifierInfo *Identifier = MD->getIdentifier()) {
+      if (IdentifierInfo* Identifier = MD->getIdentifier()) {
         if (Identifier->getName() == MethodName) {
           Found = true;
           return false;
@@ -96,7 +97,8 @@ void SupportsWeakPtrCycleCollectionChecker::check(
   const auto *UnlinkDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("unlink");
   // Get the out-of-class definition (expanded from NS_IMPL_CYCLE_COLLECTION_*
   // macros in the .cpp)
-  const auto *UnlinkDef = dyn_cast<CXXMethodDecl>(UnlinkDecl->getDefinition());
+  const auto *UnlinkDef =
+      dyn_cast<CXXMethodDecl>(UnlinkDecl->getDefinition());
 
   WeakUnlinkFinder Finder(RequiredMethod);
   Finder.TraverseFunction(UnlinkDef);

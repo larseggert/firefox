@@ -1,10 +1,8 @@
 #include <cstddef>
 #include <utility>
 
-#define MOZ_MUST_RETURN_FROM_CALLER_IF_THIS_IS_ARG                             \
-  __attribute__((annotate("moz_must_return_from_caller_if_this_is_arg")))
-#define MOZ_MAY_CALL_AFTER_MUST_RETURN                                         \
-  __attribute__((annotate("moz_may_call_after_must_return")))
+#define MOZ_MUST_RETURN_FROM_CALLER_IF_THIS_IS_ARG __attribute__((annotate("moz_must_return_from_caller_if_this_is_arg")))
+#define MOZ_MAY_CALL_AFTER_MUST_RETURN __attribute__((annotate("moz_may_call_after_must_return")))
 
 struct Thrower {
   void MOZ_MUST_RETURN_FROM_CALLER_IF_THIS_IS_ARG Throw() {}
@@ -20,13 +18,15 @@ bool Condition();
 // risk of redefinition errors.  Just stick to the normal clang-plugin test
 // style and use as little external code as possible.
 
-template <typename Func> class ScopeExit {
+template<typename Func>
+class ScopeExit {
   Func exitFunction;
   bool callOnDestruction;
-
 public:
-  explicit ScopeExit(Func &&func)
-      : exitFunction(std::move(func)), callOnDestruction(true) {}
+  explicit ScopeExit(Func&& func)
+    : exitFunction(std::move(func))
+    , callOnDestruction(true)
+  {}
 
   ~ScopeExit() {
     if (callOnDestruction) {
@@ -37,8 +37,10 @@ public:
   void release() { callOnDestruction = false; }
 };
 
-template <typename ExitFunction>
-ScopeExit<ExitFunction> MakeScopeExit(ExitFunction &&func) {
+template<typename ExitFunction>
+ScopeExit<ExitFunction>
+MakeScopeExit(ExitFunction&& func)
+{
   return ScopeExit<ExitFunction>(std::move(func));
 }
 
@@ -48,60 +50,57 @@ public:
   Foo();
 };
 
-void a1(Thrower &thrower) { thrower.Throw(); }
+void a1(Thrower& thrower) {
+  thrower.Throw();
+}
 
-int a2(Thrower &thrower) {
-  thrower.Throw(); // expected-error {{You must immediately return after calling
-                   // this function}}
+int a2(Thrower& thrower) {
+  thrower.Throw(); // expected-error {{You must immediately return after calling this function}}
   return MakeAnInt();
 }
 
-int a3(Thrower &thrower) {
+int a3(Thrower& thrower) {
   // RAII operations happening after a must-immediately-return are fine.
   auto atExit = MakeScopeExit([] { DoAnythingElse(); });
   thrower.Throw();
   return 5;
 }
 
-int a4(Thrower &thrower) {
-  thrower.Throw(); // expected-error {{You must immediately return after calling
-                   // this function}}
+int a4(Thrower& thrower) {
+  thrower.Throw(); // expected-error {{You must immediately return after calling this function}}
   return Condition() ? MakeAnInt() : MakeAnInt();
 }
 
-void a5(Thrower &thrower) {
-  thrower.Throw(); // expected-error {{You must immediately return after calling
-                   // this function}}
+void a5(Thrower& thrower) {
+  thrower.Throw(); // expected-error {{You must immediately return after calling this function}}
   DoAnythingElse();
 }
 
-int a6(Thrower &thrower) {
-  thrower.Throw(); // expected-error {{You must immediately return after calling
-                   // this function}}
+int a6(Thrower& thrower) {
+  thrower.Throw(); // expected-error {{You must immediately return after calling this function}}
   DoAnythingElse();
   return MakeAnInt();
 }
 
-int a7(Thrower &thrower) {
-  thrower.Throw(); // expected-error {{You must immediately return after calling
-                   // this function}}
+int a7(Thrower& thrower) {
+  thrower.Throw(); // expected-error {{You must immediately return after calling this function}}
   DoAnythingElse();
   return Condition() ? MakeAnInt() : MakeAnInt();
 }
 
-int a8(Thrower &thrower) {
+int a8(Thrower& thrower) {
   thrower.Throw();
   return SafeMakeInt();
 }
 
-int a9(Thrower &thrower) {
+int a9(Thrower& thrower) {
   if (Condition()) {
     thrower.Throw();
   }
   return SafeMakeInt();
 }
 
-int a10(Thrower &thrower) {
+int a10(Thrower& thrower) {
   auto atExit = MakeScopeExit([] { DoAnythingElse(); });
 
   if (Condition()) {
@@ -114,21 +113,20 @@ int a10(Thrower &thrower) {
   return 5;
 }
 
-void b1(Thrower &thrower) {
+void b1(Thrower& thrower) {
   if (Condition()) {
     thrower.Throw();
   }
 }
 
-int b2(Thrower &thrower) {
+int b2(Thrower& thrower) {
   if (Condition()) {
-    thrower.Throw(); // expected-error {{You must immediately return after
-                     // calling this function}}
+    thrower.Throw(); // expected-error {{You must immediately return after calling this function}}
   }
   return MakeAnInt();
 }
 
-int b3(Thrower &thrower) {
+int b3(Thrower& thrower) {
   if (Condition()) {
     thrower.Throw();
   }
@@ -136,52 +134,49 @@ int b3(Thrower &thrower) {
 }
 
 // Explicit test in orer to also verify the `UnaryOperator` node in the `CFG`
-int b3a(Thrower &thrower) {
+int b3a(Thrower& thrower) {
   if (Condition()) {
     thrower.Throw();
   }
   return -1;
 }
 
-float b3b(Thrower &thrower) {
+float b3b(Thrower& thrower) {
   if (Condition()) {
     thrower.Throw();
   }
   return 1.0f;
 }
 
-bool b3c(Thrower &thrower) {
+bool b3c(Thrower& thrower) {
   if (Condition()) {
     thrower.Throw();
   }
   return false;
 }
 
-int b4(Thrower &thrower) {
+int b4(Thrower& thrower) {
   if (Condition()) {
-    thrower.Throw(); // expected-error {{You must immediately return after
-                     // calling this function}}
+    thrower.Throw(); // expected-error {{You must immediately return after calling this function}}
   }
   return Condition() ? MakeAnInt() : MakeAnInt();
 }
 
-void b5(Thrower &thrower) {
+void b5(Thrower& thrower) {
   if (Condition()) {
-    thrower.Throw(); // expected-error {{You must immediately return after
-                     // calling this function}}
+    thrower.Throw(); // expected-error {{You must immediately return after calling this function}}
   }
   DoAnythingElse();
 }
 
-void b6(Thrower &thrower) {
+void b6(Thrower& thrower) {
   if (Condition()) {
-    thrower.Throw(); // expected-error {{You must immediately return after
-                     // calling this function}}
+    thrower.Throw(); // expected-error {{You must immediately return after calling this function}}
     DoAnythingElse();
   }
 }
 
-void b7(Thrower &thrower) {
+void b7(Thrower& thrower) {
   if (Condition()) {
     thrower.Throw();
     return;
@@ -189,33 +184,30 @@ void b7(Thrower &thrower) {
   DoAnythingElse();
 }
 
-void b8(Thrower &thrower) {
+void b8(Thrower& thrower) {
   if (Condition()) {
-    thrower.Throw(); // expected-error {{You must immediately return after
-                     // calling this function}}
+    thrower.Throw(); // expected-error {{You must immediately return after calling this function}}
     DoAnythingElse();
     return;
   }
   DoAnythingElse();
 }
 
-void b9(Thrower &thrower) {
+void b9(Thrower& thrower) {
   while (Condition()) {
-    thrower.Throw(); // expected-error {{You must immediately return after
-                     // calling this function}}
+    thrower.Throw(); // expected-error {{You must immediately return after calling this function}}
   }
 }
 
-void b10(Thrower &thrower) {
+void b10(Thrower& thrower) {
   while (Condition()) {
     thrower.Throw();
     return;
   }
 }
 
-void b11(Thrower &thrower) {
-  thrower.Throw(); // expected-error {{You must immediately return after calling
-                   // this function}}
+void b11(Thrower& thrower) {
+  thrower.Throw(); // expected-error {{You must immediately return after calling this function}}
   if (Condition()) {
     return;
   } else {
@@ -223,7 +215,7 @@ void b11(Thrower &thrower) {
   }
 }
 
-void b12(Thrower &thrower) {
+void b12(Thrower& thrower) {
   switch (MakeAnInt()) {
   case 1:
     break;
@@ -233,14 +225,14 @@ void b12(Thrower &thrower) {
   }
 }
 
-void b13(Thrower &thrower) {
+void b13(Thrower& thrower) {
   if (Condition()) {
     thrower.Throw();
   }
   return;
 }
 
-Foo b14(Thrower &thrower) {
+Foo b14(Thrower& thrower) {
   if (Condition()) {
     thrower.Throw();
     return nullptr;
@@ -248,14 +240,14 @@ Foo b14(Thrower &thrower) {
   return nullptr;
 }
 
-Foo b15(Thrower &thrower) {
+Foo b15(Thrower& thrower) {
   if (Condition()) {
     thrower.Throw();
   }
   return nullptr;
 }
 
-Foo b16(Thrower &thrower) {
+Foo b16(Thrower& thrower) {
   if (Condition()) {
     thrower.Throw();
   }
