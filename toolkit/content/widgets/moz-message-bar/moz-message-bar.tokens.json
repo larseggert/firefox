@@ -51,7 +51,15 @@
         "value": "{space.small}"
       },
       "inline": {
-        "value": "{space.medium} {space.small}"
+        "value": {
+          "default": "{space.medium} {space.small}",
+          "nova": {
+            "value": {
+              "comment": "Using rem-based space tokens ends up causing subpixel rendering issues that cause the icon to look uncentered",
+              "default": "8px"
+            }
+          }
+        }
       }
     }
   },
@@ -83,7 +91,12 @@
     "container": {
       "border": {
         "@base": {
-          "value": "none"
+          "value": {
+            "default": "none",
+            "nova": {
+              "value": "1px solid {message-bar.icon.container.border.color}"
+            }
+          }
         },
         "color": {
           "value": "transparent"
@@ -93,7 +106,12 @@
         }
       },
       "height": {
-        "value": "min-content"
+        "value": {
+          "default": "min-content",
+          "nova": {
+            "value": "{message-bar.icon.size}"
+          }
+        }
       },
       "margin": {
         "block": {
@@ -157,7 +175,12 @@
       },
       "padding": {
         "block": {
-          "value": "calc(({message-bar.container.min-height} - {message-bar.icon.size}) / 2)"
+          "value": {
+            "default": "calc(({message-bar.container.min-height} - {message-bar.icon.size}) / 2)",
+            "nova": {
+              "value": "0"
+            }
+          }
         }
       }
     },

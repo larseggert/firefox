@@ -9,6 +9,14 @@
         },
         "platform": {
           "default": "currentColor"
+        },
+        "nova": {
+          "value": {
+            "prefersContrast": "CanvasText",
+            "nativeTheme": "currentColor",
+            "light": "{color.violet-desaturated.90}",
+            "dark": "{color.violet-desaturated.0}"
+          }
         }
       }
     },
@@ -28,7 +36,14 @@
       "value": {
         "light": "{color.red.70}",
         "dark": "{color.red.20}",
-        "prefersContrast": "inherit"
+        "prefersContrast": "inherit",
+        "nova": {
+          "value": {
+            "light": "{color.red.50}",
+            "dark": "{color.red.20}",
+            "prefersContrast": "inherit"
+          }
+        }
       }
     },
     "accent": {
@@ -42,6 +57,18 @@
             },
             "platform": {
               "default": "SelectedItemText"
+            },
+            "nova": {
+              "value": {
+                "forcedColors": "SelectedItemText",
+                "brand": {
+                  "light": "{color.white.@base}",
+                  "dark": "{color.gray.55}"
+                },
+                "platform": {
+                  "default": "SelectedItemText"
+                }
+              }
             }
           }
         }

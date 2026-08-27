@@ -87,7 +87,12 @@
       }
     },
     "padding": {
-      "value": "0px"
+      "value": {
+        "default": "0px",
+        "nova": {
+          "value": "calc({focus.outline.offset} + {focus.outline.width})"
+        }
+      }
     }
   },
   "gap": {
