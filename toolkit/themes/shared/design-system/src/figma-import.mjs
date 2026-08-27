@@ -149,9 +149,6 @@ const NOVA_STRUCTURAL_OVERRIDES = {
   "message-bar/icon/container/margin/block-start": {
     default: "0",
   },
-  "message-bar/icon/container/padding": {
-    default: "calc({space.small} - 1px)",
-  },
   "message-bar/text/container/padding/block": {
     default: "0",
   },
