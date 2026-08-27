@@ -8,7 +8,8 @@ target: obj-x86_64-pc-linux-gnu
 # 1. Configure a static analyzer build, using
 # `./mach configure --disable-unified-build --enable-debug --disable-tests`
 # 2. Check that build with your new check, using
-# `./mach static-analysis check --checks='-*,new-checker' --output=clang-tidy.json --format=json`
+# `./mach static-analysis check --checks='-*,
+# new-checker' --output=clang-tidy.json --format=json`
 # 3. Fix all issues found in `clang-tidy.json`. Running the above with
 # `--fix` may help, depending on the confidence you have in the checker.
 #    Eventually use // NOLINT(new-checker)
