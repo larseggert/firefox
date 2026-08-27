@@ -42,8 +42,6 @@ import mozilla.components.compose.base.menu.MenuItem
 import mozilla.components.compose.base.modifier.thenConditional
 import mozilla.components.compose.base.text.Text as DropdownText
 import mozilla.components.compose.base.textfield.TextField
-import mozilla.components.compose.base.theme.PreviewThemeProvider
-import mozilla.components.compose.base.theme.Theme
 import mozilla.components.concept.engine.autofill.AddressStructure
 import mozilla.components.concept.storage.Address
 import mozilla.components.concept.storage.UpdatableAddressFields
@@ -57,6 +55,8 @@ import org.mozilla.fenix.settings.address.store.SaveTapped
 import org.mozilla.fenix.settings.address.store.ViewAppeared
 import org.mozilla.fenix.settings.address.utils.generateAddress
 import org.mozilla.fenix.theme.FirefoxTheme
+import org.mozilla.fenix.theme.PreviewThemeProvider
+import org.mozilla.fenix.theme.Theme
 
 /**
  * The UI host for the Edit Address Screen.

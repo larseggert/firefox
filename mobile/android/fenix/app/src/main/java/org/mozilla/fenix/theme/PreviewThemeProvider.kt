@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package mozilla.components.compose.base.theme
+package org.mozilla.fenix.theme
 
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 
@@ -15,7 +15,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
  * @Composable
  * private fun PreviewText(
  *     @PreviewParameter(PreviewThemeProvider::class) theme: Theme,
- * ) = AppTheme(theme) {
+ * ) = FirefoxTheme(theme) {
  *     Surface {
  *         Text("hello")
  *     }
@@ -71,7 +71,7 @@ data class ThemedValue<T>(
  * @Composable
  * private fun PreviewText(
  *     @PreviewParameter(MyPreviewProvider::class) state: ThemedValue<MyUiState>,
- * ) = AppTheme(state.theme) {
+ * ) = FirefoxTheme(state.theme) {
  *     Surface {
  *         Text(state.value.text)
  *     }
@@ -90,7 +90,7 @@ abstract class ThemedValueProvider<T>(
     /**
      * @param baseValues The base values to be wrapped with each available theme.
      * @param displayNames An optional list of display names for [baseValues].
-     * @see [ThemedValueProvider]
+     * @see [org.mozilla.fenix.theme.ThemedValueProvider]
      */
     constructor(
         baseValues: Sequence<T>,
