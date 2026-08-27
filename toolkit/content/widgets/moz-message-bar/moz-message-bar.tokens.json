@@ -52,13 +52,7 @@
       },
       "inline": {
         "value": {
-          "default": "{space.medium} {space.small}",
-          "nova": {
-            "value": {
-              "comment": "Using rem-based space tokens ends up causing subpixel rendering issues that cause the icon to look uncentered",
-              "default": "8px"
-            }
-          }
+          "default": "{space.medium} {space.small}"
         }
       }
     }
@@ -94,6 +88,7 @@
           "value": {
             "default": "none",
             "nova": {
+              "comment": "There is no equivalent value for this token in Figma",
               "value": "1px solid {message-bar.icon.container.border.color}"
             }
           }
@@ -109,6 +104,7 @@
         "value": {
           "default": "min-content",
           "nova": {
+            "comment": "There is no equivalent value for this token in Figma",
             "value": "{message-bar.icon.size}"
           }
         }
@@ -120,6 +116,7 @@
               "value": {
                 "default": "{space.small}",
                 "nova": {
+                  "comment": "There is no equivalent value for this token in Figma, and we need the unit for calculations",
                   "value": "0px"
                 }
               }
@@ -128,6 +125,7 @@
               "value": {
                 "default": "2px",
                 "nova": {
+                  "comment": "There is no equivalent value for this token in Figma, and we need the unit for calculations",
                   "value": "0px"
                 }
               }
@@ -140,6 +138,7 @@
           "value": {
             "default": "0px",
             "nova": {
+              "comment": "There is no equivalent value for this token in Figma",
               "value": "{space.small}"
             }
           }
@@ -148,6 +147,7 @@
           "value": {
             "default": "0px",
             "nova": {
+              "comment": "There is no equivalent value for this token in Figma",
               "value": "1px"
             }
           }
@@ -178,6 +178,7 @@
           "value": {
             "default": "calc(({message-bar.container.min-height} - {message-bar.icon.size}) / 2)",
             "nova": {
+              "comment": "There is no equivalent value for this token in Figma",
               "value": "0"
             }
           }

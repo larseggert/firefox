@@ -31,6 +31,7 @@
   "badge/padding/block": 1,
   "badge/padding/inline": "0.375rem",
   "input-color/space/padding/inline": "{Primitives$space/small}",
+  "message-bar/container/padding/inline": 8,
   "message-bar/icon/container/border": "1px solid {Primitives$message-bar/icon/container/border/color}",
   "message-bar/icon/container/height": "{Primitives$message-bar/icon/size}",
   "message-bar/icon/container/margin/block/start": 0,

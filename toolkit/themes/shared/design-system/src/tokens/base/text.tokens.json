@@ -11,6 +11,7 @@
           "default": "currentColor"
         },
         "nova": {
+          "comment": "Figma flattens the platform structure that this token needs",
           "value": {
             "prefersContrast": "CanvasText",
             "nativeTheme": "currentColor",
@@ -21,12 +22,14 @@
       }
     },
     "deemphasized": {
+      "ignoreFigma": "color-mix with currentColor cannot be expressed in Figma",
       "value": {
         "default": "color-mix(in srgb, currentColor 69%, transparent)",
         "prefersContrast": "inherit"
       }
     },
     "disabled": {
+      "ignoreFigma": "color-mix with currentColor cannot be expressed in Figma",
       "value": {
         "default": "color-mix(in srgb, currentColor 40%, transparent)",
         "forcedColors": "GrayText"
@@ -38,6 +41,7 @@
         "dark": "{color.red.20}",
         "prefersContrast": "inherit",
         "nova": {
+          "comment": "Figma flattens the platform structure that this token needs",
           "value": {
             "light": "{color.red.50}",
             "dark": "{color.red.20}",
@@ -59,6 +63,7 @@
               "default": "SelectedItemText"
             },
             "nova": {
+              "comment": "Figma flattens the platform structure that this token needs",
               "value": {
                 "forcedColors": "SelectedItemText",
                 "brand": {

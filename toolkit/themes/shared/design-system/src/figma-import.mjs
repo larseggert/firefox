@@ -36,37 +36,6 @@ const FIGMA_VALUE_MAP = {
   Value: "",
 };
 const TOKEN_VALUE_KEYS = new Set(["light", "dark", "forcedColors", "value"]);
-// Figma variables that we deliberately don't import, because the corresponding
-// base token relies on platform structure that Figma can't express (e.g.
-// `color-mix()` on `currentColor`, a `prefers-contrast` treatment, or a
-// brand/platform surface split). Ignoring the variable lets the Nova token fall
-// back to the carefully-chosen base value instead of a flattened light/dark pair.
-const FIGMA_IGNORES = new Set([
-  "badge/padding/inline",
-  "focus/outline",
-  "focus/outline/inset",
-  "message-bar/container/padding/inline",
-  // Tab HCM overrides are handled in CSS; strip forcedColors from these tokens.
-  "tab/background/color/hover",
-  "tab/background/color/selected",
-  "tab/border/color/accent",
-  "tab/loading/fill",
-  "tab/outline/color",
-  "text/color",
-  "text/color/accent/primary/selected",
-  "text/color/deemphasized",
-  "text/color/disabled",
-  "text/color/error",
-  "toolbar/field/border/color/focus",
-  "panel/separator/color",
-  // color-mix() on currentColor for nativeTheme can't be stored in Figma.
-  "urlbar/box/background/color",
-  "urlbar/box/background/color/hover",
-  "urlbar/box/background/color/active",
-  // Base already has `inherit`; Figma stores a token reference that would overwrite it.
-  "urlbar/box/text/color",
-  "urlbar/icon/fill/opacity",
-]);
 
 function transformValue(val, tokenNames, figmaName) {
   if (typeof val === "number") {
@@ -161,9 +130,7 @@ function normalizeFigma(figma, path) {
   for (const node in figma) {
     if (node in FIGMA_VALUE_MAP) {
       let figmaVar = `${path}${FIGMA_VALUE_MAP[node]}`;
-      if (!FIGMA_IGNORES.has(path)) {
-        vars[figmaVar] = figma[node];
-      }
+      vars[figmaVar] = figma[node];
     }
     let value = figma[node];
     if (!value || typeof value === "string" || typeof value === "number") {
@@ -205,6 +172,7 @@ export const FIGMA_GROUPS = [
   "Theme",
   "Components",
 ];
+let localOverrides = {};
 
 function buildFigmaVars(exportData) {
   let figmaVars = {};
@@ -244,11 +212,24 @@ function matchesFigmaVar(resolvedPath, figmaVar) {
 }
 
 function walkUpdateNovaTokens(tokens, vars, tokenNames, path = []) {
+  if (tokens.ignoreFigma) {
+    localOverrides[path.join("/")] = tokens;
+    return null;
+  }
+
   for (const tokenProp in tokens) {
     if (tokenProp === "comment") {
       continue;
     }
     if (tokenProp === "value") {
+      // Skip any tokens that have local Nova overrides in code.
+      // This happens when values can't be expressed in Figma or when Figma
+      // hasn't been updated to use the correct values yet.
+      if (tokens.value.nova) {
+        localOverrides[path.join("/")] = tokens.value.nova;
+        continue;
+      }
+
       let resolvedPath = path.filter(p => p !== "@base").join("/");
       let newValue = {};
       let { nativeTheme } = tokens.value;
@@ -449,4 +430,9 @@ if (isMain) {
 
   // eslint-disable-next-line no-console
   console.log("Remaining Figma vars:", figmaVars);
+  // eslint-disable-next-line no-console
+  console.log(
+    "Tokens in code that take precedence over Figma:",
+    localOverrides
+  );
 }
