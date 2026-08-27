@@ -8,6 +8,8 @@
 #include "mozilla/dom/ScriptLoadContext.h"
 #include "mozilla/HoldDropJSObjects.h"
 
+#include "js/Modules.h"
+
 #include "LoadContextBase.h"
 #include "LoadedScript.h"
 #include "ModuleLoaderBase.h"
@@ -66,6 +68,12 @@ ModuleLoadRequest::~ModuleLoadRequest() {
 
 nsIGlobalObject* ModuleLoadRequest::GetGlobalObject() {
   return mLoader->GetGlobalObject();
+}
+
+bool ModuleLoadRequest::IsSourcePhaseRequest(JSContext* aCx) const {
+  Rooted<JSObject*> moduleRequest(aCx, mModuleRequestObj);
+  // moduleRequest can be null if ClearImport() has been called.
+  return moduleRequest && JS::ModuleRequestIsSourcePhase(aCx, moduleRequest);
 }
 
 bool ModuleLoadRequest::IsErrored() const {
