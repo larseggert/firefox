@@ -75,10 +75,15 @@ class Element;
  *
  */
 
+class StencilCompileOrDecodeTask;
+class WasmCompileTask;
+
 // Base class for tasks which perform off-thread compilation.
 class CompileOrDecodeTask : public mozilla::Task {
  protected:
-  CompileOrDecodeTask();
+  enum class Type : uint8_t { Stencil, Wasm };
+
+  explicit CompileOrDecodeTask(Type aType);
   virtual ~CompileOrDecodeTask() = default;
 
   bool IsCancelled(const MutexAutoLock& aProofOfLock) const {
@@ -90,11 +95,20 @@ class CompileOrDecodeTask : public mozilla::Task {
   // If the task is already running, this waits for the task to finish.
   void Cancel();
 
+  bool IsStencilTask() const { return mType == Type::Stencil; }
+  bool IsWasmTask() const { return mType == Type::Wasm; }
+
+  inline StencilCompileOrDecodeTask* AsStencilCompileOrDecodeTask();
+  inline WasmCompileTask* AsWasmCompileTask();
+
  protected:
   // This mutex is locked during running the task or cancelling task.
   mozilla::Mutex mMutex;
 
   bool mIsCancelled = false;
+
+ private:
+  const Type mType;
 };
 
 // Base class for the off-thread compile or off-thread decode tasks which
@@ -145,7 +159,7 @@ class WasmCompileTask final : public CompileOrDecodeTask {
   using WasmBytesBuffer = mozilla::Vector<uint8_t, 0, js::MallocAllocPolicy>;
 
   explicit WasmCompileTask(WasmBytesBuffer&& aBytes)
-      : mBytes(std::move(aBytes)) {}
+      : CompileOrDecodeTask(Type::Wasm), mBytes(std::move(aBytes)) {}
 
   nsresult Init(JSContext* aCx, JS::CompileOptions& aOptions);
 
@@ -171,6 +185,17 @@ class WasmCompileTask final : public CompileOrDecodeTask {
 
   WasmBytesBuffer mBytes;
 };
+
+StencilCompileOrDecodeTask*
+CompileOrDecodeTask::AsStencilCompileOrDecodeTask() {
+  MOZ_ASSERT(IsStencilTask());
+  return static_cast<StencilCompileOrDecodeTask*>(this);
+}
+
+WasmCompileTask* CompileOrDecodeTask::AsWasmCompileTask() {
+  MOZ_ASSERT(IsWasmTask());
+  return static_cast<WasmCompileTask*>(this);
+}
 
 class ScriptLoadContext : public JS::loader::LoadContextBase,
                           public PreloaderBase {
@@ -338,6 +363,11 @@ class ScriptLoadContext : public JS::loader::LoadContextBase,
   already_AddRefed<JS::Stencil> StealOffThreadResult(
       JSContext* aCx, JS::InstantiationStorage* aInstantiationStorage);
 
+  // Sets aModuleOut to the module record for the compiled wasm module.
+  // Returns false otherwise, and sets pending exception on JSContext.
+  bool StealOffThreadWasmResult(JSContext* aCx,
+                                JS::MutableHandle<JSObject*> aModuleOut);
+
   ScriptMode mScriptMode;  // Whether this is a blocking, defer or async script.
   bool mScriptFromHead;    // Synchronous head script block loading of other non
                            // js/css content.
@@ -375,7 +405,7 @@ class ScriptLoadContext : public JS::loader::LoadContextBase,
   //
   // Set to non-null on the task creation, and set to null when taking the
   // result or cancelling the task.
-  RefPtr<StencilCompileOrDecodeTask> mCompileOrDecodeTask;
+  RefPtr<CompileOrDecodeTask> mCompileOrDecodeTask;
 
   // Non-null if there is a document that this request is blocking from loading.
   RefPtr<Document> mLoadBlockedDocument;

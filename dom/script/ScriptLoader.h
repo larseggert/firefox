@@ -694,9 +694,9 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
   nsresult AttemptOffThreadScriptCompile(ScriptLoadRequest* aRequest,
                                          bool* aCouldCompileOut);
 
-  nsresult CreateOffThreadTask(
-      JSContext* aCx, ScriptLoadRequest* aRequest, JS::CompileOptions& aOptions,
-      StencilCompileOrDecodeTask** aCompileOrDecodeTask);
+  nsresult CreateOffThreadTask(JSContext* aCx, ScriptLoadRequest* aRequest,
+                               JS::CompileOptions& aOptions,
+                               CompileOrDecodeTask** aCompileOrDecodeTask);
 
   MOZ_CAN_RUN_SCRIPT nsresult ProcessRequest(ScriptLoadRequest* aRequest);
   MOZ_CAN_RUN_SCRIPT nsresult
