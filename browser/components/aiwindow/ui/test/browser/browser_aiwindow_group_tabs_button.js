@@ -1035,6 +1035,16 @@ describe("Auto Tab Grouping toolbar button", () => {
   });
 
   describe("viewing existing tab groups", () => {
+    // Create the first suggested group, which is what makes the row appear,
+    // and hand back the row with a suggestion still listed above it.
+    async function showRow(panel) {
+      panel.querySelector(".swgt-suggestion").click();
+      return TestUtils.waitForCondition(
+        () => panel.querySelector(".swgt-view-tab-groups"),
+        "The row appears once the created group exists"
+      );
+    }
+
     it("offers the row once groups exist and switches to the one clicked", async () => {
       win = await openGroupingWindowWithTabs();
       const panel = await openPanelWithSuggestions(win);
@@ -1110,12 +1120,8 @@ describe("Auto Tab Grouping toolbar button", () => {
     it("takes focus when the list replaces an open suggestion flyout", async () => {
       win = await openGroupingWindowWithTabs();
       const panel = await openPanelWithSuggestions(win);
+      const row = await showRow(panel);
 
-      panel.querySelector(".swgt-suggestion").click();
-      const row = await TestUtils.waitForCondition(
-        () => panel.querySelector(".swgt-view-tab-groups"),
-        "The row appears once the created group exists"
-      );
       const suggestion = panel.querySelector(".swgt-suggestion");
       suggestion.dispatchEvent(new win.MouseEvent("mouseenter"));
       await TestUtils.waitForCondition(
@@ -1129,6 +1135,99 @@ describe("Auto Tab Grouping toolbar button", () => {
       await TestUtils.waitForCondition(
         () => win.document.activeElement?.classList.contains("tab-group-row"),
         "Focus lands in the tab groups list, not on the render it replaced"
+      );
+    });
+
+    it("opens the list on hover and hands it on with the pointer", async () => {
+      win = await openGroupingWindowWithTabs();
+      const panel = await openPanelWithSuggestions(win);
+      const row = await showRow(panel);
+
+      row.dispatchEvent(new win.MouseEvent("mouseenter"));
+      await TestUtils.waitForCondition(
+        () =>
+          panel._flyoutPanel?.state === "open" &&
+          panel._flyoutPanel.querySelector("tab-groups-list"),
+        "Pointing at the row is enough to open the tab groups list"
+      );
+      Assert.ok(
+        !panel._flyoutPanel.contains(win.document.activeElement),
+        "Hovering leaves focus where it was, as the suggestions do"
+      );
+
+      const suggestion = panel.querySelector(".swgt-suggestion");
+      row.dispatchEvent(new win.MouseEvent("mouseleave"));
+      suggestion.dispatchEvent(
+        new win.MouseEvent("mouseover", { bubbles: true })
+      );
+      suggestion.dispatchEvent(new win.MouseEvent("mouseenter"));
+      await TestUtils.waitForCondition(
+        () => panel._flyoutPanel.querySelector(".swgt-flyout-tab"),
+        "Moving on to a suggestion replaces the list with its tabs"
+      );
+      Assert.equal(
+        row.getAttribute("aria-expanded"),
+        "false",
+        "The row no longer reports a list as expanded"
+      );
+
+      suggestion.dispatchEvent(new win.MouseEvent("mouseleave"));
+      await TestUtils.waitForCondition(
+        () => panel._flyoutPanel.state === "closed",
+        "Leaving the rows behind closes the flyout"
+      );
+    });
+
+    it("lets the pointer take over the list a click opened", async () => {
+      win = await openGroupingWindowWithTabs();
+      const panel = await openPanelWithSuggestions(win);
+      const row = await showRow(panel);
+
+      row.click();
+      await TestUtils.waitForCondition(
+        () => win.document.activeElement?.classList.contains("tab-group-row"),
+        "Clicking the row moves focus into the list"
+      );
+
+      const suggestion = panel.querySelector(".swgt-suggestion");
+      suggestion.dispatchEvent(
+        new win.MouseEvent("mouseover", { bubbles: true })
+      );
+      suggestion.dispatchEvent(new win.MouseEvent("mouseenter"));
+      await TestUtils.waitForCondition(
+        () => panel._flyoutPanel.querySelector(".swgt-flyout-tab"),
+        "The suggestion's tabs replace the list the click opened"
+      );
+      await TestUtils.waitForCondition(
+        () => win.document.activeElement?.classList.contains("swgt-flyout-tab"),
+        "Focus moves onto the tabs, since the list it was on is gone"
+      );
+      Assert.equal(
+        panel._hideTimer,
+        0,
+        "The flyout the pointer took over is not left waiting to hide"
+      );
+    });
+
+    it("closes the list when the window is left behind", async () => {
+      win = await openGroupingWindowWithTabs();
+      const panel = await openPanelWithSuggestions(win);
+      const row = await showRow(panel);
+
+      row.click();
+      await TestUtils.waitForCondition(
+        () => panel._flyoutPanel?.state === "open",
+        "The list is open"
+      );
+
+      win.dispatchEvent(new win.Event("deactivate"));
+      await TestUtils.waitForCondition(
+        () => panel._flyoutPanel.state === "closed",
+        "Switching away from the window closes the list"
+      );
+      Assert.ok(
+        win.document.getElementById("smartwindow-group-tabs-panel"),
+        "The panel itself is left open"
       );
     });
   });
@@ -1214,8 +1313,7 @@ describe("Auto Tab Grouping toolbar button", () => {
     it("keeps the flyout the keyboard opened when the pointer drifts away", async () => {
       win = await openGroupingWindowWithTabs();
       const panel = await openPanelWithSuggestions(win);
-      const { tabRows } = await openFlyout(panel);
-      const rows = [...panel.querySelectorAll(".swgt-suggestion")];
+      const { row, tabRows } = await openFlyout(panel);
       const suggestion = AutoTabGrouping._getState(win).suggestions[0];
 
       EventUtils.synthesizeKey("KEY_ArrowRight", {}, win);
@@ -1224,8 +1322,7 @@ describe("Auto Tab Grouping toolbar button", () => {
         "Focus moved into the flyout"
       );
 
-      rows[1].dispatchEvent(new win.MouseEvent("mouseenter"));
-      rows[1].dispatchEvent(new win.MouseEvent("mouseleave"));
+      row.dispatchEvent(new win.MouseEvent("mouseleave"));
 
       Assert.equal(
         panel._flyoutPanel._flyoutEl.suggestion,
@@ -1236,6 +1333,32 @@ describe("Auto Tab Grouping toolbar button", () => {
         panel._hideTimer,
         0,
         "Pointing away does not schedule a hide while the flyout holds focus"
+      );
+    });
+
+    it("hands the flyout over to a row the pointer lands on", async () => {
+      win = await openGroupingWindowWithTabs();
+      const panel = await openPanelWithSuggestions(win);
+      const { tabRows } = await openFlyout(panel);
+      const rows = [...panel.querySelectorAll(".swgt-suggestion")];
+      const suggestions = AutoTabGrouping._getState(win).suggestions;
+
+      EventUtils.synthesizeKey("KEY_ArrowRight", {}, win);
+      await TestUtils.waitForCondition(
+        () => win.document.activeElement === tabRows[0],
+        "Focus moved into the flyout"
+      );
+
+      rows[1].dispatchEvent(new win.MouseEvent("mouseover", { bubbles: true }));
+      rows[1].dispatchEvent(new win.MouseEvent("mouseenter"));
+
+      await TestUtils.waitForCondition(
+        () => panel._flyoutPanel._flyoutEl.suggestion === suggestions[1],
+        "Pointing at another suggestion takes the flyout the keyboard opened"
+      );
+      Assert.ok(
+        panel._flyoutPanel.contains(win.document.activeElement),
+        "Focus stays on the tabs, which now belong to the hovered suggestion"
       );
     });
 
