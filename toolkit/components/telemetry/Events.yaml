@@ -1184,55 +1184,6 @@ telemetry.test.second:
       key1: This is just a test description.
 
 security.ui.protections:
-  show:
-    objects: [
-      "protection_report",
-    ]
-    bug_numbers:
-      - 1557050
-      - 1610897
-      - 1643428
-      - 1650468
-      - 1661756
-      - 1678201
-      - 1739287
-      - 1787249
-    description: >
-      User arrived on the protection report. This also includes a 'value' attribute which defaults to 'direct' or will be the value that a referring website adds to the url.
-    expiry_version: never
-    record_in_processes: ["content"]
-    release_channel_collection: opt-out
-    notification_emails:
-      - emz@mozilla.com
-      - seceng-telemetry@mozilla.com
-    products:
-      - firefox
-    extra_keys:
-      category: The category of protections the user is in, standard, strict or custom.
-  close:
-    objects: [
-      "protection_report",
-    ]
-    bug_numbers:
-      - 1557050
-      - 1610897
-      - 1612091
-      - 1643428
-      - 1678201
-      - 1739287
-      - 1787249
-    description: >
-      User closed on the protection report.
-    expiry_version: never
-    record_in_processes: ["content"]
-    release_channel_collection: opt-out
-    notification_emails:
-      - emz@mozilla.com
-      - seceng-telemetry@mozilla.com
-    products:
-      - firefox
-    extra_keys:
-      category: The category of protections the user is in, standard, strict or custom.
   click:
     bug_numbers:
       - 1557050
@@ -1249,15 +1200,10 @@ security.ui.protections:
     description: >
       User interaction by click events on the protection report.
     objects: [
-      "lw_open_button",
       "lw_sync_link",
-      "lw_about_link",
       "mtr_about_link",
       "mtr_report_link",
       "mtr_signup_button",
-      "trackers_about_link",
-      "mobile_app_link",
-      "settings_link",
       "vpn_app_link_android",
       "vpn_app_link_ios",
     ]

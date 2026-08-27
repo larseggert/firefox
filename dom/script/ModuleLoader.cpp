@@ -250,19 +250,24 @@ nsresult ModuleLoader::CompileJavaScriptOrWasmModule(
 #ifdef NIGHTLY_BUILD
   if (aRequest->HasWasmMimeTypeEssence()) {
     MOZ_ASSERT(aRequest->IsWasmBytes());
-    JS::Rooted<JSObject*> moduleReq(aCx, aRequest->mModuleRequestObj);
-    JSObject* wasmModule;
-    if (moduleReq && JS::ModuleRequestIsSourcePhase(aCx, moduleReq)) {
-      wasmModule =
-          JS::CompileWasmModuleAsSource(aCx, aOptions, aRequest->WasmBytes());
+    if (aRequest->IsSourcePhaseRequest(aCx)) {
+      if (aRequest->GetScriptLoadContext()->mWasCompiledOMT) {
+        if (!aRequest->GetScriptLoadContext()->StealOffThreadWasmResult(
+                aCx, aModuleOut)) {
+          return NS_ERROR_FAILURE;
+        }
+      } else {
+        aModuleOut.set(JS::CompileWasmModuleAsSource(aCx, aOptions,
+                                                     aRequest->WasmBytes()));
+      }
     } else {
-      wasmModule = JS::CompileWasmModule(aCx, aOptions, aRequest->WasmBytes());
+      aModuleOut.set(
+          JS::CompileWasmModule(aCx, aOptions, aRequest->WasmBytes()));
     }
-    if (!wasmModule) {
+    if (!aModuleOut) {
       return NS_ERROR_FAILURE;
     }
 
-    aModuleOut.set(wasmModule);
     return NS_OK;
   }
 #endif

@@ -7905,6 +7905,12 @@
     type: RelaxedAtomicUint32
     value: 3
     mirror: always
+
+# Whether to hide legacy font formats (Type 1 and PCF) from the font list.
+-   name: gfx.font_rendering.fontconfig.skip_legacy_fonts
+    type: RelaxedAtomicBool
+    value: @IS_NIGHTLY_BUILD@
+    mirror: always
 #endif
 
 #if defined(XP_WIN)

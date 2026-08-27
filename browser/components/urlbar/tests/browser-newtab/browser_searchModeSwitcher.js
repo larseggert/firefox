@@ -89,6 +89,34 @@ add_task(async function switcherEntersSearchMode() {
   BrowserTestUtils.removeTab(tab);
 });
 
+add_task(async function switcherOpensSearchSettings() {
+  let tab = await NewtabSearchbarTestUtils.openNewTabPage();
+  let locationChange = BrowserTestUtils.waitForLocationChange(
+    gBrowser,
+    "about:preferences#search"
+  );
+
+  await NewtabSearchbarTestUtils.spawn(tab.linkedBrowser, [], async () => {
+    let popup =
+      await NewtabSearchbarContentTestUtils.openSearchModeSwitcher(content);
+    // The settings page replaces the page this task runs in, taking the actor
+    // with it, so the click can't be awaited here.
+    popup.querySelector("panel-item[data-action=openpreferences]").click();
+  });
+  await locationChange;
+
+  Assert.equal(
+    gBrowser.selectedBrowser.currentURI.spec,
+    "about:preferences#search",
+    "the settings page opened"
+  );
+
+  BrowserTestUtils.removeTab(gBrowser.selectedTab);
+  if (gBrowser.tabs.includes(tab)) {
+    BrowserTestUtils.removeTab(tab);
+  }
+});
+
 add_task(async function shiftClickSearchesInTheSameTab() {
   let tab = await NewtabSearchbarTestUtils.openNewTabPage();
   let loaded = BrowserTestUtils.browserLoaded(
@@ -152,6 +180,12 @@ add_task(async function accelClickSearchesInANewTab() {
 });
 
 add_task(async function tabReachesTheSwitcher() {
+  // Outside the toolbar, this pref is what puts the button in the tab order
+  // while the input has focus.
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.urlbar.searchModeSwitcher.skipTabStop", true]],
+  });
+
   let tab = await NewtabSearchbarTestUtils.openNewTabPage();
 
   await NewtabSearchbarTestUtils.spawn(tab.linkedBrowser, [], async () => {

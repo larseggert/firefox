@@ -713,6 +713,13 @@ this.FxAMenuDeviceList = class FxAMenuDeviceList {
     return "desktop";
   }
 
+  _getTelemetryDeviceType(device) {
+    const isMobile =
+      device?.type === DEVICE_TYPE_MOBILE ||
+      device?.type === DEVICE_TYPE_TABLET;
+    return isMobile ? "mobile" : "desktop";
+  }
+
   _createDeviceEntry(client, device) {
     let btn = document.createXULElement("toolbarbutton");
     btn.classList.add(
@@ -736,12 +743,14 @@ this.FxAMenuDeviceList = class FxAMenuDeviceList {
       // was created (e.g. on the first menu open after signing in). Resolving
       // it now ensures the "Send Current Page to This Device" button is shown
       // when the device is sendTab-capable, instead of only on a later open.
-      this._showDeviceRecentTabs(
-        client,
-        this._getDeviceForClient(client) ?? device,
-        btn,
-        e
-      );
+      const resolvedDevice = this._getDeviceForClient(client) ?? device;
+
+      gSync.emitFxaToolbarTelemetry("synced_device_submenu", btn, {
+        device_type: this._getTelemetryDeviceType(resolvedDevice),
+        device_count: String(gSync.getSendTabTargets().length),
+      });
+
+      this._showDeviceRecentTabs(client, resolvedDevice, btn, e);
     });
     return btn;
   }
@@ -1091,6 +1100,16 @@ var gSync = {
   _obs: ["weave:engine:sync:finish", "quit-application", UIState.ON_UPDATE],
   // Track whether send tab exposure events have been recorded for current context menu session
   _sendTabExposureRecorded: new Set(),
+
+  // FxA menu telemetry types that already name their Glean metric in full.
+  // Every other type names only the `<object>` half of a legacy
+  // `fxa_*_menu.click#<object>` event and gets a `click` prefix added.
+  // See emitFxaToolbarTelemetry.
+  NONPREFIXED_EVENT_TYPES: new Set([
+    "send_tab_exposed",
+    "send_tab_opened",
+    "synced_device_submenu",
+  ]),
 
   get log() {
     if (!this._log) {
@@ -2331,12 +2350,12 @@ var gSync = {
       ...extraOpts,
     };
 
-    // send_tab_exposed -> sendTabExposed, send_tab_opened -> sendTabOpened.
-    // All other types are legacy click events: sync_now -> clickSyncNow,
-    // send_tab -> clickSendTab, etc.
+    // Types listed in NONPREFIXED_EVENT_TYPES map straight to their camelCased
+    // Glean metric (send_tab_opened -> sendTabOpened). Everything else is a
+    // legacy click event and gets the prefix: sync_now -> clickSyncNow.
     const cap = w => w[0].toUpperCase() + w.slice(1);
     const parts = type.split("_");
-    const methodName = type.startsWith("send_tab_")
+    const methodName = gSync.NONPREFIXED_EVENT_TYPES.has(type)
       ? parts[0] + parts.slice(1).map(cap).join("")
       : "click" + parts.map(cap).join("");
 

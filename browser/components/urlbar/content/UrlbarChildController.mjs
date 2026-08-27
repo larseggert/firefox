@@ -986,6 +986,11 @@ export class UrlbarChildController {
     );
   }
 
+  /** @type {typeof UrlbarParentController.prototype.openPreferences} */
+  openPreferences(paneID) {
+    this.#parentController.openPreferences(paneID);
+  }
+
   /** @type {typeof UrlbarParentController.prototype.getEngineIconURL} */
   getEngineIconURL(engineId) {
     return this.#parentController.getEngineIconURL(engineId);

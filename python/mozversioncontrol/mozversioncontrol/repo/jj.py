@@ -153,7 +153,9 @@ class JujutsuRepository(Repository):
             "--revisions",
             self.HEAD_REVSET,
             "--template",
-            'local_bookmarks.join("\n")',
+            # Use name() rather than the default RefName formatting, which
+            # decorates diverged ("*") and conflicted ("??") bookmarks.
+            'local_bookmarks.map(|b| b.name()).join("\n")',
         )
         bookmark = output.split("\n")[0].strip()
         return bookmark or None

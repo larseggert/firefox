@@ -392,7 +392,7 @@ class SharePageActionClass {
     let connectButton = document.createXULElement("toolbarbutton");
     connectButton.id = CONNECT_DEVICE_BUTTON_ID;
     connectButton.classList.add("subviewbutton", "subviewbutton-iconic");
-    document.l10n.setAttributes(connectButton, "share-panel-connect-device");
+    document.l10n.setAttributes(connectButton, "share-panel-connect-device-2");
 
     let helpButton = document.createXULElement("toolbarbutton");
     helpButton.id = DEVICE_HELP_BUTTON_ID;
