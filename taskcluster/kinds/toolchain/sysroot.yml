@@ -25,7 +25,6 @@ sysroot-i686-linux-gnu:
     dependencies:
         gcc-10: packages-deb8-32-gcc-10
     run:
-        clone-with: hg
         toolchain-artifact: public/build/sysroot-i686-linux-gnu.tar.zst
         arguments:
             - i386
@@ -43,7 +42,6 @@ sysroot-x86_64-linux-gnu:
     dependencies:
         gcc-10: packages-deb8-gcc-10
     run:
-        clone-with: hg
         toolchain-artifact: public/build/sysroot-x86_64-linux-gnu.tar.zst
         arguments:
             - amd64
@@ -62,7 +60,6 @@ sysroot-x86_64-linux-gnu-x11:
         gcc-10: packages-deb8-gcc-10
         gtk3: packages-deb8-gtk3
     run:
-        clone-with: hg
         toolchain-artifact: public/build/sysroot-x86_64-linux-gnu.tar.zst
         arguments:
             - amd64
@@ -74,7 +71,6 @@ sysroot-wasm32-wasi-clang-19:
     treeherder:
         symbol: TL(sysroot-wasi-19)
     run:
-        clone-with: hg
         script: build-sysroot-wasi.sh
         arguments:
             - wasi-sdk.patch
@@ -97,7 +93,6 @@ sysroot-wasm32-wasi-clang-22:
     treeherder:
         symbol: TL(sysroot-wasi-22)
     run:
-        clone-with: hg
         script: build-sysroot-wasi.sh
         arguments:
             - wasi-sdk.patch
@@ -123,7 +118,6 @@ sysroot-wasm32-wasi-clang-trunk:
     treeherder:
         symbol: TL(sysroot-wasi-trunk)
     run:
-        clone-with: hg
         script: build-sysroot-wasi.sh
         arguments:
             - wasi-sdk.patch
@@ -155,7 +149,6 @@ sysroot-aarch64-linux-gnu:
     dependencies:
         gcc-10: packages-deb10-arm64-gcc-10
     run:
-        clone-with: hg
         toolchain-artifact: public/build/sysroot-aarch64-linux-gnu.tar.zst
         arguments:
             - arm64
@@ -171,7 +164,6 @@ linux32-toolchain-sysroot:
     dependencies:
         gcc-8: packages-deb8-32-gcc-8
     run:
-        clone-with: hg
         arguments:
             - i386
             # For clang
@@ -189,7 +181,6 @@ linux64-toolchain-sysroot:
     dependencies:
         gcc-8: packages-deb8-gcc-8
     run:
-        clone-with: hg
         arguments:
             - amd64
             # For clang
@@ -219,7 +210,6 @@ linux64-toolchain-sysroot-gcc10:
     dependencies:
         gcc-10: packages-deb8-gcc-10
     run:
-        clone-with: hg
         arguments:
             - amd64
             # For clang
@@ -241,7 +231,6 @@ linux64-aarch64-toolchain-sysroot:
     treeherder:
         symbol: TLA64(sysroot-toolchain)
     run:
-        clone-with: hg
         arguments:
             - arm64
             # For clang

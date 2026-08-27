@@ -16,7 +16,6 @@ linux64-clang-14-stage1:
     treeherder:
         symbol: TL(clang-14-stage1)
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -42,7 +41,6 @@ macosx64-clang-14-raw:
     worker:
         max-run-time: 3600
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-artifact.json'
@@ -68,7 +66,6 @@ linux64-clang-19-raw:
         symbol: TL(clang-19-raw)
     worker-type: b-linux-docker-large-amd
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-system-clang.json'
@@ -93,7 +90,6 @@ linux64-clang-19:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias: linux64-clang-base
         toolchain-artifact: public/build/clang.tar.zst
@@ -108,7 +104,6 @@ linux64-clang-22-mingw-x86:
         symbol: TMW(clang-22-x86)
     worker-type: b-linux-docker-amd
     run:
-        clone-with: hg
         script: build-clang-mingw.sh
         arguments:
             - 'x86'
@@ -135,7 +130,6 @@ linux64-clang-22-mingw-x64:
         tier: 1
     worker-type: b-linux-docker-amd
     run:
-        clone-with: hg
         script: build-clang-mingw.sh
         arguments:
             - 'x64'
@@ -160,7 +154,6 @@ linux64-clang-22-stage1:
     treeherder:
         symbol: TL(clang-22-stage1)
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -187,7 +180,6 @@ linux64-clang-22-profile:
     treeherder:
         symbol: TL(clang-22-profile)
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -212,7 +204,6 @@ linux64-clang-22-raw:
     treeherder:
         symbol: TL(clang-22-raw)
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-artifact.json'
@@ -242,7 +233,6 @@ linux64-clang-22:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias:
             by-project:
@@ -274,7 +264,6 @@ linux64-aarch64-clang-22-raw:
     treeherder:
         symbol: TLA64(clang-22-raw)
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-artifact.json'
@@ -306,7 +295,6 @@ linux64-aarch64-clang-22:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias:
             by-project:
@@ -338,7 +326,6 @@ macosx64-clang-22-stage2:
     treeherder:
         symbol: TM(clang-22-stage2)
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -368,7 +355,6 @@ macosx64-clang-22-profile:
     worker:
         max-run-time: 7210
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -398,7 +384,6 @@ macosx64-clang-22-raw:
     worker:
         max-run-time: 3600
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-artifact.json'
@@ -430,7 +415,6 @@ macosx64-clang-22:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias:
             by-project:
@@ -464,7 +448,6 @@ macosx64-aarch64-clang-22-stage2:
     treeherder:
         symbol: TMA64(clang-22-stage2)
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -494,7 +477,6 @@ macosx64-aarch64-clang-22-profile:
     worker:
         max-run-time: 7210
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -524,7 +506,6 @@ macosx64-aarch64-clang-22-raw:
     worker:
         max-run-time: 3600
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-artifact.json'
@@ -556,7 +537,6 @@ macosx64-aarch64-clang-22:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias:
             by-project:
@@ -588,7 +568,6 @@ win64-clang-22-stage2:
     treeherder:
         symbol: TW64(clang-22-stage2)
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-cl-artifact.json'
@@ -618,7 +597,6 @@ win64-clang-22-profile:
     worker:
         max-run-time: 9000
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-cl-artifact.json'
@@ -646,7 +624,6 @@ win64-clang-22-raw:
     treeherder:
         symbol: TW64(clang-22-raw)
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-cl-artifact.json'
@@ -681,7 +658,6 @@ win64-clang-22:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias:
             by-project:
@@ -717,7 +693,6 @@ win64-aarch64-clang-22-raw:
     worker:
         max-run-time: 3600
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-cl-artifact.json'
@@ -750,7 +725,6 @@ win64-aarch64-clang-22:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias:
             by-project:
@@ -785,7 +759,6 @@ linux64-clang-trunk-mingw-x86:
         symbol: TMW(clang-trunk-x86)
     worker-type: b-linux-docker-amd
     run:
-        clone-with: hg
         script: build-clang-mingw.sh
         arguments:
             - 'x86'
@@ -814,7 +787,6 @@ linux64-clang-trunk-mingw-x64:
         tier: 1
     worker-type: b-linux-docker-amd
     run:
-        clone-with: hg
         script: build-clang-mingw.sh
         arguments:
             - 'x64'
@@ -841,7 +813,6 @@ linux64-clang-trunk-stage1:
     treeherder:
         symbol: TL(clang-trunk-stage1)
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -870,7 +841,6 @@ linux64-clang-trunk-profile:
     treeherder:
         symbol: TL(clang-trunk-profile)
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -897,7 +867,6 @@ linux64-clang-trunk-raw:
     treeherder:
         symbol: TL(clang-trunk-raw)
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-artifact.json'
@@ -927,7 +896,6 @@ linux64-clang-trunk:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias:
             by-project:
@@ -961,7 +929,6 @@ linux64-aarch64-clang-trunk-raw:
     treeherder:
         symbol: TLA64(clang-trunk-raw)
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-artifact.json'
@@ -993,7 +960,6 @@ linux64-aarch64-clang-trunk:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias:
             by-project:
@@ -1027,7 +993,6 @@ macosx64-clang-trunk-stage2:
     treeherder:
         symbol: TM(clang-trunk-stage2)
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -1059,7 +1024,6 @@ macosx64-clang-trunk-profile:
     worker:
         max-run-time: 7200
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -1091,7 +1055,6 @@ macosx64-clang-trunk-raw:
     worker:
         max-run-time: 3600
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-artifact.json'
@@ -1123,7 +1086,6 @@ macosx64-clang-trunk:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias:
             by-project:
@@ -1159,7 +1121,6 @@ macosx64-aarch64-clang-trunk-stage2:
     treeherder:
         symbol: TMA64(clang-trunk-stage2)
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -1191,7 +1152,6 @@ macosx64-aarch64-clang-trunk-profile:
     worker:
         max-run-time: 7200
     run:
-        clone-with: hg
         using: toolchain-script
         script: build-clang.sh
         arguments:
@@ -1223,7 +1183,6 @@ macosx64-aarch64-clang-trunk-raw:
     worker:
         max-run-time: 3600
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-artifact.json'
@@ -1255,7 +1214,6 @@ macosx64-aarch64-clang-trunk:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias:
             by-project:
@@ -1289,7 +1247,6 @@ win64-clang-trunk-stage2:
     treeherder:
         symbol: TW64(clang-trunk-stage2)
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-cl-artifact.json'
@@ -1321,7 +1278,6 @@ win64-clang-trunk-profile:
     worker:
         max-run-time: 9000
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-cl-artifact.json'
@@ -1351,7 +1307,6 @@ win64-clang-trunk-raw:
     treeherder:
         symbol: TW64(clang-trunk-raw)
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-cl-artifact.json'
@@ -1384,7 +1339,6 @@ win64-clang-trunk:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias:
             by-project:
@@ -1422,7 +1376,6 @@ win64-aarch64-clang-trunk-raw:
     worker:
         max-run-time: 3600
     run:
-        clone-with: hg
         script: build-clang.sh
         arguments:
             - 'build/build-clang/use-clang-cl-artifact.json'
@@ -1455,7 +1408,6 @@ win64-aarch64-clang-trunk:
     worker:
         max-run-time: 600
     run:
-        clone-with: hg
         script: repack-clang.sh
         toolchain-alias:
             by-project:
