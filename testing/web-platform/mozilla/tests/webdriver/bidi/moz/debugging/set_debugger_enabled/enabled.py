@@ -94,6 +94,7 @@ async def test_disable_resumes_debugger(
     inline,
     subscribe_events,
     wait_for_event,
+    wait_for_future_safe,
     set_breakpoint,
 ):
     await subscribe_events([PAUSED_EVENT, RESUMED_EVENT])
@@ -115,12 +116,12 @@ async def test_disable_resumes_debugger(
             await_promise=False,
         )
     )
-    await on_paused
+    await wait_for_future_safe(on_paused)
 
     # Breakpoint should be automatically resumed when debugging is disabled.
     on_resumed = wait_for_event(RESUMED_EVENT)
     await bidi_session.moz.debugging.set_debugger_enabled(enabled=None)
-    await on_resumed
+    await wait_for_future_safe(on_resumed)
 
     result = await eval_task
     assert result["type"] == "number"

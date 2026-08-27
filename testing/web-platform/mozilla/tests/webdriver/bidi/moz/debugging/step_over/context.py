@@ -15,6 +15,7 @@ async def test_step_over_basic(
     inline,
     subscribe_events,
     wait_for_event,
+    wait_for_future_safe,
     set_breakpoint,
 ):
     await subscribe_events([PAUSED_EVENT, RESUMED_EVENT])
@@ -47,20 +48,20 @@ function test() {
         )
     )
 
-    paused_event1 = await on_paused
+    paused_event1 = await wait_for_future_safe(on_paused)
     assert paused_event1["line"] == 6
 
     on_paused2 = wait_for_event(PAUSED_EVENT)
     await bidi_session.moz.debugging.step_over(context=new_tab["context"])
 
-    paused_event2 = await on_paused2
+    paused_event2 = await wait_for_future_safe(on_paused2)
     assert paused_event2["line"] == 7
     assert paused_event2["url"] == url
 
     on_paused3 = wait_for_event(PAUSED_EVENT)
     await bidi_session.moz.debugging.step_over(context=new_tab["context"])
 
-    paused_event3 = await on_paused3
+    paused_event3 = await wait_for_future_safe(on_paused3)
     assert paused_event3["line"] == 8
 
     await bidi_session.moz.debugging.resume(context=new_tab["context"])
@@ -77,6 +78,7 @@ async def test_step_over_skips_function_call(
     inline,
     subscribe_events,
     wait_for_event,
+    wait_for_future_safe,
     set_breakpoint,
 ):
     await subscribe_events([PAUSED_EVENT, RESUMED_EVENT])
@@ -114,13 +116,13 @@ function test() {
         )
     )
 
-    paused_event1 = await on_paused
+    paused_event1 = await wait_for_future_safe(on_paused)
     assert paused_event1["line"] == 11
 
     on_paused2 = wait_for_event(PAUSED_EVENT)
     await bidi_session.moz.debugging.step_over(context=new_tab["context"])
 
-    paused_event2 = await on_paused2
+    paused_event2 = await wait_for_future_safe(on_paused2)
     assert paused_event2["line"] == 12
     assert paused_event2["url"] == url
 

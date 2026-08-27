@@ -48,6 +48,7 @@ async def test_evaluate_in_paused_frame(
     inline,
     subscribe_events,
     wait_for_event,
+    wait_for_future_safe,
     set_breakpoint,
 ):
     await subscribe_events([PAUSED_EVENT, RESUMED_EVENT])
@@ -84,7 +85,7 @@ function calculate() {
 
     # Wait for the pause on line 7 `b = 20;`. Variable `a` should already
     # be at 10, variable `b` should be undefined.
-    paused_event = await on_paused
+    paused_event = await wait_for_future_safe(on_paused)
     assert paused_event["context"] == new_tab["context"]
     assert paused_event["line"] == 7
 
@@ -106,7 +107,7 @@ function calculate() {
     # variable `b` should be set to 20 now.
     on_paused = wait_for_event(PAUSED_EVENT)
     await bidi_session.moz.debugging.resume(context=new_tab["context"])
-    paused_event = await on_paused
+    paused_event = await wait_for_future_safe(on_paused)
     assert paused_event["context"] == new_tab["context"]
     assert paused_event["line"] == 8
 
@@ -208,7 +209,7 @@ function outer() {
     # Resuming should only unwind the innermost pause.
     on_resumed = wait_for_event(RESUMED_EVENT)
     await bidi_session.moz.debugging.resume(context=new_tab["context"])
-    await on_resumed
+    await wait_for_future_safe(on_resumed)
 
     inner_result = await wait_for_future_safe(inner_task)
     assert inner_result == {"type": "number", "value": 21}
@@ -430,6 +431,7 @@ async def test_call_function_in_paused_frame(
     inline,
     subscribe_events,
     wait_for_event,
+    wait_for_future_safe,
     set_breakpoint,
 ):
     await subscribe_events([PAUSED_EVENT, RESUMED_EVENT])
@@ -460,7 +462,7 @@ function add(x, y) {
         )
     )
 
-    paused_event = await on_paused
+    paused_event = await wait_for_future_safe(on_paused)
     assert paused_event["context"] == new_tab["context"]
     assert paused_event["line"] == 5
 
