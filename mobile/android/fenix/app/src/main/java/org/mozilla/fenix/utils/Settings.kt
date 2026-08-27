@@ -2769,6 +2769,13 @@ class Settings(
             default = { FxNimbus.features.listenToPage.value().enabled },
         )
 
+    /** Nimbus controlled feature flag that indicates if the weekly privacy notification feature should be enabled. */
+    var weeklyPrivacyNotificationFeatureFlagEnabled by
+        booleanPreference(
+            key = appContext.getPreferenceKey(R.string.pref_key_enable_weekly_privacy_notification),
+            default = { FxNimbus.features.weeklyPrivacyNotification.value().enabled },
+        )
+
     var aiControlsFeatureFlagEnabled by
         booleanPreference(
             key = appContext.getPreferenceKey(R.string.pref_key_enable_ai_controls),
