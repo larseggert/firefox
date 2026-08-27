@@ -1200,15 +1200,10 @@ security.ui.protections:
     description: >
       User interaction by click events on the protection report.
     objects: [
-      "lw_open_button",
       "lw_sync_link",
-      "lw_about_link",
       "mtr_about_link",
       "mtr_report_link",
       "mtr_signup_button",
-      "trackers_about_link",
-      "mobile_app_link",
-      "settings_link",
       "vpn_app_link_android",
       "vpn_app_link_ios",
     ]
