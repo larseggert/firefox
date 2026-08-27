@@ -120,7 +120,6 @@ internal class IPProtectionTelemetryMiddleware(
         }
     }
 
-    @androidx.annotation.OptIn(ExperimentalGeckoViewApi::class)
     private fun handleToggleFailedAction(state: IPProtectionState, error: Throwable?) {
         if (
             state.accountState.status == AccountStatus.EnrolledAndEntitled &&
@@ -128,15 +127,16 @@ internal class IPProtectionTelemetryMiddleware(
         ) {
             Vpn.entitledAccountUnauthenticated.record()
         }
-        Vpn.errorEncountered.record(Vpn.ErrorEncounteredExtra(errorCode = "${(error as? IPProxyException)?.code}"))
+        Vpn.errorEncountered.record(Vpn.ErrorEncounteredExtra(errorCode = errorCodeOf(error)))
     }
 
-    @androidx.annotation.OptIn(ExperimentalGeckoViewApi::class)
     private fun handleLocationSwitchFailed(error: Throwable?) {
-        Vpn.locationSwitchError.record(
-            extra = Vpn.LocationSwitchErrorExtra(errorCode = "${(error as? IPProxyException)?.code}")
-        )
+        Vpn.locationSwitchError.record(extra = Vpn.LocationSwitchErrorExtra(errorCode = errorCodeOf(error)))
     }
+
+    // FIXME(IPP) the engine should pass the error code through: https://bugzilla.mozilla.org/show_bug.cgi?id=2066553
+    @androidx.annotation.OptIn(ExperimentalGeckoViewApi::class)
+    private fun errorCodeOf(error: Throwable?): String = "${(error as? IPProxyException)?.code}"
 
     private fun durationSince(startMs: Long?): Int? = startMs?.let { (currentTimeInMillis() - it).toInt() }
 
