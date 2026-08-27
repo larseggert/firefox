@@ -417,7 +417,7 @@ export class UrlbarParentControllerProxy {
    * @param {UrlbarQueryContext} queryContext The context to cache.
    */
   setLastQueryContextCache(queryContext) {
-    this.#lastQueryContextWrapper = { queryContext };
+    this.#lastQueryContextWrapper = { queryContext, done: true };
     this.#actor.sendAsyncMessage("SetLastQueryContextCache", {
       instanceId: this.#instanceId,
       queryContext: queryContext.toWire(),
