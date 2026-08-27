@@ -319,6 +319,9 @@ export const AutoTabGrouping = {
       this._createById(win, panel, e.detail.id)
     );
     card.addEventListener("ungroup", () => this._ungroupRecent(win, panel));
+    card.addEventListener("select-group", e =>
+      this._selectGroup(win, panel, e.detail.id)
+    );
     card.addEventListener("close-duplicates", () =>
       this._closeDuplicateTabs(win, panel)
     );
@@ -735,6 +738,23 @@ export const AutoTabGrouping = {
     panel.hidePopup();
   },
 
+  /**
+   * Switch to a group listed under "Just created", the way the tab groups list
+   * switches to one of the user's own groups.
+   *
+   * @param {ChromeWindow} win
+   * @param {XULElement} panel
+   * @param {number} id - Recent group id.
+   */
+  _selectGroup(win, panel, id) {
+    const entry = this._getState(win).recent.find(e => e.id === id);
+    if (!entry || !this._isGroupLive(win, entry.group)) {
+      return;
+    }
+    entry.group.select();
+    panel.hidePopup();
+  },
+
   _flyoutHasFocus(panel) {
     const active = panel.ownerDocument.activeElement;
     return !!active && !!panel._flyoutPanel?.contains(active);
@@ -744,12 +764,10 @@ export const AutoTabGrouping = {
     if (!panel._activeRow) {
       return;
     }
-    // .swgt-row is every row the card makes actionable ("Create Groups", the
-    // suggestions, "Ungroup Tabs", "Close Duplicate Tabs"); .swgt-recent-row is
-    // a "Just created" entry, which is only there to be read. The rows that
-    // own a flyout are left out because they reposition it instead. Pointing
-    // at a row takes the flyout over even when the keyboard opened it.
-    const row = event.target.closest(".swgt-row, .swgt-recent-row");
+    // The rows that own a flyout are left out because they reposition it
+    // instead. Pointing at any other row takes the flyout over, even when the
+    // keyboard opened it.
+    const row = event.target.closest(".swgt-row");
     if (
       row &&
       row !== panel._activeRow &&
