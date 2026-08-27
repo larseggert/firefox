@@ -329,9 +329,7 @@ nsresult nsXMLContentSink::OnDocumentCreated(Document* aSourceDocument,
   // Make sure that we haven't loaded a new document into the documentviewer
   // after starting the XSLT transform.
   if (viewer && viewer->GetDocument() == aSourceDocument) {
-    nsresult rv = viewer->SetDocumentInternal(aResultDocument, true);
-    NS_ENSURE_SUCCESS(rv, rv);
-    aResultDocument->BeginLoad();
+    return viewer->SetDocumentInternal(aResultDocument, true);
   }
   return NS_OK;
 }
@@ -409,9 +407,6 @@ nsresult nsXMLContentSink::OnTransformDone(Document* aSourceDocument,
     // This UnblockOnload call corresponds to the BlockOnload call in
     // nsContentSink::WillBuildModelImpl.
     originalDocument->UnblockOnload(true);
-  }
-  if (aResultDocument->IsExpectingEndLoad()) {
-    aResultDocument->EndLoad();
   }
 
   DropParserAndPerfHint();
