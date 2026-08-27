@@ -52,6 +52,9 @@ managed-notice-info-icon =
 managed-notice-nav =
     .label = Your browser is being managed by your organization.
 
+tls-key-logging-notice-nav =
+    .label = An app or service may see your encrypted traffic.
+
 category-list =
     .aria-label = Categories
 
