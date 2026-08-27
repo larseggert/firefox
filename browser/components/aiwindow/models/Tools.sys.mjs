@@ -1256,6 +1256,9 @@ export async function addMemory(
  */
 export async function createAITab({ url_list, focus }, conversation, signal) {
   lazy.console.log("[Tool] aiTab", JSON.stringify({ url_list, focus }));
+  // Generate the page from the requested URLs. Nothing is persisted; the chat
+  // tool returns a link to the external viewer with the page config in the URL
+  // hash, so the page data never reaches the viewer host.
   const viewerBase = lazy.AITab.getViewerBaseURL();
   if (!viewerBase) {
     return (

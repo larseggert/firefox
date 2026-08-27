@@ -2434,13 +2434,15 @@ pref("browser.smartwindow.searchQuery.apiKey", "");
 pref("browser.smartwindow.searchTheWebFast", true);
 
 // Smart Window Logging
+pref("browser.smartwindow.aiTabHistory.logLevel", "Error");
+pref("browser.smartwindow.aiTabStore.logLevel", "Error");
 pref("browser.smartwindow.chatHistory.loglevel", "Error");
 pref("browser.smartwindow.chatStore.loglevel", "Error");
 pref("browser.smartwindow.conversation.logLevel", "Error");
+pref("browser.smartwindow.conversationHistory.logLevel", "Error");
+pref("browser.smartwindow.conversationStore.logLevel", "Error");
 pref("browser.smartwindow.smartbarMentions.loglevel", "Error");
 pref("browser.smartwindow.telemetryLogLevel", "Error");
-pref("browser.smartwindow.aiTabHistory.logLevel", "Error");
-pref("browser.smartwindow.aiTabStore.logLevel", "Error");
 
 // Block insecure active content on https pages
 pref("security.mixed_content.block_active_content", true);
