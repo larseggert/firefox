@@ -1,6 +1,6 @@
 (third-party-modules-ping)=
 
-# "third-party-modules" ping
+# "third-party-modules" ping (obsolete)
 
 This ping contains information about events whereby third-party modules
 were loaded into Firefox processes.
@@ -117,13 +117,14 @@ omitted from the ping when it is identical to `resolvedDllName`.
 ## Notes
 
 - The client id and profile group id are submitted with this ping.
-- The {doc}`Telemetry Environment <../data/environment>` is submitted in this ping.
+- The {doc}`Telemetry Environment <../../data/environment>` is submitted in this ping.
 - String fields within `payload` are limited in length to 260 characters.
 - This ping is sent once daily.
 - If there are no events to report, this ping is not sent.
 
 ## Version History
 
+- Firefox 157: Removed and no longer sent ([bug 2066836](https://bugzilla.mozilla.org/show_bug.cgi?id=2066836)).
 - Firefox 110: Added `blockedModules` ([bug 1808158](https://bugzilla.mozilla.org/show_bug.cgi?id=1808158)).
 - Firefox 77: Added `isDependent` ([bug 1620118](https://bugzilla.mozilla.org/show_bug.cgi?id=1620118)).
 - Firefox 71: Renamed from untrustedModules to third-party-modules with a revised schema ([bug 1542830](https://bugzilla.mozilla.org/show_bug.cgi?id=1542830)).
