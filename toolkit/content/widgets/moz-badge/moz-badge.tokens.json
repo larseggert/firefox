@@ -46,10 +46,12 @@
       "value": "0"
     },
     "inline": {
-      "value": "{space.xsmall}"
-    },
-    "nova-inline": {
-      "value": "calc({space.xsmall} + {space.xxsmall})"
+      "value": {
+        "default": "{space.xsmall}",
+        "nova": {
+          "value": "calc({space.xsmall} + {space.xxsmall})"
+        }
+      }
     }
   },
   "text": {

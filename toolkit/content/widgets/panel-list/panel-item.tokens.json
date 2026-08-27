@@ -1,45 +1,24 @@
 {
-  "nova": {
-    "badge": {
-      "inset": {
-        "block": {
-          "start": {
-            "value": "{space.xsmall}"
-          }
-        },
-        "inline": {
-          "start": {
-            "value": "calc({panel-menuitem.padding.inline} + {icon.size.@base})"
-          }
-        }
-      }
-    },
-    "button": {
-      "border": {
-        "radius": {
-          "value": "{panel-menuitem.border.radius}"
-        }
-      },
-      "margin": {
-        "value": "{panel-menuitem.margin.@base}"
-      },
-      "padding": {
-        "@base": {
-          "value": "{panel-menuitem.padding.@base}"
-        }
-      }
-    }
-  },
   "badge": {
     "inset": {
       "block": {
         "start": {
-          "value": "4px"
+          "value": {
+            "default": "4px",
+            "nova": {
+              "value": "{space.xsmall}"
+            }
+          }
         }
       },
       "inline": {
         "start": {
-          "value": "24px"
+          "value": {
+            "default": "24px",
+            "nova": {
+              "value": "calc({panel-menuitem.padding.inline} + {icon.size.@base})"
+            }
+          }
         }
       }
     }
@@ -47,15 +26,30 @@
   "button": {
     "border": {
       "radius": {
-        "value": "0"
+        "value": {
+          "default": "0",
+          "nova": {
+            "value": "{panel-menuitem.border.radius}"
+          }
+        }
       }
     },
     "margin": {
-      "value": "0"
+      "value": {
+        "default": "0",
+        "nova": {
+          "value": "{panel-menuitem.margin.@base}"
+        }
+      }
     },
     "padding": {
       "@base": {
-        "value": "{space.xsmall} {space.small}"
+        "value": {
+          "default": "{space.xsmall} {space.small}",
+          "nova": {
+            "value": "{panel-menuitem.padding.@base}"
+          }
+        }
       },
       "inline": {
         "start": {
