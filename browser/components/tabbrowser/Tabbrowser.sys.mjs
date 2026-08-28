@@ -8761,7 +8761,7 @@ export class Tabbrowser {
     ) {
       tabs.push(selectedTab);
     }
-    return tabs.sort((a, b) => a.index > b.index);
+    return tabs.sort((a, b) => a.index - b.index);
   }
 
   /**
