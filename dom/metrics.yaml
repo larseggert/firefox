@@ -898,8 +898,6 @@ dom.parentprocess:
     type: boolean
     description: >
       Whether a private browsing window has been used in the session.
-      This metric was generated to correspond to the Legacy Telemetry
-      scalar dom.parentprocess.private_window_used.
     bugs:
       - https://bugzil.la/1491047
     data_reviews:
@@ -908,7 +906,6 @@ dom.parentprocess:
       - seceng-telemetry@mozilla.com
       - ehsan+telemetry@mozilla.com
     expires: never
-    telemetry_mirror: DOM_PARENTPROCESS_PRIVATE_WINDOW_USED
 
   process_launch_errors:
     type: labeled_counter
