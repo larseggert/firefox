@@ -6049,8 +6049,20 @@ bool nsDisplayStickyPosition::UpdateScrollData(
               ->CommandBuilder()
               .GetWebRenderUserData<WebRenderAPZAnimationData>(
                   displayItemKey, mFrame->FirstContinuation());
-      MOZ_ASSERT(animationData);
-      aLayerData->SetStickyPositionAnimationId(animationData->GetAnimationId());
+      if (animationData) {
+        aLayerData->SetStickyPositionAnimationId(
+            animationData->GetAnimationId());
+      } else {
+        if (!stickyScrollContainer) {
+          MOZ_DIAGNOSTIC_CRASH(
+              "no animation data because there's no sticky scroll container");
+        } else if (stickyScrollContainer->ShouldFlattenAway()) {
+          MOZ_DIAGNOSTIC_CRASH(
+              "no animation data because the sticky item is being flattened");
+        } else {
+          MOZ_DIAGNOSTIC_CRASH("no animation data for some other reason");
+        }
+      }
     }
   }
   // Return true if either there is a dynamic toolbar affecting this sticky
