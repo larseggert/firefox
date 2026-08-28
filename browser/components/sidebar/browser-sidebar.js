@@ -369,6 +369,7 @@ var SidebarController = {
   _mainResizeObserver: null,
   _ongoingAnimations: [],
   _collapsedWidthMeasurementID: 0,
+  _expandOnHoverToggleID: 0,
 
   /**
    * @type {MutationObserver | null}
@@ -2743,6 +2744,7 @@ var SidebarController = {
   },
 
   async toggleExpandOnHover(isEnabled, isDragEnded) {
+    const toggleID = ++this._expandOnHoverToggleID;
     document.documentElement.toggleAttribute(
       "sidebar-expand-on-hover",
       isEnabled
@@ -2752,9 +2754,18 @@ var SidebarController = {
         this._state = new this.SidebarState(this);
       }
       await this.waitUntilStable();
+      if (toggleID !== this._expandOnHoverToggleID) {
+        // A later call superseded us while we were awaiting. It has already put
+        // the attribute and the listeners into its own state, so stop rather
+        // than reinstating ours over it.
+        return;
+      }
       MousePosTracker.addListener(this);
       if (!isDragEnded) {
         await this.setLauncherCollapsedWidth();
+        if (toggleID !== this._expandOnHoverToggleID) {
+          return;
+        }
       }
       document.addEventListener("popupshown", this);
       document.addEventListener("popuphidden", this);
