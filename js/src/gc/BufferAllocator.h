@@ -399,6 +399,9 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
   // had their free regions merged into |freeLists|. Owned by the main thread.
   MainThreadOrGCTaskData<ChunkLists> availableChunks;
 
+  // The total number of chunks used for small and medium allocations.
+  mozilla::Atomic<size_t, mozilla::Relaxed> totalChunkCount;
+
   // List of large nursery-owned buffers.
   MainThreadOrGCTaskData<LargeAllocList> largeNurseryAllocs;
 
