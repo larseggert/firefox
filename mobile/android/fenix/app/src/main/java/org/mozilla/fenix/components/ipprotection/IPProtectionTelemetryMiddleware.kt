@@ -45,10 +45,13 @@ internal class IPProtectionTelemetryMiddleware(
         // prominent case when user is navigating into VPN auth flow from the onboarding card in bug 2057032, but there
         // is nothing stopping them accessing the feature very quickly through the menu or settings, and running into
         // the said problem.
-        if (action is IPProtectionAction.ToggleFailed) {
-            handleToggleFailedAction(store.state, action.error)
-        } else if (action is IPProtectionAction.LocationSwitchFailed) {
-            handleLocationSwitchFailed(action.error)
+        when (action) {
+            is IPProtectionAction.ToggleFailed -> handleToggleFailedAction(store.state, action.error)
+            is IPProtectionAction.LocationSwitchFailed -> handleLocationSwitchFailed(action.error)
+            is IPProtectionAction.LocationUpdateFailed -> handleLocationUpdateFailed(action.error)
+            else -> {
+                // no-op
+            }
         }
 
         val previousStatus = store.state.accountState.status
@@ -132,6 +135,12 @@ internal class IPProtectionTelemetryMiddleware(
 
     private fun handleLocationSwitchFailed(error: Throwable?) {
         Vpn.locationSwitchError.record(extra = Vpn.LocationSwitchErrorExtra(errorCode = errorCodeOf(error)))
+    }
+
+    // The location list is fetched over the GeckoView event dispatcher, which rejects with an
+    // exception that carries no message, so we report the class name instead of an error code.
+    private fun handleLocationUpdateFailed(error: Throwable) {
+        Vpn.locationUpdateError.record(extra = Vpn.LocationUpdateErrorExtra(errorCode = error::class.simpleName))
     }
 
     // FIXME(IPP) the engine should pass the error code through: https://bugzilla.mozilla.org/show_bug.cgi?id=2066553

@@ -217,8 +217,7 @@ TEST_F(APZCBasicTester, ResumeInterruptedTouchDrag_Bug1592435) {
   // Start a touch-drag and scroll some amount, not lifting the finger.
   SCOPED_GFX_PREF_FLOAT("apz.touch_start_tolerance", 1.0f / 1000.0f);
   ScreenIntPoint touchPos(10, 50);
-  uint64_t touchBlock = TouchDown(apzc, touchPos, mcc->Time()).mInputBlockId;
-  SetDefaultAllowedTouchBehavior(apzc, touchBlock);
+  TouchDown(apzc, touchPos, mcc->Time());
   for (int i = 0; i < 20; ++i) {
     touchPos.y -= 1;
     mcc->AdvanceByMillis(1);
@@ -995,8 +994,7 @@ TEST_F(APZCBasicTester, StartTolerance) {
   fm.SetIsRootContent(true);
   apzc->SetFrameMetrics(fm);
 
-  uint64_t touchBlock = TouchDown(apzc, {50, 50}, mcc->Time()).mInputBlockId;
-  SetDefaultAllowedTouchBehavior(apzc, touchBlock);
+  TouchDown(apzc, {50, 50}, mcc->Time());
 
   CSSPoint initialScrollOffset =
       apzc->GetFrameMetrics().GetVisualScrollOffset();

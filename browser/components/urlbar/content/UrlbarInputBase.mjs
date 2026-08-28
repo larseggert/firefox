@@ -1004,6 +1004,13 @@ ${
       // the opener will be a secure context, i.e. no about:blank
       throw new Error("Document PiP should show its opener URL");
     }
+
+    // A load finishing behind the open view must not overwrite the value the
+    // user's selection put in the input, otherwise Enter won't pick it.
+    if (uri && !dueToTabSwitch && this.view.selectedResult) {
+      return;
+    }
+
     // We only need to update the searchModeUI on tab switch conditionally
     // as we only persist searchMode with ScotchBonnet enabled.
     if (

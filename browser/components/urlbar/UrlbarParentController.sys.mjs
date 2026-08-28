@@ -1268,7 +1268,9 @@ export class UrlbarParentController {
    * @param {UrlbarQueryContext} queryContext the object to cache.
    */
   setLastQueryContextCache(queryContext) {
-    this._lastQueryContextWrapper = { queryContext };
+    // Marked done: no query is running behind a context cached this way, so
+    // cancelQuery() must not treat it as one.
+    this._lastQueryContextWrapper = { queryContext, done: true };
   }
 
   /**
@@ -1524,6 +1526,12 @@ export class TelemetryEvent {
         lazy.UrlbarTelemetryUtils.startInteractionType(event, searchString),
       searchString,
     };
+
+    // Engagements that run no query would otherwise reach the provider
+    // notifications with no context at all.
+    if (!this._controller._lastQueryContextWrapper) {
+      this._controller.setLastQueryContextCache(queryContext);
+    }
   }
 
   /**
@@ -1784,6 +1792,11 @@ export class TelemetryEvent {
   }) {
     try {
       let { queryContext } = this._controller._lastQueryContextWrapper || {};
+      if (!queryContext) {
+        // start() caches one for every session, so this means a caller ended a
+        // session it never started.
+        console.error(`Recording a ${method} with no query context`);
+      }
       let sap = this.#searchSourceToSap(searchSource);
 
       if (built && sap) {

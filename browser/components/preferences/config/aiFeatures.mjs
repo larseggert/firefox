@@ -1535,7 +1535,7 @@ SettingGroupManager.registerGroups({
       {
         id: "sidebarChatbotFieldset",
         control: "moz-fieldset",
-        l10nId: "preferences-ai-controls-sidebar-chatbot-group-2",
+        l10nId: "preferences-ai-controls-sidebar-chatbot-group-3",
         supportPage: "ai-chatbot",
         controlAttrs: {
           headinglevel: 2,

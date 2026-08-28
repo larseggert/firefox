@@ -1768,6 +1768,13 @@ class HTMLMediaElement : public nsGenericHTMLElement,
   // inactive docshell is not allowing media to play.
   bool mSuspendedByInactiveDocOrDocshell = false;
 
+#if defined(MOZ_WIDGET_ANDROID)
+  // Android-only state for the temporary background media playback probe (bug
+  // 2066141): true once we have recorded telemetry for the current background
+  // episode. Reset when the document becomes visible again.
+  bool mRecordedBackgroundAudioPlayback = false;
+#endif
+
   // True if we're running the "load()" method.
   bool mIsRunningLoadMethod = false;
 

@@ -568,7 +568,7 @@ div#feature-callout.hidden {
   border: 1px solid var(--fc-border);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
   border-radius: var(--panel-border-radius, var(--border-radius-large));
-  padding: var(--callout-padding, var(--dimension-20));
+  padding: var(--callout-padding, 20px);
   width: 25em;
   gap: 16px;
   background: var(--fc-background);
@@ -666,7 +666,7 @@ div#feature-callout.hidden {
 #feature-callout .screen[pos=callout] .section-main .main-content .steps {
   height: auto;
   position: absolute;
-  bottom: calc(var(--callout-padding, var(--dimension-20)) + var(--cta-height, var(--button-min-height-small, 24px)) / 2 - 4px);
+  bottom: calc(var(--callout-padding, 20px) + var(--cta-height, var(--button-min-height-small, 24px)) / 2 - 4px);
   padding-block: 0;
 }
 #feature-callout .screen[pos=callout] .section-main .main-content .steps .indicator {

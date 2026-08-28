@@ -9947,6 +9947,12 @@ void PresShell::EventHandler::DispatchTouchEventToDOM(
   nsEventStatus tmpStatus = nsEventStatus_eIgnore;
   WidgetTouchEvent* touchEvent = aEvent->AsTouchEvent();
 
+  // A single widget event may carry more than one changed touch point.  In
+  // that case only one DOM event should be dispatched per distinct target,
+  // carrying all the changed touch points, rather than one event per changed
+  // touch point.
+  AutoTArray<RefPtr<EventTarget>, 4> dispatchedTargets;
+
   // loop over all touches and dispatch events on any that have changed
   for (dom::Touch* touch : touchEvent->mTouches) {
     // We should remove all suppressed touch instances in
@@ -9972,6 +9978,12 @@ void PresShell::EventHandler::DispatchTouchEventToDOM(
       }
       content = capturingContent;
     }
+
+    if (dispatchedTargets.Contains(targetPtr.get())) {
+      continue;
+    }
+    dispatchedTargets.AppendElement(targetPtr);
+
     // copy the event
     MOZ_ASSERT(touchEvent->IsTrusted());
     WidgetTouchEvent newEvent(true, touchEvent->mMessage, touchEvent->mWidget);

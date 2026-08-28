@@ -48,6 +48,8 @@ import mozilla.components.browser.state.action.SystemAction
 import mozilla.components.browser.state.state.selectedOrDefaultPrivateSearchEngine
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.browser.storage.sync.GlobalPlacesDependencyProvider
+import mozilla.components.compose.base.theme.Theme
+import mozilla.components.compose.base.theme.Theme.Private
 import mozilla.components.concept.ai.controls.isEnabled
 import mozilla.components.concept.base.crash.Breadcrumb
 import mozilla.components.concept.engine.webextension.WebExtension
@@ -138,8 +140,6 @@ import org.mozilla.fenix.settings.doh.DefaultDohSettingsProvider
 import org.mozilla.fenix.settings.doh.DohSettingsProvider
 import org.mozilla.fenix.startupCrash.StartupCrashActivity
 import org.mozilla.fenix.theme.DefaultThemeProvider
-import org.mozilla.fenix.theme.Theme
-import org.mozilla.fenix.theme.Theme.Private
 import org.mozilla.fenix.theme.ThemeProvider
 import org.mozilla.fenix.utils.Settings
 import org.mozilla.fenix.utils.isLargeScreenSize
