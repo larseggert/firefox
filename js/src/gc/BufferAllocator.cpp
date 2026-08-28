@@ -2137,9 +2137,9 @@ void* BufferAllocator::allocSmall(size_t bytes, bool nurseryOwned, bool inGC) {
   // Get size class from |bytes|.
   size_t sizeClass = SizeClassForSmallAlloc(bytes);
 
-  void* alloc = bumpAlloc(bytes, sizeClass, MaxSmallAllocClass);
+  void* alloc = bumpAlloc(bytes, sizeClass, MaxSmallAllocClass, nurseryOwned);
   if (MOZ_UNLIKELY(!alloc)) {
-    alloc = retrySmallAlloc(bytes, sizeClass, inGC);
+    alloc = retrySmallAlloc(bytes, sizeClass, nurseryOwned, inGC);
     if (!alloc) {
       return nullptr;
     }
@@ -2169,18 +2169,19 @@ void* BufferAllocator::allocSmall(size_t bytes, bool nurseryOwned, bool inGC) {
 
 MOZ_NEVER_INLINE void* BufferAllocator::retrySmallAlloc(size_t bytes,
                                                         size_t sizeClass,
+                                                        bool nurseryOwned,
                                                         bool inGC) {
   auto alloc = [&]() {
-    return bumpAlloc(bytes, sizeClass, MaxSmallAllocClass);
+    return bumpAlloc(bytes, sizeClass, MaxSmallAllocClass, nurseryOwned);
   };
-  auto growHeap = [&]() { return allocNewSmallRegion(inGC); };
+  auto growHeap = [&]() { return allocNewSmallRegion(inGC, nurseryOwned); };
 
-  return refillFreeListsAndRetryAlloc(sizeClass, MaxSmallAllocClass, alloc,
-                                      growHeap);
+  return refillFreeListsAndRetryAlloc(sizeClass, MaxSmallAllocClass,
+                                      nurseryOwned, alloc, growHeap);
 }
 
-bool BufferAllocator::allocNewSmallRegion(bool inGC) {
-  void* ptr = allocMediumAligned(SmallRegionSize, inGC);
+bool BufferAllocator::allocNewSmallRegion(bool nurseryOwned, bool inGC) {
+  void* ptr = allocMediumAligned(SmallRegionSize, nurseryOwned, inGC);
   if (!ptr) {
     return false;
   }
@@ -2226,9 +2227,9 @@ void* BufferAllocator::allocMedium(size_t bytes, bool nurseryOwned, bool inGC) {
   // Get size class from |bytes|.
   size_t sizeClass = SizeClassForMediumAlloc(bytes);
 
-  void* alloc = bumpAlloc(bytes, sizeClass, MaxMediumAllocClass);
+  void* alloc = bumpAlloc(bytes, sizeClass, MaxMediumAllocClass, nurseryOwned);
   if (MOZ_UNLIKELY(!alloc)) {
-    alloc = retryMediumAlloc(bytes, sizeClass, inGC);
+    alloc = retryMediumAlloc(bytes, sizeClass, nurseryOwned, inGC);
     if (!alloc) {
       return nullptr;
     }
@@ -2240,23 +2241,27 @@ void* BufferAllocator::allocMedium(size_t bytes, bool nurseryOwned, bool inGC) {
 
 MOZ_NEVER_INLINE void* BufferAllocator::retryMediumAlloc(size_t bytes,
                                                          size_t sizeClass,
+                                                         bool nurseryOwned,
                                                          bool inGC) {
   auto alloc = [&]() {
-    return bumpAlloc(bytes, sizeClass, MaxMediumAllocClass);
+    return bumpAlloc(bytes, sizeClass, MaxMediumAllocClass, nurseryOwned);
   };
-  auto growHeap = [&]() { return stealOrAllocNewChunk(sizeClass, inGC); };
-  return refillFreeListsAndRetryAlloc(sizeClass, MaxMediumAllocClass, alloc,
-                                      growHeap);
+  auto growHeap = [&]() {
+    return stealOrAllocNewChunk(sizeClass, nurseryOwned, inGC);
+  };
+  return refillFreeListsAndRetryAlloc(sizeClass, MaxMediumAllocClass,
+                                      nurseryOwned, alloc, growHeap);
 }
 
 template <typename Alloc, typename GrowHeap>
 void* BufferAllocator::refillFreeListsAndRetryAlloc(size_t sizeClass,
                                                     size_t maxSizeClass,
+                                                    bool nurseryOwned,
                                                     Alloc&& alloc,
                                                     GrowHeap&& growHeap) {
   RefillResult r;
   do {
-    r = refillFreeLists(sizeClass, maxSizeClass, growHeap);
+    r = refillFreeLists(sizeClass, maxSizeClass, nurseryOwned, growHeap);
     if (r == RefillResult::Fail) {
       return nullptr;
     }
@@ -2269,12 +2274,13 @@ void* BufferAllocator::refillFreeListsAndRetryAlloc(size_t sizeClass,
 
 template <typename GrowHeap>
 BufferAllocator::RefillResult BufferAllocator::refillFreeLists(
-    size_t sizeClass, size_t maxSizeClass, GrowHeap&& growHeap) {
+    size_t sizeClass, size_t maxSizeClass, bool nurseryOwned,
+    GrowHeap&& growHeap) {
   MOZ_ASSERT(sizeClass <= maxSizeClass);
 
   // Take chunks from the available lists and add their free regions to the
   // free lists.
-  if (useAvailableChunk(sizeClass, maxSizeClass)) {
+  if (useAvailableChunk(sizeClass, maxSizeClass, nurseryOwned)) {
     return RefillResult::Success;
   }
 
@@ -2301,7 +2307,8 @@ BufferAllocator::RefillResult BufferAllocator::refillFreeLists(
   return RefillResult::Fail;
 }
 
-bool BufferAllocator::useAvailableChunk(size_t sizeClass, size_t maxSizeClass) {
+bool BufferAllocator::useAvailableChunk(size_t sizeClass, size_t maxSizeClass,
+                                        bool nurseryOwned) {
   return useAvailableChunk(sizeClass, maxSizeClass, ContentKind::Mixed,
                            currentMixedChunks.ref()) ||
          useAvailableChunk(sizeClass, maxSizeClass, ContentKind::Tenured,
@@ -2386,7 +2393,7 @@ BufferAllocator::SizeKind BufferAllocator::SizeClassKind(size_t sizeClass) {
 }
 
 void* BufferAllocator::bumpAlloc(size_t bytes, size_t sizeClass,
-                                 size_t maxSizeClass) {
+                                 size_t maxSizeClass, bool nurseryOwned) {
   MOZ_ASSERT(SizeClassKind(sizeClass) == SizeClassKind(maxSizeClass));
   freeLists.ref().checkAvailable();
 
@@ -2446,7 +2453,8 @@ void* BufferAllocator::allocFromRegion(FreeRegion* region, size_t bytes,
 // Allocate a region of size |bytes| aligned to |bytes|. The maximum size is
 // limited to 256KB. In practice this is only ever used to allocate
 // SmallBufferRegions.
-void* BufferAllocator::allocMediumAligned(size_t bytes, bool inGC) {
+void* BufferAllocator::allocMediumAligned(size_t bytes, bool nurseryOwned,
+                                          bool inGC) {
   MOZ_ASSERT(bytes >= MinMediumAllocSize);
   MOZ_ASSERT(bytes <= MaxAlignedAllocSize);
   MOZ_ASSERT(std::has_single_bit(bytes));
@@ -2454,9 +2462,9 @@ void* BufferAllocator::allocMediumAligned(size_t bytes, bool inGC) {
   // Get size class from |bytes|.
   size_t sizeClass = SizeClassForMediumAlloc(bytes);
 
-  void* alloc = alignedAlloc(sizeClass);
+  void* alloc = alignedAlloc(sizeClass, nurseryOwned);
   if (MOZ_UNLIKELY(!alloc)) {
-    alloc = retryAlignedAlloc(sizeClass, inGC);
+    alloc = retryAlignedAlloc(sizeClass, nurseryOwned, inGC);
     if (!alloc) {
       return nullptr;
     }
@@ -2468,20 +2476,21 @@ void* BufferAllocator::allocMediumAligned(size_t bytes, bool inGC) {
 }
 
 MOZ_NEVER_INLINE void* BufferAllocator::retryAlignedAlloc(size_t sizeClass,
+                                                          bool nurseryOwned,
                                                           bool inGC) {
   // Ensure aligned allocation is possible.
   MOZ_ASSERT(sizeClass < MaxMediumAllocClass);
   size_t expandedSizeClass = sizeClass + 1;
 
-  auto alloc = [&]() { return alignedAlloc(sizeClass); };
+  auto alloc = [&]() { return alignedAlloc(sizeClass, nurseryOwned); };
   auto growHeap = [&]() {
-    return stealOrAllocNewChunk(expandedSizeClass, inGC);
+    return stealOrAllocNewChunk(expandedSizeClass, nurseryOwned, inGC);
   };
   return refillFreeListsAndRetryAlloc(expandedSizeClass, MaxMediumAllocClass,
-                                      alloc, growHeap);
+                                      nurseryOwned, alloc, growHeap);
 }
 
-void* BufferAllocator::alignedAlloc(size_t sizeClass) {
+void* BufferAllocator::alignedAlloc(size_t sizeClass, bool nurseryOwned) {
   freeLists.ref().checkAvailable();
 
   // Try the first free region for the smallest possible size class. This will
@@ -2660,18 +2669,20 @@ static inline StallAndRetry ShouldStallAndRetry(bool inGC) {
   return inGC ? StallAndRetry::Yes : StallAndRetry::No;
 }
 
-bool BufferAllocator::stealOrAllocNewChunk(size_t sizeClass, bool inGC) {
+bool BufferAllocator::stealOrAllocNewChunk(size_t sizeClass, bool nurseryOwned,
+                                           bool inGC) {
   if (majorState == State::Marking && !tenuredChunksToSweep.ref().isEmpty() &&
       gc->isNormalGC()) {
-    if (tryToStealQueuedChunk(sizeClass)) {
+    if (tryToStealQueuedChunk(nurseryOwned, sizeClass)) {
       return true;
     }
   }
 
-  return allocNewChunk(inGC);
+  return allocNewChunk(nurseryOwned, inGC);
 }
 
-bool BufferAllocator::tryToStealQueuedChunk(size_t sizeClass) {
+bool BufferAllocator::tryToStealQueuedChunk(bool nurseryOwned,
+                                            size_t sizeClass) {
   // Attempt to steal a nearly empty chunk that would otherwise be swept so we
   // can continue allocating from it.
 
@@ -2713,7 +2724,7 @@ bool BufferAllocator::tryToStealQueuedChunk(size_t sizeClass) {
   return true;
 }
 
-bool BufferAllocator::allocNewChunk(bool inGC) {
+bool BufferAllocator::allocNewChunk(bool nurseryOwned, bool inGC) {
   if (!inGC && js::oom::ShouldFailWithOOM()) {
     return false;
   }
