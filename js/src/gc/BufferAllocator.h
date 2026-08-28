@@ -279,9 +279,10 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
     FreeRegionIter freeRegionIter();
 
     bool isEmpty() const { return available.IsEmpty(); }
+    const auto& availableSizeClasses() const { return available; }
 
     bool hasSizeClass(size_t sizeClass) const;
-    const auto& availableSizeClasses() const { return available; }
+    bool hasAnySizeClass(size_t minSizeClass, size_t maxSizeClass) const;
 
     // Returns SIZE_MAX if none available.
     size_t getFirstAvailableSizeClass(size_t minSizeClass,

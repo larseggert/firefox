@@ -74,6 +74,10 @@ bool BufferAllocator::FreeLists::hasSizeClass(size_t sizeClass) const {
   MOZ_ASSERT(sizeClass <= MaxMediumAllocClass);
   return available[sizeClass];
 }
+bool BufferAllocator::FreeLists::hasAnySizeClass(size_t minSizeClass,
+                                                 size_t maxSizeClass) const {
+  return getFirstAvailableSizeClass(minSizeClass, maxSizeClass) != SIZE_MAX;
+}
 
 size_t BufferAllocator::FreeLists::getFirstAvailableSizeClass(
     size_t minSizeClass, size_t maxSizeClass) const {
@@ -2332,8 +2336,7 @@ bool BufferAllocator::useAvailableChunk(size_t sizeClass, size_t maxSizeClass,
   // used chunks, in the hope that less used chunks will become completely empty
   // and can be reclaimed.
 
-  MOZ_ASSERT(freeLists.ref().getFirstAvailableSizeClass(
-                 sizeClass, maxSizeClass) == SIZE_MAX);
+  MOZ_ASSERT(!freeLists.ref().hasAnySizeClass(sizeClass, maxSizeClass));
 
   SizeClassBitSet sizeClasses = getChunkSizeClassesToMove(maxSizeClass, kind);
   for (auto i = BitSetIter(sizeClasses); !i.done(); i.next()) {
@@ -2352,14 +2355,12 @@ bool BufferAllocator::useAvailableChunk(size_t sizeClass, size_t maxSizeClass,
     if (i >= sizeClass) {
       // We should now be able to allocate a block of the required size as we've
       // added free regions of size class |i| where |i => sizeClass|.
-      MOZ_ASSERT(freeLists.ref().getFirstAvailableSizeClass(
-                     sizeClass, maxSizeClass) != SIZE_MAX);
+      MOZ_ASSERT(freeLists.ref().hasAnySizeClass(sizeClass, maxSizeClass));
       return true;
     }
   }
 
-  MOZ_ASSERT(freeLists.ref().getFirstAvailableSizeClass(
-                 sizeClass, maxSizeClass) == SIZE_MAX);
+  MOZ_ASSERT(!freeLists.ref().hasAnySizeClass(sizeClass, maxSizeClass));
   return false;
 }
 
@@ -2695,8 +2696,8 @@ bool BufferAllocator::tryToStealQueuedChunk(bool nurseryOwned,
   // Look for chunks that have a free region at least 1/2 the size of a chunk,
   // and that can fit the allocation.
   size_t minSizeClass = std::max(sizeClass, MaxMediumAllocClass - 1);
-  if (chunk->freeLists.ref().getLastAvailableSizeClass(
-          minSizeClass, MaxMediumAllocClass) == SIZE_MAX) {
+  if (!chunk->freeLists.ref().hasAnySizeClass(minSizeClass,
+                                              MaxMediumAllocClass)) {
     return false;
   }
 
