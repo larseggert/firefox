@@ -324,17 +324,14 @@ class TestAsyncPanZoomController : public AsyncPanZoomController {
     return Some(std::move(behaviors));
   }
 
-  APZEventResult ReceiveInputEvent(
-      InputData& aEvent,
-      const Maybe<nsTArray<TouchBehaviorFlags>>& aTouchBehaviors = Nothing()) {
-    // This is a function whose signature matches exactly the ReceiveInputEvent
-    // on APZCTreeManager. This allows us to templates for functions like
-    // TouchDown, TouchUp, etc so that we can reuse the code for dispatching
-    // events into both APZC and APZCTM.
+  APZEventResult ReceiveInputEvent(InputData& aEvent) {
+    // This function is signature-compatible with
+    // APZCTreeManager::ReceiveInputEvent. This allows us to use templates for
+    // functions like TouchDown, TouchUp, etc so that we can reuse the code for
+    // dispatching events into both APZC and APZCTM.
     APZEventResult result = GetInputQueue()->ReceiveInputEvent(
         this, TargetConfirmationFlags{!mWaitForMainThread}, aEvent,
-        aTouchBehaviors ? Some(aTouchBehaviors->Clone())
-                        : DefaultTouchBehaviors(aEvent));
+        DefaultTouchBehaviors(aEvent));
 
     if (aEvent.mInputType == PANGESTURE_INPUT &&
         aEvent.AsPanGestureInput().AllowsSwipe()) {
