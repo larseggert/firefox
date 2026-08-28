@@ -63,21 +63,21 @@
     --tab-group-yellow-text-invert: light-dark(var(--color-yellow-60), var(--color-white));
     --tab-hover-outline-color: transparent;
     --tab-icon-end-margin: 5.5px;
-    --tab-inline-padding: var(--dimension-8);
+    --tab-inline-padding: 8px;
     --tab-inner-inline-margin: var(--space-medium);
     --tab-label-line-height: 1.7;
     --tab-loading-fill: var(--color-blue-50);
-    --tab-margin-block: var(--dimension-4);
+    --tab-margin-block: 4px;
     --tab-outline: var(--border-width) solid var(--tab-outline-color);
     --tab-outline-color: transparent;
     --tab-outline-offset: calc(-1 * var(--border-width));
-    --tab-overflow-clip-margin: var(--dimension-2);
+    --tab-overflow-clip-margin: 2px;
     --tab-pinned-container-margin-inline-expanded: var(--space-small);
-    --tab-pinned-expanded-background-width: var(--dimension-40);
+    --tab-pinned-expanded-background-width: 40px;
     --tab-pinned-margin-inline-expanded: var(--space-xsmall);
     --tab-selected-outline-color: transparent;
     --tab-selected-textcolor: var(--toolbar-text-color);
-    --tab-vertical-block-margin: var(--dimension-2);
+    --tab-vertical-block-margin: 2px;
     --tab-vertical-inline-padding: var(--space-medium);
   }
 

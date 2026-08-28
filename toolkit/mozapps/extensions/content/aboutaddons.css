@@ -52,7 +52,7 @@ h2 {
 }
 
 .category-badge {
-  min-width: var(--dimension-20);
+  min-width: 20px;
   background-color: var(--color-accent-primary);
   color: var(--button-text-color-primary);
   font-weight: var(--font-weight-bold);

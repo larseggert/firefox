@@ -253,7 +253,6 @@
   --icon-color-warning: light-dark(var(--color-yellow-50), var(--color-yellow-20));
   --icon-size-xsmall: var(--size-item-xsmall);
   --icon-size-small: var(--size-item-small);
-  --icon-size-medium: 20px;
   --icon-size-large: var(--size-item-medium);
   --icon-size-xlarge: var(--size-item-large);
 
@@ -276,13 +275,6 @@
   /** popup **/
   --popup-border-color: light-dark(var(--color-gray-10), var(--color-gray-65));
   --popup-border-radius: var(--border-radius-xlarge);
-
-  /** size **/
-  --size-item-xsmall: 12px;
-  --size-item-small: 16px;
-  --size-item-medium: 24px;
-  --size-item-large: 32px;
-  --size-item-xlarge: 48px;
 
   /** table **/
   --table-row-background-color: var(--background-color-canvas);

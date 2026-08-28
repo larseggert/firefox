@@ -835,8 +835,7 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   color: var(--promo-message-text-color-vibrant);
   /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
   padding: 10px;
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
-  gap: var(--dimension-8);
+  gap: var(--space-small);
   margin: 0 var(--space-medium) var(--space-medium);
 
   & .fxa-menu-sign-in-promo-image {
@@ -846,8 +845,7 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   }
 
   & .fxa-menu-sign-in-promo-text {
-    /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
-    gap: var(--dimension-2);
+    gap: var(--space-xxsmall);
   }
 
   & .fxa-menu-sign-in-promo-heading {
@@ -878,8 +876,7 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
 
   & .fxa-menu-signed-out-text {
     min-width: 0;
-    /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
-    gap: var(--dimension-2);
+    gap: var(--space-xxsmall);
   }
 
   & .fxa-menu-signed-out-email {

@@ -59,7 +59,7 @@
   --tab-collapsed-width: calc(var(--tab-collapsed-background-width) + 2 * var(--tab-inner-inline-margin));
   --tab-collapsed-split-pill-offset: 0px;
   --tab-pinned-min-width-expanded: calc(var(--tab-pinned-expanded-background-width) + 2 * var(--tab-pinned-margin-inline-expanded));
-  --tab-note-icon-end-margin: var(--dimension-4);
+  --tab-note-icon-end-margin: 4px;
   --tab-selected-color-scheme: var(--toolbar-color-scheme);
   &[lwt-tab-selected="light"] {
     --tab-selected-color-scheme: light;
@@ -213,7 +213,7 @@
     @media -moz-pref("browser.nova.enabled") {
       /* The hover highlight fills a full tab-height row and the tab group
        * label is inset within it. */
-      --tab-group-label-hover-inset: var(--dimension-2);
+      --tab-group-label-hover-inset: 2px;
       --tab-group-label-container-size: var(--tab-min-height);
       --tab-group-label-size: calc(var(--tab-group-label-container-size) - 2 * var(--tab-group-label-hover-inset));
     }
@@ -3117,7 +3117,7 @@ toolbar:not(#TabsToolbar) #firefox-view-button {
 
   &.grouped {
     /* Indent further by the size of a favicon and the favicon's padding-inline-start. */
-    margin-inline-start: calc(var(--panel-menuitem-margin-inline) + var(--icon-size) + var(--dimension-8));
+    margin-inline-start: calc(var(--panel-menuitem-margin-inline) + var(--icon-size) + var(--panel-menuitem-padding-inline));
   }
 
   &[selected] {
