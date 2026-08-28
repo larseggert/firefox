@@ -5059,7 +5059,7 @@ ${
   /**
    * @typedef {object} LoadURLParams
    *   The parameters related to how and where the result will be opened.
-   *   Further supported parameters are listed in utilityOverlay.js#openUILinkIn.
+   *   Further supported parameters are listed in UrlbarChildController.mjs#loadURL.
    *
    * @property {object} [triggeringPrincipal]
    *   The principal that the action was triggered from.
