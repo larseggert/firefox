@@ -167,7 +167,11 @@ export class SmartwindowGroupTabsCard extends MozLitElement {
   }
 
   #recentRow(entry) {
-    return html`<div class="swgt-recent-row">
+    return html`<button
+      type="button"
+      class="swgt-row swgt-recent-row"
+      @click=${() => this.#emit("select-group", { id: entry.id })}
+    >
       <img
         class="swgt-group-icon"
         src=${GROUP_ICON_URL}
@@ -179,7 +183,7 @@ export class SmartwindowGroupTabsCard extends MozLitElement {
         })}
       />
       <span class="swgt-row-label">${entry.label}</span>
-    </div>`;
+    </button>`;
   }
 
   render() {
