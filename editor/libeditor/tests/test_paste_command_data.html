@@ -121,7 +121,7 @@ document.querySelectorAll("input, textarea, div[contenteditable]").forEach((elem
       let dataTransfer = e.dataTransfer;
       if (element.isContentEditable) {
         isDeeply(dataTransfer.types, ['text/plain'], "Check dataTransfer types");
-        todo_is(dataTransfer.getData('text/plain'), text, "Check dataTransfer plain text data");
+        is(dataTransfer.getData('text/plain'), text, "Check dataTransfer plain text data");
         is(dataTransfer.getData('text/html'), '', "Check dataTransfer HTML data");
       } else {
         is(dataTransfer, null, "Check dataTransfer");
