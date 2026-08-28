@@ -552,6 +552,10 @@ class APZCLongPressTester : public APZCGestureDetectorTester {
   // block initiated by a touch-start event and the touch block initiated by a
   // long-tap event have been discarded when a new touch-start event happens.
   void DoLongPressDiscardTouchBlockTest(bool aWithTouchMove) {
+    // This test relies on the touch blocks remaining in the input queue,
+    // so don't let the harness report allowed touch behaviors for them.
+    apzc->DisableDefaultTouchBehaviors();
+
     // Set apz.content_response_timeout > ui.click_hold_context_menus.delay and
     // apz.touch_start_tolerance explicitly to match Android preferences.
     SCOPED_GFX_PREF_INT("apz.content_response_timeout", 60);

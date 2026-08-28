@@ -17,6 +17,8 @@ class APZCPanningTester : public APZCBasicTester {
  protected:
   void DoPanTest(bool aShouldTriggerScroll, bool aShouldBeConsumed,
                  uint32_t aBehavior) {
+    apzc->DisableDefaultTouchBehaviors();
+
     if (aShouldTriggerScroll) {
       // Four repaint request for each pan.
       EXPECT_CALL(*mcc, RequestContentRepaint(_)).Times(8);
@@ -59,6 +61,7 @@ class APZCPanningTester : public APZCBasicTester {
   }
 
   void DoPanWithPreventDefaultTest() {
+    apzc->DisableDefaultTouchBehaviors();
     MakeApzcWaitForMainThread();
 
     int touchStart = 50;
