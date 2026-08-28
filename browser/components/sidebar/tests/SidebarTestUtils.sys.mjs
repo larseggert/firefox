@@ -75,6 +75,14 @@ class _SidebarTestUtils {
       win.SidebarController.lastOpenedId = null;
       // Restore sidebar launcher back to whatever state it was in initially.
       await win.SidebarController.updateUIState(state);
+      // getProperties() omits properties that were unset, and updateUIState()
+      // skips the ones it is not given, so a width a test stored would outlive
+      // it. Put those back to unset too.
+      for (const prop of ["launcherWidth", "expandedLauncherWidth"]) {
+        if (state[prop] === undefined) {
+          win.SidebarController._state[prop] = undefined;
+        }
+      }
       initialStates.delete(win);
     }
   }

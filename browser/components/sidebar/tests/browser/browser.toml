@@ -65,6 +65,9 @@ tags = "vertical-tabs"
 ["browser_launcher_hidden_restore.js"]
 tags = "vertical-tabs"
 
+["browser_launcher_splitter_drag_release.js"]
+tags = "vertical-tabs"
+
 ["browser_launcher_splitter_expand_on_hover.js"]
 tags = "vertical-tabs"
 
