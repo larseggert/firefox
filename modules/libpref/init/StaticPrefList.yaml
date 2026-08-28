@@ -11296,7 +11296,7 @@
 # Is the at-rule() function in @supports enabled?
 - name: layout.css.supports.at-rule.enabled
   type: RelaxedAtomicBool
-  value: @IS_NIGHTLY_BUILD@
+  value: true
   mirror: always
   rust: true
 
