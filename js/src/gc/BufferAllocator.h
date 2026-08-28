@@ -381,7 +381,8 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
 
   // Free lists for the small and medium buffers in |currentMixedChunks| and
   // |currentTenuredChunks|. Used for allocation.
-  MainThreadOrGCTaskData<FreeLists> freeLists;
+  MainThreadOrGCTaskData<FreeLists> mixedFreeLists;
+  MainThreadOrGCTaskData<FreeLists> tenuredFreeLists;
 
   // Chunks that may contain nursery-owned buffers waiting to be swept during a
   // minor GC. Populated from |currentMixedChunks|.
@@ -438,6 +439,12 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
   // A major GC finished while a minor GC was still sweeping. Some post major GC
   // cleanup will be deferred to the end of the minor sweeping.
   MainThreadOrGCTaskData<bool> majorFinishedWhileMinorSweeping;
+
+  // Whether to allocate tenured owned allocations in current mixed chunks if
+  // there are no current tenured chunks available with sufficient space.  This
+  // is set for small heaps and when we would otherwise have to grow the heap
+  // for a tenured allocation.
+  MainThreadOrGCTaskData<bool> allocTenuredInMixedChunks;
 
   // A mutex that must be held to call public APIs if the allocator is being
   // used by multiple threads. This is checked in debug builds.
@@ -575,20 +582,20 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
   bool useAvailableChunk(size_t sizeClass, size_t maxSizeClass,
                          bool nurseryOwned);
   bool useAvailableChunk(size_t sizeClass, size_t maxSizeClass,
-                         ContentKind kind, BufferChunkList& dst);
-  SizeClassBitSet getChunkSizeClassesToMove(size_t maxSizeClass,
-                                            ContentKind kind) const;
-  void* bumpAlloc(size_t bytes, size_t sizeClass, size_t maxSizeClass,
+                         bool nurseryOwned, ContentKind srcKind,
+                         BufferChunkList& dstChunks, FreeLists& dstFreeLists);
+  void* bumpAlloc(size_t bytes, size_t minSizeClass, size_t maxSizeClass,
                   bool nurseryOwned);
+  FreeLists& getFreeListsForAlloc(bool nurseryOwned);
   void* allocFromRegion(FreeRegion* region, size_t bytes, size_t sizeClass);
   void* allocMediumAligned(size_t bytes, bool nurseryOwned, bool inGC);
   void* retryAlignedAlloc(size_t sizeClass, bool nurseryOwned, bool inGC);
   void* alignedAlloc(size_t sizeClass, bool nurseryOwned);
-  void* alignedAllocFromRegion(FreeRegion* region, size_t sizeClass);
+  void* alignedAllocFromRegion(FreeRegion* region, size_t sizeClass,
+                               FreeLists& freeLists);
   void updateFreeListsAfterAlloc(FreeLists* freeLists, FreeRegion* region,
                                  size_t sizeClass);
   void setAllocated(void* alloc, size_t bytes, bool nurseryOwned, bool inGC);
-  void setChunkHasNurseryAllocs(BufferChunk* chunk);
   void recommitRegion(FreeRegion* region);
   bool stealOrAllocNewChunk(size_t sizeClass, bool nurseryOwned, bool inGC);
   bool tryToStealQueuedChunk(bool nurseryOwned, size_t sizeClass);
