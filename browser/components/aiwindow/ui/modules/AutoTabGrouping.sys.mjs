@@ -217,6 +217,9 @@ export const AutoTabGrouping = {
       panel._restoreFocus = true;
       panel.hidePopup();
     };
+    // The flyout is a preview of the row the user is on, so it has no business
+    // floating over whatever they switched to.
+    const onDeactivate = () => this._hideFlyout(panel);
 
     panel.addEventListener(
       "popupshown",
@@ -225,6 +228,7 @@ export const AutoTabGrouping = {
         panel._card.focus();
         win.addEventListener("mousedown", onMouseDown, true);
         win.addEventListener("keydown", onKeyDown, true);
+        win.addEventListener("deactivate", onDeactivate);
       },
       { once: true }
     );
@@ -234,6 +238,7 @@ export const AutoTabGrouping = {
         button.setAttribute("aria-expanded", "false");
         win.removeEventListener("mousedown", onMouseDown, true);
         win.removeEventListener("keydown", onKeyDown, true);
+        win.removeEventListener("deactivate", onDeactivate);
         this._cancelHideFlyout(panel);
         panel._flyoutPanel?.remove();
         this._getState(win).recent = [];
@@ -300,9 +305,6 @@ export const AutoTabGrouping = {
     card.addEventListener("close-duplicates", () =>
       this._closeDuplicateTabs(win, panel)
     );
-    card.addEventListener("view-tab-groups", e =>
-      this._showGroupsFlyout(win, panel, e.detail.anchor)
-    );
     card.addEventListener("preview", e => {
       // Focusing a row whose flyout was just dismissed must not reopen it;
       // pointing at it again is a fresh request and does.
@@ -310,9 +312,6 @@ export const AutoTabGrouping = {
         e.detail.source === "focus" &&
         panel._dismissedRow === e.detail.anchor
       ) {
-        return;
-      }
-      if (e.detail.source === "hover" && this._flyoutHasFocus(panel)) {
         return;
       }
       panel._dismissedRow = null;
@@ -452,12 +451,15 @@ export const AutoTabGrouping = {
    *
    * @param {ChromeWindow} win
    * @param {XULElement} panel
-   * @param {{id: ?number, duplicates: ?boolean, anchor: Element}} detail - The
-   *   preview event's detail: a suggestion id, or the duplicates flag the
-   *   "Close Duplicate Tabs" row sets.
+   * @param {{id: ?number, duplicates: ?boolean, groups: ?boolean, anchor: Element}} detail -
+   *   The preview event's detail: a suggestion id, the duplicates flag the
+   *   "Close Duplicate Tabs" row sets, or the groups flag the "View Tab
+   *   Groups" row sets.
    */
-  _showPreview(win, panel, { id, duplicates, anchor }) {
-    if (duplicates) {
+  _showPreview(win, panel, { id, duplicates, groups, anchor }) {
+    if (groups) {
+      this._showFlyout(win, panel, anchor, { groups: true });
+    } else if (duplicates) {
       this._showDuplicatesFlyout(win, panel, anchor);
     } else {
       this._showFlyoutById(win, panel, id, anchor);
@@ -469,16 +471,6 @@ export const AutoTabGrouping = {
     if (suggestion) {
       this._showFlyout(win, panel, anchorRow, { suggestion });
     }
-  },
-
-  /**
-   * @param {ChromeWindow} win
-   * @param {XULElement} panel
-   * @param {Element} anchorRow
-   */
-  _showGroupsFlyout(win, panel, anchorRow) {
-    this._showFlyout(win, panel, anchorRow, { groups: true });
-    this._focusFlyout(panel);
   },
 
   /**
@@ -525,9 +517,32 @@ export const AutoTabGrouping = {
   ) {
     this._cancelHideFlyout(panel);
     const flyoutPanel = this._ensureFlyoutPanel(win, panel);
-    flyoutPanel._flyoutEl.suggestion = suggestion;
-    flyoutPanel._flyoutEl.duplicates = duplicates;
-    flyoutPanel._flyoutEl.groupsListId = groups ? this._nextId++ : 0;
+    const flyoutEl = flyoutPanel._flyoutEl;
+    const showing =
+      flyoutPanel.state === "open" || flyoutPanel.state === "showing";
+    // A new id builds a fresh <tab-groups-list>, which is when it reads the
+    // groups; the list already on screen keeps its own. A suggestion's rows
+    // are only replaced when the suggestion changes, and the duplicates are
+    // read fresh on every show.
+    let rebuilding = true;
+    if (groups) {
+      rebuilding = !(
+        showing &&
+        !flyoutEl.suggestion &&
+        !flyoutEl.duplicates &&
+        flyoutEl.groupsListId
+      );
+    } else if (suggestion) {
+      rebuilding = flyoutEl.suggestion !== suggestion;
+    }
+    const refocus = rebuilding && this._flyoutHasFocus(panel);
+    flyoutEl.suggestion = suggestion;
+    flyoutEl.duplicates = duplicates;
+    if (!groups) {
+      flyoutEl.groupsListId = 0;
+    } else if (rebuilding) {
+      flyoutEl.groupsListId = this._nextId++;
+    }
 
     if (panel._activeRow && panel._activeRow !== anchorRow) {
       panel._activeRow.classList.remove("is-active");
@@ -541,11 +556,14 @@ export const AutoTabGrouping = {
     // moveToAnchor repositions without a hide/show flicker when the pointer
     // slides between rows; the panel is an arrow panel, so it keeps following
     // its anchor instead of freezing to the screen position of the first row.
-    const flyoutState = flyoutPanel.state;
-    if (flyoutState === "open" || flyoutState === "showing") {
+    if (showing) {
       flyoutPanel.moveToAnchor(anchorRow, "end_before", 0, 0);
     } else {
       flyoutPanel.openPopup(anchorRow, "end_before", 0, 0, false, false);
+    }
+
+    if (refocus) {
+      this._focusFlyout(panel);
     }
   },
 
@@ -639,18 +657,19 @@ export const AutoTabGrouping = {
   },
 
   _dismissPreviewOnRow(panel, event) {
-    if (!panel._activeRow || this._flyoutHasFocus(panel)) {
+    if (!panel._activeRow) {
       return;
     }
     // .swgt-row is every row the card makes actionable ("Create Groups", the
     // suggestions, "Ungroup Tabs", "Close Duplicate Tabs"); .swgt-recent-row is
-    // a "Just created" entry, which is only there to be read. The rows with a
-    // flyout of their own are left out because they reposition it instead.
+    // a "Just created" entry, which is only there to be read. The rows that
+    // own a flyout are left out because they reposition it instead. Pointing
+    // at a row takes the flyout over even when the keyboard opened it.
     const row = event.target.closest(".swgt-row, .swgt-recent-row");
     if (
       row &&
       row !== panel._activeRow &&
-      !row.matches(".swgt-suggestion, .swgt-close-duplicates")
+      !row.classList.contains("swgt-flyout-row")
     ) {
       this._hideFlyout(panel);
     }
