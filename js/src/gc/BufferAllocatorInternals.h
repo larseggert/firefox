@@ -285,10 +285,6 @@ struct AllocSpace {
     return markBits.ref().getBit(bit);
   }
 
-  uintptr_t startAddress() const {
-    return uintptr_t(static_cast<const Derived*>(this));
-  }
-
   // Find next/previous allocations from |offset|. Return SizeBytes on failure.
   size_t findNextAllocated(uintptr_t offset) const;
   size_t findPrevAllocated(uintptr_t offset) const;
@@ -299,7 +295,6 @@ struct AllocSpace {
   FreeRegion* findPrecedingFreeRegion(uintptr_t endAddr);
 
   using FreeLists = BufferAllocator::FreeLists;
-  using SizeKind = BufferAllocator::SizeKind;
   using SweepKind = BufferAllocator::SweepKind;
   struct SweepResult {
     bool isEmpty = false;
@@ -310,14 +305,19 @@ struct AllocSpace {
     // used/free/admin byte totals without a separate free-region walk.
     size_t usedBytes = 0;
   };
-  SweepResult sweep(FreeLists& freeLists, SweepKind sweepKind,
-                    bool mayBeUnchanged, bool shouldDecommit);
+  SweepResult sweep(BufferAllocator* allocator, FreeLists& freeLists,
+                    SweepKind sweepKind, bool sweptAnyPreviously,
+                    bool shouldDecommit);
 
  protected:
   AllocSpace() {
     MOZ_ASSERT(allocStartBitmap.ref().IsEmpty());
     MOZ_ASSERT(allocEndBitmap.ref().IsEmpty());
     MOZ_ASSERT(nurseryOwnedBitmap.ref().IsEmpty());
+  }
+
+  uintptr_t startAddress() const {
+    return uintptr_t(static_cast<const Derived*>(this));
   }
 
   template <size_t Divisor = GranularityBytes, size_t Align = Divisor>
@@ -437,10 +437,6 @@ struct BufferChunk
 
   bool isPointerWithinAllocation(void* ptr) const;
 
-  void addSweptRegion(uintptr_t freeStart, uintptr_t freeEnd,
-                      bool shouldDecommit, bool expectUnchanged,
-                      FreeLists& freeLists);
-
   void getStats(BufferAllocator::Stats& stats);
 };
 
@@ -467,10 +463,6 @@ struct SmallBufferRegion : public AllocSpace<SmallBufferRegion, SmallRegionSize,
   bool hasNurseryOwnedAllocs() const;
 
   bool isPointerWithinAllocation(void* ptr) const;
-
-  void addSweptRegion(uintptr_t freeStart, uintptr_t freeEnd,
-                      bool shouldDecommit, bool expectUnchanged,
-                      FreeLists& freeLists);
 };
 
 constexpr size_t FirstSmallAllocOffset = SmallBufferRegion::firstAllocOffset();
@@ -494,9 +486,6 @@ struct BufferAllocator::FreeRegion
 
   explicit FreeRegion(uintptr_t startAddr, bool decommitted = false)
       : startAddr(startAddr), hasDecommittedPages(decommitted) {}
-
-  static FreeRegion* create(uintptr_t start, size_t bytes, bool anyDecommitted,
-                            bool expectUnchanged = false);
 
   static FreeRegion* fromEndOffset(BufferChunk* chunk, uintptr_t endOffset) {
     MOZ_ASSERT(endOffset <= ChunkSize);
