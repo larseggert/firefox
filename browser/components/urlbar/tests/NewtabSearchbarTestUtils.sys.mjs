@@ -25,6 +25,7 @@ const CONTENT_UTILS_URL =
 const FORWARDED = [
   "blur",
   "fireInputEvent",
+  "getPlaceholderL10n",
   "getResultCount",
   "getSelectedElementIndex",
   "getSelectedRowIndex",

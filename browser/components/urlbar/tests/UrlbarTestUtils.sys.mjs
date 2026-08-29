@@ -1173,10 +1173,12 @@ export class UrlbarInputBaseTestUtils {
         "browser.urlbar.placeholderName" +
         (lazy.PrivateBrowsingUtils.isWindowPrivate(window) ? ".private" : "");
       let engineName = Services.prefs.getStringPref(prefName, "");
-      let keywordEnabled = Services.prefs.getBoolPref("keyword.enabled");
+      let keywordEnabled = UrlbarShared.keywordEnabled(
+        this.#urlbar(window).sapName
+      );
 
       let expectedPlaceholder;
-      if (this.#urlbar(window).isSearchbarSAP) {
+      if (!UrlbarShared.navigationEnabled(this.#urlbar(window).sapName)) {
         expectedPlaceholder = { id: "searchbar-input" };
       } else if (keywordEnabled && engineName) {
         expectedPlaceholder = {
@@ -1286,8 +1288,8 @@ export class UrlbarInputBaseTestUtils {
 
     // Check the input's placeholder.
     let expectedPlaceholderL10n;
-    if (this.#urlbar(window).isSearchbarSAP) {
-      // A search bar's placeholder stays constant.
+    if (!UrlbarShared.navigationEnabled(this.#urlbar(window).sapName)) {
+      // The toolbar search bar's placeholder stays constant.
       expectedPlaceholderL10n = {
         id: "searchbar-input",
         args: null,

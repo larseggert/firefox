@@ -77,6 +77,16 @@ class NewtabContentTestUtils extends UrlbarInputBaseTestUtils {
   }
 
   /**
+   * The Fluent id and arguments the bar's placeholder comes from.
+   *
+   * @param {ChromeWindow} win
+   * @returns {L10nIdArgs}
+   */
+  getPlaceholderL10n(win) {
+    return win.document.l10n.getAttributes(this.getUrlbar(win).inputField);
+  }
+
+  /**
    * What the bar is showing, in one round trip. `viewOpen` is the state the
    * view keeps, `viewVisible` whether it is painted; the element stays in the
    * top layer between queries, so the two can disagree.

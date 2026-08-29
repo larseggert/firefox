@@ -678,6 +678,19 @@ export const UrlbarShared = {
   },
 
   /**
+   * Whether a string that is a URL may be navigated to. The toolbar search bar
+   * only searches; the address bar and New Tab's bar both navigate.
+   *
+   * @param {string} sapName
+   *   The SAP name to check.
+   * @returns {boolean}
+   *   Whether navigation is enabled.
+   */
+  navigationEnabled(sapName) {
+    return sapName != "searchbar";
+  },
+
+  /**
    * Gets a default icon for a URL.
    *
    * @param {string|URL} url

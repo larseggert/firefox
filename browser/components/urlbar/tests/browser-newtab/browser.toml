@@ -17,6 +17,8 @@ skip-if = ["debug"]
 
 ["browser_pickResult.js"]
 
+["browser_placeholder.js"]
+
 ["browser_resultIcon.js"]
 
 ["browser_resultMenu.js"]

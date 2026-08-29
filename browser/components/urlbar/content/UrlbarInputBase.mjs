@@ -273,6 +273,10 @@ ${
   #breakoutBlockerCount = 0;
   #isAddressbar = false;
   /**
+   * @see {UrlbarShared.navigationEnabled}
+   */
+  #navigationEnabled = false;
+  /**
    * The search access point name of the UrlbarInput for use with telemetry or
    * logging, e.g. `urlbar`, `searchbar`.
    *
@@ -384,6 +388,7 @@ ${
         this.getAttribute("sap-name")
       );
     this.#isAddressbar = this.#sapName == "urlbar";
+    this.#navigationEnabled = UrlbarShared.navigationEnabled(this.#sapName);
 
     this.#addStylesheet();
 
@@ -5043,10 +5048,12 @@ ${
       return;
     }
 
-    if (this.#isAddressbar) {
+    if (this.#navigationEnabled) {
       if (engineName) {
         // Set text content for the search mode indicator.
-        this._searchModeIndicatorTitle.textContent = engineName;
+        if (this._searchModeIndicatorTitle) {
+          this._searchModeIndicatorTitle.textContent = engineName;
+        }
         this.document.l10n.setAttributes(
           this.inputField,
           isGeneralPurposeEngine
@@ -5063,11 +5070,12 @@ ${
           tabs: "urlbar-placeholder-search-mode-other-tabs",
         };
         let sourceName = UrlbarShared.getResultSourceName(source);
-        let l10nID = `urlbar-search-mode-${sourceName}`;
-        this.document.l10n.setAttributes(
-          this._searchModeIndicatorTitle,
-          l10nID
-        );
+        if (this._searchModeIndicatorTitle) {
+          this.document.l10n.setAttributes(
+            this._searchModeIndicatorTitle,
+            `urlbar-search-mode-${sourceName}`
+          );
+        }
         this.document.l10n.setAttributes(
           this.inputField,
           messageIDs[sourceName]
@@ -5185,7 +5193,7 @@ ${
    * placeholder is a string which doesn't have the engine name.
    */
   #initPlaceholderFromPref() {
-    if (!this.#isAddressbar || this.controller.engineStore.failed) {
+    if (!this.#navigationEnabled || this.controller.engineStore.failed) {
       return;
     }
 
@@ -5301,7 +5309,7 @@ ${
    * Updates the urlbar placeholder based on the default engine.
    */
   updatePlaceholder() {
-    if (this.searchMode || !this.#isAddressbar) {
+    if (this.searchMode || !this.#navigationEnabled) {
       return;
     }
 
@@ -5325,13 +5333,13 @@ ${
    * The name of the engine or null to use the default placeholder.
    */
   _setPlaceholder(engineName) {
-    if (!this.#isAddressbar) {
+    if (!this.#navigationEnabled) {
       this.document.l10n.setAttributes(this.inputField, "searchbar-input");
       return;
     }
 
     let l10nId;
-    if (UrlbarPrefs.get("keyword.enabled")) {
+    if (UrlbarShared.keywordEnabled(this.#sapName)) {
       l10nId = engineName
         ? "urlbar-placeholder-with-name"
         : "urlbar-placeholder";

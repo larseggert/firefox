@@ -41,11 +41,7 @@ export class UrlbarNewTabComponentRegistrant extends BaseAboutNewTabComponentReg
     return [
       {
         type: AboutNewTabComponentRegistry.TYPES.SEARCH,
-        l10nURLs: [
-          "browser/browser.ftl",
-          "browser/search.ftl",
-          "preview/enUS-searchFeatures.ftl",
-        ],
+        l10nURLs: ["browser/browser.ftl", "preview/enUS-searchFeatures.ftl"],
         componentURL: "chrome://browser/content/urlbar/UrlbarInput.mjs",
         tagName: "moz-urlbar",
         attributes: {
