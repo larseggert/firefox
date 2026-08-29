@@ -11,7 +11,6 @@
 # Shrink this list over time. Each entry wants a real bug number.
 ---
 expected-fail:
-    config/external/rlbox_wasm2c_sandbox/moz.yaml: "TODO bug: sources differ after re-vendoring"
     dom/canvas/test/webgl-conf/moz.yaml: "TODO bug: re-vendoring fails"
     dom/media/webrtc/transport/third_party/nICEr/moz.yaml: "TODO bug: re-vendoring fails"
     js/src/irregexp/moz.yaml: "TODO bug: sources differ after re-vendoring"
