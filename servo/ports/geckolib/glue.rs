@@ -2221,7 +2221,7 @@ where
     F: FnOnce(&T) -> R,
 {
     debug_assert!(!is_dom_worker_thread());
-    func(raw.read_unchecked())
+    func(unsafe { raw.read_unchecked() })
 }
 
 fn write_locked_arc<T, R, F>(raw: &Locked<T>, func: F) -> R
