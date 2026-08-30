@@ -26,6 +26,14 @@
 
 namespace mozilla::layers {
 
+void SharedResourceWrapper::ClearTextureHost() {
+  if (mTag == Tag::SharedSurface) {
+    mSharedSurface->ClearTextureHost();
+  } else if (mTag == Tag::SharedTexture) {
+    mSharedTexture->ClearTextureHost();
+  }
+}
+
 RemoteTextureRecycleBin::RemoteTextureRecycleBin(bool aIsShared)
     : mIsShared(aIsShared) {}
 
@@ -153,8 +161,23 @@ void RemoteTextureOwnerClient::PushTexture(
 
   UniquePtr<TextureData> textureData =
       MakeUnique<SharedSurfaceTextureData>(aDesc, aFormat, aSize);
-  RefPtr<TextureHost> textureHost = RemoteTextureMap::CreateRemoteTexture(
-      textureData.get(), TextureFlags::DEFAULT);
+
+  RefPtr<layers::TextureHost> textureHost =
+      [&]() -> already_AddRefed<TextureHost> {
+    RefPtr<layers::TextureHost> textureHost = aSharedSurface->GetTextureHost();
+    if (textureHost) {
+      return textureHost.forget();
+    }
+    textureHost = RemoteTextureMap::CreateRemoteTexture(textureData.get(),
+                                                        TextureFlags::DEFAULT);
+    if (textureHost) {
+      if (aDesc.type() == SurfaceDescriptor::TSurfaceDescriptorD3D10) {
+        aSharedSurface->SetTextureHost(textureHost);
+      }
+    }
+    return textureHost.forget();
+  }();
+
   if (!textureHost) {
     MOZ_ASSERT_UNREACHABLE("unexpected to be called");
     return;
@@ -174,8 +197,23 @@ void RemoteTextureOwnerClient::PushTexture(
 
   UniquePtr<TextureData> textureData =
       MakeUnique<SharedSurfaceTextureData>(aDesc, aFormat, aSize);
-  RefPtr<TextureHost> textureHost = RemoteTextureMap::CreateRemoteTexture(
-      textureData.get(), TextureFlags::DEFAULT);
+
+  RefPtr<layers::TextureHost> textureHost =
+      [&]() -> already_AddRefed<TextureHost> {
+    RefPtr<layers::TextureHost> textureHost = aSharedTexture->GetTextureHost();
+    if (textureHost) {
+      return textureHost.forget();
+    }
+    textureHost = RemoteTextureMap::CreateRemoteTexture(textureData.get(),
+                                                        TextureFlags::DEFAULT);
+    if (textureHost) {
+      if (aDesc.type() == SurfaceDescriptor::TSurfaceDescriptorD3D10) {
+        aSharedTexture->SetTextureHost(textureHost);
+      }
+    }
+    return textureHost.forget();
+  }();
+
   if (!textureHost) {
     MOZ_ASSERT_UNREACHABLE("unexpected to be called");
     return;
@@ -612,6 +650,11 @@ void RemoteTextureMap::KeepTextureDataAliveForTextureHostIfNecessary(
     // SharedResourceWrapper/TextureData alive while the TextureHost is alive.
     if (holder->mTextureHost &&
         holder->mTextureHost->NumCompositableRefs() > 0) {
+      // Clear TextureHost before calling TextureHost::SetDestroyedCallback().
+      if (holder->mResourceWrapper) {
+        holder->mResourceWrapper->ClearTextureHost();
+      }
+
       RefPtr<nsISerialEventTarget> eventTarget = GetCurrentSerialEventTarget();
       RefPtr<Runnable> runnable = NS_NewRunnableFunction(
           "RemoteTextureMap::UnregisterTextureOwner::Runnable",
