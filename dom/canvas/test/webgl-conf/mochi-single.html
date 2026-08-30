@@ -68,6 +68,7 @@ function runTest() {
 }
 
 SpecialPowers.pushPrefEnv({"set": [
+  ['media.rvfc.enabled', true],
   ['webgl.force-enabled', true],
   ['webgl.enable-draft-extensions', true],
 ]}, runTest);
