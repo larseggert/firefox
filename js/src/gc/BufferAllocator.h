@@ -544,8 +544,9 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
   static bool IsSmallAlloc(void* alloc);
 
   void* allocSmall(size_t bytes, bool nurseryOwned, bool inGC);
-  void* retrySmallAlloc(size_t requestedBytes, size_t sizeClass, bool inGC);
-  bool allocNewSmallRegion(bool inGC);
+  void* retrySmallAlloc(size_t requestedBytes, size_t sizeClass,
+                        bool nurseryOwned, bool inGC);
+  bool allocNewSmallRegion(bool nurseryOwned, bool inGC);
   void traceSmallAlloc(JSTracer* trc, void* alloc, const char* name);
   void markSmallNurseryOwnedBuffer(void* alloc, bool nurseryOwned);
   bool markSmallTenuredAlloc(void* alloc);
@@ -557,33 +558,37 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
                             BufferAllocator::SweepKind sweepKind);
 
   void* allocMedium(size_t bytes, bool nurseryOwned, bool inGC);
-  void* retryMediumAlloc(size_t requestedBytes, size_t sizeClass, bool inGC);
+  void* retryMediumAlloc(size_t requestedBytes, size_t sizeClass,
+                         bool nurseryOwned, bool inGC);
   template <typename Alloc, typename GrowHeap>
   void* refillFreeListsAndRetryAlloc(size_t sizeClass, size_t maxSizeClass,
-                                     Alloc&& alloc, GrowHeap&& growHeap);
+                                     bool nurseryOwned, Alloc&& alloc,
+                                     GrowHeap&& growHeap);
   enum class RefillResult { Fail = 0, Success, Retry };
   template <typename GrowHeap>
   RefillResult refillFreeLists(size_t sizeClass, size_t maxSizeClass,
-                               GrowHeap&& growHeap);
-  bool useAvailableChunk(size_t sizeClass, size_t maxSizeClass);
+                               bool nurseryOwned, GrowHeap&& growHeap);
+  bool useAvailableChunk(size_t sizeClass, size_t maxSizeClass,
+                         bool nurseryOwned);
   bool useAvailableChunk(size_t sizeClass, size_t maxSizeClass,
                          ContentKind kind, BufferChunkList& dst);
   SizeClassBitSet getChunkSizeClassesToMove(size_t maxSizeClass,
                                             ContentKind kind) const;
-  void* bumpAlloc(size_t bytes, size_t sizeClass, size_t maxSizeClass);
+  void* bumpAlloc(size_t bytes, size_t sizeClass, size_t maxSizeClass,
+                  bool nurseryOwned);
   void* allocFromRegion(FreeRegion* region, size_t bytes, size_t sizeClass);
-  void* allocMediumAligned(size_t bytes, bool inGC);
-  void* retryAlignedAlloc(size_t sizeClass, bool inGC);
-  void* alignedAlloc(size_t sizeClass);
+  void* allocMediumAligned(size_t bytes, bool nurseryOwned, bool inGC);
+  void* retryAlignedAlloc(size_t sizeClass, bool nurseryOwned, bool inGC);
+  void* alignedAlloc(size_t sizeClass, bool nurseryOwned);
   void* alignedAllocFromRegion(FreeRegion* region, size_t sizeClass);
   void updateFreeListsAfterAlloc(FreeLists* freeLists, FreeRegion* region,
                                  size_t sizeClass);
   void setAllocated(void* alloc, size_t bytes, bool nurseryOwned, bool inGC);
   void setChunkHasNurseryAllocs(BufferChunk* chunk);
   void recommitRegion(FreeRegion* region);
-  bool stealOrAllocNewChunk(size_t sizeClass, bool inGC);
-  bool tryToStealQueuedChunk(size_t sizeClass);
-  bool allocNewChunk(bool inGC);
+  bool stealOrAllocNewChunk(size_t sizeClass, bool nurseryOwned, bool inGC);
+  bool tryToStealQueuedChunk(bool nurseryOwned, size_t sizeClass);
+  bool allocNewChunk(bool nurseryOwned, bool inGC);
   bool sweepChunk(BufferChunk* chunk, SweepKind sweepKind, bool shouldDecommit);
   void addSweptRegion(BufferChunk* chunk, uintptr_t freeStart,
                       uintptr_t freeEnd, bool shouldDecommit,
