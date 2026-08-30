@@ -1389,29 +1389,14 @@ void BufferAllocator::startMajorCollection(MaybeLock& lock) {
 
   largeTenuredAllocsToSweep.ref() = std::move(largeTenuredAllocs.ref());
 
-  // Move free regions that need to be swept to the free lists in their
-  // respective chunks.
-  //
-  // TODO: We may be able to discard free regions here and rebuild them if abort
-  // sweeping.
-  tenuredFreeLists.ref().forEachRegion(
-      [](FreeList& list, size_t sizeClass, FreeRegion* region) {
-        BufferChunk* chunk = BufferChunk::from(region);
-        MOZ_ASSERT(!chunk->hasNurseryOwnedAllocs);
-        list.remove(region);
-        chunk->freeLists.ref().pushBack(sizeClass, region);
-      });
+  // Discard free regions in |tenuredFreeLists| (these live in
+  // |currentTenuredChunks|). They will be rebuilt by sweeping or on abort.
+  tenuredFreeLists.ref().clear();
 
-  // Move all tenured chunks to |availableChunks|.
-  while (BufferChunk* chunk = currentTenuredChunks.ref().popFirst()) {
-    MOZ_ASSERT(!chunk->hasNurseryOwnedAllocs);
-    chunk->ownsFreeLists = true;
-    availableChunks.ref().addTenuredChunk(chunk);
-  }
-
-  // Move all available tenured chunks to the sweep list.
+  // Move all tenured chunks to the list of chunks to sweep.
+  tenuredChunksToSweep.ref() = std::move(currentTenuredChunks.ref());
   MOZ_ASSERT(!availableChunks.ref().hasMixedChunks());
-  tenuredChunksToSweep.ref() = availableChunks.ref().extractAllChunks();
+  tenuredChunksToSweep.ref().append(availableChunks.ref().extractAllChunks());
 
   if (minorState == State::Sweeping) {
     // Ensure swept nursery chunks are moved to the currentTenuredChunks lists
@@ -1424,9 +1409,6 @@ void BufferAllocator::startMajorCollection(MaybeLock& lock) {
   MOZ_ASSERT(availableChunks.ref().isEmpty());
   tenuredFreeLists.ref().assertEmpty();
   MOZ_ASSERT(largeTenuredAllocs.ref().isEmpty());
-  for (BufferChunk* chunk : tenuredChunksToSweep.ref()) {
-    MOZ_ASSERT(chunk->ownsFreeLists);
-  }
 #endif
 
   majorState = State::Marking;
@@ -1572,6 +1554,9 @@ void BufferAllocator::abortMajorSweeping(const AutoLock& lock) {
 
   // Clear mark bits for chunks we didn't end up sweeping.
   while (BufferChunk* chunk = tenuredChunksToSweep.ref().popFirst()) {
+    if (!chunk->ownsFreeLists) {
+      rebuildFreeLists(chunk);
+    }
     MOZ_ASSERT(chunk->ownsFreeLists);
     clearChunkMarkBits(chunk);
     availableChunks.ref().addTenuredChunk(chunk);
@@ -2693,7 +2678,9 @@ bool BufferAllocator::tryToStealQueuedChunk(bool nurseryOwned,
   MOZ_ASSERT(!tenuredChunksToSweep.ref().isEmpty());
 
   BufferChunk* chunk = tenuredChunksToSweep.ref().getLast();
-  MOZ_ASSERT(chunk->ownsFreeLists);
+  if (!chunk->ownsFreeLists) {
+    return false;
+  }
 
   // Look for chunks that have a free region at least 1/2 the size of a chunk,
   // and that can fit the allocation.
@@ -2802,14 +2789,16 @@ bool BufferAllocator::sweepChunk(BufferChunk* chunk, SweepKind sweepKind,
   // space they had and then adding their free regions to the free lists in that
   // order.
 
-  MOZ_ASSERT_IF(sweepKind == SweepKind::Tenured, !chunk->stolenFromSweepList);
-  MOZ_ASSERT_IF(sweepKind == SweepKind::Tenured,
+  MOZ_ASSERT_IF(sweepKind != SweepKind::Nursery, !chunk->stolenFromSweepList);
+  MOZ_ASSERT_IF(sweepKind != SweepKind::Nursery,
                 !chunk->allocatedDuringCollection);
-  MOZ_ASSERT_IF(sweepKind == SweepKind::Tenured, chunk->ownsFreeLists);
   FreeLists& freeLists = chunk->freeLists.ref();
 
-  // TODO: For tenured sweeping, check whether anything needs to be swept and
-  // reuse the existing free regions rather than rebuilding these every time.
+  // Try and check that existing free regions are unchanged if we don't free
+  // anything. Chunks that don't own their free lists may have been modified by
+  // realloc while queued for sweeping without their free regions being updated.
+  bool mayBeUnchanged = chunk->ownsFreeLists;
+
   freeLists.clear();
   chunk->ownsFreeLists = true;
 
@@ -2819,7 +2808,6 @@ bool BufferAllocator::sweepChunk(BufferChunk* chunk, SweepKind sweepKind,
   }
 
   // First sweep any small buffer regions.
-  bool sweptAny = false;
   bool hasNurseryOwnedSmallRegions = false;
   size_t smallRegionBytesFreed = 0;
   size_t smallRegionBytesRetained = 0;
@@ -2837,7 +2825,7 @@ bool BufferAllocator::sweepChunk(BufferChunk* chunk, SweepKind sweepKind,
       PoisonAlloc(region, JS_SWEPT_TENURED_PATTERN, sizeof(SmallBufferRegion),
                   MemCheckKind::MakeUndefined);
       smallRegionBytesFreed += SmallRegionSize;
-      sweptAny = true;
+      mayBeUnchanged = false;
     } else {
       if (sweepKind == SweepKind::Tenured) {
         chunk->setMarked(region);
@@ -2856,13 +2844,14 @@ bool BufferAllocator::sweepChunk(BufferChunk* chunk, SweepKind sweepKind,
     decreaseHeapSize(smallRegionBytesFreed, false, inMajorGC);
   }
 
-  auto result = chunk->sweep(freeLists, sweepKind, sweptAny, shouldDecommit);
+  auto result =
+      chunk->sweep(freeLists, sweepKind, mayBeUnchanged, shouldDecommit);
 
   if (sweepKind == SweepKind::Tenured && result.bytesFreed) {
     decreaseHeapSize(result.bytesFreed, false, true);
   }
 
-  if (result.isEmpty) {
+  if (sweepKind != SweepKind::RebuildFreeLists && result.isEmpty) {
     // Chunk is empty. Give it back to the system. It will never be merged, so
     // it simply won't contribute to BufferAllocatorRuntime's used/free/admin
     // byte totals for this GC (see mergeSweptData/resetRetainedStats).
@@ -2882,8 +2871,10 @@ bool BufferAllocator::sweepChunk(BufferChunk* chunk, SweepKind sweepKind,
     chunk->adminBytesAfterSweep += FirstMediumAllocOffset;
   }
 
-  chunk->hasNurseryOwnedAllocsAfterSweep =
-      hasNurseryOwnedSmallRegions || result.hasNurseryOwnedAllocs;
+  if (sweepKind != SweepKind::RebuildFreeLists) {
+    chunk->hasNurseryOwnedAllocsAfterSweep =
+        hasNurseryOwnedSmallRegions || result.hasNurseryOwnedAllocs;
+  }
 
   return true;
 }
@@ -2965,13 +2956,13 @@ bool BufferAllocator::sweepSmallBufferRegion(BufferChunk* chunk,
 
 template <typename D, size_t S, size_t G>
 AllocSpace<D, S, G>::SweepResult AllocSpace<D, S, G>::sweep(
-    FreeLists& freeLists, SweepKind sweepKind, bool sweptAnyPreviously,
+    FreeLists& freeLists, SweepKind sweepKind, bool mayBeUnchanged,
     bool shouldDecommit) {
   SweepResult result;
 
   size_t freeStart = firstAllocOffset();
-  bool sweptAny = sweptAnyPreviously;
 
+  bool regionUnchanged = mayBeUnchanged;
   for (auto iter = allocIter(); !iter.done(); iter.next()) {
     void* alloc = iter.get();
 
@@ -2987,13 +2978,13 @@ AllocSpace<D, S, G>::SweepResult AllocSpace<D, S, G>::sweep(
       PoisonAlloc(alloc, JS_SWEPT_TENURED_PATTERN, bytes,
                   MemCheckKind::MakeUndefined);
       result.bytesFreed += bytes;
-      sweptAny = true;
+      regionUnchanged = false;
     } else {
       // Alive. Add any free space before this allocation.
       uintptr_t allocStart = iter.getOffset();
       if (freeStart != allocStart) {
         asDerived()->addSweptRegion(freeStart, allocStart, shouldDecommit,
-                                    !sweptAny, freeLists);
+                                    regionUnchanged, freeLists);
       }
       freeStart = allocEnd;
       result.usedBytes += bytes;
@@ -3004,16 +2995,19 @@ AllocSpace<D, S, G>::SweepResult AllocSpace<D, S, G>::sweep(
         MOZ_ASSERT(sweepKind == SweepKind::Nursery);
         result.hasNurseryOwnedAllocs = true;
       }
-      sweptAny = sweptAnyPreviously;
+      regionUnchanged = mayBeUnchanged;
     }
   }
 
-  // Add any free space from the last allocation to the end of the chunk, but
-  // not if the space is entirely empty.
+  // Add any free space from the end of the last allocation to the end of the
+  // space. We don't always need to do this if the space is entirely empty.
   result.isEmpty = freeStart == firstAllocOffset();
-  if (freeStart != SizeBytes && !result.isEmpty) {
-    asDerived()->addSweptRegion(freeStart, SizeBytes, shouldDecommit, !sweptAny,
-                                freeLists);
+  bool hasFreeRegionAtEnd = freeStart != SizeBytes;
+  bool addFreeRegionIfEmpty = sweepKind == SweepKind::RebuildFreeLists &&
+                              std::is_same_v<D, BufferChunk>;
+  if (hasFreeRegionAtEnd && (!result.isEmpty || addFreeRegionIfEmpty)) {
+    asDerived()->addSweptRegion(freeStart, SizeBytes, shouldDecommit,
+                                regionUnchanged, freeLists);
   }
 
   return result;
@@ -3045,6 +3039,13 @@ void SmallBufferRegion::addSweptRegion(uintptr_t freeStart, uintptr_t freeEnd,
   }
 }
 
+void BufferAllocator::rebuildFreeLists(BufferChunk* chunk) {
+  // Called when sweeping is aborted for chunks that don't have their own free
+  // lists because they were being used for allocation.
+  MOZ_ASSERT(!chunk->ownsFreeLists);
+  sweepChunk(chunk, SweepKind::RebuildFreeLists, false);
+}
+
 void BufferAllocator::freeMedium(void* alloc) {
   // Free a medium sized allocation. This coalesces the free space with any
   // neighboring free regions. Coalescing is necessary for resize to work
@@ -3074,8 +3075,6 @@ void BufferAllocator::freeMedium(void* alloc) {
   // Set region as not allocated and clear metadata.
   chunk->setDeallocated(alloc, bytes);
 
-  FreeLists* freeLists = getChunkFreeLists(chunk);
-
   uintptr_t startAddr = uintptr_t(alloc);
   uintptr_t endAddr = startAddr + bytes;
 
@@ -3086,18 +3085,22 @@ void BufferAllocator::freeMedium(void* alloc) {
     oldChunkSizeClass = chunk->sizeClassForAvailableLists();
   }
 
+  FreeLists* freeLists = getChunkFreeLists(chunk);
+
   // First check whether there is a free region following the allocation.
   FreeRegion* region;
   uintptr_t endOffset = endAddr & ChunkMask;
   if (endOffset == 0 || chunk->isAllocated(endOffset)) {
-    // The allocation abuts the end of the chunk or another allocation. Add the
-    // allocation as a new free region.
+    // The allocation abuts the end of the chunk or another allocation. Add
+    // the allocation as a new free region.
     //
     // The new region is added to the front of relevant list so as to reuse
-    // recently freed memory preferentially. This may reduce fragmentation. See
-    // "The Memory Fragmentation Problem: Solved?"  by Johnstone et al.
+    // recently freed memory preferentially. This may reduce fragmentation.
+    // See "The Memory Fragmentation Problem: Solved?"  by Johnstone et al.
     region = FreeRegion::create(startAddr, bytes, false);
-    freeLists->pushFront(region, SizeKind::Medium);
+    if (freeLists) {
+      freeLists->pushFront(region, SizeKind::Medium);
+    }
   } else {
     // There is a free region following this allocation. Expand the existing
     // region down to cover the newly freed space.
@@ -3276,27 +3279,25 @@ bool BufferAllocator::growMedium(void* alloc, size_t newBytes) {
   size_t currentBytes = chunk->allocBytes(alloc);
   MOZ_ASSERT(newBytes > currentBytes);
 
-  uintptr_t endOffset = (uintptr_t(alloc) & ChunkMask) + currentBytes;
+  uintptr_t startOffset = uintptr_t(alloc) & ChunkMask;
+  uintptr_t endOffset = startOffset + currentBytes;
   MOZ_ASSERT(endOffset <= ChunkSize);
-  if (endOffset == ChunkSize) {
-    return false;  // Can't extend because we're at the end of the chunk.
+
+  uintptr_t newEndOffset = startOffset + newBytes;
+  if (newEndOffset > ChunkSize) {
+    return false;  // Can't extend because there's not enough room in a chunk.
   }
 
-  size_t endAddr = uintptr_t(chunk) + endOffset;
-  if (chunk->isAllocated(endOffset)) {
-    return false;  // Can't extend because we abut another allocation.
+  uintptr_t nextAllocOffset = chunk->findNextAllocated(endOffset);
+  if (nextAllocOffset < newEndOffset) {
+    return false;  // Can't extend because another allocation is in the way.
   }
 
-  FreeRegion* region = chunk->findFollowingFreeRegion(endAddr);
-  MOZ_ASSERT(region->startAddr == endAddr);
-
+  FreeRegion* region =
+      FreeRegion::fromEndAddr(chunk->startAddress() + nextAllocOffset);
+  MOZ_ASSERT((region->startAddr & ChunkMask) == endOffset);
   size_t extraBytes = newBytes - currentBytes;
-  if (region->size() < extraBytes) {
-    return false;  // Can't extend because following free region is too small.
-  }
-
   size_t sizeClass = SizeClassForFreeRegion(region->size(), SizeKind::Medium);
-
   allocFromRegion(region, extraBytes, sizeClass);
 
   // If the chunk is in one of the available lists we may need to move it if the
@@ -3307,8 +3308,9 @@ bool BufferAllocator::growMedium(void* alloc, size_t newBytes) {
     oldChunkSizeClass = chunk->sizeClassForAvailableLists();
   }
 
-  FreeLists* freeLists = getChunkFreeLists(chunk);
-  updateFreeListsAfterAlloc(freeLists, region, sizeClass);
+  if (FreeLists* freeLists = getChunkFreeLists(chunk)) {
+    updateFreeListsAfterAlloc(freeLists, region, sizeClass);
+  }
 
   if (availableChunks) {
     maybeUpdateAvailableLists(availableChunks, chunk, oldChunkSizeClass);
@@ -3377,7 +3379,9 @@ bool BufferAllocator::shrinkMedium(void* alloc, size_t newBytes) {
     // If we abut another allocation then add a new free region.
     uintptr_t freeStart = chunkAddr + newEndOffset;
     FreeRegion* region = FreeRegion::create(freeStart, sizeChange, false);
-    freeLists->pushFront(region, SizeKind::Medium);
+    if (freeLists) {
+      freeLists->pushFront(region, SizeKind::Medium);
+    }
   } else {
     // Otherwise find the following free region and extend it down.
     FreeRegion* region =
@@ -3398,13 +3402,15 @@ BufferAllocator::FreeLists* BufferAllocator::getChunkFreeLists(
     BufferChunk* chunk) {
   MOZ_ASSERT_IF(majorState == State::Sweeping,
                 chunk->allocatedDuringCollection);
-  MOZ_ASSERT_IF(
-      majorState == State::Marking && !chunk->allocatedDuringCollection,
-      chunk->ownsFreeLists);
 
   if (chunk->ownsFreeLists) {
     // The chunk is in one of the available lists.
     return &chunk->freeLists.ref();
+  }
+
+  if (majorState == State::Marking && !chunk->allocatedDuringCollection) {
+    // The chunk is queued for sweeping and the free lists with be rebuilt.
+    return nullptr;
   }
 
   if (chunk->kind() == ContentKind::Mixed) {

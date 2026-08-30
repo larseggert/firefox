@@ -285,6 +285,10 @@ struct AllocSpace {
     return markBits.ref().getBit(bit);
   }
 
+  uintptr_t startAddress() const {
+    return uintptr_t(static_cast<const Derived*>(this));
+  }
+
   // Find next/previous allocations from |offset|. Return SizeBytes on failure.
   size_t findNextAllocated(uintptr_t offset) const;
   size_t findPrevAllocated(uintptr_t offset) const;
@@ -307,17 +311,13 @@ struct AllocSpace {
     size_t usedBytes = 0;
   };
   SweepResult sweep(FreeLists& freeLists, SweepKind sweepKind,
-                    bool sweptAnyPreviously, bool shouldDecommit);
+                    bool mayBeUnchanged, bool shouldDecommit);
 
  protected:
   AllocSpace() {
     MOZ_ASSERT(allocStartBitmap.ref().IsEmpty());
     MOZ_ASSERT(allocEndBitmap.ref().IsEmpty());
     MOZ_ASSERT(nurseryOwnedBitmap.ref().IsEmpty());
-  }
-
-  uintptr_t startAddress() const {
-    return uintptr_t(static_cast<const Derived*>(this));
   }
 
   template <size_t Divisor = GranularityBytes, size_t Align = Divisor>

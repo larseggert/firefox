@@ -365,7 +365,7 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
 
   enum class State : uint8_t { NotCollecting, Marking, Sweeping };
 
-  enum class SweepKind : uint8_t { Tenured = 0, Nursery };
+  enum class SweepKind : uint8_t { Tenured = 0, Nursery, RebuildFreeLists };
 
   // The main GC runtime.
   MainThreadOrGCTaskData<GCRuntime*> gc;
@@ -606,6 +606,7 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
   bool sweepChunk(BufferChunk* chunk, SweepKind sweepKind, bool shouldDecommit);
   bool sweepSmallBufferRegion(BufferChunk* chunk, SmallBufferRegion* region,
                               SweepKind sweepKind, size_t* usedBytesOut);
+  void rebuildFreeLists(BufferChunk* chunk);
   void freeMedium(void* alloc);
   bool growMedium(void* alloc, size_t newBytes);
   bool shrinkMedium(void* alloc, size_t newBytes);
