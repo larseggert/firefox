@@ -636,6 +636,7 @@ BufferAllocator::~BufferAllocator() {
   MOZ_ASSERT(currentTenuredChunks.ref().isEmpty());
   freeLists.ref().assertEmpty();
   MOZ_ASSERT(availableChunks.ref().isEmpty());
+  MOZ_ASSERT(totalChunkCount == 0);
   MOZ_ASSERT(largeNurseryAllocs.ref().isEmpty());
   MOZ_ASSERT(largeTenuredAllocs.ref().isEmpty());
 #endif
@@ -2767,6 +2768,8 @@ bool BufferAllocator::allocNewChunk(bool nurseryOwned, bool inGC) {
   MOZ_ASSERT(region->getEnd() == freeEnd);
   freeLists.ref().pushFront(sizeClass, region);
 
+  totalChunkCount++;
+
   return true;
 }
 
@@ -2845,6 +2848,8 @@ bool BufferAllocator::sweepChunk(BufferChunk* chunk, SweepKind sweepKind,
     // Chunk is empty. Give it back to the system. It will never be merged, so
     // it simply won't contribute to BufferAllocatorRuntime's used/free/admin
     // byte totals for this GC (see mergeSweptData/resetRetainedStats).
+    MOZ_ASSERT(totalChunkCount != 0);
+    totalChunkCount--;
     bool allMemoryCommitted = chunk->decommittedPages.ref().IsEmpty();
     chunk->~BufferChunk();
     ArenaChunk* tenuredChunk = ArenaChunk::init(chunk, gc, allMemoryCommitted);
