@@ -259,6 +259,8 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
 
   enum class ContentKind : uint8_t { Tenured = 0, Mixed };
 
+  enum class SizeKind : uint8_t { Small, Medium };
+
   // Segregated free list: an array of free lists, one per size class.
   class FreeLists {
     using FreeListArray = mozilla::Array<FreeList, AllocSizeClasses>;
@@ -291,6 +293,9 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
                                      size_t maxSizeClass) const;
 
     FreeRegion* getFirstRegion(size_t sizeClass);
+
+    void pushFront(FreeRegion* region, SizeKind kind);
+    void pushBack(FreeRegion* region, SizeKind kind);
 
     void pushFront(size_t sizeClass, FreeRegion* region);
     void pushBack(size_t sizeClass, FreeRegion* region);
@@ -359,8 +364,6 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
   using LargeAllocList = SlimLinkedList<LargeBuffer>;
 
   enum class State : uint8_t { NotCollecting, Marking, Sweeping };
-
-  enum class SizeKind : uint8_t { Small, Medium };
 
   enum class SweepKind : uint8_t { Tenured = 0, Nursery };
 
@@ -601,23 +604,11 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
   bool tryToStealQueuedChunk(bool nurseryOwned, size_t sizeClass);
   bool allocNewChunk(bool nurseryOwned, bool inGC);
   bool sweepChunk(BufferChunk* chunk, SweepKind sweepKind, bool shouldDecommit);
-  void addSweptRegion(BufferChunk* chunk, uintptr_t freeStart,
-                      uintptr_t freeEnd, bool shouldDecommit,
-                      bool expectUnchanged, FreeLists& freeLists);
   bool sweepSmallBufferRegion(BufferChunk* chunk, SmallBufferRegion* region,
                               SweepKind sweepKind, size_t* usedBytesOut);
-  void addSweptRegion(SmallBufferRegion* region, uintptr_t freeStart,
-                      uintptr_t freeEnd, bool shouldDecommit,
-                      bool expectUnchanged, FreeLists& freeLists);
   void freeMedium(void* alloc);
   bool growMedium(void* alloc, size_t newBytes);
   bool shrinkMedium(void* alloc, size_t newBytes);
-  FreeRegion* makeFreeRegion(uintptr_t start, uintptr_t bytes,
-                             bool anyDecommitted, bool expectUnchanged = false);
-  void pushFreeRegionBack(FreeLists* freeLists, FreeRegion* region,
-                          SizeKind kind);
-  void pushFreeRegionFront(FreeLists* freeLists, FreeRegion* region,
-                           SizeKind kind);
   void updateFreeRegionStart(FreeLists* freeLists, FreeRegion* region,
                              uintptr_t newStart, SizeKind kind);
   FreeLists* getChunkFreeLists(BufferChunk* chunk);
