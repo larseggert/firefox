@@ -106,9 +106,6 @@ partial interface HTMLVideoElement {
 
 // https://wicg.github.io/video-rvfc
 partial interface HTMLVideoElement {
-  [Pref="media.rvfc.enabled", Throws]
   unsigned long requestVideoFrameCallback(VideoFrameRequestCallback callback);
-
-  [Pref="media.rvfc.enabled"]
   undefined cancelVideoFrameCallback(unsigned long handle);
 };
