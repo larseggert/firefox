@@ -100,6 +100,8 @@ import org.mozilla.fenix.home.toolbar.DisplayActions.MenuClicked
 import org.mozilla.fenix.home.toolbar.DisplayActions.VoiceSearchClicked
 import org.mozilla.fenix.home.toolbar.NavigationInteractions.NavigateBackClicked
 import org.mozilla.fenix.home.toolbar.NavigationInteractions.NavigateBackLongClicked
+import org.mozilla.fenix.home.toolbar.NavigationInteractions.NavigateForwardClicked
+import org.mozilla.fenix.home.toolbar.NavigationInteractions.NavigateForwardLongClicked
 import org.mozilla.fenix.home.toolbar.PageOriginInteractions.OriginClicked
 import org.mozilla.fenix.home.toolbar.TabCounterInteractions.AddNewPrivateTab
 import org.mozilla.fenix.home.toolbar.TabCounterInteractions.AddNewTab
@@ -1046,6 +1048,30 @@ class BrowserToolbarMiddlewareTest {
         }
 
     @Test
+    fun `GIVEN homepage as a new tab WHEN initializing a wide toolbar THEN show the Back and Forward buttons in the start browser actions`() =
+        runTest {
+            every { testContext.components.settings.enableHomepageAsNewTab } returns true
+
+            val (_, toolbarStore) =
+                buildMiddlewareAndAddToStore(
+                    browserStore = createBrowserStoreWithAboutHome(),
+                    isWideScreen = { true },
+                )
+
+            assertEquals(2, toolbarStore.state.displayState.browserActionsStart.size)
+
+            val backButton = toolbarStore.state.displayState.browserActionsStart[0] as ActionButtonRes
+            assertEquals(ActionButton.State.DEFAULT, backButton.state)
+            assertEquals(NavigateBackClicked(Source.AddressBar.BrowserStart), backButton.onClick)
+            assertEquals(NavigateBackLongClicked(Source.AddressBar.BrowserStart), backButton.onLongClick)
+
+            val forwardButton = toolbarStore.state.displayState.browserActionsStart[1] as ActionButtonRes
+            assertEquals(ActionButton.State.DEFAULT, forwardButton.state)
+            assertEquals(NavigateForwardClicked(Source.AddressBar.BrowserStart), forwardButton.onClick)
+            assertEquals(NavigateForwardLongClicked(Source.AddressBar.BrowserStart), forwardButton.onLongClick)
+        }
+
+    @Test
     fun `GIVEN homepage as a new tab is disabled WHEN initializing a wide toolbar THEN show no start browser actions`() =
         runTest {
             every { testContext.components.settings.enableHomepageAsNewTab } returns false
@@ -1103,7 +1129,10 @@ class BrowserToolbarMiddlewareTest {
                 assertEquals("tab", it.tabId)
             }
             verify(exactly = 0) {
-                navController.navigate(NavGraphDirections.actionGlobalTabHistoryDialogFragment(activeSessionId = null))
+                navController.navigate(
+                    NavGraphDirections.actionGlobalTabHistoryDialogFragment(null),
+                    null,
+                )
             }
         }
 
@@ -1208,6 +1237,150 @@ class BrowserToolbarMiddlewareTest {
         val back = with(middleware) { ShortcutType.BACK.toHomeToolbarAction() }
 
         assertEquals(HomeToolbarAction.Back, back)
+    }
+
+    @Test
+    fun `GIVEN homepage as new tab and the selected home tab can go forward WHEN the Forward button is clicked THEN go forward in the tab history`() =
+        runTest {
+            every { testContext.components.settings.enableHomepageAsNewTab } returns true
+            val captureMiddleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
+            val navController: NavController = mockk(relaxed = true)
+            val browserStore =
+                BrowserStore(
+                    initialState =
+                        BrowserState(
+                            tabs =
+                                listOf(
+                                    createTab(
+                                        id = "tab",
+                                        canGoForward = true,
+                                        history =
+                                            HistoryState(
+                                                items =
+                                                    listOf(
+                                                        HistoryItem(title = "Homepage", uri = ABOUT_HOME_URL),
+                                                        HistoryItem(title = "Mozilla", uri = "mozilla.org"),
+                                                        HistoryItem(title = "Homepage", uri = ABOUT_HOME_URL),
+                                                    ),
+                                                currentIndex = 2,
+                                            ),
+                                    )
+                                ),
+                            selectedTabId = "tab",
+                        ),
+                    middleware = listOf(captureMiddleware) + EngineMiddleware.create(mockk(relaxed = true)),
+                )
+
+            val (_, toolbarStore) =
+                buildMiddlewareAndAddToStore(
+                    browserStore = browserStore,
+                    navController = navController,
+                )
+
+            toolbarStore.dispatch(NavigateForwardClicked(Source.AddressBar.BrowserStart))
+
+            captureMiddleware.assertLastAction(EngineAction.GoForwardAction::class) {
+                assertEquals("tab", it.tabId)
+            }
+            verify(exactly = 0) {
+                navController.navigate(
+                    NavGraphDirections.actionGlobalTabHistoryDialogFragment(null),
+                    null,
+                )
+            }
+        }
+
+    @Test
+    fun `GIVEN the homepage is shown with homepage as new tab enabled and there is a page to go forward to WHEN the Forward button is clicked THEN leave the homepage`() =
+        runTest {
+            every { testContext.components.settings.enableHomepageAsNewTab } returns true
+            val navController: NavController =
+                mockk(relaxed = true) {
+                    every { currentDestination } returns mockk { every { id } returns R.id.homeFragment }
+                }
+            val browserStore =
+                BrowserStore(
+                    initialState =
+                        BrowserState(
+                            tabs =
+                                listOf(
+                                    createTab(
+                                        id = "tab",
+                                        canGoForward = true,
+                                        history =
+                                            HistoryState(
+                                                items =
+                                                    listOf(
+                                                        HistoryItem(title = "Homepage", uri = ABOUT_HOME_URL),
+                                                        HistoryItem(title = "Homepage", uri = ABOUT_HOME_URL),
+                                                        HistoryItem(title = "Mozilla", uri = "mozilla.org"),
+                                                    ),
+                                                currentIndex = 1,
+                                            ),
+                                    )
+                                ),
+                            selectedTabId = "tab",
+                        ),
+                    middleware = EngineMiddleware.create(mockk(relaxed = true)),
+                )
+
+            val (_, toolbarStore) =
+                buildMiddlewareAndAddToStore(
+                    browserStore = browserStore,
+                    navController = navController,
+                )
+
+            toolbarStore.dispatch(NavigateForwardClicked(Source.AddressBar.BrowserStart))
+
+            verify { navController.navigate(NavGraphDirections.actionGlobalBrowser()) }
+        }
+
+    @Test
+    fun `GIVEN homepage as new tab and the selected home tab cannot go forward WHEN the Forward button is clicked THEN do nothing`() =
+        runTest {
+            every { testContext.components.settings.enableHomepageAsNewTab } returns true
+            val captureMiddleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
+            val navController: NavController =
+                mockk(relaxed = true) {
+                    every { currentDestination } returns mockk { every { id } returns R.id.homeFragment }
+                }
+            val (_, toolbarStore) =
+                buildMiddlewareAndAddToStore(
+                    browserStore =
+                        createBrowserStoreWithAboutHome(canGoForward = false, captureMiddleware = captureMiddleware),
+                    navController = navController,
+                )
+
+            toolbarStore.dispatch(NavigateForwardClicked(Source.AddressBar.BrowserStart))
+
+            captureMiddleware.assertNotDispatched(EngineAction.GoForwardAction::class)
+            verify(exactly = 0) { navController.navigate(any<NavDirections>()) }
+        }
+
+    @Test
+    fun `GIVEN homepage as new tab WHEN the Forward button is long clicked THEN show the tab history`() = runTest {
+        every { testContext.components.settings.enableHomepageAsNewTab } returns true
+        val captureMiddleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
+        val navController: NavController =
+            mockk(relaxed = true) {
+                every { currentDestination } returns mockk { every { id } returns R.id.homeFragment }
+            }
+        val (_, toolbarStore) =
+            buildMiddlewareAndAddToStore(
+                browserStore =
+                    createBrowserStoreWithAboutHome(canGoForward = false, captureMiddleware = captureMiddleware),
+                navController = navController,
+            )
+
+        toolbarStore.dispatch(NavigateForwardLongClicked(Source.AddressBar.BrowserStart))
+
+        verify {
+            navController.navigate(
+                NavGraphDirections.actionGlobalTabHistoryDialogFragment(null),
+                null,
+            )
+        }
+        captureMiddleware.assertNotDispatched(EngineAction.GoForwardAction::class)
     }
 
     @Test
@@ -1510,12 +1683,21 @@ class BrowserToolbarMiddlewareTest {
 
     private fun createBrowserStoreWithAboutHome(
         canGoBack: Boolean = true,
+        canGoForward: Boolean = true,
         captureMiddleware: CaptureActionsMiddleware<BrowserState, BrowserAction>? = null,
     ) =
         BrowserStore(
             initialState =
                 BrowserState(
-                    tabs = listOf(createTab(url = ABOUT_HOME_URL, id = aboutHomeTabId, canGoBack = canGoBack)),
+                    tabs =
+                        listOf(
+                            createTab(
+                                url = ABOUT_HOME_URL,
+                                id = aboutHomeTabId,
+                                canGoBack = canGoBack,
+                                canGoForward = canGoForward,
+                            )
+                        ),
                     selectedTabId = aboutHomeTabId,
                 ),
             middleware = listOfNotNull(captureMiddleware) + EngineMiddleware.create(mockk(relaxed = true)),

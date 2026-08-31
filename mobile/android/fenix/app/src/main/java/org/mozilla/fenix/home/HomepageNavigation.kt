@@ -41,6 +41,26 @@ internal fun goBackFromHomepage(
     return false
 }
 
+internal fun goForwardFromHomepage(
+    browserStore: BrowserStore,
+    navController: NavController,
+): Boolean {
+    val tab = browserStore.state.selectedTab ?: return false
+
+    if (tab.content.canGoForward) {
+        browserStore.dispatch(EngineAction.GoForwardAction(tab.id))
+
+        val history = tab.content.history
+        if (history.items.getOrNull(history.currentIndex + 1)?.uri != ABOUT_HOME_URL) {
+            navigateFromHomeFragmentToBrowserFragment(navController)
+        }
+
+        return true
+    }
+
+    return false
+}
+
 internal fun navigateFromHomeFragmentToBrowserFragment(navController: NavController) {
     if (navController.currentDestination?.id == R.id.homeFragment) {
         navController.navigate(NavGraphDirections.actionGlobalBrowser())

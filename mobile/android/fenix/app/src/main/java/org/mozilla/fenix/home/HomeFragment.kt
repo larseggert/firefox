@@ -1160,7 +1160,25 @@ class HomeFragment : Fragment(), UserInteractionHandler, OnLongPressedListener {
         return true
     }
 
-    override fun onForwardLongPressed(): Boolean = false
+    override fun onForwardPressed(): Boolean {
+        if (context == null || !requireComponents.settings.enableHomepageAsNewTab) {
+            return false
+        }
+
+        return goForwardFromHomepage(
+            browserStore = store,
+            navController = findNavController(),
+        )
+    }
+
+    override fun onForwardLongPressed(): Boolean {
+        if (context == null || !requireComponents.settings.enableHomepageAsNewTab) {
+            return false
+        }
+
+        navigateToGlobalTabHistoryDialogFragment(navController = findNavController())
+        return true
+    }
 
     private fun navigateToGlobalTabHistoryDialogFragment(navController: NavController) {
         navController.navigate(NavGraphDirections.actionGlobalTabHistoryDialogFragment(activeSessionId = null))

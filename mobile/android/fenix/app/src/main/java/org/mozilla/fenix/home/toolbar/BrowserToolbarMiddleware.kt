@@ -7,6 +7,8 @@ package org.mozilla.fenix.home.toolbar
 import android.content.Context
 import android.content.Intent
 import android.speech.RecognizerIntent
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
 import androidx.navigation.NavController
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +32,7 @@ import mozilla.components.compose.browser.toolbar.concept.PageOrigin.Companion.C
 import mozilla.components.compose.browser.toolbar.concept.PageOrigin.Companion.ContextualMenuOption.PasteFromClipboard
 import mozilla.components.compose.browser.toolbar.concept.PageOrigin.Companion.PageOriginContextualMenuInteractions.LoadFromClipboardClicked
 import mozilla.components.compose.browser.toolbar.concept.PageOrigin.Companion.PageOriginContextualMenuInteractions.PasteFromClipboardClicked
+import mozilla.components.compose.browser.toolbar.store.BrowserDisplayToolbarAction
 import mozilla.components.compose.browser.toolbar.store.BrowserDisplayToolbarAction.BrowserActionsEndUpdated
 import mozilla.components.compose.browser.toolbar.store.BrowserDisplayToolbarAction.NavigationActionsUpdated
 import mozilla.components.compose.browser.toolbar.store.BrowserDisplayToolbarAction.PageActionsEndUpdated
@@ -77,11 +80,14 @@ import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
 import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.home.HomeFragmentDirections
 import org.mozilla.fenix.home.goBackFromHomepage
+import org.mozilla.fenix.home.goForwardFromHomepage
 import org.mozilla.fenix.home.toolbar.DisplayActions.FakeClicked
 import org.mozilla.fenix.home.toolbar.DisplayActions.MenuClicked
 import org.mozilla.fenix.home.toolbar.DisplayActions.VoiceSearchClicked
 import org.mozilla.fenix.home.toolbar.NavigationInteractions.NavigateBackClicked
 import org.mozilla.fenix.home.toolbar.NavigationInteractions.NavigateBackLongClicked
+import org.mozilla.fenix.home.toolbar.NavigationInteractions.NavigateForwardClicked
+import org.mozilla.fenix.home.toolbar.NavigationInteractions.NavigateForwardLongClicked
 import org.mozilla.fenix.home.toolbar.PageOriginInteractions.OriginClicked
 import org.mozilla.fenix.home.toolbar.TabCounterInteractions.AddNewPrivateTab
 import org.mozilla.fenix.home.toolbar.TabCounterInteractions.AddNewTab
@@ -126,6 +132,10 @@ internal sealed class NavigationInteractions : BrowserToolbarEvent {
     data class NavigateBackClicked(override val source: Source) : NavigationInteractions()
 
     data class NavigateBackLongClicked(override val source: Source) : NavigationInteractions()
+
+    data class NavigateForwardClicked(override val source: Source) : NavigationInteractions()
+
+    data class NavigateForwardLongClicked(override val source: Source) : NavigationInteractions()
 }
 
 /**
@@ -177,6 +187,7 @@ class BrowserToolbarMiddleware(
                 }
 
                 updatePageOrigin(store)
+                updateStartBrowserActions(store)
                 updateEndPageActions(store)
                 updateEndBrowserActions(store)
                 scope.launch {
@@ -245,6 +256,17 @@ class BrowserToolbarMiddleware(
                 next(action)
             }
             is NavigateBackLongClicked -> {
+                showTabHistory()
+                next(action)
+            }
+            is NavigateForwardClicked -> {
+                goForwardFromHomepage(
+                    browserStore = browserStore,
+                    navController = navController,
+                )
+                next(action)
+            }
+            is NavigateForwardLongClicked -> {
                 showTabHistory()
                 next(action)
             }
@@ -357,6 +379,10 @@ class BrowserToolbarMiddleware(
             )
         )
 
+    private fun updateStartBrowserActions(store: Store<BrowserToolbarState, BrowserToolbarAction>) {
+        store.dispatch(BrowserDisplayToolbarAction.BrowserActionsStartUpdated(buildStartBrowserActions()))
+    }
+
     private fun updateEndBrowserActions(store: Store<BrowserToolbarState, BrowserToolbarAction>) {
         store.dispatch(BrowserActionsEndUpdated(buildEndBrowserActions()))
     }
@@ -391,6 +417,18 @@ class BrowserToolbarMiddleware(
             )
         )
     }
+
+    private fun buildStartBrowserActions(): List<Action> =
+        listOf(
+                HomeToolbarActionConfig(HomeToolbarAction.Back) {
+                    isWideScreen() && settings.enableHomepageAsNewTab
+                },
+                HomeToolbarActionConfig(HomeToolbarAction.Forward) {
+                    isWideScreen() && settings.enableHomepageAsNewTab
+                },
+            )
+            .filter { config -> config.isVisible() }
+            .map { config -> buildHomeAction(config.action, Source.AddressBar.BrowserStart) }
 
     private fun buildEndBrowserActions(): List<Action> {
         val isWideWindow = isWideScreen()
@@ -496,6 +534,7 @@ class BrowserToolbarMiddleware(
         appStore.observeWhileActive {
             distinctUntilChangedBy { it.orientation }
                 .collect {
+                    updateStartBrowserActions(store)
                     updateEndBrowserActions(store)
                     updateNavigationActions(store)
                 }
@@ -514,8 +553,14 @@ class BrowserToolbarMiddleware(
 
     private fun observePageNavigationStatus(store: Store<BrowserToolbarState, BrowserToolbarAction>) {
         browserStore.observeWhileActive {
-            distinctUntilChangedBy { it.selectedTab?.content?.canGoBack }
+            distinctUntilChangedBy {
+                Pair(
+                    it.selectedTab?.content?.canGoBack,
+                    it.selectedTab?.content?.canGoForward,
+                )
+            }
                 .collect {
+                    updateStartBrowserActions(store)
                     if (ShortcutType.fromValue(settings.toolbarExpandedShortcutKey) == ShortcutType.BACK) {
                         updateNavigationActions(store)
                     }
@@ -567,6 +612,7 @@ class BrowserToolbarMiddleware(
         FakeHomepage,
         Back,
         FakeBack,
+        Forward,
         FakeSummarize,
     }
 
@@ -574,6 +620,45 @@ class BrowserToolbarMiddleware(
         val action: HomeToolbarAction,
         val isVisible: () -> Boolean = { true },
     )
+
+    private fun createFakeActionButtonRes(
+        @DrawableRes drawableResId: Int,
+        @StringRes contentDescription: Int,
+    ) =
+        ActionButtonRes(
+            drawableResId = drawableResId,
+            contentDescription = contentDescription,
+            state = ActionButton.State.DISABLED,
+            onClick = FakeClicked,
+        )
+
+    private fun createBackActionButtonRes(source: Source) =
+        ActionButtonRes(
+            drawableResId = iconsR.drawable.mozac_ic_back_24,
+            contentDescription = R.string.browser_menu_back,
+            state =
+                if (browserStore.state.selectedTab?.content?.canGoBack == true) {
+                    ActionButton.State.DEFAULT
+                } else {
+                    ActionButton.State.DISABLED
+                },
+            onClick = NavigateBackClicked(source),
+            onLongClick = NavigateBackLongClicked(source),
+        )
+
+    private fun createForwardActionButtonRes(source: Source) =
+        ActionButtonRes(
+            drawableResId = iconsR.drawable.mozac_ic_forward_24,
+            contentDescription = R.string.browser_menu_forward,
+            state =
+                if (browserStore.state.selectedTab?.content?.canGoForward == true) {
+                    ActionButton.State.DEFAULT
+                } else {
+                    ActionButton.State.DISABLED
+                },
+            onClick = NavigateForwardClicked(source),
+            onLongClick = NavigateForwardLongClicked(source),
+        )
 
     @VisibleForTesting
     internal fun buildHomeAction(
@@ -615,19 +700,15 @@ class BrowserToolbarMiddleware(
             }
 
             HomeToolbarAction.FakeBookmark ->
-                ActionButtonRes(
+                createFakeActionButtonRes(
                     drawableResId = iconsR.drawable.mozac_ic_bookmark_24,
                     contentDescription = R.string.browser_menu_bookmark_this_page_2,
-                    state = ActionButton.State.DISABLED,
-                    onClick = FakeClicked,
                 )
 
             HomeToolbarAction.FakeShare ->
-                ActionButtonRes(
+                createFakeActionButtonRes(
                     drawableResId = iconsR.drawable.mozac_ic_share_android_24,
                     contentDescription = R.string.browser_menu_share,
-                    state = ActionButton.State.DISABLED,
-                    onClick = FakeClicked,
                 )
 
             HomeToolbarAction.NewTab ->
@@ -648,50 +729,32 @@ class BrowserToolbarMiddleware(
                 )
 
             HomeToolbarAction.FakeTranslate ->
-                ActionButtonRes(
+                createFakeActionButtonRes(
                     drawableResId = iconsR.drawable.mozac_ic_translate_24,
                     contentDescription = R.string.browser_toolbar_translate,
-                    state = ActionButton.State.DISABLED,
-                    onClick = FakeClicked,
                 )
 
             HomeToolbarAction.FakeHomepage ->
-                ActionButtonRes(
+                createFakeActionButtonRes(
                     drawableResId = iconsR.drawable.mozac_ic_home_24,
                     contentDescription = R.string.browser_menu_homepage,
-                    state = ActionButton.State.DISABLED,
-                    onClick = FakeClicked,
                 )
 
             HomeToolbarAction.FakeBack ->
-                ActionButtonRes(
+                createFakeActionButtonRes(
                     drawableResId = iconsR.drawable.mozac_ic_back_24,
                     contentDescription = R.string.browser_menu_back,
-                    state = ActionButton.State.DISABLED,
-                    onClick = FakeClicked,
                 )
 
             HomeToolbarAction.FakeSummarize ->
-                ActionButtonRes(
+                createFakeActionButtonRes(
                     drawableResId = iconsR.drawable.mozac_ic_lightning_24,
                     contentDescription = summariesR.string.mozac_summarize_settings_summarize_pages,
-                    state = ActionButton.State.DISABLED,
-                    onClick = FakeClicked,
                 )
 
-            HomeToolbarAction.Back ->
-                ActionButtonRes(
-                    drawableResId = iconsR.drawable.mozac_ic_back_24,
-                    contentDescription = R.string.browser_menu_back,
-                    state =
-                        if (browserStore.state.selectedTab?.content?.canGoBack == true) {
-                            ActionButton.State.DEFAULT
-                        } else {
-                            ActionButton.State.DISABLED
-                        },
-                    onClick = NavigateBackClicked(source),
-                    onLongClick = NavigateBackLongClicked(source),
-                )
+            HomeToolbarAction.Back -> createBackActionButtonRes(source)
+
+            HomeToolbarAction.Forward -> createForwardActionButtonRes(source)
         }
 
     private suspend fun isTranslationsFeatureAvailable(): Boolean {
