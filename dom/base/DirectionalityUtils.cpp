@@ -820,9 +820,9 @@ void ResetDirectionSetBySlotHostInternal(HTMLSlotElement* aSlot,
   }
 }
 
-void ResetDirFormAssociatedElement(Element* aElement, bool aNotify,
-                                   bool aHasDirAuto,
-                                   const nsAString* aKnownValue) {
+void ResetDirFormAssociatedElementInternal(Element* aElement, bool aNotify,
+                                           bool aHasDirAuto,
+                                           const nsAString* aKnownValue) {
   if (aHasDirAuto) {
     Directionality dir = Directionality::Unset;
 
@@ -860,7 +860,10 @@ void ResetDirFormAssociatedElement(Element* aElement, bool aNotify,
 
 void OnSetDirAttr(Element* aElement, const nsAttrValue* aNewValue,
                   bool hadValidDir, bool hadDirAuto, bool aNotify) {
-  if (!ParticipatesInAutoDirection(aElement)) {
+  MaybeSetDocNeedsDirHandling(aElement, aNewValue);
+
+  if (!aElement->OwnerDoc()->NeedsDirHandling() ||
+      !ParticipatesInAutoDirection(aElement)) {
     return;
   }
 
@@ -922,7 +925,7 @@ void OnSetDirAttr(Element* aElement, const nsAttrValue* aNewValue,
   }
 }
 
-void SetDirOnBind(Element* aElement, nsIContent* aParent) {
+void SetDirOnBindInternal(Element* aElement, nsIContent* aParent) {
   // Propagate flags from parent to new element
   if (AffectsDirAutoElement(aParent) && !EstablishesOwnDirection(aElement)) {
     if (aParent->NodeOrAncestorHasDirAuto()) {
