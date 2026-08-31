@@ -124,6 +124,8 @@ treeherder:
         'W-pb': 'Web platform tests with private browsing enabled'
         'W-ioi': 'Web platform tests tagged with inc-origin-init'
         'W-ioi-cf': 'Web platform tests tagged with inc-origin-init for confirm failure'
+        'W-oh264': 'Web platform tests with OpenH264 preferred'
+        'W-oh264-cf': 'Web platform tests with OpenH264 preferred for confirm failure'
         'W-pb-ioi': 'Web platform tests with private browsing enabled and tagged with inc-origin-init'
         'X': 'Xpcshell tests'
         'X-f': 'Xpcshell tests that fail on a given config'

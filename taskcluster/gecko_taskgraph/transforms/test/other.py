@@ -242,6 +242,8 @@ def handle_keyed_by(config, tasks):
         "virtualization",
         "fetches.fetch",
         "fetches.toolchain",
+        "fetches.openh264-plugin",
+        "dependencies.openh264-plugin",
         "target",
         "webrender-run-on-projects",
         "mozharness.extra-options",
@@ -1265,3 +1267,26 @@ def add_symbols_to_xpcshell_mochitest(config, tests):
                     "extract": False,
                 })
         yield test
+
+
+@transforms.add
+def resolve_openh264_version(config, tasks):
+    """Substitute the OpenH264 version into openh264-plugin fetch paths.
+
+    The version lives on the fetch-openh264-source task, so the artifact
+    names do not have to be updated by hand when it changes.
+    """
+    version = None
+    for task in tasks:
+        fetches = task.get("fetches", {}).get("openh264-plugin")
+        if fetches:
+            if version is None:
+                dep = config.kind_dependencies_tasks.get("fetch-openh264-source")
+                if not dep:
+                    raise Exception("fetch-openh264-source not in kind dependencies")
+                version = dep.attributes["openh264_version"]
+            for fetch in fetches:
+                for key in ("artifact", "dest"):
+                    if key in fetch:
+                        fetch[key] = fetch[key].format(openh264_version=version)
+        yield task
