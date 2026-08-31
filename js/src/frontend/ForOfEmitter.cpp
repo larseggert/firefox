@@ -249,6 +249,11 @@ bool ForOfEmitter::emitEnd(uint32_t iteratedPos) {
     return false;
   }
 
+  if (!loopInfo_->emitEnd(bce_)) {
+    //              [stack]
+    return false;
+  }
+
   loopInfo_.reset();
 
 #ifdef DEBUG
