@@ -989,6 +989,13 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
+    "discoverystream.sections.topicNavigation.enabled",
+    {
+      title: "Boolean flag to enable the topic navigation strip above sections",
+      value: false,
+    },
+  ],
+  [
     "discoverystream.carousel.paused",
     {
       title:
