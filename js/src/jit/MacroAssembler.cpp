@@ -4188,10 +4188,8 @@ void MacroAssembler::loadJitCodeRawNoIon(Register func, Register dest,
 }
 
 void MacroAssembler::loadBaselineFramePtr(Register framePtr, Register dest) {
-  if (framePtr != dest) {
-    movePtr(framePtr, dest);
-  }
-  subPtr(Imm32(BaselineFrame::Size()), dest);
+  computeEffectiveAddress(Address(framePtr, -int32_t(BaselineFrame::Size())),
+                          dest);
 }
 
 void MacroAssembler::handleFailure() {
