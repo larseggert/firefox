@@ -1384,6 +1384,16 @@ void CodeGenerator::testValueTruthyForType(
       }
       return;
     case JSVAL_TYPE_OBJECT: {
+      if (!ool) {
+        // If we have no ool path, then the hasSeenObjectEmulateUndefined fuse
+        // is intact, and all objects are truthy.
+        if (!skipTypeTest) {
+          masm.branchTestObject(Assembler::Equal, tag, ifTruthy);
+        } else {
+          masm.jump(ifTruthy);
+        }
+        return;
+      }
       Label notObject;
       if (!skipTypeTest) {
         masm.branchTestObject(Assembler::NotEqual, tag, &notObject);
@@ -1924,8 +1934,11 @@ void CodeGenerator::visitTestOAndBranch(LTestOAndBranch* lir) {
 }
 
 void CodeGenerator::visitTestVAndBranch(LTestVAndBranch* lir) {
-  auto* ool = new (alloc()) OutOfLineTestObject();
-  addOutOfLineCode(ool, lir->mir());
+  OutOfLineTestObject* ool = nullptr;
+  if (!hasSeenObjectEmulateUndefinedFuseIntactAndDependencyNoted()) {
+    ool = new (alloc()) OutOfLineTestObject();
+    addOutOfLineCode(ool, lir->mir());
+  }
 
   Label* truthy = getJumpLabelForBranch(lir->ifTruthy());
   Label* falsy = getJumpLabelForBranch(lir->ifFalsy());
