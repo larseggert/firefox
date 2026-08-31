@@ -1193,9 +1193,7 @@ SettingGroupManager.registerGroups({
         l10nId: "addressbar-header-1",
         supportPage: "firefox-suggest",
         control: "moz-fieldset",
-        controlAttrs: {
-          headinglevel: 2,
-        },
+        headingLevel: 2,
         items: [
           {
             id: "historySuggestion",
@@ -1250,9 +1248,7 @@ SettingGroupManager.registerGroups({
             id: "dismissedSuggestionsDescription",
             l10nId: "addressbar-dismissed-suggestions-label-2",
             control: "moz-fieldset",
-            controlAttrs: {
-              headinglevel: 3,
-            },
+            headingLevel: 3,
             items: [
               {
                 id: "restoreDismissedSuggestions",
