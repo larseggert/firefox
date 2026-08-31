@@ -114,8 +114,12 @@ class DMABufSurface {
   virtual bool Serialize(
       mozilla::layers::SurfaceDescriptor& aOutDescriptor) = 0;
 
+  // WidthAligned/HeightAligned is size of buffer while
+  // Width/Height is size of actual content.
   virtual int GetWidth(int aPlane = 0) = 0;
   virtual int GetHeight(int aPlane = 0) = 0;
+  virtual int GetWidthAligned(int aPlane = 0) = 0;
+  virtual int GetHeightAligned(int aPlane = 0) = 0;
   virtual mozilla::gfx::SurfaceFormat GetFormat() = 0;
 
   virtual bool CreateTexture(mozilla::gl::GLContext* aGLContext,
@@ -377,6 +381,9 @@ class DMABufSurfaceRGBA final : public DMABufSurface {
 
   int GetWidth(int aPlane = 0) override { return mWidth; };
   int GetHeight(int aPlane = 0) override { return mHeight; };
+  int GetWidthAligned(int aPlane = 0) override { return mWidth; };
+  int GetHeightAligned(int aPlane = 0) override { return mHeight; };
+
   mozilla::gfx::SurfaceFormat GetFormat() override;
   bool HasAlpha();
 
@@ -470,6 +477,11 @@ class DMABufSurfaceYUV final : public DMABufSurface {
 
   int GetWidth(int aPlane = 0) override { return mWidth[aPlane]; }
   int GetHeight(int aPlane = 0) override { return mHeight[aPlane]; }
+
+  int GetWidthAligned(int aPlane = 0) override { return mWidthAligned[aPlane]; }
+  int GetHeightAligned(int aPlane = 0) override {
+    return mHeightAligned[aPlane];
+  }
   mozilla::gfx::SurfaceFormat GetFormat() override;
 
   // Get hardware compatible format for SW decoded one.

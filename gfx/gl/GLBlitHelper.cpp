@@ -1592,11 +1592,15 @@ bool GLBlitHelper::Blit(DMABufSurface* surface, const gfx::IntRect& destRect,
     mGL->TexParams_SetClampNoMips(texTarget);
   }
 
-  // We support only NV12/YUV420 formats only with 1/2 texture scale.
-  // We don't set cliprect as DMABus textures are created without padding.
-  baseArgs.texMatrix0 = SubRectMat3(0, 0, 1, 1);
+  // Crop to visible region: VA-API surfaces may have macroblock-aligned
+  // textures larger than the visible size (bug 2054811).
+  baseArgs.texMatrix0 = SubRectMat3(
+      0, 0, float(surface->GetWidth(0)) / float(surface->GetWidthAligned(0)),
+      float(surface->GetHeight(0)) / float(surface->GetHeightAligned(0)));
   baseArgs.texSize = gfx::IntSize(surface->GetWidth(), surface->GetHeight());
-  yuvArgs.texMatrix1 = SubRectMat3(0, 0, 1, 1);
+  yuvArgs.texMatrix1 = SubRectMat3(
+      0, 0, float(surface->GetWidth(1)) / float(surface->GetWidthAligned(1)),
+      float(surface->GetHeight(1)) / float(surface->GetHeightAligned(1)));
 
   const auto& prog =
       GetDrawBlitProg({kFragHeader_Tex2D,
