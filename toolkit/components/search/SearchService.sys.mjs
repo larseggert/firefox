@@ -504,23 +504,23 @@ export const SearchService = new (class SearchService {
    *   Whether or not to show the prompt.
    */
   async shouldShowInstallPrompt(engine) {
-    let identifer = engine._loadPath;
+    let identifier = engine._loadPath;
     let seenEngines =
       this._settings.getMetaDataAttribute(ENGINES_SEEN_KEY) ?? {};
 
-    if (!(identifer in seenEngines)) {
-      seenEngines[identifer] = 1;
+    if (!(identifier in seenEngines)) {
+      seenEngines[identifier] = 1;
       this._settings.setMetaDataAttribute(ENGINES_SEEN_KEY, seenEngines);
       return false;
     }
 
-    let value = seenEngines[identifer];
+    let value = seenEngines[identifier];
     if (value == DONT_SHOW_PROMPT) {
       return false;
     }
 
     if (value == ENGINES_SEEN_FOR_PROMPT) {
-      seenEngines[identifer] = DONT_SHOW_PROMPT;
+      seenEngines[identifier] = DONT_SHOW_PROMPT;
       this._settings.setMetaDataAttribute(ENGINES_SEEN_KEY, seenEngines);
       return true;
     }
