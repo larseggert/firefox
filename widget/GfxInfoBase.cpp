@@ -555,6 +555,31 @@ GfxInfoBase::SpoofMonitorInfo(uint32_t aScreenCount, int32_t aMinRefreshRate,
   mMaxRefreshRate = aMaxRefreshRate;
   return NS_OK;
 }
+
+NS_IMETHODIMP GfxInfoBase::SpoofVendorID2(const nsAString& aVendorID) {
+  mSpoofedAdapter2 = true;
+  mSpoofedAdapterVendorID2 = aVendorID;
+  return NS_OK;
+}
+
+NS_IMETHODIMP GfxInfoBase::SpoofDeviceID2(const nsAString& aDeviceID) {
+  mSpoofedAdapter2 = true;
+  mSpoofedAdapterDeviceID2 = aDeviceID;
+  return NS_OK;
+}
+
+NS_IMETHODIMP GfxInfoBase::SpoofDriverVendor2(const nsAString& aDriverVendor) {
+  mSpoofedAdapter2 = true;
+  mSpoofedAdapterDriverVendor2 = aDriverVendor;
+  return NS_OK;
+}
+
+NS_IMETHODIMP GfxInfoBase::SpoofDriverVersion2(
+    const nsAString& aDriverVersion) {
+  mSpoofedAdapter2 = true;
+  mSpoofedAdapterDriverVersion2 = aDriverVersion;
+  return NS_OK;
+}
 #endif
 
 NS_IMETHODIMP
@@ -834,6 +859,17 @@ int32_t GfxInfoBase::FindBlocklistedDeviceInList(
        NS_FAILED(GetAdapterDeviceID2(adapterDeviceID[1])) ||
        NS_FAILED(GetAdapterDriverVendor2(adapterDriverVendor[1])) ||
        NS_FAILED(GetAdapterDriverVersion2(adapterDriverVersionString[1])));
+
+#ifdef DEBUG
+  if (mSpoofedAdapter2) {
+    adapterInfoFailed[1] = false;
+    adapterVendorID[1] = mSpoofedAdapterVendorID2;
+    adapterDeviceID[1] = mSpoofedAdapterDeviceID2;
+    adapterDriverVendor[1] = mSpoofedAdapterDriverVendor2;
+    adapterDriverVersionString[1] = mSpoofedAdapterDriverVersion2;
+  }
+#endif
+
   // No point in going on if we don't have adapter info
   if (adapterInfoFailed[0] && adapterInfoFailed[1]) {
     return 0;
