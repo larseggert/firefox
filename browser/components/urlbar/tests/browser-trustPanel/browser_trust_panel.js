@@ -1344,3 +1344,30 @@ add_task(async function test_close_on_tab_switch() {
   BrowserTestUtils.removeTab(tab2);
   BrowserTestUtils.removeTab(tab1);
 });
+
+add_task(async function test_closes_on_navigation() {
+  const tab = await BrowserTestUtils.openNewForegroundTab({
+    gBrowser,
+    opening: "https://example.com",
+    waitForLoad: true,
+  });
+  const popup = document.getElementById("trustpanel-popup");
+
+  await UrlbarTestUtils.openTrustPanel(window);
+  Assert.equal(popup.state, "open", "Trust Panel is open");
+
+  info("Navigate from the content page, without touching the panel");
+  let popupHidden = BrowserTestUtils.waitForEvent(popup, "popuphidden");
+  await SpecialPowers.spawn(tab.linkedBrowser, [], () => {
+    content.location = "https://example.org/";
+  });
+  await popupHidden;
+
+  Assert.equal(
+    popup.state,
+    "closed",
+    "Trust Panel closed for the new document"
+  );
+
+  BrowserTestUtils.removeTab(tab);
+});

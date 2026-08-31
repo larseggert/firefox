@@ -511,6 +511,12 @@ class TrustPanel {
     if (!this.#enabled) {
       return;
     }
+
+    // Close the panel if we navigate to a new url.
+    if (this.#uri?.spec != uri.spec && this.#popup?.state == "open") {
+      PanelMultiView.hidePopup(this.#popup);
+    }
+
     try {
       // Account for file: urls and catch when "" is the value
       this.#uriHasHost = !!uri.host;
