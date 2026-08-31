@@ -591,8 +591,8 @@ class TextInputDelegateTest : BaseSessionTest() {
                 }
             )
 
-            mainSession.evaluateJS("document.querySelector('#input').blur()")
             activity.view.clearFocus()
+            mainSession.evaluateJS("document.querySelector('#input').blur()")
 
             UiThreadUtils.waitForCondition(
                 {
