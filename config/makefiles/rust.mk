@@ -292,8 +292,12 @@ endif
 export RUSTC_BOOTSTRAP
 endif
 
-target_rust_ltoable := force-cargo-library-build $(ADD_RUST_LTOABLE)
-target_rust_nonltoable := force-cargo-test-run force-cargo-program-build
+# `cargo` subcommands other than `build` that `mach cargo` can drive and need
+# build scripts to run.
+other_cargo_subcommands := check clippy fix udeps
+
+target_rust_ltoable := force-cargo-library-build $(addprefix force-cargo-library-,$(other_cargo_subcommands))
+target_rust_nonltoable := force-cargo-test-run force-cargo-program-build $(addprefix force-cargo-program-,$(other_cargo_subcommands))
 
 # Work around https://github.com/rust-lang/rust/issues/112480
 ifdef MOZ_DEBUG_RUST
@@ -316,7 +320,7 @@ $(target_rust_nonltoable): RUSTFLAGS:=$(rustflags_override) $(RUST_SANCOV_FLAGS)
 TARGET_RECIPES := $(target_rust_ltoable) $(target_rust_nonltoable)
 
 HOST_RECIPES := \
-  $(foreach a,library program,$(foreach b,build check udeps clippy,force-cargo-host-$(a)-$(b)))
+  $(foreach a,library program,$(foreach b,build $(other_cargo_subcommands),force-cargo-host-$(a)-$(b)))
 
 $(HOST_RECIPES): RUSTFLAGS:=$(rustflags_override)
 
