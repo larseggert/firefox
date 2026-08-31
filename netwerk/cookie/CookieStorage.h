@@ -249,6 +249,8 @@ class CookieStorage : public nsIObserver, public nsSupportsWeakReference {
                                                   uint16_t aMaxNumberOfCookies,
                                                   int64_t aCookiePurgeAge) = 0;
 
+  void PurgeExpiredCookies();
+
   void RemoveCookiesFromBack(nsTArray<CookieListIter>& aCookieIters,
                              nsCOMPtr<nsIArray>& aPurgedList);
 
