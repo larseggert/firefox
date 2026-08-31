@@ -1103,8 +1103,6 @@ void MacroAssembler::branch8(Condition cond, const BaseIndex& lhs, Register rhs,
   Register scratch = temps.Acquire();
   MOZ_ASSERT(scratch != lhs.base);
 
-  computeScaledAddress(lhs, scratch);
-
   switch (cond) {
     case Assembler::Equal:
     case Assembler::NotEqual:
@@ -1112,7 +1110,7 @@ void MacroAssembler::branch8(Condition cond, const BaseIndex& lhs, Register rhs,
     case Assembler::AboveOrEqual:
     case Assembler::Below:
     case Assembler::BelowOrEqual:
-      load8ZeroExtend(Address(scratch, lhs.offset), scratch);
+      load8ZeroExtend(lhs, scratch);
       branch32(cond, scratch, rhs, label);
       break;
 
@@ -1120,7 +1118,7 @@ void MacroAssembler::branch8(Condition cond, const BaseIndex& lhs, Register rhs,
     case Assembler::GreaterThanOrEqual:
     case Assembler::LessThan:
     case Assembler::LessThanOrEqual:
-      load8SignExtend(Address(scratch, lhs.offset), scratch);
+      load8SignExtend(lhs, scratch);
       branch32(cond, scratch, rhs, label);
       break;
 
