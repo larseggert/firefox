@@ -27,9 +27,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import java.net.URLEncoder
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.selector.findTabOrCustomTab
 import mozilla.components.browser.state.selector.privateTabs
@@ -689,7 +687,6 @@ class BrowserFragment : BaseFragment(), UserInteractionHandler, AccessibilityMan
         promptFeature.withFeature { it.onActivityResult(requestCode, data, resultCode) }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun showCrashReporter(crash: Crash) {
         val fragmentManager = requireActivity().supportFragmentManager
 
@@ -705,7 +702,7 @@ class BrowserFragment : BaseFragment(), UserInteractionHandler, AccessibilityMan
             if (sendCrashReport) {
                 val crashReporter = requireComponents.crashReporter
 
-                GlobalScope.launch(Dispatchers.IO) { crashReporter.submitReport(crash) }
+                requireComponents.applicationScope.launch(Dispatchers.IO) { crashReporter.submitReport(crash) }
             }
 
             requireComponents.sessionUseCases.crashRecovery.invoke()
