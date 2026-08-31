@@ -172,12 +172,15 @@ EditContext::EditContext(nsIGlobalObject* aGlobalObject,
   MOZ_ASSERT(mTextContainer);
   mText = document->CreateTextNode(u""_ns);
   mText->MarkAsMaybeModifiedFrequently();
-  mTextContainer->AppendChild(*mText, IgnoreErrors());
-  anonymousContent->Root()->AppendChild(*mTextContainer, IgnoreErrors());
+  mTextContainer->AppendChild(*mText, aRv);
+  anonymousContent->Root()->AppendChild(*mTextContainer, aRv);
   mText->SetEditableFlag(true);
   mTextContainer->SetEditableFlag(true);
   mTextContainer->Style()->SetProperty("visibility"_ns, "hidden"_ns, ""_ns,
-                                       IgnoreErrors());
+                                       aRv);
+  // For computing target ranges for backspace, etc.,
+  // we shouldn't treat consecutive spaces as collapsed.
+  mTextContainer->Style()->SetProperty("white-space"_ns, "pre"_ns, ""_ns, aRv);
   mSelectionStart = aInit.mSelectionStart;
   mSelectionEnd = aInit.mSelectionEnd;
   UpdateTextInternal(0, 0, aInit.mText, aRv);
