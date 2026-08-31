@@ -249,9 +249,10 @@ class gfxDWriteFontEntry final : public gfxFontEntry {
   // faces can be reliably identified via a GDI LOGFONT structure.
   bool mMayUseGDIAccess = false;
 
-  mozilla::ThreadSafeWeakPtr<mozilla::gfx::UnscaledFontDWrite> mUnscaledFont;
-  mozilla::ThreadSafeWeakPtr<mozilla::gfx::UnscaledFontDWrite>
-      mUnscaledFontBold;
+  mozilla::ThreadSafeWeakPtr<mozilla::gfx::UnscaledFontDWrite> mUnscaledFont
+      MOZ_GUARDED_BY(mLock);
+  mozilla::ThreadSafeWeakPtr<mozilla::gfx::UnscaledFontDWrite> mUnscaledFontBold
+      MOZ_GUARDED_BY(mLock);
 };
 
 // custom text renderer used to determine the fallback font for a given char

@@ -703,12 +703,11 @@ gfxFont* gfxDWriteFontEntry::CreateFontInstance(
   }
   DWRITE_FONT_SIMULATIONS sims =
       useBoldSim ? DWRITE_FONT_SIMULATIONS_BOLD : DWRITE_FONT_SIMULATIONS_NONE;
-  ThreadSafeWeakPtr<UnscaledFontDWrite>& unscaledFontPtr =
-      useBoldSim ? mUnscaledFontBold : mUnscaledFont;
   RefPtr<UnscaledFontDWrite> unscaledFont;
   {
     AutoReadLock lock(mLock);
-    unscaledFont = RefPtr<UnscaledFontDWrite>(unscaledFontPtr);
+    unscaledFont = RefPtr<UnscaledFontDWrite>(useBoldSim ? mUnscaledFontBold
+                                                         : mUnscaledFont);
   }
   if (!unscaledFont) {
     RefPtr<IDWriteFontFace> fontFace;
@@ -723,7 +722,11 @@ gfxFont* gfxDWriteFontEntry::CreateFontInstance(
     // a descriptor to represent the font for various transport use-cases.
     unscaledFont =
         new UnscaledFontDWrite(fontFace, !mIsDataUserFont ? mFont : nullptr);
-    unscaledFontPtr = unscaledFont;
+    if (useBoldSim) {
+      mUnscaledFontBold = unscaledFont;
+    } else {
+      mUnscaledFont = unscaledFont;
+    }
   }
   RefPtr<IDWriteFontFace> fontFace;
   if (HasVariations()) {
