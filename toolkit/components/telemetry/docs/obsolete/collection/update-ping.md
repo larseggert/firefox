@@ -1,4 +1,4 @@
-# "update" ping
+# "update" ping (obsolete)
 
 This opt-out ping is sent from Firefox Desktop when a browser update is ready to be applied and after it was correctly applied.
 

@@ -6,14 +6,7 @@ import { Log } from "resource://gre/modules/Log.sys.mjs";
 
 import { TelemetryUtils } from "resource://gre/modules/TelemetryUtils.sys.mjs";
 
-const lazy = {};
-
-ChromeUtils.defineESModuleGetters(lazy, {
-  TelemetryController: "resource://gre/modules/TelemetryController.sys.mjs",
-});
-
 const LOGGER_NAME = "Toolkit.Telemetry";
-const PING_TYPE = "update";
 const UPDATE_DOWNLOADED_TOPIC = "update-downloaded";
 const UPDATE_STAGED_TOPIC = "update-staged";
 
@@ -81,29 +74,7 @@ export var UpdatePing = {
 
     progress.updateFetched = true;
 
-    const payload = {
-      reason: "success",
-      previousChannel: update ? update.channel : null,
-      previousVersion: aPreviousVersion,
-      previousBuildId: aPreviousBuildId,
-    };
-
-    const options = {
-      addClientId: true,
-      addEnvironment: true,
-      usePingSender: true,
-    };
-
     progress.payloadCreated = true;
-
-    lazy.TelemetryController.submitExternalPing(
-      PING_TYPE,
-      payload,
-      options
-    ).catch(e => {
-      progress.pingFailed = true;
-      this._log.error("handleUpdateSuccess - failed to submit update ping", e);
-    });
 
     if (update) {
       Glean.update.previousChannel.set(update.channel);
@@ -145,28 +116,6 @@ export var UpdatePing = {
       );
       return;
     }
-
-    const payload = {
-      reason: "ready",
-      targetChannel: update.channel,
-      targetVersion: update.appVersion,
-      targetBuildId: update.buildID,
-      targetDisplayVersion: update.displayVersion,
-    };
-
-    const options = {
-      addClientId: true,
-      addEnvironment: true,
-      usePingSender: true,
-    };
-
-    lazy.TelemetryController.submitExternalPing(
-      PING_TYPE,
-      payload,
-      options
-    ).catch(e =>
-      this._log.error("_handleUpdateReady - failed to submit update ping", e)
-    );
 
     Glean.update.targetChannel.set(update.channel);
     Glean.update.targetVersion.set(update.appVersion);
