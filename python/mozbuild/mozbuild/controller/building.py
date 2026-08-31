@@ -59,6 +59,7 @@ RE_BUILD_OUTPUT = re.compile(
     |(?P<info_cargo>^\s{3,}(?:Compiling|Downloading|Building|Finished|Fresh|Running|Documenting)\s)
     |(?P<warning_summary>^\d+\s+(?:compiler\s+)?warnings?\s+(?:generated|present)\.)
     |(?P<error_summary>^\d+\s+errors?\s+generated\.)
+    |(?P<python_traceback>^Traceback\ \(most\ recent\ call\ last\):)
     |(?P<make_error>make(?:\[\d+\])?\s*:\s*\*\*\*)
     |(?P<nsis_warning_block>^\d+\s+warnings?:)
     |(?P<error_block>^error(?:\[e\d+\])?:\s?)
@@ -816,6 +817,7 @@ class BuildOutputManager(OutputManager):
                             self._active_log_level = None
                         elif match_type in (
                             "error_summary",
+                            "python_traceback",
                             "make_error",
                             "error_block",
                         ):
