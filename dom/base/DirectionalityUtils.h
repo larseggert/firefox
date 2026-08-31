@@ -5,6 +5,11 @@
 #ifndef DirectionalityUtils_h_
 #define DirectionalityUtils_h_
 
+#include "mozilla/Directionality.h"
+#include "mozilla/dom/Element.h"
+#include "mozilla/dom/HTMLSlotElement.h"
+#include "mozilla/dom/Text.h"
+#include "nsIContentInlines.h"
 #include "nsStringFwd.h"
 #include "nscore.h"
 
@@ -13,16 +18,17 @@ class nsINode;
 class nsAttrValue;
 
 namespace mozilla::dom {
-class Element;
 class HTMLSlotElement;
 class ShadowRoot;
-class Text;
 struct UnbindContext;
 }  // namespace mozilla::dom
 
 namespace mozilla {
 
-enum class Directionality : uint8_t { Unset, Rtl, Ltr, Auto };
+inline bool MayAffectDirAutoElement(const nsINode* aNode) {
+  return aNode &&
+         (aNode->NodeOrAncestorHasDirAuto() || aNode->AffectsDirAutoSlot());
+}
 
 /**
  * Various methods for returning the directionality of a string using the
@@ -69,12 +75,7 @@ void SlotAssignedNodeAddedForDir(dom::HTMLSlotElement* aSlot,
 void SlotAssignedNodeRemovedForDir(dom::HTMLSlotElement* aSlot,
                                    nsIContent& aUnassignedNode);
 
-/**
- * After unsetting dir=auto on an element, walk its descendants in tree order,
- * skipping any that have dir=auto themselves, and unset the
- * NODE_ANCESTOR_HAS_DIR_AUTO flag
- */
-void WalkDescendantsClearAncestorDirAuto(nsIContent* aContent);
+bool TextNodeWillChangeDirectionInternal(dom::Text*, Directionality*, uint32_t);
 
 /**
  * When the contents of a text node are about to change, retrieve the current
@@ -82,8 +83,14 @@ void WalkDescendantsClearAncestorDirAuto(nsIContent* aContent);
  *
  * @return whether the text node affects the directionality of any element
  */
-bool TextNodeWillChangeDirection(dom::Text* aTextNode, Directionality* aOldDir,
-                                 uint32_t aOffset);
+inline bool TextNodeWillChangeDirection(dom::Text* aTextNode,
+                                        Directionality* aOldDir,
+                                        uint32_t aOffset) {
+  if (!MayAffectDirAutoElement(aTextNode)) {
+    return false;
+  }
+  return TextNodeWillChangeDirectionInternal(aTextNode, aOldDir, aOffset);
+}
 
 /**
  * After the contents of a text node have changed, change the directionality
@@ -92,25 +99,47 @@ bool TextNodeWillChangeDirection(dom::Text* aTextNode, Directionality* aOldDir,
 void TextNodeChangedDirection(dom::Text* aTextNode, Directionality aOldDir,
                               bool aNotify);
 
+void SetDirectionFromNewTextNodeInternal(dom::Text*, nsINode*);
+
 /**
  * When a text node is appended to an element, find any ancestors with dir=auto
  * whose directionality will be determined by the text node
  */
-void SetDirectionFromNewTextNode(dom::Text* aTextNode, nsINode* aParent);
+inline void SetDirectionFromNewTextNode(dom::Text* aTextNode,
+                                        nsINode* aParent) {
+  if (MayAffectDirAutoElement(aParent)) {
+    SetDirectionFromNewTextNodeInternal(aTextNode, aParent);
+  }
+}
+
+void ResetDirectionSetByTextNodeInternal(dom::Text*, dom::UnbindContext&);
 
 /**
  * When a text node is removed from a document, find any ancestors whose
  * directionality it determined and redetermine their directionality
  */
-void ResetDirectionSetByTextNode(dom::Text*, dom::UnbindContext&);
+inline void ResetDirectionSetByTextNode(dom::Text* aTextNode,
+                                        dom::UnbindContext& aContext) {
+  if (aTextNode->MaySetDirAuto()) {
+    ResetDirectionSetByTextNodeInternal(aTextNode, aContext);
+  }
+}
+
+void ResetDirectionSetBySlotHostInternal(dom::HTMLSlotElement*,
+                                         dom::UnbindContext&, dom::ShadowRoot*);
 
 /**
  * Similar to text nodes, slots can also determine the directionality of
  * ancestors. These need to be updated if the slot is removed.
  * https://html.spec.whatwg.org/#contained-text-auto-directionality
  */
-void ResetDirectionSetBySlotHost(dom::HTMLSlotElement*, dom::UnbindContext&,
-                                 dom::ShadowRoot*);
+inline void ResetDirectionSetBySlotHost(dom::HTMLSlotElement* aSlot,
+                                        dom::UnbindContext& aContext,
+                                        dom::ShadowRoot* aOldContainingShadow) {
+  if (MayAffectDirAutoElement(aSlot)) {
+    ResetDirectionSetBySlotHostInternal(aSlot, aContext, aOldContainingShadow);
+  }
+}
 
 /**
  * Update directionality of this and other affected elements.
@@ -142,7 +171,11 @@ void SetDirOnBind(mozilla::dom::Element* aElement, nsIContent* aParent);
  * directionality of the element if it doesn't have autodirection, and to
  * clean up any entries in nsTextDirectionalityMap that refer to it.
  */
-void ResetDir(mozilla::dom::Element* aElement);
+inline void ResetDir(mozilla::dom::Element* aElement) {
+  if (!aElement->HasDirAuto()) {
+    RecomputeDirectionality(aElement, false);
+  }
+}
 }  // end namespace mozilla
 
 #endif /* DirectionalityUtils_h_ */

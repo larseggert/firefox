@@ -11,6 +11,7 @@
 #include "mozilla/MouseEvents.h"
 #include "mozilla/PresState.h"
 #include "mozilla/TextControlState.h"
+#include "mozilla/dom/DirectionalityUtils.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/FormData.h"
 #include "mozilla/dom/HTMLTextAreaElementBinding.h"
