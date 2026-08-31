@@ -107,6 +107,8 @@ class MacroAssemblerLOONG64 : public Assembler {
                             FPConditionBit fcc = FCC0);
 
  public:
+  void ma_move(Register dest, Register src);
+
   void ma_li(Register dest, CodeLabel* label);
   void ma_li(Register dest, ImmWord imm);
   void ma_liPatchable(Register dest, ImmPtr imm);

@@ -198,6 +198,13 @@ void MacroAssemblerLOONG64Compat::convertInt32ToFloat32(const Address& src,
   as_ffint_s_w(dest, dest);
 }
 
+void MacroAssemblerLOONG64::ma_move(Register dest, Register src) {
+  if (dest == src) {
+    return;
+  }
+  as_or(dest, src, zero);
+}
+
 void MacroAssemblerLOONG64::ma_li(Register dest, CodeLabel* label) {
   BufferOffset bo = m_buffer.nextOffset();
   ma_liPatchable(dest, ImmWord(/* placeholder */ 0));
