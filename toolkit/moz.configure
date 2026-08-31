@@ -2568,9 +2568,10 @@ def ffvpx(target):
     audio_only = False
     flags = []
 
-    # This enables audio and video codecs paths on Windows  x86 and x86_64,
-    # macOS (all arch), and Linux x86_64. On other arch / OS combinations,
-    # only audio codecs are enabled.
+    # This enables audio and video codecs paths on Windows (x86, x86_64,
+    # aarch64), macOS (all arch), Android (x86_64, aarch64, arm), and Linux
+    # x86_64 and aarch64. On other arch / OS combinations, only audio codecs
+    # are enabled.
     if target.kernel == "WINNT":
         if target.cpu == "x86":
             # 32-bit windows need to prefix symbols with an underscore.
@@ -2607,6 +2608,10 @@ def ffvpx(target):
             use_nasm = False
     elif target.cpu == "x86_64":
         flags = ["-D__x86_64__", "-DPIC", "-DELF", "-Pconfig_unix64.asm"]
+    elif target.cpu == "aarch64":
+        # Linux/BSD aarch64: match Android aarch64 (NEON asm, no nasm).
+        flags = ["-DPIC", "-DELF"]
+        use_nasm = False
     else:
         audio_only = True
 
