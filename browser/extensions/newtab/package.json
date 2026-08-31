@@ -97,7 +97,6 @@
     "watchmc:css": "npm run bundle:css -- --source-map --embed-sources --embed-source-map --load-path=content-src -w",
     "testmc": "npm-run-all testmc:*",
     "testmc:lint": "npm run lint",
-    "testmc:build": "npm run bundle:webpack",
     "testmc:jest": "jest",
     "testmc:jest:coverage": "jest --coverage",
     "testmc:unit": "karma start karma.mc.config.js",
