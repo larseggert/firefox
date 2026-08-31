@@ -6230,7 +6230,7 @@ void MacroAssembler::shiftIndex32AndAdd(Register indexTemp32, int shift,
   addPtr(indexTemp32, pointer);
 }
 
-void MacroAssembler::wasmMarkCallAsSlow() { mov(ra, ra); }
+void MacroAssembler::wasmMarkCallAsSlow() { as_ori(ra, ra, 0); }
 
 const int32_t SlowCallMarker = 0x03800021;  // ori ra, ra, 0
 
