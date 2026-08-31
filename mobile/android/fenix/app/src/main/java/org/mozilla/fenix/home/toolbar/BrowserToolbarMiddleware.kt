@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.browser.state.selector.getNormalOrPrivateTabs
+import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.compose.browser.toolbar.concept.Action
@@ -75,9 +76,12 @@ import org.mozilla.fenix.components.menu.MenuAccessPoint
 import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
 import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.home.HomeFragmentDirections
+import org.mozilla.fenix.home.goBackFromHomepage
 import org.mozilla.fenix.home.toolbar.DisplayActions.FakeClicked
 import org.mozilla.fenix.home.toolbar.DisplayActions.MenuClicked
 import org.mozilla.fenix.home.toolbar.DisplayActions.VoiceSearchClicked
+import org.mozilla.fenix.home.toolbar.NavigationInteractions.NavigateBackClicked
+import org.mozilla.fenix.home.toolbar.NavigationInteractions.NavigateBackLongClicked
 import org.mozilla.fenix.home.toolbar.PageOriginInteractions.OriginClicked
 import org.mozilla.fenix.home.toolbar.TabCounterInteractions.AddNewPrivateTab
 import org.mozilla.fenix.home.toolbar.TabCounterInteractions.AddNewTab
@@ -115,6 +119,13 @@ internal sealed class TabCounterInteractions : BrowserToolbarEvent {
 
 internal sealed class PageOriginInteractions : BrowserToolbarEvent {
     data object OriginClicked : PageOriginInteractions()
+}
+
+@VisibleForTesting
+internal sealed class NavigationInteractions : BrowserToolbarEvent {
+    data class NavigateBackClicked(override val source: Source) : NavigationInteractions()
+
+    data class NavigateBackLongClicked(override val source: Source) : NavigationInteractions()
 }
 
 /**
@@ -174,6 +185,7 @@ class BrowserToolbarMiddleware(
                 updateToolbarActionsBasedOnOrientation(store)
                 updateTabsCount(store)
                 updateMenuHighlight(store)
+                observePageNavigationStatus(store)
 
                 observeTranslationsFeatureAvailabilityUpdates(store)
             }
@@ -225,6 +237,17 @@ class BrowserToolbarMiddleware(
                 Events.searchBarTapped.record(Events.SearchBarTappedExtra("HOME"))
                 appStore.dispatch(SearchStarted())
             }
+            is NavigateBackClicked -> {
+                goBackFromHomepage(
+                    browserStore = browserStore,
+                    navController = navController,
+                )
+                next(action)
+            }
+            is NavigateBackLongClicked -> {
+                showTabHistory()
+                next(action)
+            }
             is VoiceSearchClicked -> {
                 scope.launch {
                     appStore.dispatch(VoiceInputRequested)
@@ -254,6 +277,12 @@ class BrowserToolbarMiddleware(
             else -> next(action)
         }
     }
+
+    private fun showTabHistory() =
+        navController.nav(
+            R.id.homeFragment,
+            NavGraphDirections.actionGlobalTabHistoryDialogFragment(activeSessionId = null),
+        )
 
     private fun addNewTab(
         store: Store<BrowserToolbarState, BrowserToolbarAction>,
@@ -483,6 +512,17 @@ class BrowserToolbarMiddleware(
         }
     }
 
+    private fun observePageNavigationStatus(store: Store<BrowserToolbarState, BrowserToolbarAction>) {
+        browserStore.observeWhileActive {
+            distinctUntilChangedBy { it.selectedTab?.content?.canGoBack }
+                .collect {
+                    if (ShortcutType.fromValue(settings.toolbarExpandedShortcutKey) == ShortcutType.BACK) {
+                        updateNavigationActions(store)
+                    }
+                }
+        }
+    }
+
     private fun updateMenuHighlight(store: Store<BrowserToolbarState, BrowserToolbarAction>) {
         appStore.observeWhileActive {
             distinctUntilChangedBy { it.supportedMenuNotifications.isNotEmpty() }
@@ -525,6 +565,7 @@ class BrowserToolbarMiddleware(
         NewTab,
         FakeTranslate,
         FakeHomepage,
+        Back,
         FakeBack,
         FakeSummarize,
     }
@@ -637,6 +678,20 @@ class BrowserToolbarMiddleware(
                     state = ActionButton.State.DISABLED,
                     onClick = FakeClicked,
                 )
+
+            HomeToolbarAction.Back ->
+                ActionButtonRes(
+                    drawableResId = iconsR.drawable.mozac_ic_back_24,
+                    contentDescription = R.string.browser_menu_back,
+                    state =
+                        if (browserStore.state.selectedTab?.content?.canGoBack == true) {
+                            ActionButton.State.DEFAULT
+                        } else {
+                            ActionButton.State.DISABLED
+                        },
+                    onClick = NavigateBackClicked(source),
+                    onLongClick = NavigateBackLongClicked(source),
+                )
         }
 
     private suspend fun isTranslationsFeatureAvailable(): Boolean {
@@ -658,7 +713,11 @@ class BrowserToolbarMiddleware(
                     false -> HomeToolbarAction.FakeBookmark // the first available option in settings.
                 }
             ShortcutType.HOMEPAGE -> HomeToolbarAction.FakeHomepage
-            ShortcutType.BACK -> HomeToolbarAction.FakeBack
+            ShortcutType.BACK ->
+                when (settings.enableHomepageAsNewTab) {
+                    true -> HomeToolbarAction.Back
+                    false -> HomeToolbarAction.FakeBack
+                }
             ShortcutType.SUMMARIZE -> HomeToolbarAction.FakeSummarize
             ShortcutType.NONE -> null
         }
