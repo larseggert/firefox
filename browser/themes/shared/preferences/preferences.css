@@ -185,6 +185,10 @@ label {
   }
 }
 
+#urlLabel {
+  margin-block-end: var(--space-small);
+}
+
 .description-deemphasized {
   color: var(--text-color-deemphasized);
 }
