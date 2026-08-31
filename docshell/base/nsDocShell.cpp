@@ -867,7 +867,10 @@ nsresult nsDocShell::LoadURI(nsDocShellLoadState* aLoadState,
       aLoadState->TriggeringPrincipal();
   if (triggeringPrincipal && triggeringPrincipal->IsSystemPrincipal()) {
     WindowContext* topWc = mBrowsingContext->GetTopWindowContext();
-    if (topWc && !topWc->IsDiscarded()) {
+    // Already set by BrowsingContext::LoadURI for a parent initiated load;
+    // notifying again could flag the entry this load is about to add.
+    if (topWc && !topWc->IsDiscarded() &&
+        !topWc->GetSHEntryHasUserInteraction()) {
       MOZ_ALWAYS_SUCCEEDS(topWc->SetSHEntryHasUserInteraction(true));
     }
   }
