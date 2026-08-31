@@ -32,6 +32,7 @@ import mozilla.components.browser.state.action.AwesomeBarAction
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.compose.browser.awesomebar.AwesomeBar
 import mozilla.components.compose.browser.awesomebar.AwesomeBarOrientation
+import mozilla.components.compose.browser.awesomebar.internal.CurrentTabDetailsInteractions.CopyClicked
 import mozilla.components.compose.browser.awesomebar.internal.CurrentTabDetailsInteractions.ShareClicked
 import mozilla.components.compose.browser.toolbar.store.BrowserEditToolbarAction.SearchQueryUpdated
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarStore
@@ -54,6 +55,8 @@ import org.mozilla.fenix.search.BrowserStoreToFenixSearchMapperMiddleware
 import org.mozilla.fenix.search.BrowserToolbarToFenixSearchMapperMiddleware
 import org.mozilla.fenix.search.FenixSearchMiddleware
 import org.mozilla.fenix.search.SearchFragmentAction
+import org.mozilla.fenix.search.SearchFragmentAction.CopyCurrentWebsiteDetailsClicked
+import org.mozilla.fenix.search.SearchFragmentAction.ShareCurrentWebsiteDetailsClicked
 import org.mozilla.fenix.search.SearchFragmentAction.SuggestionClicked
 import org.mozilla.fenix.search.SearchFragmentAction.SuggestionSelected
 import org.mozilla.fenix.search.SearchFragmentStore
@@ -232,8 +235,8 @@ class AwesomeBarComposable(
                         },
                         onCurrentSiteDetailsInteraction = {
                             when (it) {
-                                ShareClicked ->
-                                    searchStore.dispatch(SearchFragmentAction.ShareCurrentWebsiteDetailsClicked)
+                                ShareClicked -> searchStore.dispatch(ShareCurrentWebsiteDetailsClicked)
+                                CopyClicked -> searchStore.dispatch(CopyCurrentWebsiteDetailsClicked)
                             }
                         },
                         onVisibilityStateUpdated = {
@@ -317,6 +320,7 @@ class AwesomeBarComposable(
                             navController = navController,
                             browsingModeManager = activity.browsingModeManager,
                             shareUseCases = components.useCases.shareUseCases,
+                            clipboardHandler = components.clipboardHandler,
                         ),
                     ),
             )

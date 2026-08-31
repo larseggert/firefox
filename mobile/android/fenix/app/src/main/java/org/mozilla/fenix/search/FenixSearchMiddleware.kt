@@ -4,6 +4,7 @@
 
 package org.mozilla.fenix.search
 
+import android.os.Build
 import androidx.annotation.VisibleForTesting
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -38,6 +39,7 @@ import mozilla.components.lib.state.Middleware
 import mozilla.components.lib.state.State
 import mozilla.components.lib.state.Store
 import mozilla.components.lib.state.ext.flow
+import mozilla.components.support.utils.ClipboardHandler
 import mozilla.telemetry.glean.private.NoExtras
 import org.mozilla.fenix.GleanMetrics.BookmarksManagement
 import org.mozilla.fenix.GleanMetrics.Events
@@ -51,6 +53,7 @@ import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.NimbusComponents
 import org.mozilla.fenix.components.UseCases
 import org.mozilla.fenix.components.appstate.AppAction.SearchAction.SearchEngineSelected
+import org.mozilla.fenix.components.appstate.AppAction.URLCopiedToClipboard
 import org.mozilla.fenix.components.metrics.MetricsUtils
 import org.mozilla.fenix.components.search.BOOKMARKS_SEARCH_ENGINE_ID
 import org.mozilla.fenix.components.search.HISTORY_SEARCH_ENGINE_ID
@@ -61,6 +64,7 @@ import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.ext.telemetryName
 import org.mozilla.fenix.nimbus.FxNimbus
+import org.mozilla.fenix.search.SearchFragmentAction.CopyCurrentWebsiteDetailsClicked
 import org.mozilla.fenix.search.SearchFragmentAction.Init
 import org.mozilla.fenix.search.SearchFragmentAction.PrivateSuggestionsCardAccepted
 import org.mozilla.fenix.search.SearchFragmentAction.SearchEnginesSelectedActions
@@ -94,7 +98,8 @@ import org.mozilla.fenix.utils.Settings
  * @param toolbarStore [BrowserToolbarStore] used for querying and updating the toolbar state.
  * @param navController [NavController] to use for navigating to other in-app destinations.
  * @param browsingModeManager [BrowsingModeManager] used for querying and updating the browsing mode.
- * @param shareUseCases [ShareUseCases] used for sharing applications content to other installd applications.
+ * @param shareUseCases [ShareUseCases] used for sharing applications content to other installed applications.
+ * @param clipboardHandler [ClipboardHandler] used for copying text to the system clipboard.
  */
 @Suppress("LongParameterList")
 class FenixSearchMiddleware(
@@ -109,6 +114,7 @@ class FenixSearchMiddleware(
     private val navController: NavController,
     private val browsingModeManager: BrowsingModeManager,
     private val shareUseCases: ShareUseCases,
+    private val clipboardHandler: ClipboardHandler,
 ) : Middleware<SearchFragmentState, SearchFragmentAction> {
     private var observeSearchEnginesChangeJob: Job? = null
 
@@ -198,6 +204,10 @@ class FenixSearchMiddleware(
 
             is ShareCurrentWebsiteDetailsClicked -> {
                 handleSharingCurrentWebsiteDetails()
+            }
+
+            is CopyCurrentWebsiteDetailsClicked -> {
+                handleCopyingCurrentWebsiteDetails()
             }
 
             else -> next(action)
@@ -517,7 +527,7 @@ class FenixSearchMiddleware(
 
     private fun handleSharingCurrentWebsiteDetails() {
         val currentDestination = navController.currentDestination ?: return
-        val session = browserStore.state.findTab(appStore.state.searchState.sourceTabId ?: "") ?: return
+        val session = sessionSearchWasStartedFor ?: return
         val url = session.getUrl()
 
         shareUseCases.shareUrl(
@@ -544,4 +554,27 @@ class FenixSearchMiddleware(
             },
         )
     }
+
+    private fun handleCopyingCurrentWebsiteDetails() {
+        val session = sessionSearchWasStartedFor ?: return
+        val url = session.getUrl()
+        val isPrivate = session.content.private
+
+        if (isPrivate) {
+            clipboardHandler.sensitiveText = url
+        } else {
+            clipboardHandler.text = url
+        }
+
+        // Android 13+ shows by default a popup for copied text.
+        // Avoid overlapping popups informing the user when the URL is copied to the clipboard.
+        // and only show our snackbar when Android will not show an indication by default.
+        // See https://developer.android.com/develop/ui/views/touch-and-input/copy-paste#duplicate-notifications).
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+            appStore.dispatch(URLCopiedToClipboard)
+        }
+    }
+
+    private val sessionSearchWasStartedFor
+        get() = browserStore.state.findTab(appStore.state.searchState.sourceTabId ?: "")
 }

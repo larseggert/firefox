@@ -4,6 +4,7 @@
 
 package org.mozilla.fenix.search
 
+import android.os.Build
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -42,6 +43,7 @@ import mozilla.components.concept.engine.EngineSession.LoadUrlFlags
 import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.support.test.middleware.CaptureActionsMiddleware
 import mozilla.components.support.test.robolectric.testContext
+import mozilla.components.support.utils.ClipboardHandler
 import mozilla.telemetry.glean.testing.GleanTestRule
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -65,6 +67,7 @@ import org.mozilla.fenix.components.NimbusComponents
 import org.mozilla.fenix.components.UseCases
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.components.appstate.AppAction.SearchAction.SearchEngineSelected
+import org.mozilla.fenix.components.appstate.AppAction.URLCopiedToClipboard
 import org.mozilla.fenix.components.appstate.AppState
 import org.mozilla.fenix.components.appstate.search.SearchState as AppSearchState
 import org.mozilla.fenix.components.appstate.search.SelectedSearchEngine
@@ -77,6 +80,7 @@ import org.mozilla.fenix.nimbus.AddressbarFocusMode
 import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.search.SearchEngineSource.Bookmarks
 import org.mozilla.fenix.search.SearchEngineSource.Shortcut
+import org.mozilla.fenix.search.SearchFragmentAction.CopyCurrentWebsiteDetailsClicked
 import org.mozilla.fenix.search.SearchFragmentAction.SearchProvidersUpdated
 import org.mozilla.fenix.search.SearchFragmentAction.SearchShortcutEngineSelected
 import org.mozilla.fenix.search.SearchFragmentAction.SearchStarted
@@ -92,6 +96,7 @@ import org.mozilla.fenix.telemetry.SURFACE_BROWSER
 import org.mozilla.fenix.telemetry.SURFACE_HOME
 import org.mozilla.fenix.utils.Settings
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 class FenixSearchMiddlewareTest {
@@ -119,6 +124,7 @@ class FenixSearchMiddlewareTest {
     private val toolbarStore: BrowserToolbarStore = mockk(relaxed = true)
     private val navController: NavController = mockk(relaxed = true)
     private val shareUseCases: ShareUseCases = mockk(relaxed = true)
+    private val clipboardHandler: ClipboardHandler = mockk(relaxed = true)
 
     @Before
     fun setup() {
@@ -745,6 +751,54 @@ class FenixSearchMiddlewareTest {
         }
     }
 
+    @Test
+    fun `WHEN choosing to copy the current website details THEN copy the URL of the tab search started for`() {
+        val currentTab = createTab(url = "https://mozilla.com", title = "Mozilla", private = false)
+        stubSearchSourceTab(currentTab.id)
+        val (_, store) = buildMiddlewareAndAddToSearchStore(browserStore = buildBrowserStore(currentTab))
+
+        store.dispatch(CopyCurrentWebsiteDetailsClicked)
+
+        verify { clipboardHandler.text = currentTab.content.url }
+        verify(exactly = 0) { clipboardHandler.sensitiveText = any() }
+    }
+
+    @Test
+    fun `GIVEN a private tab WHEN choosing to copy the current website details THEN copy the URL as sensitive text`() {
+        val currentTab = createTab(url = "https://mozilla.com", title = "Mozilla", private = true)
+        stubSearchSourceTab(currentTab.id)
+        val (_, store) = buildMiddlewareAndAddToSearchStore(browserStore = buildBrowserStore(currentTab))
+
+        store.dispatch(CopyCurrentWebsiteDetailsClicked)
+
+        verify { clipboardHandler.sensitiveText = currentTab.content.url }
+        verify(exactly = 0) { clipboardHandler.text = any() }
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.S])
+    fun `GIVEN on Android 12 WHEN choosing to copy the current website details THEN show a snackbar to inform about the operation`() {
+        val currentTab = createTab(url = "https://mozilla.com", title = "Mozilla", private = false)
+        stubSearchSourceTab(currentTab.id)
+        val (_, store) = buildMiddlewareAndAddToSearchStore(browserStore = buildBrowserStore(currentTab))
+
+        store.dispatch(CopyCurrentWebsiteDetailsClicked)
+
+        verify { appStore.dispatch(URLCopiedToClipboard) }
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+    fun `GIVEN on Android 13 WHEN choosing to copy the current website details THEN don't show a snackbar to inform about the operation`() {
+        val currentTab = createTab(url = "https://mozilla.com", title = "Mozilla", private = false)
+        stubSearchSourceTab(currentTab.id)
+        val (_, store) = buildMiddlewareAndAddToSearchStore(browserStore = buildBrowserStore(currentTab))
+
+        store.dispatch(CopyCurrentWebsiteDetailsClicked)
+
+        verify(exactly = 0) { appStore.dispatch(URLCopiedToClipboard) }
+    }
+
     private fun buildMiddlewareAndAddToSearchStore(
         engine: Engine = this.engine,
         useCases: UseCases = this.useCases,
@@ -753,6 +807,7 @@ class FenixSearchMiddlewareTest {
         browserStore: BrowserStore = this.browserStore,
         toolbarStore: BrowserToolbarStore = this.toolbarStore,
         shareUseCases: ShareUseCases = this.shareUseCases,
+        clipboardHandler: ClipboardHandler = this.clipboardHandler,
     ): Pair<FenixSearchMiddleware, SearchFragmentStore> {
         val middleware =
             buildMiddleware(
@@ -764,6 +819,7 @@ class FenixSearchMiddlewareTest {
                 browserStore = browserStore,
                 toolbarStore = toolbarStore,
                 shareUseCases = shareUseCases,
+                clipboardHandler = clipboardHandler,
             )
         every { middleware.buildSearchSuggestionsProvider(any()) } returns mockk(relaxed = true)
 
@@ -783,6 +839,7 @@ class FenixSearchMiddlewareTest {
         navController: NavController = this.navController,
         browsingModeManager: BrowsingModeManager = this.browsingModeManager,
         shareUseCases: ShareUseCases = this.shareUseCases,
+        clipboardHandler: ClipboardHandler = this.clipboardHandler,
     ): FenixSearchMiddleware {
         val middleware =
             spyk(
@@ -801,6 +858,7 @@ class FenixSearchMiddlewareTest {
                     navController = navController,
                     browsingModeManager = browsingModeManager,
                     shareUseCases = shareUseCases,
+                    clipboardHandler = clipboardHandler,
                 )
             )
         every { middleware.buildSearchSuggestionsProvider(any()) } returns mockk(relaxed = true)

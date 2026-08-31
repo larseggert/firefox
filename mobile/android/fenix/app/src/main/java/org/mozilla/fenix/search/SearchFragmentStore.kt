@@ -396,6 +396,9 @@ sealed class SearchFragmentAction : Action {
 
     /** Action indicating the user wants to share the current website details. */
     data object ShareCurrentWebsiteDetailsClicked : SearchFragmentAction()
+
+    /** Action indicating the user wants to share the current website details. */
+    data object CopyCurrentWebsiteDetailsClicked : SearchFragmentAction()
 }
 
 /** The SearchState Reducer. */
@@ -590,7 +593,8 @@ private fun searchStateReducer(state: SearchFragmentState, action: SearchFragmen
         is SearchFragmentAction.SuggestionClicked,
         is SearchFragmentAction.PrivateSuggestionsCardAccepted,
         is SearchFragmentAction.SuggestionSelected,
-        is SearchFragmentAction.ShareCurrentWebsiteDetailsClicked -> {
+        is SearchFragmentAction.ShareCurrentWebsiteDetailsClicked,
+        is SearchFragmentAction.CopyCurrentWebsiteDetailsClicked -> {
             // no-op. Expected to be handled in middlewares.
             state
         }
