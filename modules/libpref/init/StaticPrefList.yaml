@@ -8407,7 +8407,7 @@
 
 - name: gfx.webrender.layer-compositor
   type: RelaxedAtomicBool
-#if defined(XP_WIN)
+#if defined(XP_WIN) || defined(MOZ_WIDGET_GTK)
   value: true
 #else
   value: false
