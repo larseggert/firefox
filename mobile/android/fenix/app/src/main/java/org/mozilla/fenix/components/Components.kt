@@ -12,7 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationManagerCompat
 import com.google.android.play.core.review.ReviewManagerFactory
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.CoroutineScope
 import mozilla.components.concept.ai.controls.AIFeatureBlock
 import mozilla.components.concept.ai.controls.AIFeatureRegistry
 import mozilla.components.feature.addons.AddonManager
@@ -115,6 +115,13 @@ private const val AMO_COLLECTION_MAX_CACHE_AGE = 2 * 24 * 60L // Two days in min
  */
 class Components(
     private val context: Context,
+    /**
+     * A [CoroutineScope] that is tied to the lifetime of the application process.
+     *
+     * Note: Tasks should be scoped to the container which holds their UI. If necessary, applicationScope can be used
+     * for top-level background work that must remain active for the whole duration of the application.
+     */
+    val applicationScope: CoroutineScope,
     private val currentTimeMillis: () -> Long = { System.currentTimeMillis() },
 ) {
     val backgroundServices by lazyMonitored {
@@ -133,7 +140,7 @@ class Components(
     }
     val services by lazyMonitored { Services(context, core.store, backgroundServices.accountManager) }
     val core by lazyMonitored {
-        Core(context, analytics.crashReporter, strictMode, performance.visualCompletenessQueue)
+        Core(context, analytics.crashReporter, strictMode, performance.visualCompletenessQueue, applicationScope)
     }
 
     val useCases by lazyMonitored {
@@ -463,7 +470,7 @@ class Components(
     }
 
     val aiFeatureRegistry by lazyMonitored {
-        AIFeatureRegistry.default(scope = MainScope(), context = context).also {
+        AIFeatureRegistry.default(scope = kotlinx.coroutines.MainScope(), context = context).also {
             if (settings.shakeToSummarizeFeatureFlagEnabled) {
                 it.register(PageSummaryFeature(summarizationSettings))
             }

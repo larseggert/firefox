@@ -623,6 +623,7 @@ abstract class BaseBrowserFragment :
                     tabsUseCases = context.components.useCases.tabsUseCases,
                     sendTabUseCases = SendTabUseCases(requireComponents.backgroundServices.accountManager),
                     customTabSessionId = customTabSessionId,
+                    applicationScope = context.components.applicationScope,
                     viewHasFocus = { view.hasWindowFocus() },
                 ),
             owner = this,

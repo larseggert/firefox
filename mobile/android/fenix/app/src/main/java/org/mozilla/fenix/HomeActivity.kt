@@ -655,9 +655,14 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
         startupTelemetryOnCreateCalled(intent.toSafeIntent())
         startupPathProvider.attachOnActivityOnCreate(lifecycle, intent)
         startupTypeTelemetry =
-            StartupTypeTelemetry(components.startupStateProvider, startupPathProvider).apply {
-                attachOnHomeActivityOnCreate(lifecycle)
-            }
+            StartupTypeTelemetry(
+                    components.startupStateProvider,
+                    startupPathProvider,
+                    components.applicationScope,
+                )
+                .apply {
+                    attachOnHomeActivityOnCreate(lifecycle)
+                }
 
         components.core.requestInterceptor.setNavigationController(navHost.navController)
 

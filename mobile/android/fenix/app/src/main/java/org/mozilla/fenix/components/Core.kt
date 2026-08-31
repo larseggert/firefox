@@ -158,6 +158,7 @@ class Core(
     private val crashReporter: CrashReporting,
     strictMode: StrictModeManager,
     visualCompletenessQueue: RunWhenReadyQueue,
+    @Suppress("UnusedPrivateProperty") private val applicationScope: CoroutineScope,
 ) {
     /** The browser engine component initialized based on the build configuration (see build variants). */
     val engine: Engine by lazyMonitored {
