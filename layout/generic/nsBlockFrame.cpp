@@ -2327,7 +2327,8 @@ std::pair<nsBlockFrame*, nsLineBox*> FindLineClampTarget(
   return std::pair(targetFrame, targetLine);
 }
 
-nscoord nsBlockFrame::ApplyLineClamp(nscoord aContentBlockEndEdge) {
+nscoord nsBlockFrame::ApplyLineClamp(nscoord aContentBlockEndEdge,
+                                     nscoord aCollapsingBEndMargin) {
   auto* root = GetLineClampRoot();
   if (!root) {
     return aContentBlockEndEdge;
@@ -2353,6 +2354,7 @@ nscoord nsBlockFrame::ApplyLineClamp(nscoord aContentBlockEndEdge) {
       static_cast<nsBlockFrame*>(f)->SetHasLineClampEllipsisDescendant(true);
     }
     if (f == this) {
+      edge += aCollapsingBEndMargin;
       break;
     }
     if (f == root) {
@@ -2451,7 +2453,9 @@ nscoord nsBlockFrame::ComputeFinalSize(const ReflowInput& aReflowInput,
     // We don't care about ApplyLineClamp's return value (the line-clamped
     // content BSize) in this explicit-BSize codepath, but we do still need to
     // call ApplyLineClamp for ellipsis markers to be placed as-needed.
-    ApplyLineClamp(contentBSizeWithBStartBP);
+    // If we don't care about the size, also don't worry about providing
+    // the margin value.
+    ApplyLineClamp(contentBSizeWithBStartBP, 0);
 
     finalSize.BSize(wm) = ComputeFinalBSize(aState, contentBSizeWithBStartBP);
 
@@ -2498,7 +2502,7 @@ nscoord nsBlockFrame::ComputeFinalSize(const ReflowInput& aReflowInput,
     finalSize.BSize(wm) = aReflowInput.AvailableBSize();
   } else if (aState.mReflowStatus.IsComplete()) {
     const nscoord lineClampedContentBlockEndEdge =
-        ApplyLineClamp(blockEndEdgeOfChildren);
+        ApplyLineClamp(blockEndEdgeOfChildren, aState.mPrevBEndMargin.Get());
 
     const nscoord bpBStart = borderPadding.BStart(wm);
     const nscoord contentBSize = blockEndEdgeOfChildren - bpBStart;
