@@ -38,7 +38,6 @@ import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoSession.TextInputDelegate
 import org.mozilla.geckoview.test.rule.GeckoSessionTestRule.AssertCalled
 import org.mozilla.geckoview.test.rule.GeckoSessionTestRule.NullDelegate
-import org.mozilla.geckoview.test.rule.GeckoSessionTestRule.TimeoutMillis
 import org.mozilla.geckoview.test.rule.GeckoSessionTestRule.WithDisplay
 import org.mozilla.geckoview.test.util.UiThreadUtils
 
@@ -559,8 +558,7 @@ class TextInputDelegateTest : BaseSessionTest() {
     }
 
     // For bug 2048921
-    @Test(expected = UiThreadUtils.TimeoutException::class)
-    @TimeoutMillis(2000)
+    @Test
     @NullDelegate(Autofill.Delegate::class)
     fun noDismissKeyboardAfterlostFocus() {
         assumeThat("input only", id, equalTo("#input"))
@@ -594,12 +592,10 @@ class TextInputDelegateTest : BaseSessionTest() {
             activity.view.clearFocus()
             mainSession.evaluateJS("document.querySelector('#input').blur()")
 
-            UiThreadUtils.waitForCondition(
-                {
-                    dismissCount != 0
-                },
-                sessionRule.timeoutMillis,
-            )
+            // Must outlast DISMISS_VKB_DELAY_MS so HideSoftInputTask runs and hits its hasFocus() return.
+            try {
+                UiThreadUtils.waitForCondition({ dismissCount != 0 }, 2000)
+            } catch (e: UiThreadUtils.TimeoutException) {}
 
             assertThat(
                 "The keyboard should not be dismissed after losing focus.",
