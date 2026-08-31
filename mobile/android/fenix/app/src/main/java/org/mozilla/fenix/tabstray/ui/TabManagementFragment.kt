@@ -67,6 +67,7 @@ import mozilla.components.lib.state.helpers.StoreProvider.Companion.storeProvide
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import mozilla.components.support.ktx.android.view.setNavigationBarTheme
 import mozilla.components.support.ktx.android.view.setStatusBarTheme
+import mozilla.components.support.utils.BuildManufacturerChecker
 import mozilla.components.support.utils.ext.pixelSizeFor
 import mozilla.telemetry.glean.private.NoExtras
 import org.mozilla.fenix.Config
@@ -754,6 +755,13 @@ class TabManagementFragment : Fragment() {
         group: TabsTrayItem.TabGroup,
         @ColorInt dotColor: Int,
     ) {
+        // ColorOS-based devices render the system share sheet's content-preview image as a
+        // large graphic rather than a small icon, so we omit the thumbnail on these devices.
+        if (isColorOsBasedDevice) {
+            tabManagerController.handleShareTabGroupClicked(group, dotColor, thumbnailUri = null)
+            return
+        }
+
         val context = requireContext()
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -777,6 +785,10 @@ class TabManagementFragment : Fragment() {
             tabManagerController.handleShareTabGroupClicked(group, dotColor, thumbnailUri)
         }
     }
+
+    /** Whether this device runs a ColorOS-based OS. */
+    private val isColorOsBasedDevice: Boolean
+        get() = BuildManufacturerChecker().let { it.isOppo() || it.isOnePlus() || it.isRealme() }
 
     private fun createTabGroupDotBitmap(@ColorInt color: Int): Bitmap {
         val bitmap = createBitmap(TAB_GROUP_SHARE_DOT_SIZE_PX, TAB_GROUP_SHARE_DOT_SIZE_PX)
