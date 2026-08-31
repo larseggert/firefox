@@ -142,7 +142,7 @@ class Components(
     val settings by lazy { Settings(context) }
 
     val fileUploadsDirCleaner: FileUploadsDirCleaner by lazy {
-        FileUploadsDirCleaner { context.cacheDir }
+        FileUploadsDirCleaner(applicationScope) { context.cacheDir }
     }
 
     val remoteSettingsSyncScheduler by lazy {
@@ -213,7 +213,7 @@ class Components(
                         // We are currently using the default location service. We should consider using
                         // an actual implementation:
                         // https://github.com/mozilla-mobile/focus-android/issues/4781
-                        RegionMiddleware(context, locationService),
+                        RegionMiddleware(context, locationService, applicationScope = applicationScope),
                         SearchMiddleware(
                             context,
                             migration = SearchMigration(context),

@@ -289,7 +289,7 @@ class Core(
     }
 
     val fileUploadsDirCleaner: FileUploadsDirCleaner by lazyMonitored {
-        FileUploadsDirCleaner { context.cacheDir }
+        FileUploadsDirCleaner(scope = applicationScope) { context.cacheDir }
     }
 
     val geckoRuntime: GeckoRuntime by lazyMonitored {
@@ -298,6 +298,7 @@ class Core(
             lazyAutofillStorage,
             lazyPasswordsStorage,
             trackingProtectionPolicyFactory.createTrackingProtectionPolicy(),
+            applicationScope,
         )
     }
 
@@ -306,7 +307,7 @@ class Core(
     }
 
     val sessionStorage: SessionStorage by lazyMonitored {
-        SessionStorage(context, engine, crashReporter)
+        SessionStorage(context, engine, crashReporter, applicationScope)
     }
 
     private val locationService: LocationService by lazyMonitored {
@@ -361,7 +362,7 @@ class Core(
                 TelemetryMiddleware(context, context.components.settings, metrics, crashReporter),
                 ThumbnailsMiddleware(thumbnailStorage),
                 UndoMiddleware(context.components.settings.getUndoDelay()),
-                RegionMiddleware(context, locationService),
+                RegionMiddleware(context, locationService, applicationScope = applicationScope),
                 SearchMiddleware(
                     context = context,
                     additionalBundledSearchEngineIds = listOf("reddit", "youtube"),

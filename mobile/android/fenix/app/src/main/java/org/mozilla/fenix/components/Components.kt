@@ -136,6 +136,7 @@ class Components(
             core.lazyRemoteTabsStorage,
             core.lazyAutofillStorage,
             strictMode,
+            applicationScope,
         )
     }
     val services by lazyMonitored { Services(context, core.store, backgroundServices.accountManager) }
@@ -178,6 +179,7 @@ class Components(
             useCases.searchUseCases,
             core.webAppManifestStorage,
             core.engine,
+            applicationScope,
         )
     }
 
@@ -470,7 +472,7 @@ class Components(
     }
 
     val aiFeatureRegistry by lazyMonitored {
-        AIFeatureRegistry.default(scope = kotlinx.coroutines.MainScope(), context = context).also {
+        AIFeatureRegistry.default(scope = applicationScope, context = context).also {
             if (settings.shakeToSummarizeFeatureFlagEnabled) {
                 it.register(PageSummaryFeature(summarizationSettings))
             }

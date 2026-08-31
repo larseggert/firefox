@@ -707,7 +707,6 @@
     <ID>UndocumentedPublicFunction:Fragment.kt$fun Fragment.breadcrumb( message: String, data: Map&lt;String, String&gt; = emptyMap(), )</ID>
     <ID>UndocumentedPublicFunction:Fragment.kt$fun Fragment.getPreferenceKey(@StringRes resourceId: Int): String</ID>
     <ID>UndocumentedPublicFunction:FxaServer.kt$FxaServer$fun config(context: Context): ServerConfig</ID>
-    <ID>UndocumentedPublicFunction:GeckoProvider.kt$GeckoProvider$@Synchronized fun getOrCreateRuntime( context: Context, autofillStorage: Lazy&lt;CreditCardsAddressesStorage&gt;, loginStorage: Lazy&lt;LoginsStorage&gt;, trackingProtectionPolicy: TrackingProtectionPolicy, ): GeckoRuntime</ID>
     <ID>UndocumentedPublicFunction:GroupableRadioButton.kt$GroupableRadioButton$fun addToRadioGroup(radioButton: GroupableRadioButton)</ID>
     <ID>UndocumentedPublicFunction:GroupableRadioButton.kt$GroupableRadioButton$fun updateRadioValue(isChecked: Boolean)</ID>
     <ID>UndocumentedPublicFunction:GroupableRadioButton.kt$fun Iterable&lt;GroupableRadioButton&gt;.uncheckAll()</ID>
