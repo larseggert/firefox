@@ -221,7 +221,7 @@ busy-trr:
             xpcshell/tests/netwerk/test/unit/test_trr_bench.js
             --flavor xpcshell
             --perfherder
-            --perfherder-metrics name:average,unit:ms
+            --perfherder-metrics name:average,unit:ms,shouldAlert:True
             --output $MOZ_FETCHES_DIR/../artifacts
             --xpcshell-binary ${MOZ_FETCHES_DIR}/bin/xpcshell
             --xpcshell-mozinfo ${MOZ_FETCHES_DIR}/target.mozinfo.json

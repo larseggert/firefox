@@ -504,6 +504,7 @@ test_trr_bench.js
 ::
 
  --perfherder
+ --perfherder-metrics name:average,unit:ms,shouldAlert:True,lowerIsBetter:True
 
 **Benchmark for TRR (Trusted Recursive Resolver) DNS lookup performance under various load conditions.**
 
