@@ -1142,6 +1142,7 @@ SettingGroupManager.registerGroups({
   referrals: {
     l10nId: "referrals-section-header2",
     headingLevel: 2,
+    iconSrc: "chrome://browser/content/logos/share-firefox.svg",
     hidden: !Referrals.isEnabled,
     items: [
       {
