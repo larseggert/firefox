@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.3.237
- * pdfjsBuild = 9aea8e2df
+ * pdfjsVersion = 6.3.280
+ * pdfjsBuild = c3257df8d
  */
 
 ;// ./src/shared/util.js
@@ -2065,7 +2065,7 @@ class FloatingToolbar {
 }
 
 ;// ./src/shared/internal_evt.js
-const INTERNAL_EVT = "0dbae0d4-6a6c-42d9-90aa-b76687a77787";
+const INTERNAL_EVT = "66acb31d-c658-4d23-ad07-851f03e8c668";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -12833,11 +12833,9 @@ class DOMFilterFactory extends BaseFilterFactory {
     if (fgColor === "#000000" && bgColor === "#ffffff" || fgColor === bgColor) {
       return info.url;
     }
-    const map = new Array(256);
-    for (let i = 0; i <= 255; i++) {
-      const x = i / 255;
-      map[i] = x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
-    }
+    const map = Array.from({
+      length: 256
+    }, (_, i) => computeLuminance(i / 255));
     const table = map.join(",");
     const id = `g_${this.#docId}_hcm_filter`;
     const filter = info.filter = this.#createFilter(id);
@@ -14480,7 +14478,7 @@ function getDocument(src = {}) {
   }
   const docParams = {
     docId,
-    apiVersion: "6.3.237",
+    apiVersion: "6.3.280",
     data,
     password,
     disableAutoFetch,
@@ -16137,8 +16135,8 @@ class InternalRenderTask {
     }
   }
 }
-const version = "6.3.237";
-const build = "9aea8e2df";
+const version = "6.3.280";
+const build = "c3257df8d";
 
 ;// ./src/display/editor/color_picker.js
 
