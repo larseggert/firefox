@@ -2327,6 +2327,13 @@ pref("sidebar.openTabsPanel.hoverPreview.enabled", true);
 pref("sidebar.notification.badge.aichat", false);
 
 pref("browser.resourceMonitor.enabled", false);
+// Registers the Resource Monitor for sidebar new-tool migration. When
+// browser.resourceMonitor.enabled flips to true, the tool is auto-added
+// to sidebar.main.tools. See browser/components/sidebar/docs/index.md.
+pref(
+  "sidebar.newTool.migration.resourcemonitor",
+  '{"visibilityPref":"browser.resourceMonitor.enabled"}'
+);
 
 pref("browser.ml.chat.enabled", true);
 pref("browser.ml.chat.hideLocalhost", true);
