@@ -11,6 +11,7 @@ import org.junit.Test
 import org.mozilla.fenix.customannotations.Converted
 import org.mozilla.fenix.customannotations.SmokeTest
 import org.mozilla.fenix.helpers.FenixTestRule
+import org.mozilla.fenix.helpers.FxNimbusHelper
 import org.mozilla.fenix.helpers.HomeActivityTestRule
 import org.mozilla.fenix.helpers.MatcherHelper.itemContainingText
 import org.mozilla.fenix.helpers.MatcherHelper.itemWithText
@@ -64,6 +65,7 @@ class TextSelectionTest {
     @SmokeTest
     @Test
     fun verifySelectAllTextOptionTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(false)
         val genericURL = mockWebServer.getGenericAsset(1)
 
         navigationToolbar(composeTestRule) {}
@@ -88,6 +90,7 @@ class TextSelectionTest {
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326828
     @Test
     fun verifyCopyTextOptionTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(false)
         val genericURL = mockWebServer.getGenericAsset(1)
 
         navigationToolbar(composeTestRule) {}
@@ -160,6 +163,7 @@ class TextSelectionTest {
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326834
     @Test
     fun verifySelectAllPDFTextOptionTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(false)
         val genericURL = mockWebServer.getGenericAsset(3)
 
         navigationToolbar(composeTestRule) {}
@@ -192,6 +196,7 @@ class TextSelectionTest {
     @SmokeTest
     @Test
     fun verifyCopyPDFTextOptionTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(false)
         val genericURL = mockWebServer.getGenericAsset(3)
 
         navigationToolbar(composeTestRule) {}
@@ -270,6 +275,7 @@ class TextSelectionTest {
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326813
     @Test
     fun verifyUrlBarTextSelectionOptionsTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(false)
         val genericURL = mockWebServer.getGenericAsset(1)
 
         navigationToolbar(composeTestRule) {}.enterURLAndEnterToBrowser(genericURL.url) {}.openNavigationToolbar {}
@@ -282,6 +288,7 @@ class TextSelectionTest {
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326814
     @Test
     fun verifyCopyUrlBarTextSelectionOptionTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(false)
         val genericURL = mockWebServer.getGenericAsset(1)
 
         navigationToolbar(composeTestRule) {}.enterURLAndEnterToBrowser(genericURL.url) {}.openNavigationToolbar {}
@@ -299,6 +306,7 @@ class TextSelectionTest {
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326815
     @Test
     fun verifyCutUrlBarTextSelectionOptionTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(false)
         val genericURL = mockWebServer.getGenericAsset(1)
 
         navigationToolbar(composeTestRule) {}.enterURLAndEnterToBrowser(genericURL.url) {}.openNavigationToolbar {}
@@ -315,6 +323,7 @@ class TextSelectionTest {
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/414316
     @Test
     fun urlBarQuickActionsTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(false)
         val firstWebsite = mockWebServer.getGenericAsset(1)
         val secondWebsite = mockWebServer.getGenericAsset(2)
 

@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import mozilla.components.browser.state.action.AwesomeBarAction
 import mozilla.components.browser.state.search.DefaultSearchEngineProvider
 import mozilla.components.browser.state.search.SearchEngine
+import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.compose.browser.toolbar.store.BrowserEditToolbarAction
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarStore
@@ -52,6 +53,7 @@ import org.mozilla.fenix.components.search.HISTORY_SEARCH_ENGINE_ID
 import org.mozilla.fenix.components.search.TABS_SEARCH_ENGINE_ID
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.telemetryName
+import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.search.SearchFragmentAction.Init
 import org.mozilla.fenix.search.SearchFragmentAction.PrivateSuggestionsCardAccepted
 import org.mozilla.fenix.search.SearchFragmentAction.SearchEnginesSelectedActions
@@ -242,7 +244,12 @@ class FenixSearchMiddleware(
             with(store.state) {
                 currentTabData?.url != query && query.isNotBlank()
             }
-        val shouldShowSuggestions = shouldShowTrendingSearches || shouldShowSearchSuggestions
+        val shouldShowCurrentWebsiteDetails =
+            FxNimbus.features.addressbarFocusMode.value().enabled &&
+                query.isBlank() &&
+                appStore.state.searchState.sourceTabId?.let { browserStore.state.findTab(it) } != null
+        val shouldShowSuggestions =
+            shouldShowTrendingSearches || shouldShowSearchSuggestions || shouldShowCurrentWebsiteDetails
 
         store.dispatch(SearchSuggestionsVisibilityUpdated(shouldShowSuggestions))
 

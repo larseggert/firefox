@@ -48,6 +48,7 @@ import org.mozilla.fenix.components.metrics.MetricsUtils
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.getRootView
 import org.mozilla.fenix.home.toolbar.edgeToEdgeClipboardBarBackground
+import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.search.BrowserStoreToFenixSearchMapperMiddleware
 import org.mozilla.fenix.search.BrowserToolbarToFenixSearchMapperMiddleware
 import org.mozilla.fenix.search.FenixSearchMiddleware
@@ -207,7 +208,7 @@ class AwesomeBarComposable(
                 ) {
                     val currentTabDetailsToShow =
                         remember(state.query.isBlank()) {
-                            when (state.query.isBlank()) {
+                            when (state.query.isBlank() && FxNimbus.features.addressbarFocusMode.value().enabled) {
                                 true -> state.currentTabData
                                 else -> null
                             }

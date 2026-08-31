@@ -40,11 +40,13 @@ import androidx.test.uiautomator.UiSelector
 import androidx.test.uiautomator.Until
 import mozilla.components.browser.toolbar.R as toolbarR
 import mozilla.components.compose.browser.awesomebar.AwesomeBarTestTags
+import mozilla.components.compose.browser.awesomebar.AwesomeBarTestTags.CURRENT_URL_IN_SITE_DETAILS
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_EDIT_MODE
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_EDIT_MODE_HORIZONTAL_DIVIDER
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_SEARCH_BOX
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.SEARCH_SELECTOR
 import mozilla.components.feature.qr.R as qrR
+import mozilla.components.support.ktx.util.URLStringUtils
 import org.junit.Assert.assertTrue
 import org.mozilla.fenix.R
 import org.mozilla.fenix.bookmarks.BookmarksTestTag.BOOKMARK_PLACEHOLDER
@@ -64,6 +66,7 @@ import org.mozilla.fenix.helpers.TestHelper.appName
 import org.mozilla.fenix.helpers.TestHelper.mDevice
 import org.mozilla.fenix.helpers.TestHelper.packageName
 import org.mozilla.fenix.helpers.ext.waitNotNull
+import org.mozilla.fenix.nimbus.FxNimbus
 
 /** Implementation of Robot Pattern for the search fragment. */
 class SearchRobot(private val composeTestRule: ComposeTestRule) {
@@ -674,13 +677,35 @@ class SearchRobot(private val composeTestRule: ComposeTestRule) {
 
     @OptIn(ExperimentalTestApi::class)
     fun verifyTypedToolbarText(expectedText: String, exists: Boolean) {
-        Log.i(TAG, "verifyTypedToolbarText: Waiting for $waitingTime until the edit mode toolbar search box exists")
-        composeTestRule.waitUntilAtLeastOneExists(hasTestTag(ADDRESSBAR_SEARCH_BOX), waitingTime)
-        Log.i(TAG, "verifyTypedToolbarText: Waited for $waitingTime until the edit mode toolbar search box exists")
+        Log.i(TAG, "verifyTypedToolbarText: Waiting for $waitingTime until the edited URL exists")
+        composeTestRule.waitUntilAtLeastOneExists(
+            hasTestTag(ADDRESSBAR_SEARCH_BOX) or hasText(CURRENT_URL_IN_SITE_DETAILS),
+            waitingTime,
+        )
+        Log.i(TAG, "verifyTypedToolbarText: Waited for $waitingTime until the edited URL exists")
         Log.i(TAG, "verifyTypedToolbarText: Verifying that text '$expectedText' exists?: $exists")
-        val normalizedExpectedText = normalizeWhitespace(expectedText)
+        val normalizedExpectedText =
+            normalizeWhitespace(expectedText).let {
+                when (FxNimbus.features.addressbarFocusMode.value().enabled) {
+                    true -> URLStringUtils.toDisplayUrl(it).toString()
+                    else -> it
+                }
+            }
         val actualText =
-            composeTestRule.onNodeWithTag(ADDRESSBAR_SEARCH_BOX).fetchSemanticsNode().config.toNormalizedToolbarText()
+            when (FxNimbus.features.addressbarFocusMode.value().enabled) {
+                true ->
+                    composeTestRule
+                        .onNodeWithTag(CURRENT_URL_IN_SITE_DETAILS, true)
+                        .fetchSemanticsNode()
+                        .config
+                        .toNormalizedToolbarText()
+                false ->
+                    composeTestRule
+                        .onNodeWithTag(ADDRESSBAR_SEARCH_BOX)
+                        .fetchSemanticsNode()
+                        .config
+                        .toNormalizedToolbarText()
+            }
 
         assertTrue(
             "Expected toolbar text '$normalizedExpectedText' to ${if (exists) "exist" else "not exist"} in '$actualText'",

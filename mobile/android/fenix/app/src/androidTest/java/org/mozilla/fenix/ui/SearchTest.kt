@@ -30,6 +30,7 @@ import org.mozilla.fenix.helpers.AppAndSystemHelper.verifyKeyboardVisibility
 import org.mozilla.fenix.helpers.Constants
 import org.mozilla.fenix.helpers.DataGenerationHelper.getStringResource
 import org.mozilla.fenix.helpers.FenixTestRule
+import org.mozilla.fenix.helpers.FxNimbusHelper
 import org.mozilla.fenix.helpers.HomeActivityTestRule
 import org.mozilla.fenix.helpers.MatcherHelper
 import org.mozilla.fenix.helpers.MockBrowserDataHelper
@@ -834,6 +835,7 @@ class SearchTest {
     @SmokeTest
     @Test
     fun verifyHistorySearchWithBrowsingHistoryTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(false)
         val firstPageUrl = searchMockServerRule.server.getGenericAsset(1)
         val secondPageUrl = searchMockServerRule.server.getGenericAsset(2)
 
@@ -906,6 +908,7 @@ class SearchTest {
     @SmokeTest
     @Test
     fun verifyTabsSearchWithOpenTabsTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(false)
         TestHelper.appContext.components.settings.tabGroupsOnboardingEnabled = false
 
         val firstPageUrl = searchMockServerRule.server.getGenericAsset(1)

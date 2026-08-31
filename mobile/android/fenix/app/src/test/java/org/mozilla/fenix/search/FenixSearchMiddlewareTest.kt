@@ -25,6 +25,8 @@ import mozilla.components.browser.state.search.RegionState
 import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.browser.state.state.SearchState
+import mozilla.components.browser.state.state.TabSessionState
+import mozilla.components.browser.state.state.createTab
 import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.compose.browser.awesomebar.internal.CurrentTabData
@@ -39,10 +41,12 @@ import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.support.test.middleware.CaptureActionsMiddleware
 import mozilla.components.support.test.robolectric.testContext
 import mozilla.telemetry.glean.testing.GleanTestRule
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,6 +69,8 @@ import org.mozilla.fenix.components.appstate.search.SelectedSearchEngine
 import org.mozilla.fenix.components.search.BOOKMARKS_SEARCH_ENGINE_ID
 import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
 import org.mozilla.fenix.ext.telemetryName
+import org.mozilla.fenix.nimbus.AddressbarFocusMode
+import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.search.SearchEngineSource.Bookmarks
 import org.mozilla.fenix.search.SearchEngineSource.Shortcut
 import org.mozilla.fenix.search.SearchFragmentAction.SearchProvidersUpdated
@@ -107,6 +113,18 @@ class FenixSearchMiddlewareTest {
         )
     private val toolbarStore: BrowserToolbarStore = mockk(relaxed = true)
     private val navController: NavController = mockk(relaxed = true)
+
+    @Before
+    fun setup() {
+        // This experiment is enabled by default in the developer channel.
+        // Opt out so that the other suggestions visibility criteria are what each test actually exercises.
+        FxNimbus.features.addressbarFocusMode.withCachedValue(AddressbarFocusMode(enabled = false))
+    }
+
+    @After
+    fun teardown() {
+        FxNimbus.features.addressbarFocusMode.withCachedValue(null)
+    }
 
     @Test
     fun `WHEN the store is created THEN update the search engines configuration`() {
@@ -261,6 +279,31 @@ class FenixSearchMiddlewareTest {
     }
 
     @Test
+    fun `GIVEN addressbar focus mode is enabled and search started from a browser tab WHEN the query is empty THEN show search suggestions`() {
+        FxNimbus.features.addressbarFocusMode.withCachedValue(AddressbarFocusMode(enabled = true))
+        val currentTab = createTab("https://mozilla.com")
+        stubSearchSourceTab(currentTab.id)
+        val (_, store) = buildMiddlewareAndAddToSearchStore(browserStore = buildBrowserStore(currentTab))
+        every { settings.shouldShowSearchSuggestions } returns false
+
+        store.dispatch(SearchFragmentAction.UpdateQuery(""))
+
+        assertTrue(store.state.shouldShowSearchSuggestions)
+    }
+
+    @Test
+    fun `GIVEN addressbar focus mode is enabled and search started from home WHEN the query is empty THEN don't show search suggestions`() {
+        FxNimbus.features.addressbarFocusMode.withCachedValue(AddressbarFocusMode(enabled = true))
+        stubSearchSourceTab(null)
+        val (_, store) = buildMiddlewareAndAddToSearchStore()
+        every { settings.shouldShowSearchSuggestions } returns false
+
+        store.dispatch(SearchFragmentAction.UpdateQuery(""))
+
+        assertFalse(store.state.shouldShowSearchSuggestions)
+    }
+
+    @Test
     fun `GIVEN a search query already exists WHEN the search providers are updated THEN show new search suggestions`() {
         val (_, store) = buildMiddlewareAndAddToSearchStore()
         store.dispatch(SearchFragmentAction.UpdateQuery("test"))
@@ -335,6 +378,31 @@ class FenixSearchMiddlewareTest {
 
         searchActionsCaptor.assertLastAction(SearchSuggestionsVisibilityUpdated::class) {
             assertFalse(it.visible)
+        }
+    }
+
+    @Test
+    fun `GIVEN addressbar focus mode is enabled and no other suggestions are enabled WHEN search starts THEN show new search suggestions`() {
+        FxNimbus.features.addressbarFocusMode.withCachedValue(AddressbarFocusMode(enabled = true))
+        val currentTab = createTab("https://mozilla.com")
+        stubSearchSourceTab(currentTab.id)
+        val (_, store) = buildMiddlewareAndAddToSearchStore(browserStore = buildBrowserStore(currentTab))
+        every { settings.trendingSearchSuggestionsEnabled } returns false
+        every { settings.shouldShowRecentSearchSuggestions } returns false
+        every { settings.shouldShowSearchSuggestions } returns false
+        val defaultSearchEngine = fakeSearchEnginesState().selectedOrDefaultSearchEngine
+
+        store.dispatch(
+            SearchStarted(
+                defaultSearchEngine,
+                isUserSelected = false,
+                inPrivateMode = false,
+                searchStartedForCurrentUrl = true,
+            )
+        )
+
+        searchActionsCaptor.assertLastAction(SearchSuggestionsVisibilityUpdated::class) {
+            assertTrue(it.visible)
         }
     }
 
@@ -709,6 +777,13 @@ class FenixSearchMiddlewareTest {
             showQrButton = true,
             tabId = tabId,
         )
+
+    private fun buildBrowserStore(vararg tabs: TabSessionState) =
+        BrowserStore(initialState = BrowserState(tabs = tabs.toList(), search = fakeSearchEnginesState()))
+
+    private fun stubSearchSourceTab(tabId: String?) {
+        every { appStore.state } returns AppState(searchState = AppSearchState.EMPTY.copy(sourceTabId = tabId))
+    }
 
     private fun fakeSearchEnginesState() =
         SearchState(

@@ -20,6 +20,7 @@ import mozilla.components.browser.state.state.createTab
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarStore
 import mozilla.components.support.test.robolectric.testContext
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -29,6 +30,8 @@ import org.junit.runner.RunWith
 import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.metrics.MetricsUtils
 import org.mozilla.fenix.home.toolbar.HomeToolbarComposable.Companion.DirectToSearchConfig
+import org.mozilla.fenix.nimbus.AddressbarFocusMode
+import org.mozilla.fenix.nimbus.FxNimbus
 import org.robolectric.shadows.ShadowPackageManager
 
 @RunWith(AndroidJUnit4::class)
@@ -38,6 +41,11 @@ class HomeToolbarComposableTest {
     val browserStore = BrowserStore()
     val toolbarStore = BrowserToolbarStore()
     val dispatcher = StandardTestDispatcher()
+
+    @After
+    fun teardown() {
+        FxNimbus.features.addressbarFocusMode.withCachedValue(null)
+    }
 
     @Test
     fun `GIVEN speech recognition is available WHEN should start to a voice search THEN start voice recognition and then search mode`() =
@@ -88,6 +96,7 @@ class HomeToolbarComposableTest {
 
     @Test
     fun `GIVEN a specific tab WHEN should start a typed search from it THEN enter search mode with tab's URL prefilled`() {
+        FxNimbus.features.addressbarFocusMode.withCachedValue(AddressbarFocusMode(enabled = false))
         val tab = createTab("https://test.com")
         val browserStore = BrowserStore(BrowserState(tabs = listOf(tab)))
         val htc =
@@ -110,6 +119,31 @@ class HomeToolbarComposableTest {
         assertEquals(MetricsUtils.Source.ACTION, appStore.state.searchState.searchAccessPoint)
         assertEquals(tab.content.url, toolbarStore.state.editState.query.current)
         assertTrue(toolbarStore.state.editState.isQueryPrefilled)
+    }
+
+    @Test
+    fun `GIVEN addressbar focus mode is enabled WHEN should start a typed search from a tab THEN don't prefill its URL`() {
+        FxNimbus.features.addressbarFocusMode.withCachedValue(AddressbarFocusMode(enabled = true))
+        val tab = createTab("https://test.com")
+        val browserStore = BrowserStore(BrowserState(tabs = listOf(tab)))
+        val htc =
+            buildHomeToolbarComposable(
+                directToSearchConfig =
+                    DirectToSearchConfig(
+                        startVoiceSearch = false,
+                        startSearch = true,
+                        sessionId = tab.id,
+                        source = MetricsUtils.Source.ACTION,
+                    ),
+                browserStore = browserStore,
+            )
+
+        htc.build(false)
+
+        assertTrue(appStore.state.searchState.isSearchActive)
+        assertEquals(tab.id, appStore.state.searchState.sourceTabId)
+        assertEquals("", toolbarStore.state.editState.query.current)
+        assertFalse(toolbarStore.state.editState.isQueryPrefilled)
     }
 
     @Test

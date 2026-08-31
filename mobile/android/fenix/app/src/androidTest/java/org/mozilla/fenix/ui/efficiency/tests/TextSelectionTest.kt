@@ -6,6 +6,7 @@ package org.mozilla.fenix.ui.efficiency.tests
 
 import org.junit.Test
 import org.mozilla.fenix.customannotations.SmokeTest
+import org.mozilla.fenix.helpers.FxNimbusHelper
 import org.mozilla.fenix.helpers.TestAssetHelper.getGenericAsset
 import org.mozilla.fenix.ui.efficiency.helpers.BaseTest
 
@@ -59,6 +60,7 @@ class TextSelectionTest : BaseTest() {
     @SmokeTest
     @Test
     fun verifyCopyPDFTextOptionTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(false)
         val genericURL = mockWebServer.getGenericAsset(3)
 
         on.home.navigateToPage()
@@ -72,6 +74,27 @@ class TextSelectionTest : BaseTest() {
         on.searchBar
             .navigateToPage()
             .clickClearButton()
+            .verifySearchBarPlaceholder()
+            .longClickToolbar()
+            .clickContextMenuItem("Paste")
+            .verifyTypedToolbarText("Crossing", exists = true)
+    }
+
+    @Test
+    fun verifyCopyPDFTextOptionWithinAddressBarInFocusedModeTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(true)
+        val genericURL = mockWebServer.getGenericAsset(3)
+
+        on.home.navigateToPage()
+        on.browserPage
+            .navigateToPage(genericURL.url.toString())
+            .clickPageContent("PDF form file")
+            .clickStayInAppPromptButtonIfPresent()
+            .longClickWebContentText("Crossing")
+            .clickContextMenuItem("Copy")
+
+        on.searchBar
+            .navigateToPage()
             .verifySearchBarPlaceholder()
             .longClickToolbar()
             .clickContextMenuItem("Paste")

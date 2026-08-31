@@ -103,6 +103,7 @@ import mozilla.components.support.utils.ClipboardHandler
 import mozilla.components.support.utils.INTENT_TYPE_PDF
 import mozilla.components.ui.icons.R as iconsR
 import mozilla.components.ui.tabcounter.R as tabcounterR
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -182,6 +183,8 @@ import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
 import org.mozilla.fenix.components.usecases.ShareUseCases
 import org.mozilla.fenix.ext.directionsEq
 import org.mozilla.fenix.helpers.FenixGleanTestRule
+import org.mozilla.fenix.nimbus.AddressbarFocusMode
+import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.settings.ShortcutType
 import org.mozilla.fenix.summarization.SummarizationNavigator
 import org.mozilla.fenix.summarization.onboarding.SummarizationFeatureDiscoveryConfiguration
@@ -248,6 +251,11 @@ class BrowserToolbarMiddlewareTest {
         settings.shouldUseExpandedToolbar = false
         settings.isTabStripEnabled = false
         settings.enableHomepageTrendingRecentSearch = false
+    }
+
+    @After
+    fun teardown() {
+        FxNimbus.features.addressbarFocusMode.withCachedValue(null)
     }
 
     @Test
@@ -664,6 +672,7 @@ class BrowserToolbarMiddlewareTest {
 
     @Test
     fun `GIVEN the current tab has search terms WHEN the page origin is clicked THEN start search in the browser screen`() {
+        FxNimbus.features.addressbarFocusMode.withCachedValue(AddressbarFocusMode(enabled = false))
         val currentTab = createTab("test.com", searchTerms = "test")
         val browserStore =
             BrowserStore(
@@ -681,6 +690,28 @@ class BrowserToolbarMiddlewareTest {
         verify { appStore.dispatch(SearchStarted(currentTab.id)) }
         assertEquals(currentTab.content.searchTerms, toolbarStore.state.editState.query.current)
         assertTrue(toolbarStore.state.editState.isQueryPrefilled)
+    }
+
+    @Test
+    fun `GIVEN addressbar focus mode is enabled WHEN the page origin is clicked THEN start search without prefilling current URL`() {
+        FxNimbus.features.addressbarFocusMode.withCachedValue(AddressbarFocusMode(enabled = true))
+        val currentTab = createTab("test.com", searchTerms = "test")
+        val browserStore =
+            BrowserStore(
+                BrowserState(
+                    tabs = listOf(currentTab),
+                    selectedTabId = currentTab.id,
+                )
+            )
+        val middleware = buildMiddleware(browserStore = browserStore)
+        val toolbarStore = buildStore(middleware)
+
+        toolbarStore.dispatch(toolbarStore.state.displayState.pageOrigin.onClick as BrowserToolbarAction)
+
+        verify(exactly = 0) { navController.navigate(any<NavDirections>()) }
+        verify { appStore.dispatch(SearchStarted(currentTab.id)) }
+        assertEquals("", toolbarStore.state.editState.query.current)
+        assertFalse(toolbarStore.state.editState.isQueryPrefilled)
     }
 
     @Test
