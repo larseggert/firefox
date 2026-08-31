@@ -47,6 +47,7 @@ using mozilla::dom::UserNavigationInvolvement from "mozilla/dom/UserNavigationIn
 using mozilla::RFPTargetSet from "nsRFPService.h";
 using PropertiesFile from "nsContentUtils.h";
 [RefCounted] using mozilla::dom::ParentProcessChannelHandle from "mozilla/dom/ParentProcessChannelHandle.h";
+using struct mozilla::dom::RemoteType from "mozilla/dom/RemoteType.h";
 
 namespace mozilla {
 namespace net {
@@ -124,7 +125,7 @@ struct LoadInfoArgs
   PrincipalInfo?              principalToInheritInfo;
   PrincipalInfo?              topLevelPrincipalInfo;
   URIParams?                  resultPrincipalURI;
-  nsCString                   triggeringRemoteType;
+  RemoteType                  triggeringRemoteType;
   nsID                        sandboxedNullPrincipalID;
   uint32_t                    securityFlags;
   uint32_t                    sandboxFlags;

@@ -168,7 +168,7 @@ nsFrameLoader::nsFrameLoader(Element* aOwner, BrowsingContext* aBrowsingContext,
       mOwnerContent(aOwner),
       mPendingSwitchID(0),
       mChildID(0),
-      mRemoteType(NOT_REMOTE_TYPE),
+      mRemoteType(RemoteType::NotRemote()),
       mInitialized(false),
       mDepthTooGreat(false),
       mIsTopLevelContent(false),
@@ -418,24 +418,30 @@ already_AddRefed<nsFrameLoader> nsFrameLoader::Create(
   }
 
   bool isRemoteFrame = InitialLoadIsRemote(aOwner);
-  RefPtr<nsFrameLoader> fl =
-      new nsFrameLoader(aOwner, context, isRemoteFrame, aNetworkCreated);
-  fl->mOpenWindowInfo = aOpenWindowInfo;
 
   // If this is a toplevel initial remote frame, we're looking at a browser
   // loaded in the parent process. Pull the remote type attribute off of the
   // <browser> element to determine which remote type it should be loaded in, or
   // use a shared web remote type if we can't tell.
+  RemoteType remoteType;
   if (isRemoteFrame) {
     MOZ_ASSERT(XRE_IsParentProcess());
-    nsAutoString remoteType;
-    if (aOwner->GetAttr(nsGkAtoms::RemoteType, remoteType) &&
-        !remoteType.IsEmpty()) {
-      CopyUTF16toUTF8(remoteType, fl->mRemoteType);
+    nsAutoString remoteTypeAttr;
+    if (aOwner->GetAttr(nsGkAtoms::RemoteType, remoteTypeAttr) &&
+        !remoteTypeAttr.IsEmpty()) {
+      remoteType = RemoteType::Parse(NS_ConvertUTF16toUTF8(remoteTypeAttr));
+      NS_ENSURE_TRUE(remoteType, nullptr);
     } else {
-      fl->mRemoteType = SharedWebRemoteType(context->OriginAttributesRef());
+      remoteType = RemoteType::SharedWeb(context->OriginAttributesRef());
     }
+  } else {
+    remoteType = RemoteType::NotRemote();
   }
+
+  RefPtr<nsFrameLoader> fl =
+      new nsFrameLoader(aOwner, context, isRemoteFrame, aNetworkCreated);
+  fl->mOpenWindowInfo = aOpenWindowInfo;
+  fl->mRemoteType = remoteType;
   return fl.forget();
 }
 
@@ -541,7 +547,7 @@ void nsFrameLoader::LoadFrame(bool aOriginalSrc,
   }
 }
 
-void nsFrameLoader::ConfigRemoteProcess(const nsACString& aRemoteType,
+void nsFrameLoader::ConfigRemoteProcess(const RemoteType& aRemoteType,
                                         ContentParent* aContentParent) {
   MOZ_DIAGNOSTIC_ASSERT(IsRemoteFrame(), "Must be a remote frame");
   MOZ_DIAGNOSTIC_ASSERT(!mRemoteBrowser, "Must not have a browser yet");

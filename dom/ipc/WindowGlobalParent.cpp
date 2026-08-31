@@ -676,16 +676,16 @@ IPCResult WindowGlobalParent::RecvRawMessage(const JSActorMessageMeta& aMeta,
   return IPC_OK();
 }
 
-const nsACString& WindowGlobalParent::GetRemoteType() const {
+const RemoteType& WindowGlobalParent::GetRemoteType() const {
   if (RefPtr<BrowserParent> browserParent = GetBrowserParent()) {
     return browserParent->Manager()->GetRemoteType();
   }
 
-  return NOT_REMOTE_TYPE;
+  return RemoteType::NotRemote();
 }
 
 void WindowGlobalParent::GetRemoteType(nsACString& aRemoteType) const {
-  aRemoteType = GetRemoteType();
+  aRemoteType = GetRemoteType().Stringify();
 }
 
 void WindowGlobalParent::NotifyContentBlockingEvent(
@@ -2065,8 +2065,7 @@ bool WindowGlobalParent::ShouldTrackSiteOriginTelemetry() {
   }
 
   RefPtr<BrowserParent> browserParent = GetBrowserParent();
-  if (!browserParent ||
-      !IsWebRemoteType(browserParent->Manager()->GetRemoteType())) {
+  if (!browserParent || !browserParent->Manager()->GetRemoteType().IsWeb()) {
     return false;
   }
 

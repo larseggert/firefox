@@ -5257,13 +5257,12 @@ void Preferences::SetPreference(const dom::Pref& aDomPref) {
 /* static */
 void Preferences::GetPreference(dom::Pref* aDomPref,
                                 const GeckoProcessType aDestinationProcessType,
-                                const nsACString& aDestinationRemoteType) {
+                                const dom::RemoteType& aDestinationRemoteType) {
   MOZ_ASSERT(XRE_IsParentProcess());
   bool destIsWebContent =
       aDestinationProcessType == GeckoProcessType_Content &&
-      (StringBeginsWith(aDestinationRemoteType, WEB_REMOTE_TYPE) ||
-       StringBeginsWith(aDestinationRemoteType, PREALLOC_REMOTE_TYPE) ||
-       StringBeginsWith(aDestinationRemoteType, PRIVILEGEDMOZILLA_REMOTE_TYPE));
+      (aDestinationRemoteType.IsWeb() || aDestinationRemoteType.IsPrealloc() ||
+       aDestinationRemoteType.IsPrivilegedMozilla());
 
   Pref* pref = pref_HashTableLookup(aDomPref->name().get());
   if (pref && pref->HasAdvisablySizedValues()) {

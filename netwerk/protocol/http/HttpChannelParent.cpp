@@ -479,6 +479,10 @@ bool HttpChannelParent::DoAsyncOpen(
     return false;
   }
 
+  if (!CanSend()) {
+    return false;
+  }
+
   LOG(("HttpChannelParent RecvAsyncOpen [this=%p uri=%s, gid=%" PRIu64
        " browserid=%" PRIx64 "]\n",
        this, aURI->GetSpecOrDefault().get(), aChannelId, aBrowserId));
@@ -488,11 +492,10 @@ bool HttpChannelParent::DoAsyncOpen(
                   aURI->GetSpecOrDefault(), aChannelId);
 
   nsresult rv;
-  nsAutoCString remoteType;
-  rv = GetRemoteType(remoteType);
-  if (NS_FAILED(rv)) {
-    return SendFailedAsyncOpen(rv);
-  }
+
+  dom::PContentParent* pcp = Manager()->Manager();
+  const dom::RemoteType& remoteType =
+      static_cast<dom::ContentParent*>(pcp)->GetRemoteType();
 
   nsCOMPtr<nsILoadInfo> loadInfo;
   rv = mozilla::ipc::LoadInfoArgsToLoadInfo(aLoadInfoArgs, remoteType,
@@ -1796,7 +1799,7 @@ HttpChannelParent::Delete() {
 }
 
 NS_IMETHODIMP
-HttpChannelParent::GetRemoteType(nsACString& aRemoteType) {
+HttpChannelParent::GetRemoteType(dom::RemoteType& aRemoteType) {
   if (!CanSend()) {
     return NS_ERROR_UNEXPECTED;
   }
