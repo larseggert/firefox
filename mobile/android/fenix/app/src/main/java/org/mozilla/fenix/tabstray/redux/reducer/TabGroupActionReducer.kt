@@ -55,6 +55,7 @@ object TabGroupActionReducer {
             is TabGroupAction.DeleteClicked ->
                 state.copy(backStack = state.backStack + DeleteTabGroupConfirmationDialog(group = action.group))
             is TabGroupAction.DeleteConfirmed -> state.copy(backStack = state.backStack.popDeleteTabGroupFlow())
+            is TabGroupAction.UngroupRequested -> state
             is TabGroupAction.UngroupConfirmationRequested ->
                 state.copy(backStack = state.backStack + UngroupTabGroupConfirmationDialog(group = action.group))
             is TabGroupAction.UngroupConfirmed -> state.copy(backStack = state.backStack.popUngroupTabGroupFlow())

@@ -521,10 +521,7 @@ class TabManagementFragment : Fragment() {
                                             },
                                             onUngroupTabGroupClick = {
                                                 tabsTrayStore.dispatch(
-                                                    action =
-                                                        TabGroupAction.UngroupConfirmationRequested(
-                                                            group = expandedGroup
-                                                        )
+                                                    action = TabGroupAction.UngroupRequested(group = expandedGroup)
                                                 )
                                             },
                                             onAddNewTabClick =

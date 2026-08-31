@@ -67,6 +67,14 @@ sealed interface TabGroupAction : TabsTrayAction {
     data class DeleteConfirmed(val group: TabsTrayItem.TabGroup) : TabGroupAction, TabsStorageAction
 
     /**
+     * Fired when the user clicks ungroup on a Tab Group. Resolved into either [UngroupConfirmationRequested] or
+     * [UngroupConfirmed] depending on whether the confirmation dialog is being skipped.
+     *
+     * @property group The [TabsTrayItem.TabGroup] to be ungrouped.
+     */
+    data class UngroupRequested(val group: TabsTrayItem.TabGroup) : TabGroupAction, TabManagerUiStateStorageAction
+
+    /**
      * Fired when the ungroup confirmation dialog should be shown for a Tab Group.
      *
      * @property group The [TabsTrayItem.TabGroup] to be ungrouped.
@@ -82,7 +90,7 @@ sealed interface TabGroupAction : TabsTrayAction {
     data class UngroupConfirmed(
         val group: TabsTrayItem.TabGroup,
         val dontAskAgain: Boolean,
-    ) : TabGroupAction
+    ) : TabGroupAction, TabManagerUiStateStorageAction
 
     /**
      * Invoked when the user changes the tab group theme.

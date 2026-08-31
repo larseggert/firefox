@@ -230,6 +230,19 @@ class TabGroupReducerTest {
     }
 
     @Test
+    fun `WHEN an ungroup is requested THEN the state is unchanged`() {
+        val initialState = TabsTrayState()
+
+        val resultState =
+            TabGroupActionReducer.reduce(
+                state = initialState,
+                action = TabGroupAction.UngroupRequested(group = createTabGroup()),
+            )
+
+        assertEquals(initialState, resultState)
+    }
+
+    @Test
     fun `WHEN ungroup is confirmed THEN pop the confirmation dialog`() {
         val group = createTabGroup()
         val initialState =
