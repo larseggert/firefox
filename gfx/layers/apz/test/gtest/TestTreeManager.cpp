@@ -11,16 +11,6 @@
 
 class APZCTreeManagerGenericTester : public APZCTreeManagerTester {
  protected:
-  void CreateSimpleScrollingLayer() {
-    const char* treeShape = "x";
-    LayerIntRect layerVisibleRect[] = {
-        LayerIntRect(0, 0, 200, 200),
-    };
-    CreateScrollData(treeShape, layerVisibleRect);
-    SetScrollableFrameMetrics(layers[0], START_SCROLL_ID,
-                              CSSRect(0, 0, 500, 500));
-  }
-
   void CreateSimpleMultiLayerTree() {
     const char* treeShape = "x(xx)";
     // LayerID               0 12
