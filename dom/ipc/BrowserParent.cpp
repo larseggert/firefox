@@ -1257,6 +1257,11 @@ BrowserParent::AllocPSessionStoreParent() {
 IPCResult BrowserParent::RecvNewWindowGlobal(
     ManagedEndpoint<PWindowGlobalParent>&& aEndpoint,
     const WindowGlobalInit& aInit) {
+  if (!nsContentUtils::IsProcessSpecificIdFrom(aInit.context().mInnerWindowId,
+                                               OtherChildID())) {
+    return IPC_FAIL(this, "Invalid inner window ID from content process");
+  }
+
   RefPtr<CanonicalBrowsingContext> browsingContext =
       CanonicalBrowsingContext::Get(aInit.context().mBrowsingContextId);
   if (!browsingContext) {
