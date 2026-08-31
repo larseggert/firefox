@@ -665,9 +665,6 @@ class BrowserFragment : BaseFragment(), UserInteractionHandler, AccessibilityMan
     override fun onDestroyView() {
         super.onDestroyView()
 
-        tabsPopup?.dismiss()
-        tabsPopup = null
-
         requireContext().accessibilityManager.removeAccessibilityStateChangeListener(this)
         binding.engineView.setActivityContext(null)
 
@@ -967,26 +964,23 @@ class BrowserFragment : BaseFragment(), UserInteractionHandler, AccessibilityMan
     }
 
     private fun tabCounterListener() {
-        if (tabsPopup?.isShowing == true) {
-            return
-        }
-
         val openedTabs = requireComponents.store.state.tabs.size
-        TabCount.sessionButtonTapped.record(TabCount.SessionButtonTappedExtra(openedTabs))
 
-        // We use post to avoid an ANR in HardwareRenderer.nSetName which can happen
-        // if we show the popup while the window is in transition (e.g. keyboard hiding).
-        binding.browserToolbar.post {
-            val toolbar = _binding?.browserToolbar ?: return@post
-            if (!isAdded || isRemoving || tabsPopup?.isShowing == true) {
-                return@post
-            }
-
-            tabsPopup =
-                TabsPopup(toolbar, requireComponents).also {
-                    it.showAsDropDown(toolbar, 0, 0, Gravity.END)
+        tabsPopup =
+            TabsPopup(
+                    binding.browserToolbar,
+                    requireComponents,
+                )
+                .also { currentTabsPopup ->
+                    currentTabsPopup.showAsDropDown(
+                        binding.browserToolbar,
+                        0,
+                        0,
+                        Gravity.END,
+                    )
                 }
-        }
+
+        TabCount.sessionButtonTapped.record(TabCount.SessionButtonTappedExtra(openedTabs))
     }
 
     private fun showFindInPageBar() {
