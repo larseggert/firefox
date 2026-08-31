@@ -12,11 +12,13 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.coroutineScope
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
+import androidx.navigation.NavOptions
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.action.AwesomeBarAction
+import mozilla.components.browser.state.ext.getUrl
 import mozilla.components.browser.state.search.DefaultSearchEngineProvider
 import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.browser.state.selector.findTab
@@ -27,6 +29,7 @@ import mozilla.components.compose.browser.toolbar.ui.BrowserToolbarQuery
 import mozilla.components.concept.awesomebar.AwesomeBar
 import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession.LoadUrlFlags
+import mozilla.components.concept.engine.prompt.ShareData
 import mozilla.components.feature.search.SearchUseCases.SearchUseCase
 import mozilla.components.feature.session.SessionUseCases.LoadUrlUseCase
 import mozilla.components.feature.tabs.TabsUseCases.SelectTabUseCase
@@ -40,6 +43,7 @@ import org.mozilla.fenix.GleanMetrics.BookmarksManagement
 import org.mozilla.fenix.GleanMetrics.Events
 import org.mozilla.fenix.GleanMetrics.History
 import org.mozilla.fenix.GleanMetrics.Toolbar
+import org.mozilla.fenix.NavGraphDirections
 import org.mozilla.fenix.R
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
@@ -51,7 +55,10 @@ import org.mozilla.fenix.components.metrics.MetricsUtils
 import org.mozilla.fenix.components.search.BOOKMARKS_SEARCH_ENGINE_ID
 import org.mozilla.fenix.components.search.HISTORY_SEARCH_ENGINE_ID
 import org.mozilla.fenix.components.search.TABS_SEARCH_ENGINE_ID
+import org.mozilla.fenix.components.share.ShareSource
+import org.mozilla.fenix.components.usecases.ShareUseCases
 import org.mozilla.fenix.ext.components
+import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.ext.telemetryName
 import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.search.SearchFragmentAction.Init
@@ -60,6 +67,7 @@ import org.mozilla.fenix.search.SearchFragmentAction.SearchEnginesSelectedAction
 import org.mozilla.fenix.search.SearchFragmentAction.SearchProvidersUpdated
 import org.mozilla.fenix.search.SearchFragmentAction.SearchStarted
 import org.mozilla.fenix.search.SearchFragmentAction.SearchSuggestionsVisibilityUpdated
+import org.mozilla.fenix.search.SearchFragmentAction.ShareCurrentWebsiteDetailsClicked
 import org.mozilla.fenix.search.SearchFragmentAction.SuggestionClicked
 import org.mozilla.fenix.search.SearchFragmentAction.SuggestionSelected
 import org.mozilla.fenix.search.SearchFragmentAction.UpdateQuery
@@ -86,6 +94,7 @@ import org.mozilla.fenix.utils.Settings
  * @param toolbarStore [BrowserToolbarStore] used for querying and updating the toolbar state.
  * @param navController [NavController] to use for navigating to other in-app destinations.
  * @param browsingModeManager [BrowsingModeManager] used for querying and updating the browsing mode.
+ * @param shareUseCases [ShareUseCases] used for sharing applications content to other installd applications.
  */
 @Suppress("LongParameterList")
 class FenixSearchMiddleware(
@@ -99,6 +108,7 @@ class FenixSearchMiddleware(
     private val toolbarStore: BrowserToolbarStore,
     private val navController: NavController,
     private val browsingModeManager: BrowsingModeManager,
+    private val shareUseCases: ShareUseCases,
 ) : Middleware<SearchFragmentState, SearchFragmentAction> {
     private var observeSearchEnginesChangeJob: Job? = null
 
@@ -184,6 +194,10 @@ class FenixSearchMiddleware(
 
             is PrivateSuggestionsCardAccepted -> {
                 updateSearchProviders(store)
+            }
+
+            is ShareCurrentWebsiteDetailsClicked -> {
+                handleSharingCurrentWebsiteDetails()
             }
 
             else -> next(action)
@@ -499,5 +513,35 @@ class FenixSearchMiddleware(
             BrowsingMode.Private ->
                 settings.shouldShowSearchSuggestions && settings.shouldShowSearchSuggestionsInPrivate
         }
+    }
+
+    private fun handleSharingCurrentWebsiteDetails() {
+        val currentDestination = navController.currentDestination ?: return
+        val session = browserStore.state.findTab(appStore.state.searchState.sourceTabId ?: "") ?: return
+        val url = session.getUrl()
+
+        shareUseCases.shareUrl(
+            id = session.id,
+            url = url,
+            title = session.content.title,
+            source = ShareSource.BROWSER_TOOLBAR,
+            isPrivate = session.content.private,
+            isCustomTab = false,
+            navigateToShareFragment = {
+                val shareData =
+                    arrayOf(ShareData(title = session.content.title, url = url, private = session.content.private))
+
+                navController.nav(
+                    id = currentDestination.id,
+                    directions =
+                        NavGraphDirections.actionGlobalShareFragment(
+                            sessionId = session.id,
+                            data = shareData,
+                            showPage = true,
+                        ),
+                    navOptions = NavOptions.Builder().setPopUpTo(currentDestination.id, false).build(),
+                )
+            },
+        )
     }
 }

@@ -393,6 +393,9 @@ sealed class SearchFragmentAction : Action {
 
     /** Action indicating the user allowed to show suggestions in private mode. */
     data object PrivateSuggestionsCardAccepted : SearchFragmentAction()
+
+    /** Action indicating the user wants to share the current website details. */
+    data object ShareCurrentWebsiteDetailsClicked : SearchFragmentAction()
 }
 
 /** The SearchState Reducer. */
@@ -586,7 +589,8 @@ private fun searchStateReducer(state: SearchFragmentState, action: SearchFragmen
 
         is SearchFragmentAction.SuggestionClicked,
         is SearchFragmentAction.PrivateSuggestionsCardAccepted,
-        is SearchFragmentAction.SuggestionSelected -> {
+        is SearchFragmentAction.SuggestionSelected,
+        is SearchFragmentAction.ShareCurrentWebsiteDetailsClicked -> {
             // no-op. Expected to be handled in middlewares.
             state
         }

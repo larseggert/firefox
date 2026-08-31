@@ -9,6 +9,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.navigation.NavController
+import androidx.navigation.NavDestination
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -24,6 +25,7 @@ import mozilla.components.browser.state.action.BrowserAction
 import mozilla.components.browser.state.search.RegionState
 import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.browser.state.state.BrowserState
+import mozilla.components.browser.state.state.ReaderState
 import mozilla.components.browser.state.state.SearchState
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.state.state.createTab
@@ -67,7 +69,9 @@ import org.mozilla.fenix.components.appstate.AppState
 import org.mozilla.fenix.components.appstate.search.SearchState as AppSearchState
 import org.mozilla.fenix.components.appstate.search.SelectedSearchEngine
 import org.mozilla.fenix.components.search.BOOKMARKS_SEARCH_ENGINE_ID
+import org.mozilla.fenix.components.share.ShareSource
 import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
+import org.mozilla.fenix.components.usecases.ShareUseCases
 import org.mozilla.fenix.ext.telemetryName
 import org.mozilla.fenix.nimbus.AddressbarFocusMode
 import org.mozilla.fenix.nimbus.FxNimbus
@@ -77,6 +81,7 @@ import org.mozilla.fenix.search.SearchFragmentAction.SearchProvidersUpdated
 import org.mozilla.fenix.search.SearchFragmentAction.SearchShortcutEngineSelected
 import org.mozilla.fenix.search.SearchFragmentAction.SearchStarted
 import org.mozilla.fenix.search.SearchFragmentAction.SearchSuggestionsVisibilityUpdated
+import org.mozilla.fenix.search.SearchFragmentAction.ShareCurrentWebsiteDetailsClicked
 import org.mozilla.fenix.search.SearchFragmentAction.SuggestionClicked
 import org.mozilla.fenix.search.SearchFragmentAction.SuggestionSelected
 import org.mozilla.fenix.search.awesomebar.SearchSuggestionsProvidersBuilder
@@ -113,6 +118,7 @@ class FenixSearchMiddlewareTest {
         )
     private val toolbarStore: BrowserToolbarStore = mockk(relaxed = true)
     private val navController: NavController = mockk(relaxed = true)
+    private val shareUseCases: ShareUseCases = mockk(relaxed = true)
 
     @Before
     fun setup() {
@@ -690,6 +696,55 @@ class FenixSearchMiddlewareTest {
         }
     }
 
+    @Test
+    fun `WHEN choosing to share the current website details THEN share the details of the tab search started for`() {
+        stubCurrentNavDestination()
+        val currentTab = createTab(url = "https://mozilla.com", title = "Mozilla", private = false)
+        stubSearchSourceTab(currentTab.id)
+        val (_, store) = buildMiddlewareAndAddToSearchStore(browserStore = buildBrowserStore(currentTab))
+
+        store.dispatch(ShareCurrentWebsiteDetailsClicked)
+
+        verify {
+            shareUseCases.shareUrl(
+                id = currentTab.id,
+                url = currentTab.content.url,
+                title = currentTab.content.title,
+                source = ShareSource.BROWSER_TOOLBAR,
+                isPrivate = false,
+                isCustomTab = false,
+                navigateToShareFragment = any(),
+            )
+        }
+    }
+
+    @Test
+    fun `GIVEN the current tab is in reader mode WHEN choosing to share the current website details THEN share the original URL`() {
+        stubCurrentNavDestination()
+        val currentTab =
+            createTab(
+                url = "moz-extension://1234/readerview.html?url=https%3A%2F%2Fmozilla.com",
+                title = "Mozilla",
+                readerState = ReaderState(active = true, activeUrl = "https://mozilla.com"),
+            )
+        stubSearchSourceTab(currentTab.id)
+        val (_, store) = buildMiddlewareAndAddToSearchStore(browserStore = buildBrowserStore(currentTab))
+
+        store.dispatch(ShareCurrentWebsiteDetailsClicked)
+
+        verify {
+            shareUseCases.shareUrl(
+                id = currentTab.id,
+                url = "https://mozilla.com",
+                title = currentTab.content.title,
+                source = ShareSource.BROWSER_TOOLBAR,
+                isPrivate = false,
+                isCustomTab = false,
+                navigateToShareFragment = any(),
+            )
+        }
+    }
+
     private fun buildMiddlewareAndAddToSearchStore(
         engine: Engine = this.engine,
         useCases: UseCases = this.useCases,
@@ -697,6 +752,7 @@ class FenixSearchMiddlewareTest {
         appStore: AppStore = this.appStore,
         browserStore: BrowserStore = this.browserStore,
         toolbarStore: BrowserToolbarStore = this.toolbarStore,
+        shareUseCases: ShareUseCases = this.shareUseCases,
     ): Pair<FenixSearchMiddleware, SearchFragmentStore> {
         val middleware =
             buildMiddleware(
@@ -707,6 +763,7 @@ class FenixSearchMiddlewareTest {
                 appStore = appStore,
                 browserStore = browserStore,
                 toolbarStore = toolbarStore,
+                shareUseCases = shareUseCases,
             )
         every { middleware.buildSearchSuggestionsProvider(any()) } returns mockk(relaxed = true)
 
@@ -725,6 +782,7 @@ class FenixSearchMiddlewareTest {
         toolbarStore: BrowserToolbarStore = this.toolbarStore,
         navController: NavController = this.navController,
         browsingModeManager: BrowsingModeManager = this.browsingModeManager,
+        shareUseCases: ShareUseCases = this.shareUseCases,
     ): FenixSearchMiddleware {
         val middleware =
             spyk(
@@ -742,6 +800,7 @@ class FenixSearchMiddlewareTest {
                     toolbarStore = toolbarStore,
                     navController = navController,
                     browsingModeManager = browsingModeManager,
+                    shareUseCases = shareUseCases,
                 )
             )
         every { middleware.buildSearchSuggestionsProvider(any()) } returns mockk(relaxed = true)
@@ -779,7 +838,19 @@ class FenixSearchMiddlewareTest {
         )
 
     private fun buildBrowserStore(vararg tabs: TabSessionState) =
-        BrowserStore(initialState = BrowserState(tabs = tabs.toList(), search = fakeSearchEnginesState()))
+        BrowserStore(
+            initialState =
+                BrowserState(
+                    tabs = tabs.toList(),
+                    selectedTabId = tabs.firstOrNull()?.id,
+                    search = fakeSearchEnginesState(),
+                )
+        )
+
+    private fun stubCurrentNavDestination(destinationId: Int? = R.id.browserFragment) {
+        every { navController.currentDestination } returns
+            destinationId?.let { mockk<NavDestination> { every { id } returns it } }
+    }
 
     private fun stubSearchSourceTab(tabId: String?) {
         every { appStore.state } returns AppState(searchState = AppSearchState.EMPTY.copy(sourceTabId = tabId))

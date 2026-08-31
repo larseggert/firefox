@@ -32,6 +32,7 @@ import mozilla.components.browser.state.action.AwesomeBarAction
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.compose.browser.awesomebar.AwesomeBar
 import mozilla.components.compose.browser.awesomebar.AwesomeBarOrientation
+import mozilla.components.compose.browser.awesomebar.internal.CurrentTabDetailsInteractions.ShareClicked
 import mozilla.components.compose.browser.toolbar.store.BrowserEditToolbarAction.SearchQueryUpdated
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarStore
 import mozilla.components.compose.browser.toolbar.ui.BrowserToolbarQuery
@@ -229,6 +230,12 @@ class AwesomeBarComposable(
                         onRemoveClicked = { suggestion ->
                             deleteHistoryDelegate?.handleDeletingHistoryEntry(suggestion)
                         },
+                        onCurrentSiteDetailsInteraction = {
+                            when (it) {
+                                ShareClicked ->
+                                    searchStore.dispatch(SearchFragmentAction.ShareCurrentWebsiteDetailsClicked)
+                            }
+                        },
                         onVisibilityStateUpdated = {
                             browserStore.dispatch(AwesomeBarAction.VisibilityStateUpdated(it))
                         },
@@ -309,6 +316,7 @@ class AwesomeBarComposable(
                             toolbarStore = toolbarStore,
                             navController = navController,
                             browsingModeManager = activity.browsingModeManager,
+                            shareUseCases = components.useCases.shareUseCases,
                         ),
                     ),
             )
