@@ -83,9 +83,10 @@ bool ForOfLoopControl::emitEndCodeNeedingIteratorClose(BytecodeEmitter* bce) {
     return false;
   }
 
-  if (!emitIteratorCloseInInnermostScopeWithTryNote(bce,
-                                                    CompletionKind::Throw)) {
-    return false;  // ITER ... EXCEPTION STACK
+  if (!emitIteratorCloseInScope(bce, *bce->innermostEmitterScope(),
+                                CompletionKind::Throw)) {
+    //              [stack] ITER ... EXCEPTION STACK
+    return false;
   }
 
   if (!bce->emit1(JSOp::ThrowWithStack)) {
@@ -100,17 +101,6 @@ bool ForOfLoopControl::emitEndCodeNeedingIteratorClose(BytecodeEmitter* bce) {
   tryCatch_.reset();
 
   return true;
-}
-
-bool ForOfLoopControl::emitIteratorCloseInInnermostScopeWithTryNote(
-    BytecodeEmitter* bce, CompletionKind completionKind) {
-  BytecodeOffset start = bce->bytecodeSection().offset();
-  if (!emitIteratorCloseInScope(bce, *bce->innermostEmitterScope(),
-                                completionKind)) {
-    return false;
-  }
-  BytecodeOffset end = bce->bytecodeSection().offset();
-  return bce->addTryNote(TryNoteKind::ForOfIterClose, 0, start, end);
 }
 
 bool ForOfLoopControl::emitIteratorCloseInScope(BytecodeEmitter* bce,

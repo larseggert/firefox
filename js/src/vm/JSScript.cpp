@@ -3843,8 +3843,6 @@ static const char* TryNoteName(TryNoteKind kind) {
       return "for-of";
     case TryNoteKind::Loop:
       return "loop";
-    case TryNoteKind::ForOfIterClose:
-      return "for-of-iterclose";
     case TryNoteKind::Destructuring:
       return "destructuring";
   }
