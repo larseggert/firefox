@@ -149,6 +149,8 @@ pub mod frames;
 mod frames;
 mod headers_checks;
 mod priority;
+mod push_controller;
+mod push_id;
 mod qlog;
 mod qpack_decoder_receiver;
 mod qpack_encoder_receiver;
@@ -179,6 +181,7 @@ pub use neqo_transport::{
     streams::{SendGroupId, SendOrder},
 };
 pub use priority::Priority;
+pub use push_id::PushId;
 pub use server::Http3Server;
 pub use server_events::{Http3OrWebTransportStream, Http3ServerEvent};
 #[cfg(fuzzing)]
@@ -362,6 +365,26 @@ impl Error {
         }
     }
 
+    /// # Panics
+    ///
+    /// On unexpected errors, in debug mode.
+    #[must_use]
+    pub fn map_stream_recv_errors(err: &Self) -> Self {
+        match err {
+            Self::Transport(TransportError::NoMoreData) => {
+                debug_assert!(
+                    false,
+                    "Do not call stream_recv if FIN has been previously read"
+                );
+            }
+            Self::Transport(TransportError::InvalidStreamId) => {}
+            _ => {
+                debug_assert!(false, "Unexpected error");
+            }
+        }
+        Self::TransportStreamDoesNotExist
+    }
+
     /// # Errors
     ///
     /// Any error is mapped to the indicated type.
@@ -394,6 +417,7 @@ pub enum Http3StreamType {
     Encoder,
     NewStream,
     Http,
+    Push,
     ExtendedConnect,
     WebTransport(StreamId),
     Unknown,
@@ -616,8 +640,7 @@ trait SendStream: Stream {
         Err(Error::InvalidStreamId)
     }
 
-    /// This function is only implemented by
-    /// [`WebTransportSendStream`](crate::features::extended_connect::webtransport_streams::WebTransportSendStream).
+    /// This function is only implemented by `WebTransportSendStream`.
     fn stats(&mut self, _conn: &mut Connection) -> Res<send_stream::Stats> {
         Err(Error::Unavailable)
     }
@@ -759,6 +782,11 @@ mod tests {
         assert!(matches!(
             Error::map_stream_create_errors(&Te::StreamLimit),
             StreamLimit
+        ));
+        // Note: map_stream_recv_errors with NoMoreData has debug_assert, skip in debug builds.
+        assert!(matches!(
+            Error::map_stream_recv_errors(&Transport(Te::InvalidStreamId)),
+            TransportStreamDoesNotExist
         ));
     }
 }

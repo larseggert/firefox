@@ -8,7 +8,6 @@
     clippy::significant_drop_tightening,
     reason = "Inherent in codspeed criterion_group! macro."
 )]
-#![expect(clippy::unwrap_used, reason = "OK in a bench.")]
 
 use std::{collections::VecDeque, hint::black_box};
 
@@ -29,7 +28,7 @@ fn inbound_in_order(c: &mut Criterion) {
             |mut rx| {
                 let mut drain = Vec::new();
                 for i in 0..FRAMES {
-                    rx.inbound_frame(i * to_u64(CHUNK), &PAYLOAD).unwrap();
+                    rx.inbound_frame(i * to_u64(CHUNK), &PAYLOAD);
                     rx.read_to_end(&mut drain);
                     drain.clear();
                 }
@@ -52,20 +51,20 @@ fn inbound_with_loss(c: &mut Criterion) {
                     if i % 50 == 0 {
                         missing.push_back(i); // "drop" this frame
                     } else {
-                        rx.inbound_frame(i * to_u64(CHUNK), &PAYLOAD).unwrap();
+                        rx.inbound_frame(i * to_u64(CHUNK), &PAYLOAD);
                     }
                     // Deliver a retransmission ~20 frames later.
-                    if i % 20 == 19
-                        && let Some(lost) = missing.pop_front()
-                    {
-                        rx.inbound_frame(lost * to_u64(CHUNK), &PAYLOAD).unwrap();
+                    if i % 20 == 19 {
+                        if let Some(lost) = missing.pop_front() {
+                            rx.inbound_frame(lost * to_u64(CHUNK), &PAYLOAD);
+                        }
                     }
                     rx.read_to_end(&mut drain);
                     drain.clear();
                 }
                 // Flush any remaining retransmits.
                 for lost in missing {
-                    rx.inbound_frame(lost * to_u64(CHUNK), &PAYLOAD).unwrap();
+                    rx.inbound_frame(lost * to_u64(CHUNK), &PAYLOAD);
                     rx.read_to_end(&mut drain);
                     drain.clear();
                 }
@@ -91,7 +90,7 @@ fn inbound_reordered(c: &mut Criterion) {
             |mut rx| {
                 let mut drain = Vec::new();
                 for &i in &order {
-                    rx.inbound_frame(i * to_u64(CHUNK), &PAYLOAD).unwrap();
+                    rx.inbound_frame(i * to_u64(CHUNK), &PAYLOAD);
                     rx.read_to_end(&mut drain);
                     drain.clear();
                 }
@@ -110,10 +109,10 @@ fn inbound_duplicates(c: &mut Criterion) {
             |mut rx| {
                 let mut drain = Vec::new();
                 for i in 0..FRAMES {
-                    rx.inbound_frame(i * to_u64(CHUNK), &PAYLOAD).unwrap();
+                    rx.inbound_frame(i * to_u64(CHUNK), &PAYLOAD);
                     if i % 20 == 0 && i > 0 {
                         // Duplicate of the previous frame.
-                        rx.inbound_frame((i - 1) * to_u64(CHUNK), &PAYLOAD).unwrap();
+                        rx.inbound_frame((i - 1) * to_u64(CHUNK), &PAYLOAD);
                     }
                     rx.read_to_end(&mut drain);
                     drain.clear();
@@ -125,9 +124,11 @@ fn inbound_duplicates(c: &mut Criterion) {
     });
 }
 
-criterion_group! {
-    name = benches;
-    config = { neqo_common::log::init(None); Criterion::default() };
-    targets = inbound_in_order, inbound_with_loss, inbound_reordered, inbound_duplicates
-}
+criterion_group!(
+    benches,
+    inbound_in_order,
+    inbound_with_loss,
+    inbound_reordered,
+    inbound_duplicates,
+);
 criterion_main!(benches);

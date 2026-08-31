@@ -96,7 +96,8 @@ pub fn create_client(
         Http3Parameters::default()
             .max_table_size_encoder(args.shared.max_table_size_encoder)
             .max_table_size_decoder(args.shared.max_table_size_decoder)
-            .max_blocked_streams(args.shared.max_blocked_streams),
+            .max_blocked_streams(args.shared.max_blocked_streams)
+            .max_concurrent_push_streams(args.max_concurrent_push_streams),
     );
 
     let qlog = qlog_new(args, hostname, client.connection_id())?;

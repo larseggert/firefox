@@ -308,6 +308,7 @@ impl Http3ServerHandler {
             .base_handler
             .handle_stream_readable(conn, stream_id, now)?
         {
+            ReceiveOutput::NewStream(NewStreamType::Push(_)) => Err(Error::HttpStreamCreation),
             ReceiveOutput::NewStream(NewStreamType::Http(first_frame_type)) => {
                 self.base_handler.add_streams(
                     stream_id,
@@ -327,7 +328,8 @@ impl Http3ServerHandler {
                         },
                         Rc::clone(self.base_handler.qpack_decoder()),
                         Box::new(self.events.clone()),
-                        PriorityHandler::new(Priority::default()),
+                        None,
+                        PriorityHandler::new(false, Priority::default()),
                     )),
                 );
                 let res = self
@@ -352,13 +354,22 @@ impl Http3ServerHandler {
             ReceiveOutput::ControlFrames(control_frames) => {
                 for f in control_frames {
                     match f {
-                        HFrame::Goaway { .. } => Err(Error::HttpFrameUnexpected),
-                        // Server push is not supported. A server that does not push ignores
-                        // MAX_PUSH_ID (RFC 9114, Section 7.2.7); any other push frame is
-                        // unexpected.
-                        HFrame::MaxPushId => Ok(()),
-                        HFrame::CancelPush | HFrame::PriorityUpdatePush => {
+                        HFrame::MaxPushId { .. } => {
+                            // TODO implement push
+                            Ok(())
+                        }
+                        HFrame::Goaway { .. } | HFrame::CancelPush { .. } => {
                             Err(Error::HttpFrameUnexpected)
+                        }
+                        HFrame::PriorityUpdatePush {
+                            element_id,
+                            priority,
+                        } => {
+                            // TODO: check if the element_id references a promised push stream or
+                            // is greater than the maximum Push ID.
+                            self.events
+                                .priority_update(StreamId::from(element_id), priority);
+                            Ok(())
                         }
                         HFrame::PriorityUpdateRequest {
                             element_id,
@@ -378,7 +389,7 @@ impl Http3ServerHandler {
                             Ok(())
                         }
                         _ => unreachable!(
-                            "only Goaway, PriorityUpdateRequest and server-push frames are put into control_frames"
+                            "we should only put MaxPushId, Goaway and PriorityUpdates into control_frames"
                         ),
                     }?;
                 }

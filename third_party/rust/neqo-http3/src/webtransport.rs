@@ -153,8 +153,6 @@ pub trait ClientSession {
 
     /// Close a `WebTransport` session cleanly.
     ///
-    /// Returns a snapshot of the session's statistics taken at close time.
-    ///
     /// # Errors
     ///
     /// `InvalidStreamId` if the stream does not exist,
@@ -168,7 +166,7 @@ pub trait ClientSession {
         error: u32,
         message: &str,
         now: Instant,
-    ) -> Res<extended_connect::stats::SessionStats>;
+    ) -> Res<()>;
 
     /// Create a `WebTransport` stream.
     ///
@@ -309,7 +307,7 @@ impl ClientSession for Http3Client {
         error: u32,
         message: &str,
         now: Instant,
-    ) -> Res<extended_connect::stats::SessionStats> {
+    ) -> Res<()> {
         let (conn, handler) = self.connection_and_handler();
         handler.webtransport_close_session(conn, session_id, error, message, now)
     }
@@ -412,7 +410,7 @@ trait Handler {
         error: u32,
         message: &str,
         now: Instant,
-    ) -> Res<extended_connect::stats::SessionStats>;
+    ) -> Res<()>;
 
     fn webtransport_send_datagram<I: Into<DatagramTracking>>(
         &self,
@@ -474,25 +472,9 @@ impl Handler for Http3Connection {
         error: u32,
         message: &str,
         now: Instant,
-    ) -> Res<extended_connect::stats::SessionStats> {
+    ) -> Res<()> {
         qtrace!("Close WebTransport session {session_id:?}");
-        // Snapshot the stats before tearing the session down, so the caller sees
-        // the final values. This also rejects non-WebTransport sessions.
-        //
-        // `extended_connect_close_session` then checks the type again. That is
-        // deliberate: it is shared with connect-udp, which needs the check for its own
-        // close path, so it cannot rely on this one having happened. Two lookups once
-        // per session close is not worth a validation-skipping variant.
-        let stats = self.webtransport_session_stats(session_id)?;
-        self.extended_connect_close_session(
-            conn,
-            session_id,
-            extended_connect::ExtendedConnectType::WebTransport,
-            error,
-            message,
-            now,
-        )?;
-        Ok(stats)
+        self.extended_connect_close_session(conn, session_id, error, message, now)
     }
 
     fn webtransport_send_datagram<I: Into<DatagramTracking>>(
@@ -524,7 +506,7 @@ pub(crate) trait ServerHandler {
         error: u32,
         message: &str,
         now: Instant,
-    ) -> Res<extended_connect::stats::SessionStats>;
+    ) -> Res<()>;
 
     fn webtransport_create_stream(
         &mut self,
@@ -564,7 +546,7 @@ impl ServerHandler for Http3ServerHandler {
         error: u32,
         message: &str,
         now: Instant,
-    ) -> Res<extended_connect::stats::SessionStats> {
+    ) -> Res<()> {
         self.mark_needs_processing();
         self.base_handler_mut()
             .webtransport_close_session(conn, session_id, error, message, now)
@@ -651,19 +633,12 @@ impl ServerSession {
             )
     }
 
-    /// Returns a snapshot of the session's statistics taken at close time.
-    ///
     /// # Errors
     ///
     /// It may return `InvalidStreamId` if a stream does not exist anymore.
     /// Also return an error if the stream was closed on the transport layer,
     /// but that information is not yet consumed on the http/3 layer.
-    pub fn close_session(
-        &self,
-        error: u32,
-        message: &str,
-        now: Instant,
-    ) -> Res<extended_connect::stats::SessionStats> {
+    pub fn close_session(&self, error: u32, message: &str, now: Instant) -> Res<()> {
         self.stream_handler
             .handler
             .borrow_mut()
