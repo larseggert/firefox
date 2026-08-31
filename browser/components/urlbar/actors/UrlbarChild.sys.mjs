@@ -89,34 +89,6 @@ export class UrlbarChild extends JSWindowActorChild {
   }
 
   /**
-   * Sends a message if the actor is not destroyed.
-   *
-   * @param {string} name
-   * @param {any} data
-   */
-  #maybeSendAsyncMessage(name, data) {
-    try {
-      this.sendAsyncMessage(name, data);
-    } catch (ex) {}
-  }
-
-  /**
-   * Sends a query. If the actor is destroyed, the returned promise won't ever
-   * resolve.
-   *
-   * @param {string} name
-   * @param {any} data
-   * @returns {Promise<any>}
-   */
-  #maybeSendQuery(name, data) {
-    try {
-      return this.sendQuery(name, data);
-    } catch {
-      return new Promise(() => {});
-    }
-  }
-
-  /**
    * Converts a privileged promise into one the content realm can consume: the
    * resolution is cloned in, and a rejection is re-created as a content-realm
    * `Error` carrying only its message, so neither a system-principal object nor
@@ -182,10 +154,10 @@ export class UrlbarChild extends JSWindowActorChild {
       ? Cu.waiveXrays(this.contentWindow)
       : this.contentWindow;
     let port = {
-      sendAsyncMessage: (name, data) => this.#maybeSendAsyncMessage(name, data),
+      sendAsyncMessage: (name, data) => this.sendAsyncMessage(name, data),
       sendQuery: (name, data) =>
         unprivileged
-          ? this.#wrapPromise(this.#maybeSendQuery(name, data), win)
+          ? this.#wrapPromise(this.sendQuery(name, data), win)
           : this.sendQuery(name, data),
       registerMessagePathInput: input => this.registerMessagePathInput(input),
       registerChildController: (instanceId, child) =>
