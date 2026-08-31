@@ -117,6 +117,7 @@
     > .urlbarView-body-outer {
       min-height: 0;
       overflow-y: auto;
+      scrollbar-width: thin;
     }
   }
 
