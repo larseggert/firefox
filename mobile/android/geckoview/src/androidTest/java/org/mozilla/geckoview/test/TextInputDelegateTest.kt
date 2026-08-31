@@ -609,7 +609,7 @@ class TextInputDelegateTest : BaseSessionTest() {
         }
     }
 
-    private fun getText(ic: InputConnection) = ic.getExtractedText(ExtractedTextRequest(), 0).text.toString()
+    private fun getText(ic: InputConnection) = ic.getExtractedText(ExtractedTextRequest(), 0)!!.text.toString()
 
     private fun assertText(message: String, actual: String, expected: String) =
         // In an HTML editor, Gecko may insert an additional element that show up as a
@@ -645,7 +645,7 @@ class TextInputDelegateTest : BaseSessionTest() {
             assertThat(message, selectionOffsets, equalTo(Pair(start, end)))
         }
 
-        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0)
+        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0)!!
         assertThat(message, extracted.selectionStart, equalTo(start))
         assertThat(message, extracted.selectionEnd, equalTo(end))
     }
@@ -673,7 +673,7 @@ class TextInputDelegateTest : BaseSessionTest() {
             assertThat(message, selectionOffsets, equalTo(Pair(start, end)))
         }
 
-        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0)
+        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0)!!
         assertText(message, extracted.text.toString(), expected)
         assertThat(message, extracted.selectionStart, equalTo(start))
         assertThat(message, extracted.selectionEnd, equalTo(end))
