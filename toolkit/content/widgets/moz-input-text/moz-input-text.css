@@ -50,6 +50,10 @@
     --input-background-icon: url(chrome://global/skin/icons/search-textbox.svg);
     border-radius: var(--input-search-border-radius);
     padding-inline-end: var(--space-xxsmall);
+
+    &::-moz-search-clear-button {
+      border-radius: var(--input-search-border-radius);
+    }
   }
 
   &::placeholder {
