@@ -11,25 +11,31 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.coroutineScope
 import androidx.navigation.NavController
 import mozilla.components.browser.state.action.AwesomeBarAction
 import mozilla.components.browser.state.store.BrowserStore
+import mozilla.components.compose.base.theme.layout.AcornWindowSize
 import mozilla.components.compose.browser.awesomebar.AwesomeBar
 import mozilla.components.compose.browser.awesomebar.AwesomeBarOrientation
 import mozilla.components.compose.browser.awesomebar.internal.CurrentTabDetailsInteractions.CopyClicked
@@ -68,6 +74,18 @@ import org.mozilla.fenix.search.createInitialSearchFragmentState
 import org.mozilla.fenix.settings.SupportUtils
 
 private const val MATERIAL_DESIGN_SCRIM = "#52000000"
+private const val AWESOMEBAR_MAX_WIDTH = 600
+
+/**
+ * Cap the width of the awesomebar content to [AcornWindowSize.Small] and center it in the available space as a staged
+ * rollout change.
+ */
+private fun Modifier.awesomeBarContentWidth() =
+    if (FxNimbus.features.addressbarFocusMode.value().enabled) {
+        fillMaxWidth().wrapContentWidth(align = Alignment.CenterHorizontally).widthIn(max = AWESOMEBAR_MAX_WIDTH.dp)
+    } else {
+        fillMaxWidth()
+    }
 
 /**
  * Wrapper over a [Composable] to show search suggestions, responsible for its setup.
@@ -160,6 +178,7 @@ class AwesomeBarComposable(
             val url = components.clipboardHandler.extractURL()
 
             ClipboardSuggestionBar(
+                modifier = Modifier.awesomeBarContentWidth(),
                 shouldUseBottomToolbar = components.settings.shouldUseBottomToolbar,
                 backgroundColor = clipboardBarBackground,
                 onClick = {
@@ -175,6 +194,7 @@ class AwesomeBarComposable(
         if (isSearchActive) {
             if (state.showSearchSuggestionsHint) {
                 PrivateSuggestionsCard(
+                    modifier = Modifier.awesomeBarContentWidth(),
                     onSearchSuggestionsInPrivateModeAllowed = {
                         components.settings.shouldShowSearchSuggestionsInPrivate = true
                         components.settings.showSearchSuggestionsInPrivateOnboardingFinished = true
@@ -222,35 +242,37 @@ class AwesomeBarComposable(
                             }
                         }
 
-                    AwesomeBar(
-                        text = state.query,
-                        currentTabData = currentTabDetailsToShow,
-                        providers = state.searchSuggestionsProviders,
-                        hiddenSuggestions = state.hiddenSuggestions,
-                        orientation = orientation,
-                        onSuggestionClicked = { suggestion ->
-                            searchStore.dispatch(SuggestionClicked(suggestion))
-                        },
-                        onAutoComplete = { suggestion ->
-                            searchStore.dispatch(SuggestionSelected(suggestion))
-                        },
-                        onRemoveClicked = { suggestion ->
-                            deleteHistoryDelegate?.handleDeletingHistoryEntry(suggestion)
-                        },
-                        onCurrentSiteDetailsInteraction = {
-                            when (it) {
-                                ShareClicked -> searchStore.dispatch(ShareCurrentWebsiteDetailsClicked)
-                                CopyClicked -> searchStore.dispatch(CopyCurrentWebsiteDetailsClicked)
-                                EditClicked -> searchStore.dispatch(EditCurrentWebsiteDetailsClicked)
-                                DetailsClicked -> searchStore.dispatch(ReloadCurrentWebsiteClicked)
-                            }
-                        },
-                        onVisibilityStateUpdated = {
-                            browserStore.dispatch(AwesomeBarAction.VisibilityStateUpdated(it))
-                        },
-                        onScroll = { view.hideKeyboard() },
-                        profiler = components.core.engine.profiler,
-                    )
+                    Box(modifier = Modifier.awesomeBarContentWidth()) {
+                        AwesomeBar(
+                            text = state.query,
+                            currentTabData = currentTabDetailsToShow,
+                            providers = state.searchSuggestionsProviders,
+                            hiddenSuggestions = state.hiddenSuggestions,
+                            orientation = orientation,
+                            onSuggestionClicked = { suggestion ->
+                                searchStore.dispatch(SuggestionClicked(suggestion))
+                            },
+                            onAutoComplete = { suggestion ->
+                                searchStore.dispatch(SuggestionSelected(suggestion))
+                            },
+                            onRemoveClicked = { suggestion ->
+                                deleteHistoryDelegate?.handleDeletingHistoryEntry(suggestion)
+                            },
+                            onCurrentSiteDetailsInteraction = {
+                                when (it) {
+                                    ShareClicked -> searchStore.dispatch(ShareCurrentWebsiteDetailsClicked)
+                                    CopyClicked -> searchStore.dispatch(CopyCurrentWebsiteDetailsClicked)
+                                    EditClicked -> searchStore.dispatch(EditCurrentWebsiteDetailsClicked)
+                                    DetailsClicked -> searchStore.dispatch(ReloadCurrentWebsiteClicked)
+                                }
+                            },
+                            onVisibilityStateUpdated = {
+                                browserStore.dispatch(AwesomeBarAction.VisibilityStateUpdated(it))
+                            },
+                            onScroll = { view.hideKeyboard() },
+                            profiler = components.core.engine.profiler,
+                        )
+                    }
                 }
             } else if (showScrimWhenNoSuggestions) {
                 Spacer(
@@ -274,6 +296,7 @@ class AwesomeBarComposable(
             val url = components.clipboardHandler.extractURL()
 
             ClipboardSuggestionBar(
+                modifier = Modifier.awesomeBarContentWidth(),
                 shouldUseBottomToolbar = components.settings.shouldUseBottomToolbar,
                 backgroundColor = clipboardBarBackground,
                 onClick = {
