@@ -69,6 +69,7 @@ import org.mozilla.fenix.search.SearchFragmentAction.CopyCurrentWebsiteDetailsCl
 import org.mozilla.fenix.search.SearchFragmentAction.EditCurrentWebsiteDetailsClicked
 import org.mozilla.fenix.search.SearchFragmentAction.Init
 import org.mozilla.fenix.search.SearchFragmentAction.PrivateSuggestionsCardAccepted
+import org.mozilla.fenix.search.SearchFragmentAction.ReloadCurrentWebsiteClicked
 import org.mozilla.fenix.search.SearchFragmentAction.SearchEnginesSelectedActions
 import org.mozilla.fenix.search.SearchFragmentAction.SearchProvidersUpdated
 import org.mozilla.fenix.search.SearchFragmentAction.SearchStarted
@@ -203,6 +204,10 @@ class FenixSearchMiddleware(
 
             is PrivateSuggestionsCardAccepted -> {
                 updateSearchProviders(store)
+            }
+
+            is ReloadCurrentWebsiteClicked -> {
+                handleReloadingCurrentWebsite()
             }
 
             is ShareCurrentWebsiteDetailsClicked -> {
@@ -529,6 +534,15 @@ class FenixSearchMiddleware(
             BrowsingMode.Normal -> settings.shouldShowSearchSuggestions
             BrowsingMode.Private ->
                 settings.shouldShowSearchSuggestions && settings.shouldShowSearchSuggestionsInPrivate
+        }
+    }
+
+    private fun handleReloadingCurrentWebsite() {
+        appStore.state.searchState.sourceTabId?.let {
+            useCases.tabsUseCases.selectTab(it)
+            navController.nav(navController.currentDestination?.id, NavGraphDirections.actionGlobalBrowser())
+            useCases.sessionUseCases.reload(it)
+            browserStore.dispatch(AwesomeBarAction.EngagementFinished(abandoned = true))
         }
     }
 

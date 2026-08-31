@@ -394,6 +394,9 @@ sealed class SearchFragmentAction : Action {
     /** Action indicating the user allowed to show suggestions in private mode. */
     data object PrivateSuggestionsCardAccepted : SearchFragmentAction()
 
+    /** Action indicating the user wants to reload the current website. */
+    data object ReloadCurrentWebsiteClicked : SearchFragmentAction()
+
     /** Action indicating the user wants to share the current website details. */
     data object ShareCurrentWebsiteDetailsClicked : SearchFragmentAction()
 
@@ -596,6 +599,7 @@ private fun searchStateReducer(state: SearchFragmentState, action: SearchFragmen
         is SearchFragmentAction.SuggestionClicked,
         is SearchFragmentAction.PrivateSuggestionsCardAccepted,
         is SearchFragmentAction.SuggestionSelected,
+        is SearchFragmentAction.ReloadCurrentWebsiteClicked,
         is SearchFragmentAction.ShareCurrentWebsiteDetailsClicked,
         is SearchFragmentAction.CopyCurrentWebsiteDetailsClicked,
         is SearchFragmentAction.EditCurrentWebsiteDetailsClicked -> {

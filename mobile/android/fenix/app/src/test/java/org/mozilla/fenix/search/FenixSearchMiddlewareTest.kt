@@ -17,6 +17,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlinx.coroutines.test.runTest
@@ -40,6 +41,7 @@ import mozilla.components.concept.awesomebar.AwesomeBar.Suggestion
 import mozilla.components.concept.awesomebar.AwesomeBar.SuggestionProvider
 import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession.LoadUrlFlags
+import mozilla.components.feature.session.SessionUseCases
 import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.support.test.middleware.CaptureActionsMiddleware
 import mozilla.components.support.test.robolectric.testContext
@@ -59,6 +61,7 @@ import org.mozilla.fenix.GleanMetrics.BookmarksManagement
 import org.mozilla.fenix.GleanMetrics.Events
 import org.mozilla.fenix.GleanMetrics.History
 import org.mozilla.fenix.GleanMetrics.Toolbar
+import org.mozilla.fenix.NavGraphDirections
 import org.mozilla.fenix.R
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
@@ -82,6 +85,7 @@ import org.mozilla.fenix.search.SearchEngineSource.Bookmarks
 import org.mozilla.fenix.search.SearchEngineSource.Shortcut
 import org.mozilla.fenix.search.SearchFragmentAction.CopyCurrentWebsiteDetailsClicked
 import org.mozilla.fenix.search.SearchFragmentAction.EditCurrentWebsiteDetailsClicked
+import org.mozilla.fenix.search.SearchFragmentAction.ReloadCurrentWebsiteClicked
 import org.mozilla.fenix.search.SearchFragmentAction.SearchProvidersUpdated
 import org.mozilla.fenix.search.SearchFragmentAction.SearchShortcutEngineSelected
 import org.mozilla.fenix.search.SearchFragmentAction.SearchStarted
@@ -857,6 +861,42 @@ class FenixSearchMiddlewareTest {
                     isQueryPrefilled = true,
                 )
             )
+        }
+    }
+
+    @Test
+    fun `WHEN needing to reload the current website THEN navigate to the browser screen and reload the tab the search was started from`() {
+        val tab1 = createTab(url = "https://mozilla.com", title = "1", private = false)
+        val tab2 = createTab(url = "https://mozilla.com", title = "2", private = false)
+        val tab3 = createTab(url = "https://mozilla.com", title = "3", private = false)
+        stubSearchSourceTab(tab2.id)
+        val tabsUseCases: TabsUseCases = mockk(relaxed = true)
+        val sessionUseCases: SessionUseCases = mockk(relaxed = true)
+        val useCases: UseCases = mockk {
+            every { this@mockk.tabsUseCases } returns tabsUseCases
+            every { this@mockk.sessionUseCases } returns sessionUseCases
+        }
+        val browserActionsCaptor = CaptureActionsMiddleware<BrowserState, BrowserAction>()
+        val browserStore =
+            BrowserStore(
+                BrowserState(tabs = listOf(tab1, tab2, tab3)),
+                middleware = listOf(browserActionsCaptor),
+            )
+        val (_, store) =
+            buildMiddlewareAndAddToSearchStore(
+                useCases = useCases,
+                browserStore = browserStore,
+            )
+
+        store.dispatch(ReloadCurrentWebsiteClicked)
+
+        verifyOrder {
+            tabsUseCases.selectTab(tab2.id)
+            navController.navigate(NavGraphDirections.actionGlobalBrowser(), null)
+            sessionUseCases.reload(tab2.id)
+        }
+        browserActionsCaptor.assertLastAction(EngagementFinished::class) {
+            assertEquals(true, it.abandoned)
         }
     }
 

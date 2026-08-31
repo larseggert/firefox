@@ -33,6 +33,7 @@ import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.compose.browser.awesomebar.AwesomeBar
 import mozilla.components.compose.browser.awesomebar.AwesomeBarOrientation
 import mozilla.components.compose.browser.awesomebar.internal.CurrentTabDetailsInteractions.CopyClicked
+import mozilla.components.compose.browser.awesomebar.internal.CurrentTabDetailsInteractions.DetailsClicked
 import mozilla.components.compose.browser.awesomebar.internal.CurrentTabDetailsInteractions.EditClicked
 import mozilla.components.compose.browser.awesomebar.internal.CurrentTabDetailsInteractions.ShareClicked
 import mozilla.components.compose.browser.toolbar.store.BrowserEditToolbarAction.SearchQueryUpdated
@@ -58,6 +59,7 @@ import org.mozilla.fenix.search.FenixSearchMiddleware
 import org.mozilla.fenix.search.SearchFragmentAction
 import org.mozilla.fenix.search.SearchFragmentAction.CopyCurrentWebsiteDetailsClicked
 import org.mozilla.fenix.search.SearchFragmentAction.EditCurrentWebsiteDetailsClicked
+import org.mozilla.fenix.search.SearchFragmentAction.ReloadCurrentWebsiteClicked
 import org.mozilla.fenix.search.SearchFragmentAction.ShareCurrentWebsiteDetailsClicked
 import org.mozilla.fenix.search.SearchFragmentAction.SuggestionClicked
 import org.mozilla.fenix.search.SearchFragmentAction.SuggestionSelected
@@ -240,6 +242,7 @@ class AwesomeBarComposable(
                                 ShareClicked -> searchStore.dispatch(ShareCurrentWebsiteDetailsClicked)
                                 CopyClicked -> searchStore.dispatch(CopyCurrentWebsiteDetailsClicked)
                                 EditClicked -> searchStore.dispatch(EditCurrentWebsiteDetailsClicked)
+                                DetailsClicked -> searchStore.dispatch(ReloadCurrentWebsiteClicked)
                             }
                         },
                         onVisibilityStateUpdated = {
