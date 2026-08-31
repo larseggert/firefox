@@ -235,7 +235,7 @@ nsresult URLQueryStringStripper::ManageObservers() {
     if (!StaticPrefs::privacy_query_stripping_strip_on_share_enabled()) {
       // Clean up strip-on-share list
       mStripOnShareGlobal.reset();
-      mStripOnShareOriginMap.Clear();
+      mStripOnShareHostMap.Clear();
       mStripOnShareSchemelessSiteMap.Clear();
       rv = mListService->UnregisterStripOnShareObserver(this);
       NS_ENSURE_SUCCESS(rv, rv);
@@ -356,8 +356,8 @@ URLQueryStringStripper::OnQueryStrippingListUpdate(
 NS_IMETHODIMP
 URLQueryStringStripper::OnStripOnShareUpdate(const nsTArray<nsString>& aArgs,
                                              JSContext* aCx) {
-  mStripOnShareOriginMap.Clear();
-  mStripOnShareOriginMap.Clear();
+  mStripOnShareHostMap.Clear();
+  mStripOnShareSchemelessSiteMap.Clear();
   mStripOnShareGlobal.reset();
 
   for (const auto& ruleString : aArgs) {
@@ -369,8 +369,8 @@ URLQueryStringStripper::OnStripOnShareUpdate(const nsTArray<nsString>& aArgs,
     if (rule.mIsGlobal) {
       mStripOnShareGlobal = Some(rule);
     } else {
-      for (const auto& origin : rule.mOrigins) {
-        mStripOnShareOriginMap.InsertOrUpdate(origin, rule);
+      for (const auto& host : rule.mHosts) {
+        mStripOnShareHostMap.InsertOrUpdate(host, rule);
       }
       for (const auto& schemelessSite : rule.mSchemelessSites) {
         mStripOnShareSchemelessSiteMap.InsertOrUpdate(schemelessSite, rule);
@@ -416,7 +416,7 @@ bool URLQueryStringStripper::ShouldStripParam(const nsACString& aHost,
     return true;
   }
   // Check for site specific rules.
-  if (auto entry = mStripOnShareOriginMap.Lookup(aHost);
+  if (auto entry = mStripOnShareHostMap.Lookup(aHost);
       entry && matches(entry.Data())) {
     return true;
   }

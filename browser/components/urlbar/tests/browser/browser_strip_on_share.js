@@ -232,11 +232,11 @@ async function testMenuItemEnabled({
       },
       example: {
         queryParams: ["test_2", "test_1", "TEST_5"],
-        origins: ["www.example.com"],
+        hosts: ["www.example.com"],
       },
       exampleNet: {
         queryParams: ["test_3", "test_4"],
-        origins: ["www.example.net"],
+        hosts: ["www.example.net"],
       },
     };
 
