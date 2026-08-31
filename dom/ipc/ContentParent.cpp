@@ -1458,9 +1458,14 @@ already_AddRefed<RemoteBrowser> ContentParent::CreateBrowser(
   aBrowsingContext->Canonical()->SetOwnerProcessId(
       constructorSender->ChildID());
 
-  RefPtr<BrowserParent> browserParent =
-      new BrowserParent(constructorSender.get(), tabId, aContext,
-                        aBrowsingContext->Canonical(), chromeFlags);
+  nsCOMPtr<nsIPrincipal> initialPrincipal =
+      NullPrincipal::Create(aBrowsingContext->OriginAttributesRef());
+  WindowGlobalInit windowInit = WindowGlobalActor::AboutBlankInitializer(
+      aBrowsingContext, initialPrincipal);
+
+  RefPtr<BrowserParent> browserParent = new BrowserParent(
+      constructorSender.get(), tabId, windowInit.context().mOuterWindowId,
+      aContext, aBrowsingContext->Canonical(), chromeFlags);
 
   ContentProcessManager* cpm = ContentProcessManager::GetSingleton();
   if (NS_WARN_IF(!cpm)) {
@@ -1474,11 +1479,6 @@ already_AddRefed<RemoteBrowser> ContentParent::CreateBrowser(
   if (NS_WARN_IF(!childEp.IsValid())) {
     return nullptr;
   }
-
-  nsCOMPtr<nsIPrincipal> initialPrincipal =
-      NullPrincipal::Create(aBrowsingContext->OriginAttributesRef());
-  WindowGlobalInit windowInit = WindowGlobalActor::AboutBlankInitializer(
-      aBrowsingContext, initialPrincipal);
 
   RefPtr<WindowGlobalParent> windowParent =
       WindowGlobalParent::CreateDisconnected(windowInit,
@@ -4388,8 +4388,9 @@ mozilla::ipc::IPCResult ContentParent::RecvConstructPopupBrowser(
     return IPC_FAIL(this, "Failed to create WindowGlobalParent");
   }
 
-  auto parent = MakeRefPtr<BrowserParent>(this, aTabId, tc.GetTabContext(),
-                                          browsingContext, chromeFlags);
+  auto parent = MakeRefPtr<BrowserParent>(
+      this, aTabId, aInitialWindowInit.context().mOuterWindowId,
+      tc.GetTabContext(), browsingContext, chromeFlags);
 
   // The creation of PBrowser was triggered from content process through
   // window.open().

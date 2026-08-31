@@ -110,7 +110,7 @@ class BrowserParent final : public PBrowserParent,
   NS_DECL_CYCLE_COLLECTION_CLASS_AMBIGUOUS(BrowserParent, nsIDOMEventListener)
 
   BrowserParent(ContentParent* aManager, const TabId& aTabId,
-                const TabContext& aContext,
+                uint64_t aRootOuterWindowId, const TabContext& aContext,
                 CanonicalBrowsingContext* aBrowsingContext,
                 uint32_t aChromeFlags);
 
@@ -871,6 +871,7 @@ class BrowserParent final : public PBrowserParent,
 
  private:
   TabId mTabId;
+  uint64_t mRootOuterWindowId;
 
   // The root browsing context loaded in this BrowserParent.
   RefPtr<CanonicalBrowsingContext> mBrowsingContext;
