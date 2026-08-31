@@ -264,7 +264,7 @@ class TabGroupReducerTest {
     }
 
     @Test
-    fun `WHEN ungroup is confirmed from expanded tab group THEN keep the expanded tab group`() {
+    fun `WHEN ungroup is confirmed from expanded tab group THEN pop the confirmation dialog and expanded tab group`() {
         val group = createTabGroup()
         val initialState =
             TabsTrayState(
@@ -282,10 +282,7 @@ class TabGroupReducerTest {
                 action = TabGroupAction.UngroupConfirmed(group = group, dontAskAgain = true),
             )
 
-        assertEquals(
-            listOf(TabsTrayState().backStack.first(), ExpandedTabGroup(group = group)),
-            resultState.backStack,
-        )
+        assertEquals(TabsTrayState().backStack, resultState.backStack)
     }
 
     @Test

@@ -247,6 +247,8 @@ private fun FenixOverlayPreview() {
 
             override suspend fun deleteTabGroupsById(ids: List<String>) {}
 
+            override suspend fun ungroupTabGroup(tabGroupId: String) {}
+
             override suspend fun addTabGroupAssignment(tabId: String, tabGroupId: String) {}
 
             override suspend fun addTabsToTabGroup(tabGroupId: String, tabIds: List<String>) {}

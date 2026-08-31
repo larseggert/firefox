@@ -90,7 +90,7 @@ sealed interface TabGroupAction : TabsTrayAction {
     data class UngroupConfirmed(
         val group: TabsTrayItem.TabGroup,
         val dontAskAgain: Boolean,
-    ) : TabGroupAction, TabManagerUiStateStorageAction
+    ) : TabGroupAction, TabManagerUiStateStorageAction, TabsStorageAction
 
     /**
      * Invoked when the user changes the tab group theme.

@@ -184,7 +184,7 @@ object TabGroupActionReducer {
     }
 
     private fun List<TabManagerNavDestination>.popUngroupTabGroupFlow(): List<TabManagerNavDestination> = filterNot {
-        it is UngroupTabGroupConfirmationDialog
+        it is UngroupTabGroupConfirmationDialog || it is ExpandedTabGroup
     }
 
     private fun TabsTrayState.navigateToEditTabGroup(): List<TabManagerNavDestination> =

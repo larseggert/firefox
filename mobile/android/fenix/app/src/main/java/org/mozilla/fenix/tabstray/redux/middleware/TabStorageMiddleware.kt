@@ -194,6 +194,9 @@ class TabStorageMiddleware(
 
             is TabGroupAction.DeleteConfirmed -> handleDeleteClicked(action.group, store)
 
+            is TabGroupAction.UngroupConfirmed ->
+                scope.launch { tabGroupRepository.ungroupTabGroup(tabGroupId = action.group.id) }
+
             is TabGroupAction.DragAndDropInitiated -> {
                 handleDragAndDrop(action = action, store = store)
             }
