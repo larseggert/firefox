@@ -162,9 +162,16 @@ global-warnings {
   max-width: var(--page-main-content-width);
 }
 
-/* The margin between message bars. */
-message-bar-stack > * {
-  margin-bottom: 8px;
+/* Margin between the message-bar-stack moz-message-bar elements
+ * (e.g. for pending uninstall) and the aboutaddons-themes-mode
+ * element located in the page header */
+message-bar-stack {
+  margin-block-start: var(--space-small);
+
+  /* The margin between message bars. */
+  > * {
+    margin-bottom: var(--space-small);
+  }
 }
 
 /* List sections */
