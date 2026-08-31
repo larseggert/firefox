@@ -99,6 +99,7 @@ import org.mozilla.fenix.tabgroups.DeleteTabGroupConfirmationDialog
 import org.mozilla.fenix.tabgroups.EditTabGroup
 import org.mozilla.fenix.tabgroups.ExpandedTabGroup
 import org.mozilla.fenix.tabgroups.ExpandedTabGroupActions
+import org.mozilla.fenix.tabgroups.UngroupTabGroupConfirmationDialog
 import org.mozilla.fenix.tabstray.InactiveTabsBinding
 import org.mozilla.fenix.tabstray.PbmLockStatusBinding
 import org.mozilla.fenix.tabstray.TabManagerCfrController
@@ -518,6 +519,14 @@ class TabManagementFragment : Fragment() {
                                                     action = TabGroupAction.CloseTabGroupClicked(group = expandedGroup)
                                                 )
                                             },
+                                            onUngroupTabGroupClick = {
+                                                tabsTrayStore.dispatch(
+                                                    action =
+                                                        TabGroupAction.UngroupConfirmationRequested(
+                                                            group = expandedGroup
+                                                        )
+                                                )
+                                            },
                                             onAddNewTabClick =
                                                 if (tabsTrayStore.state.config.homepageAsNewTabEnabled) {
                                                     {
@@ -624,6 +633,24 @@ class TabManagementFragment : Fragment() {
                                         onConfirmDelete = {
                                             tabsTrayStore.dispatch(
                                                 TabGroupAction.CloseTabAndDeleteGroupConfirmed(args.group)
+                                            )
+                                        },
+                                        onCancel = {
+                                            tabsTrayStore.dispatch(TabsTrayAction.NavigateBackInvoked)
+                                        },
+                                    )
+                                }
+
+                                entry<TabManagerNavDestination.UngroupTabGroupConfirmationDialog>(
+                                    metadata = DialogSceneStrategy.dialog()
+                                ) { args ->
+                                    UngroupTabGroupConfirmationDialog(
+                                        onConfirmUngroup = { dontAskAgain ->
+                                            tabsTrayStore.dispatch(
+                                                TabGroupAction.UngroupConfirmed(
+                                                    group = args.group,
+                                                    dontAskAgain = dontAskAgain,
+                                                )
                                             )
                                         },
                                         onCancel = {
