@@ -19095,6 +19095,11 @@
   value: false
   mirror: always
 
+- name: security.tls.enable_mldsa
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
 - name: security.tls.client_hello.send_p256_keyshare
   type: RelaxedAtomicBool
   value: @IS_NOT_NIGHTLY_BUILD@
