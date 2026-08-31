@@ -1509,9 +1509,9 @@ const nsTArray<RefPtr<GfxDriverInfo>>& GfxInfo::GetGfxDriverInfo() {
 
     /* Bug 1137716: XXX this should really check for the matching Intel piece as
      * well. Unfortunately, we don't have the infrastructure to do that */
-    APPEND_TO_DRIVER_BLOCKLIST_RANGE_GPU2(
-        OperatingSystem::Windows7, DeviceFamily::Bug1137716,
-        GfxDriverInfo::optionalFeatures,
+    APPEND_TO_DRIVER_BLOCKLIST_RANGE_ADAPTER(
+        OperatingSystem::Windows7, AdapterMatch::Secondary,
+        DeviceFamily::Bug1137716, GfxDriverInfo::optionalFeatures,
         nsIGfxInfo::FEATURE_BLOCKED_DRIVER_VERSION, DRIVER_BETWEEN_INCLUSIVE,
         V(8, 17, 12, 5730), V(8, 17, 12, 6901), "FEATURE_FAILURE_BUG_1137716",
         "Nvidia driver > 8.17.12.6901");
