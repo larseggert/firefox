@@ -422,7 +422,7 @@ void MacroAssemblerLOONG64::ma_addPtrTestOverflow(Register rd, Register rj,
 
   if (rj == rk) {
     if (rj == rd) {
-      as_or(scratch, rj, zero);
+      ma_move(scratch, rj);
       rj = scratch;
     }
 
@@ -435,7 +435,7 @@ void MacroAssemblerLOONG64::ma_addPtrTestOverflow(Register rd, Register rj,
     MOZ_ASSERT(rd != scratch2);
 
     if (rj == rd) {
-      as_or(scratch2, rj, zero);
+      ma_move(scratch2, rj);
       rj = scratch2;
     }
 
@@ -460,7 +460,7 @@ void MacroAssemblerLOONG64::ma_addPtrTestOverflow(Register rd, Register rj,
   }
 
   if (rj == rd) {
-    as_ori(scratch, rj, 0);
+    ma_move(scratch, rj);
     rj = scratch;
   }
 
@@ -487,7 +487,7 @@ void MacroAssemblerLOONG64::ma_addPtrTestOverflow(Register rd, Register rj,
 
   if (rj == rd) {
     MOZ_ASSERT(rj != scratch);
-    as_ori(scratch, rj, 0);
+    ma_move(scratch, rj);
     rj = scratch;
   }
 
@@ -625,7 +625,7 @@ void MacroAssemblerLOONG64::ma_subPtrTestOverflow(Register rd, Register rj,
   Register rj_copy = rj;
 
   if (rj == rd) {
-    as_or(scratch, rj, zero);
+    ma_move(scratch, rj);
     rj_copy = scratch;
   }
 
@@ -688,11 +688,11 @@ void MacroAssemblerLOONG64::ma_mulPtrTestOverflow(Register rd, Register rj,
   MOZ_ASSERT(rd != scratch);
 
   if (rd == rj) {
-    as_or(scratch, rj, zero);
+    ma_move(scratch, rj);
     rj = scratch;
     rk = (rd == rk) ? rj : rk;
   } else if (rd == rk) {
-    as_or(scratch, rk, zero);
+    ma_move(scratch, rk);
     rk = scratch;
   }
 
@@ -982,7 +982,7 @@ void MacroAssemblerLOONG64::ma_push(Register r) {
   if (r == StackPointer) {
     UseScratchRegisterScope temps(asMasm());
     Register scratch = temps.Acquire();
-    as_or(scratch, r, zero);
+    ma_move(scratch, r);
     as_addi_d(StackPointer, StackPointer, -int32_t(sizeof(intptr_t)));
     as_st_d(scratch, StackPointer, 0);
   } else {
@@ -1222,9 +1222,7 @@ void MacroAssemblerLOONG64::ma_cselz(Register rd, Register rj, Register rk,
   MOZ_ASSERT(rd != rtmp);
 
   if (rj == rk) {
-    if (rd != rj) {
-      as_or(rd, rj, zero);
-    }
+    ma_move(rd, rj);
     return;
   }
 
@@ -1256,9 +1254,7 @@ void MacroAssemblerLOONG64::ma_cselnz(Register rd, Register rj, Register rk,
   MOZ_ASSERT(rd != rtmp);
 
   if (rj == rk) {
-    if (rd != rj) {
-      as_or(rd, rj, zero);
-    }
+    ma_move(rd, rj);
     return;
   }
 
@@ -2981,7 +2977,7 @@ void MacroAssembler::setupUnalignedABICall(Register scratch) {
   setupNativeABICall();
   dynamicAlignment_ = true;
 
-  as_or(scratch, StackPointer, zero);
+  ma_move(scratch, StackPointer);
 
   // Force sp to be aligned
   asMasm().subPtr(Imm32(sizeof(uintptr_t)), StackPointer);
@@ -3680,7 +3676,7 @@ static void CompareExchange(MacroAssembler& masm,
     }
     masm.as_slli_w(scratch2, oldval, 0);
     masm.ma_b(output, scratch2, &end, Assembler::NotEqual, ShortJump);
-    masm.as_or(scratch2, newval, zero);
+    masm.ma_move(scratch2, newval);
     masm.as_sc_w(scratch2, scratch, 0);
     masm.ma_b(scratch2, Register(scratch2), &again, Assembler::Zero, ShortJump);
 
@@ -6167,7 +6163,7 @@ void MacroAssemblerLOONG64Compat::handleFailureWithHandlerTail(
     bind(&skipProfilingInstrumentation);
   }
 
-  as_or(StackPointer, FramePointer, zero);
+  ma_move(StackPointer, FramePointer);
   pop(FramePointer);
   ret();
 

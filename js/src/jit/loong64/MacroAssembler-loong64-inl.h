@@ -919,7 +919,7 @@ void MacroAssembler::popcnt64(Register64 input, Register64 output,
                               Register tmp) {
   UseScratchRegisterScope temps(asMasm());
   Register scratch = temps.Acquire();
-  as_or(output.reg, input.reg, zero);
+  ma_move(output.reg, input.reg);
   as_srai_d(tmp, input.reg, 1);
   ma_li(scratch, Imm32(0x55555555));
   as_bstrins_d(scratch, scratch, 63, 32);
@@ -952,7 +952,7 @@ void MacroAssembler::ctz32(Register src, Register dest, bool knownNotZero) {
 
 void MacroAssembler::popcnt32(Register input, Register output, Register tmp) {
   // Equivalent to GCC output of std::popcount()
-  as_or(output, input, zero);
+  ma_move(output, input);
   as_srai_w(tmp, input, 1);
   ma_and(tmp, tmp, Imm32(0x55555555));
   as_sub_w(output, output, tmp);
