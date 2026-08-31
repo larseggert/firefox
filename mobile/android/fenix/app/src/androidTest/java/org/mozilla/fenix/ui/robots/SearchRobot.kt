@@ -16,6 +16,7 @@ import androidx.compose.ui.test.assertAny
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
@@ -41,6 +42,7 @@ import androidx.test.uiautomator.Until
 import mozilla.components.browser.toolbar.R as toolbarR
 import mozilla.components.compose.browser.awesomebar.AwesomeBarTestTags
 import mozilla.components.compose.browser.awesomebar.AwesomeBarTestTags.CURRENT_URL_IN_SITE_DETAILS
+import mozilla.components.compose.browser.awesomebar.AwesomeBarTestTags.EDIT_CURRENT_SITE_URL_BUTTON
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_EDIT_MODE
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_EDIT_MODE_HORIZONTAL_DIVIDER
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_SEARCH_BOX
@@ -628,6 +630,14 @@ class SearchRobot(private val composeTestRule: ComposeTestRule) {
         Log.i(TAG, "longClickToolbar: Trying to perform long click on the toolbar")
         composeTestRule.onNodeWithTag(ADDRESSBAR_SEARCH_BOX).performTouchInput { longClick() }
         Log.i(TAG, "longClickToolbar: Performed long click on the toolbar")
+    }
+
+    fun clickEditUrlButton() {
+        Log.i(TAG, "clickEditURLButton: Trying to tap the \"Edit URL\" button in the awesomebar")
+        composeTestRule.waitForIdle()
+        mDevice.waitForIdle()
+        composeTestRule.onNodeWithTag(EDIT_CURRENT_SITE_URL_BUTTON).performTouchInput { click() }
+        Log.i(TAG, "clickEditURLButton: tapped the \"Edit URL\" button in the awesomebar")
     }
 
     fun clickPasteText() {

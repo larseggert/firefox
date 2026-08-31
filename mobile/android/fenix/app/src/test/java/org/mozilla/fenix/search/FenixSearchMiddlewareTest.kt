@@ -81,6 +81,7 @@ import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.search.SearchEngineSource.Bookmarks
 import org.mozilla.fenix.search.SearchEngineSource.Shortcut
 import org.mozilla.fenix.search.SearchFragmentAction.CopyCurrentWebsiteDetailsClicked
+import org.mozilla.fenix.search.SearchFragmentAction.EditCurrentWebsiteDetailsClicked
 import org.mozilla.fenix.search.SearchFragmentAction.SearchProvidersUpdated
 import org.mozilla.fenix.search.SearchFragmentAction.SearchShortcutEngineSelected
 import org.mozilla.fenix.search.SearchFragmentAction.SearchStarted
@@ -797,6 +798,66 @@ class FenixSearchMiddlewareTest {
         store.dispatch(CopyCurrentWebsiteDetailsClicked)
 
         verify(exactly = 0) { appStore.dispatch(URLCopiedToClipboard) }
+    }
+
+    @Test
+    fun `WHEN choosing to edit the current website URL THEN add in the addressbar the URL of the tab search started for`() {
+        val currentTab = createTab(url = "https://mozilla.com", title = "Mozilla", private = false)
+        stubSearchSourceTab(currentTab.id)
+        val (_, store) = buildMiddlewareAndAddToSearchStore(browserStore = buildBrowserStore(currentTab))
+
+        store.dispatch(EditCurrentWebsiteDetailsClicked)
+
+        verify {
+            toolbarStore.dispatch(
+                BrowserEditToolbarAction.SearchQueryUpdated(
+                    query = BrowserToolbarQuery(currentTab.content.url),
+                    isQueryPrefilled = true,
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `WHEN choosing to edit the current search terms THEN add in the addressbar the search terms of the tab search started for`() {
+        val currentTab =
+            createTab(url = "https://mozilla.com", title = "Mozilla", searchTerms = "test", private = false)
+        stubSearchSourceTab(currentTab.id)
+        val (_, store) = buildMiddlewareAndAddToSearchStore(browserStore = buildBrowserStore(currentTab))
+
+        store.dispatch(EditCurrentWebsiteDetailsClicked)
+
+        verify {
+            toolbarStore.dispatch(
+                BrowserEditToolbarAction.SearchQueryUpdated(
+                    query = BrowserToolbarQuery(currentTab.content.searchTerms),
+                    isQueryPrefilled = true,
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `GIVEN the current tab is in reader mode WHEN choosing to edit the current website URL THEN add in the addressbar the original URL`() {
+        val currentTab =
+            createTab(
+                url = "moz-extension://1234/readerview.html?url=https%3A%2F%2Fmozilla.com",
+                title = "Mozilla",
+                readerState = ReaderState(active = true, activeUrl = "https://mozilla.com"),
+            )
+        stubSearchSourceTab(currentTab.id)
+        val (_, store) = buildMiddlewareAndAddToSearchStore(browserStore = buildBrowserStore(currentTab))
+
+        store.dispatch(EditCurrentWebsiteDetailsClicked)
+
+        verify {
+            toolbarStore.dispatch(
+                BrowserEditToolbarAction.SearchQueryUpdated(
+                    query = BrowserToolbarQuery("https://mozilla.com"),
+                    isQueryPrefilled = true,
+                )
+            )
+        }
     }
 
     private fun buildMiddlewareAndAddToSearchStore(

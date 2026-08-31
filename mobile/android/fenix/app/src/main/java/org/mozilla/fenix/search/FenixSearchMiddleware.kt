@@ -25,6 +25,7 @@ import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.compose.browser.toolbar.store.BrowserEditToolbarAction
+import mozilla.components.compose.browser.toolbar.store.BrowserEditToolbarAction.SearchQueryUpdated
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarStore
 import mozilla.components.compose.browser.toolbar.ui.BrowserToolbarQuery
 import mozilla.components.concept.awesomebar.AwesomeBar
@@ -65,6 +66,7 @@ import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.ext.telemetryName
 import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.search.SearchFragmentAction.CopyCurrentWebsiteDetailsClicked
+import org.mozilla.fenix.search.SearchFragmentAction.EditCurrentWebsiteDetailsClicked
 import org.mozilla.fenix.search.SearchFragmentAction.Init
 import org.mozilla.fenix.search.SearchFragmentAction.PrivateSuggestionsCardAccepted
 import org.mozilla.fenix.search.SearchFragmentAction.SearchEnginesSelectedActions
@@ -120,6 +122,7 @@ class FenixSearchMiddleware(
 
     @VisibleForTesting internal var suggestionsProvidersBuilder: SearchSuggestionsProvidersBuilder? = null
 
+    @Suppress("LongMethod")
     override fun invoke(
         store: Store<SearchFragmentState, SearchFragmentAction>,
         next: (SearchFragmentAction) -> Unit,
@@ -208,6 +211,10 @@ class FenixSearchMiddleware(
 
             is CopyCurrentWebsiteDetailsClicked -> {
                 handleCopyingCurrentWebsiteDetails()
+            }
+
+            is EditCurrentWebsiteDetailsClicked -> {
+                handleEditingCurrentWebsiteURL()
             }
 
             else -> next(action)
@@ -572,6 +579,20 @@ class FenixSearchMiddleware(
         // See https://developer.android.com/develop/ui/views/touch-and-input/copy-paste#duplicate-notifications).
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
             appStore.dispatch(URLCopiedToClipboard)
+        }
+    }
+
+    private fun handleEditingCurrentWebsiteURL() {
+        val session = sessionSearchWasStartedFor ?: return
+        val searchTerms = session.content.searchTerms
+        val currentInput =
+            when (searchTerms.isEmpty()) {
+                true -> session.getUrl()
+                else -> searchTerms
+            }
+
+        currentInput?.let {
+            toolbarStore.dispatch(SearchQueryUpdated(BrowserToolbarQuery(it), true))
         }
     }
 

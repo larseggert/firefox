@@ -68,6 +68,7 @@
     <ID>ForbiddenSuppress:FenixApplication.kt$FenixApplication$@Suppress("CognitiveComplexMethod", "LongMethod", "CyclomaticComplexMethod")</ID>
     <ID>ForbiddenSuppress:FenixApplication.kt$FenixApplication$@Suppress("CyclomaticComplexMethod")</ID>
     <ID>ForbiddenSuppress:FenixBrowserUseCases.kt$FenixBrowserUseCases$@Suppress("CognitiveComplexMethod")</ID>
+    <ID>ForbiddenSuppress:FenixSearchMiddleware.kt$FenixSearchMiddleware$@Suppress("LongMethod")</ID>
     <ID>ForbiddenSuppress:FontParser.kt$FontParser$@Suppress("MagicNumber")</ID>
     <ID>ForbiddenSuppress:GleanDebugToolsScreen.kt$@Suppress("LongMethod")</ID>
     <ID>ForbiddenSuppress:HistoryAdapter.kt$HistoryAdapter$@Suppress("CognitiveComplexMethod", "CyclomaticComplexMethod")</ID>

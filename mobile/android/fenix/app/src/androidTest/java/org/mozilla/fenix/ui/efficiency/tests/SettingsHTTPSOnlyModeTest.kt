@@ -7,6 +7,7 @@ package org.mozilla.fenix.ui.efficiency.tests
 import org.junit.Ignore
 import org.junit.Test
 import org.mozilla.fenix.customannotations.SmokeTest
+import org.mozilla.fenix.helpers.FxNimbusHelper
 import org.mozilla.fenix.ui.efficiency.helpers.BaseTest
 
 class SettingsHTTPSOnlyModeTest : BaseTest() {
@@ -21,6 +22,8 @@ class SettingsHTTPSOnlyModeTest : BaseTest() {
     @SmokeTest
     @Test
     fun httpsOnlyModeEnabledInNormalBrowsingTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(false)
+
         on.settingsHTTPSOnlyMode.navigateToPage().enableHttpsOnlyMode().verifyHttpsOnlyAllTabsSelected()
 
         on.settings.navigateToPage().verifyHttpsOnlyModeOnAllTabs()

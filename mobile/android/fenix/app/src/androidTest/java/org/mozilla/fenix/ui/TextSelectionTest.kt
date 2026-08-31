@@ -285,6 +285,19 @@ class TextSelectionTest {
         }
     }
 
+    @Test
+    fun verifyUrlBarTextSelectionOptionsWithinAddressBarInFocusedModeTest() {
+        FxNimbusHelper.updateAddressBarFocusModeStatus(true)
+        val genericURL = mockWebServer.getGenericAsset(1)
+
+        navigationToolbar(composeTestRule) {}.enterURLAndEnterToBrowser(genericURL.url) {}.openNavigationToolbar {}
+        searchScreen(retryableComposeTestRule.current) {
+            clickEditUrlButton()
+            longClickToolbar()
+            verifyTextSelectionOptions("Copy", "Cut")
+        }
+    }
+
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326814
     @Test
     fun verifyCopyUrlBarTextSelectionOptionTest() {
