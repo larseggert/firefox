@@ -5,6 +5,7 @@
 package org.mozilla.fenix.ui.efficiency.selectors
 
 import mozilla.components.browser.toolbar.R as toolbarR
+import mozilla.components.compose.browser.awesomebar.AwesomeBarTestTags
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_SEARCH_BOX
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.SEARCH_SELECTOR
 import mozilla.components.feature.qr.R as qrR
@@ -60,7 +61,7 @@ object SearchBarSelectors {
     val AWESOMEBAR_SUGGESTION =
         Selector(
             strategy = SelectorStrategy.COMPOSE_BY_TAG,
-            value = "mozac.awesomebar.suggestion",
+            value = AwesomeBarTestTags.SUGGESTION,
             description = "Awesomebar search suggestion",
             groups = listOf(),
         )

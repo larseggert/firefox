@@ -39,6 +39,7 @@ import androidx.test.uiautomator.By.textContains
 import androidx.test.uiautomator.UiSelector
 import androidx.test.uiautomator.Until
 import mozilla.components.browser.toolbar.R as toolbarR
+import mozilla.components.compose.browser.awesomebar.AwesomeBarTestTags
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_EDIT_MODE
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_EDIT_MODE_HORIZONTAL_DIVIDER
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_SEARCH_BOX
@@ -233,11 +234,11 @@ class SearchRobot(private val composeTestRule: ComposeTestRule) {
                 "verifySearchSuggestionsAreDisplayed: Waiting for $waitingTime ms until $searchSuggestion search suggestion exists.",
             )
             composeTestRule.waitUntilAtLeastOneExists(
-                hasTestTag("mozac.awesomebar.suggestion") and hasText(searchSuggestion, substring = true),
+                hasTestTag(AwesomeBarTestTags.SUGGESTION) and hasText(searchSuggestion, substring = true),
                 waitingTime,
             )
             composeTestRule
-                .onAllNodesWithTag("mozac.awesomebar.suggestion")
+                .onAllNodesWithTag(AwesomeBarTestTags.SUGGESTION)
                 .assertAny(hasText(searchSuggestion, substring = true))
             Log.i(TAG, "verifySearchSuggestionsAreDisplayed: Verified $searchSuggestion search suggestion exists.")
         }
@@ -276,7 +277,7 @@ class SearchRobot(private val composeTestRule: ComposeTestRule) {
                 "verifySuggestionsAreNotDisplayed: Trying to verify that there are no $searchSuggestion related search suggestions",
             )
             this@SearchRobot.composeTestRule
-                .onAllNodesWithTag("mozac.awesomebar.suggestions")
+                .onAllNodesWithTag(AwesomeBarTestTags.SUGGESTIONS)
                 .assertAny(hasText(searchSuggestion).not())
             Log.i(
                 TAG,
@@ -312,7 +313,7 @@ class SearchRobot(private val composeTestRule: ComposeTestRule) {
                     "verifySearchSuggestionsCount: Compose test rule is waiting for $waitingTime ms until the note count equals to: $numberOfSuggestions",
                 )
                 this@SearchRobot.composeTestRule.waitUntilNodeCount(
-                    hasTestTag("mozac.awesomebar.suggestion"),
+                    hasTestTag(AwesomeBarTestTags.SUGGESTION),
                     numberOfSuggestions,
                     waitingTime,
                 )
@@ -325,7 +326,7 @@ class SearchRobot(private val composeTestRule: ComposeTestRule) {
                     "verifySearchSuggestionsCount: Trying to verify that the count of the search suggestions equals: $numberOfSuggestions",
                 )
                 this@SearchRobot.composeTestRule
-                    .onAllNodesWithTag("mozac.awesomebar.suggestion")
+                    .onAllNodesWithTag(AwesomeBarTestTags.SUGGESTION)
                     .assertCountEquals(numberOfSuggestions)
                 Log.i(
                     TAG,
