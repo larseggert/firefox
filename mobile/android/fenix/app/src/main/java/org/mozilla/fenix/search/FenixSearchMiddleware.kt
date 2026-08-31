@@ -240,7 +240,7 @@ class FenixSearchMiddleware(
             }
         val shouldShowSearchSuggestions =
             with(store.state) {
-                url != query && query.isNotBlank()
+                currentTabData?.url != query && query.isNotBlank()
             }
         val shouldShowSuggestions = shouldShowTrendingSearches || shouldShowSearchSuggestions
 
@@ -252,7 +252,7 @@ class FenixSearchMiddleware(
                     browsingModeManager.mode.isPrivate &&
                     !isSearchSuggestionsFeatureEnabled() &&
                     query.isNotBlank() &&
-                    url != query
+                    currentTabData?.url != query
             }
 
         store.dispatch(SearchFragmentAction.AllowSearchSuggestionsInPrivateModePrompt(showPrivatePrompt))

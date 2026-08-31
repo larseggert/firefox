@@ -205,8 +205,17 @@ class AwesomeBarComposable(
                             )
                         }
                 ) {
+                    val currentTabDetailsToShow =
+                        remember(state.query.isBlank()) {
+                            when (state.query.isBlank()) {
+                                true -> state.currentTabData
+                                else -> null
+                            }
+                        }
+
                     AwesomeBar(
                         text = state.query,
+                        currentTabData = currentTabDetailsToShow,
                         providers = state.searchSuggestionsProviders,
                         hiddenSuggestions = state.hiddenSuggestions,
                         orientation = orientation,

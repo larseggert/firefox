@@ -27,6 +27,7 @@ import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.browser.state.state.SearchState
 import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
 import mozilla.components.browser.state.store.BrowserStore
+import mozilla.components.compose.browser.awesomebar.internal.CurrentTabData
 import mozilla.components.compose.browser.toolbar.store.BrowserEditToolbarAction
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarStore
 import mozilla.components.compose.browser.toolbar.ui.BrowserToolbarQuery
@@ -249,7 +250,7 @@ class FenixSearchMiddlewareTest {
         val (_, store) = buildMiddlewareAndAddToSearchStore()
         every { settings.shouldShowSearchSuggestions } returns true
 
-        store.dispatch(SearchFragmentAction.UpdateQuery(store.state.url))
+        store.dispatch(SearchFragmentAction.UpdateQuery(store.state.currentTabData!!.url))
         assertFalse(store.state.shouldShowSearchSuggestions)
 
         store.dispatch(SearchFragmentAction.UpdateQuery("test"))
@@ -404,7 +405,7 @@ class FenixSearchMiddlewareTest {
         every { settings.shouldShowSearchSuggestionsInPrivate } returns true
         every { browsingModeManager.mode } returns BrowsingMode.Private
 
-        store.dispatch(SearchFragmentAction.UpdateQuery(store.state.url))
+        store.dispatch(SearchFragmentAction.UpdateQuery(store.state.currentTabData!!.url))
         assertFalse(store.state.shouldShowSearchSuggestions)
 
         store.dispatch(SearchFragmentAction.UpdateQuery("test"))
@@ -698,6 +699,7 @@ class FenixSearchMiddlewareTest {
         tabId: String? = null,
     ): SearchFragmentState =
         EMPTY_SEARCH_FRAGMENT_STATE.copy(
+            currentTabData = CurrentTabData("", "", null),
             searchEngineSource = searchEngineSource,
             defaultEngine = defaultEngine,
             showSearchTermHistory = true,
