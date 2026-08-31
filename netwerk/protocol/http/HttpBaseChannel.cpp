@@ -4586,7 +4586,7 @@ already_AddRefed<nsILoadInfo> HttpBaseChannel::CloneLoadInfoForRedirect(
         this, getter_AddRefs(redirectPrincipal));
     nsCOMPtr<nsIPrincipal> nullPrincipalToInherit =
         NullPrincipal::CreateWithInheritedAttributes(redirectPrincipal);
-    newLoadInfo->SetTrustedPrincipalToInherit(nullPrincipalToInherit);
+    newLoadInfo->SetPrincipalToInherit(nullPrincipalToInherit);
   }
 
   bool isTopLevelDoc = newLoadInfo->GetExternalContentPolicyType() ==

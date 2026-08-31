@@ -1338,8 +1338,7 @@ static nsresult CheckAllowLoadByTriggeringRemoteType(nsIChannel* aChannel) {
 
   // Before getting to document-load content policy checks, validate the
   // principal to inherit against the triggering remote type.
-  if (!loadInfo->IsPrincipalToInheritTrusted() &&
-      !ValidatePrincipalCouldPotentiallyBeLoadedBy(
+  if (!ValidatePrincipalCouldPotentiallyBeLoadedBy(
           loadInfo->PrincipalToInherit(), triggeringRemoteType,
           {ValidatePrincipalOptions::AllowNullPtr,
            ValidatePrincipalOptions::AllowNotLoadedOrigin})) {

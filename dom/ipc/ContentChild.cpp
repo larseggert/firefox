@@ -3547,13 +3547,6 @@ mozilla::ipc::IPCResult ContentChild::RecvCrossProcessRedirect(
     return IPC_OK();
   }
 
-  // The parent process has already validated this PrincipalToInherit.
-  if (nsCOMPtr<nsIPrincipal> principalToInherit =
-          loadInfo->PrincipalToInherit()) {
-    MOZ_ALWAYS_SUCCEEDS(
-        loadInfo->SetTrustedPrincipalToInherit(principalToInherit));
-  }
-
   nsCOMPtr<nsIChannel> newChannel;
   MOZ_ASSERT((aArgs.loadStateInternalLoadFlags() &
               nsDocShell::InternalLoad::INTERNAL_LOAD_FLAGS_IS_SRCDOC) ||

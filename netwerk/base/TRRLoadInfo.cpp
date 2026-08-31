@@ -61,13 +61,6 @@ TRRLoadInfo::SetPrincipalToInherit(nsIPrincipal* aPrincipalToInherit) {
 }
 
 NS_IMETHODIMP
-TRRLoadInfo::SetTrustedPrincipalToInherit(nsIPrincipal* aPrincipalToInherit) {
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-bool TRRLoadInfo::IsPrincipalToInheritTrusted() { return false; }
-
-NS_IMETHODIMP
 TRRLoadInfo::GetUserNavigationInvolvement(uint8_t* aUserNavigationInvolvement) {
   return NS_ERROR_NOT_IMPLEMENTED;
 }

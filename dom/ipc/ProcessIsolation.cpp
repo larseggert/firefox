@@ -1499,9 +1499,9 @@ bool IsIsolateHighValueSiteEnabled() {
 bool ValidatePrincipalCouldPotentiallyBeLoadedBy(
     nsIPrincipal* aPrincipal, const nsACString& aRemoteType,
     const EnumSet<ValidatePrincipalOptions>& aOptions,
-    LoadedOriginSet* aLoadedOriginSet) {
+    FunctionRef<bool(nsIPrincipal*)> aIsPrincipalLoaded) {
 #ifdef DEBUG
-  if (!aLoadedOriginSet) {
+  if (!aIsPrincipalLoaded) {
     MOZ_ASSERT(
         aOptions.contains(ValidatePrincipalOptions::AllowNotLoadedOrigin),
         "`AllowNotLoadedOrigin` is required if calling "
@@ -1512,17 +1512,6 @@ bool ValidatePrincipalCouldPotentiallyBeLoadedBy(
         "ValidatePrincipalCouldPotentiallyBeLoadedBy directly");
   }
 #endif
-
-  // FIXME(bug 2064204): Currently we only match site, and ignore OAs.
-  // In the future, we hope to tighten these checks.
-  auto isPrincipalLoaded = [&](nsIPrincipal* prin) {
-    auto threshold = aOptions.contains(
-                         ValidatePrincipalOptions::Internal_ValidatingPrecursor)
-                         ? LoadedOriginSet::Level::PrecursorOnly
-                         : LoadedOriginSet::Level::SiteOnly;
-    return !StaticPrefs::dom_ipc_validatePrincipal_validateSiteLoaded() ||
-           aLoadedOriginSet->Has(prin, threshold, OriginAttributes::STRIP_ALL);
-  };
 
   // Don't bother validating principals from the parent process.
   if (aRemoteType == NOT_REMOTE_TYPE) {
@@ -1535,16 +1524,8 @@ bool ValidatePrincipalCouldPotentiallyBeLoadedBy(
   }
 
   // We currently do not reliably track relationships between specific null
-  // principals and content processes, so we can not validate much here unless
-  // it has a precursor content principal.
+  // principals and content processes, so we can not validate much here.
   if (aPrincipal->GetIsNullPrincipal()) {
-    if (nsCOMPtr<nsIPrincipal> precursor =
-            aPrincipal->GetPrecursorPrincipal()) {
-      return ValidatePrincipalCouldPotentiallyBeLoadedBy(
-          precursor, aRemoteType,
-          aOptions + ValidatePrincipalOptions::Internal_ValidatingPrecursor,
-          aLoadedOriginSet);
-    }
     return true;
   }
 
@@ -1552,7 +1533,7 @@ bool ValidatePrincipalCouldPotentiallyBeLoadedBy(
   if (aPrincipal->IsSystemPrincipal()) {
     return aOptions.contains(ValidatePrincipalOptions::AlwaysAllowSystem) ||
            (aOptions.contains(ValidatePrincipalOptions::AllowSystemIfLoaded) &&
-            isPrincipalLoaded(aPrincipal));
+            aIsPrincipalLoaded(aPrincipal));
   }
 
   // Performing checks against the remote type requires the IOService and
@@ -1575,7 +1556,7 @@ bool ValidatePrincipalCouldPotentiallyBeLoadedBy(
     const auto& allowList = expandedPrincipal->AllowList();
     for (const auto& innerPrincipal : allowList) {
       if (!ValidatePrincipalCouldPotentiallyBeLoadedBy(
-              innerPrincipal, aRemoteType, aOptions, aLoadedOriginSet)) {
+              innerPrincipal, aRemoteType, aOptions, aIsPrincipalLoaded)) {
         return false;
       }
     }
@@ -1616,9 +1597,9 @@ bool ValidatePrincipalCouldPotentiallyBeLoadedBy(
   }
 
   // All other content principal schemes are always loaded via. the parent
-  // process, so we can early-return if `isPrincipalLoaded` returns false.
+  // process, so we can early-return if `aIsPrincipalLoaded` returns false.
   if (!aOptions.contains(ValidatePrincipalOptions::AllowNotLoadedOrigin) &&
-      !isPrincipalLoaded(aPrincipal)) {
+      !aIsPrincipalLoaded(aPrincipal)) {
     return false;
   }
 
@@ -1652,11 +1633,7 @@ bool ValidatePrincipalCouldPotentiallyBeLoadedBy(
                                     /* aForChannelCreationURI */ true,
                                     /* aIsWorker */ false)) {
       case IsolationBehavior::Parent:
-        // An about: URI with parent process isolation could legitimately be the
-        // precursor for a content process null principal, as we try to load
-        // null principals in the content process when possible.
-        return aOptions.contains(
-            ValidatePrincipalOptions::Internal_ValidatingPrecursor);
+        return false;
       case IsolationBehavior::Anywhere:
         return true;
       case IsolationBehavior::AboutReader:
@@ -1711,7 +1688,6 @@ bool ValidatePrincipalCouldPotentiallyBeLoadedBy(
   }
 
   // Trim any OriginAttributes from the origin, as those will not be validated.
-  // FIXME(bug 2064204): We should validate OAs when possible.
   int32_t suffixIdx = typeOrigin.RFindChar('^');
   nsDependentCSubstring typeOriginNoSuffix(typeOrigin, 0, suffixIdx);
 
