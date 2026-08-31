@@ -14712,13 +14712,6 @@
   value: false
   mirror: always
 
-# Whether to respect the redirected-tainted origin flag
-# https://fetch.spec.whatwg.org/#concept-request-tainted-origin
-- name: network.http.origin.redirectTainted
-  type: bool
-  value: true
-  mirror: always
-
 # Bug 1965430: Use TriggeringPrincipal instead of LoadingPrincipal to
 # determine the request origin when computing redirect-taint. This fixes
 # top-level navigational POST redirects (e.g., form submissions) where
