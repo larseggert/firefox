@@ -427,7 +427,9 @@ export class LoginManagerParent extends JSWindowActorParent {
     lazy.log("#onPasswordEditedOrGenerated: Received PasswordManager.");
     if (gListenerForTests) {
       lazy.log("#onPasswordEditedOrGenerated: Calling gListenerForTests.");
-      gListenerForTests("PasswordEditedOrGenerated", {});
+      gListenerForTests("PasswordEditedOrGenerated", {
+        browsingContext: this.browsingContext,
+      });
     }
     let browser = this.getRootBrowser();
     this._onPasswordEditedOrGenerated(browser, this.origin, data);
@@ -437,16 +439,21 @@ export class LoginManagerParent extends JSWindowActorParent {
     lazy.log("#onIgnorePasswordEdit: Received PasswordManager.");
     if (gListenerForTests) {
       lazy.log("#onIgnorePasswordEdit: Calling gListenerForTests.");
-      gListenerForTests("PasswordIgnoreEdit", {});
+      gListenerForTests("PasswordIgnoreEdit", {
+        browsingContext: this.browsingContext,
+      });
     }
   }
 
   #onShowDoorhanger(data) {
     const browser = this.getRootBrowser();
+    // Read before awaiting: the actor may be destroyed by the time the doorhanger resolves.
+    const browsingContext = this.browsingContext;
     const submitPromise = this.showDoorhanger(browser, this.origin, data);
     if (gListenerForTests) {
       submitPromise.then(() => {
         gListenerForTests("ShowDoorhanger", {
+          browsingContext,
           origin: this.origin,
           data,
         });
