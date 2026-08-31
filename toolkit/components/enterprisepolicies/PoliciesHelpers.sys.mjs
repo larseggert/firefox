@@ -592,7 +592,13 @@ export function processMIMEInfo(mimeInfo, realMIMEInfo) {
             continue;
           }
         } else if ("uriTemplate" in handler) {
-          let templateURL = new URL(handler.uriTemplate);
+          let templateURL;
+          try {
+            templateURL = new URL(handler.uriTemplate);
+          } catch (ex) {
+            lazy.log.error(`Invalid web handler URL (${handler.uriTemplate})`);
+            continue;
+          }
           if (templateURL.protocol != "https:") {
             lazy.log.error(
               `Web handler must be https (${handler.uriTemplate})`

@@ -2100,16 +2100,28 @@ export var Policies = {
       if ("mimeTypes" in param) {
         for (const mimeType in param.mimeTypes) {
           const mimeInfo = param.mimeTypes[mimeType];
-          const realMIMEInfo = lazy.gMIMEService.getFromTypeAndExtension(
-            mimeType,
-            ""
-          );
-          lazy.processMIMEInfo(mimeInfo, realMIMEInfo);
+          if (!mimeType) {
+            lazy.log.error("Invalid MIME type (empty)");
+            continue;
+          }
+          try {
+            const realMIMEInfo = lazy.gMIMEService.getFromTypeAndExtension(
+              mimeType,
+              ""
+            );
+            lazy.processMIMEInfo(mimeInfo, realMIMEInfo);
+          } catch (e) {
+            lazy.log.error(`Invalid MIME type (${mimeType})`);
+          }
         }
       }
       if ("extensions" in param) {
         for (const extension in param.extensions) {
           const mimeInfo = param.extensions[extension];
+          if (!extension) {
+            lazy.log.error("Invalid file extension (empty)");
+            continue;
+          }
           try {
             const realMIMEInfo = lazy.gMIMEService.getFromTypeAndExtension(
               "",
@@ -2124,9 +2136,17 @@ export var Policies = {
       if ("schemes" in param) {
         for (const scheme in param.schemes) {
           const handlerInfo = param.schemes[scheme];
-          const realHandlerInfo =
-            lazy.gExternalProtocolService.getProtocolHandlerInfo(scheme);
-          lazy.processMIMEInfo(handlerInfo, realHandlerInfo);
+          if (!scheme) {
+            lazy.log.error("Invalid scheme (empty)");
+            continue;
+          }
+          try {
+            const realHandlerInfo =
+              lazy.gExternalProtocolService.getProtocolHandlerInfo(scheme);
+            lazy.processMIMEInfo(handlerInfo, realHandlerInfo);
+          } catch (e) {
+            lazy.log.error(`Invalid scheme (${scheme})`);
+          }
         }
       }
     },
