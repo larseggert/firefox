@@ -1352,6 +1352,33 @@ bool WebRenderBridgeParent::SetDisplayList(
   return success;
 }
 
+// True if every referent id in aScrollData is actually embedded by
+// aOwnLayersId, per the parent process's own record of the frame tree.
+static bool ReferentsAreOwnedBy(const WebRenderScrollData& aScrollData,
+                                LayersId aOwnLayersId) {
+  for (size_t i = 0; i < aScrollData.GetLayerCount(); i++) {
+    Maybe<LayersId> referent = aScrollData.GetLayerData(i)->GetReferentId();
+    if (!referent) {
+      continue;
+    }
+    LayersId embedder;
+    bool found = CompositorBridgeParent::CallWithLayerTreeState(
+        *referent, [&](CompositorBridgeParent::LayerTreeState& aState) {
+          embedder = aState.mEmbedderLayersId;
+        });
+    if (!found || embedder != aOwnLayersId) {
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool ValidateScrollData(const WebRenderScrollData& aScrollData,
+                               LayersId aOwnLayersId) {
+  return aScrollData.ValidateShape() &&
+         ReferentsAreOwnedBy(aScrollData, aOwnLayersId);
+}
+
 bool WebRenderBridgeParent::ProcessDisplayListData(
     DisplayListData& aDisplayList, wr::Epoch aWrEpoch,
     const TimeStamp& aTxnStartTime, bool aValidTransaction,
@@ -1360,13 +1387,16 @@ bool WebRenderBridgeParent::ProcessDisplayListData(
                              mRemoteTextureTxnScheduler, mFwdTransactionId);
   Maybe<wr::AutoTransactionSender> sender;
 
-  if (aDisplayList.mScrollData && !aDisplayList.mScrollData->Validate()) {
-    // If the scroll data is invalid, the entire transaction needs to be dropped
-    // because the scroll data and the display list cross-reference each other.
-    MOZ_ASSERT(
-        false,
-        "Content sent malformed scroll data (or validation check has a bug)");
-    aValidTransaction = false;
+  if (aDisplayList.mScrollData) {
+    // If the scroll data is invalid, the entire transaction needs to be
+    // dropped because the scroll data and the display list cross-reference
+    // each other.
+    if (!ValidateScrollData(*aDisplayList.mScrollData, GetLayersId())) {
+      MOZ_ASSERT(false,
+                 "Content sent malformed scroll data (or validation check "
+                 "has a bug)");
+      aValidTransaction = false;
+    }
   }
 
   if (!aValidTransaction) {
