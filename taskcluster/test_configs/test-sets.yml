@@ -437,9 +437,6 @@ talos-xperf:
     - talos-xperf
 
 # macOS
-macosx1500-64-jittests:
-    - jittest
-
 macosx1500-64-tests:
     - cppunittest
     - crashtest
@@ -487,7 +484,6 @@ macosx1500-aarch64-tests:
     - marionette-integration
     - marionette-unittest
     - crashtest
-    - jittest
     - mochitest-a11y
     - mochitest-browser-a11y
     - mochitest-browser-chrome
