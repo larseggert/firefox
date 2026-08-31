@@ -1613,6 +1613,55 @@ FaultingCodeRange MacroAssemblerLOONG64::ma_load(Register dest,
                                                  const BaseIndex& src,
                                                  LoadStoreSize size,
                                                  LoadStoreExtension extension) {
+  if (src.offset == 0 && src.scale == TimesOne) {
+    FaultingCodeRange fcr(currentOffset());
+    switch (size) {
+      case SizeByte:
+        switch (extension) {
+          case ZeroExtend:
+            as_ldx_bu(dest, src.base, src.index);
+            break;
+          case SignExtend:
+            as_ldx_b(dest, src.base, src.index);
+            break;
+          default:
+            MOZ_CRASH("Invalid extension.");
+        }
+        break;
+      case SizeHalfWord:
+        switch (extension) {
+          case ZeroExtend:
+            as_ldx_hu(dest, src.base, src.index);
+            break;
+          case SignExtend:
+            as_ldx_h(dest, src.base, src.index);
+            break;
+          default:
+            MOZ_CRASH("Invalid extension.");
+        }
+        break;
+      case SizeWord:
+        switch (extension) {
+          case ZeroExtend:
+            as_ldx_wu(dest, src.base, src.index);
+            break;
+          case SignExtend:
+            as_ldx_w(dest, src.base, src.index);
+            break;
+          default:
+            MOZ_CRASH("Invalid extension.");
+        }
+        break;
+      case SizeDouble:
+        MOZ_ASSERT(extension == ZeroExtend);
+        as_ldx_d(dest, src.base, src.index);
+        break;
+      default:
+        MOZ_CRASH("Invalid size.");
+    }
+    return fcr;
+  }
+
   UseScratchRegisterScope temps(asMasm());
   Address address = asMasm().computeScaledAddress(src, temps);
   return asMasm().ma_load(dest, address, size, extension);
@@ -1621,6 +1670,27 @@ FaultingCodeRange MacroAssemblerLOONG64::ma_load(Register dest,
 FaultingCodeRange MacroAssemblerLOONG64::ma_store(
     Register data, const BaseIndex& dest, LoadStoreSize size,
     LoadStoreExtension extension) {
+  if (dest.offset == 0 && dest.scale == TimesOne) {
+    FaultingCodeRange fcr(currentOffset());
+    switch (size) {
+      case SizeByte:
+        as_stx_b(data, dest.base, dest.index);
+        break;
+      case SizeHalfWord:
+        as_stx_h(data, dest.base, dest.index);
+        break;
+      case SizeWord:
+        as_stx_w(data, dest.base, dest.index);
+        break;
+      case SizeDouble:
+        as_stx_d(data, dest.base, dest.index);
+        break;
+      default:
+        MOZ_CRASH("Invalid size.");
+    }
+    return fcr;
+  }
+
   UseScratchRegisterScope temps(asMasm());
   Address address = asMasm().computeScaledAddress(dest, temps);
   return asMasm().ma_store(data, address, size, extension);
