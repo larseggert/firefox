@@ -4,8 +4,10 @@
 
 package org.mozilla.fenix.ui.efficiency.selectors
 
+import android.text.format.DateUtils
 import org.mozilla.fenix.R
 import org.mozilla.fenix.helpers.DataGenerationHelper.getStringResource
+import org.mozilla.fenix.helpers.TestHelper.appContext
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.helpers.SelectorStrategy
 
@@ -69,8 +71,13 @@ object HistorySelectors {
     val VISITED_TIME_TITLE =
         Selector(
             strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT,
-            value = "Today",
-            description = "Today chronological timeline title",
+            value =
+                DateUtils.formatDateTime(
+                    appContext,
+                    System.currentTimeMillis(),
+                    DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_YEAR,
+                ),
+            description = "History date chronological timeline title",
             groups = listOf("historyMenuViewWithHistoryItems"),
         )
 

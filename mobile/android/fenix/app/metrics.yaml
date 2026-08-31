@@ -6551,9 +6551,7 @@ history:
       time_group:
         type: string
         description: |
-          What time group does the history item belongs to.
-          Possible values: [Today], [Yesterday], [ThisWeek], [ThisMonth],
-          [Older].
+          The exact date of the history item in ISO 8601 format (YYYY-MM-DD).
       is_private:
         type: boolean
         description: |
