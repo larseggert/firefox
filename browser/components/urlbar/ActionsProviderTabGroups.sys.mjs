@@ -2,10 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import {
-  ActionsProvider,
-  ActionsResult,
-} from "moz-src:///browser/components/urlbar/ActionsProvider.sys.mjs";
+import { ActionsProvider } from "moz-src:///browser/components/urlbar/ActionsProvider.sys.mjs";
+
+/**
+ * @import {ActionsResult} from "moz-src:///browser/components/urlbar/ActionsProvider.sys.mjs"
+ */
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -135,7 +136,7 @@ class ProviderTabGroups extends ActionsProvider {
   }
 
   #makeResult({ key, l10nId, l10nArgs, color, dataset }) {
-    return new ActionsResult({
+    return /** @type {ActionsResult} */ ({
       providerName: this.name,
       key,
       l10nId,
