@@ -160,8 +160,6 @@ exports.ANIMATION_TYPE_FOR_LONGHANDS = [
       "scroll-snap-type",
       "shape-rendering",
       "scrollbar-gutter",
-      "-moz-scrollbar-inset-block",
-      "-moz-scrollbar-inset-inline",
       "scrollbar-width",
       "stroke-linecap",
       "stroke-linejoin",

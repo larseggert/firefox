@@ -602,15 +602,6 @@ class nsPresContext : public nsISupports,
       const mozilla::StyleLinkParameters& aLinkParameters);
 
   /**
-   * Content-area scrollbar insets forwarded from the <browser> embedder, per
-   * physical side, in app units.
-   */
-  const nsMargin& EmbedderScrollbarInset() const {
-    return mEmbedderScrollbarInset;
-  }
-  void SetEmbedderScrollbarInset(const nsMargin& aInset);
-
-  /**
    * Return the device's screen size in inches, for font size
    * inflation.
    *
@@ -1442,7 +1433,6 @@ class nsPresContext : public nsISupports,
   mozilla::dom::PrefersColorSchemeOverride mOverriddenOrEmbedderColorScheme;
   mozilla::StyleForcedColors mForcedColors;
   mozilla::StyleLinkParameters mLinkParameters;
-  nsMargin mEmbedderScrollbarInset;
 
  protected:
   virtual ~nsPresContext();

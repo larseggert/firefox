@@ -582,8 +582,6 @@ def gen_css_properties_js(output):
         "-moz-box-collapse",                  # chrome-only internal properties
         "-moz-line-scroll-amount",            # chrome-only internal properties
         "-moz-image-decoding",                # chrome-only internal properties
-        "-moz-scrollbar-inset-block",         # chrome-only internal properties
-        "-moz-scrollbar-inset-inline",        # chrome-only internal properties
         "-moz-subtree-hidden-only-visually",  # chrome-only internal properties
         "-moz-user-focus",                    # chrome-only internal properties
         "-moz-window-input-region-margin",    # chrome-only internal properties

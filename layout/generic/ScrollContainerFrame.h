@@ -111,8 +111,6 @@ class ScrollContainerFrame : public nsContainerFrame,
                       nsIFrame::Sides aSkipSides,
                       nsRectCornerRadii&) const final;
 
-  nsMargin ScrollbarInsets() const;
-
   nscoord IntrinsicISize(const IntrinsicSizeInput& aInput,
                          IntrinsicISizeType aType) override;
 
