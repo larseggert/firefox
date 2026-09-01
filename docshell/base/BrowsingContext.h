@@ -919,7 +919,6 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
     already_AddRefed<BrowsingContext> GetOpener();
 
     uint64_t GetOpenerId() const { return mFields.Get<IDX_OpenerId>(); }
-    uint64_t GetBrowserId() const { return mFields.Get<IDX_BrowserId>(); }
 
     bool mWindowless = false;
     bool mUseRemoteTabs = false;

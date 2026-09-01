@@ -78,8 +78,7 @@ nsresult BrowserBridgeParent::InitWithProcess(
 
   // Construct the BrowserParent object for our subframe.
   auto browserParent = MakeRefPtr<BrowserParent>(
-      aContentParent, aTabId, aWindowInit.context().mOuterWindowId,
-      *aParentBrowser, browsingContext, aChromeFlags);
+      aContentParent, aTabId, *aParentBrowser, browsingContext, aChromeFlags);
   browserParent->SetBrowserBridgeParent(this);
 
   ContentProcessManager* cpm = ContentProcessManager::GetSingleton();
