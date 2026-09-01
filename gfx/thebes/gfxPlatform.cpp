@@ -939,8 +939,11 @@ void gfxPlatform::Init() {
   if (XRE_IsParentProcess()) {
     // Monitor for sanity test changes.
     Preferences::RegisterCallbackAndCall(
-        VideoDecodingFailedChangedCallback,
+        HardwareVideoFailedChangedCallback,
         "media.hardware-video-decoding.failed");
+    Preferences::RegisterCallbackAndCall(
+        HardwareVideoFailedChangedCallback,
+        "media.hardware-video-encoding.failed");
     Preferences::RegisterCallbackAndCall(HWDRMFailedChangedCallback,
                                          "media.eme.hwdrm.failed");
     Preferences::RegisterCallback(HWDRMFailedChangedCallback,
@@ -2411,7 +2414,7 @@ gfxImageFormat gfxPlatform::OptimalFormatForContent(gfxContentType aContent) {
 static mozilla::Atomic<bool> sLayersAccelerationPrefsInitialized(false);
 
 /* static */
-void gfxPlatform::VideoDecodingFailedChangedCallback(const char* aPref, void*) {
+void gfxPlatform::HardwareVideoFailedChangedCallback(const char* aPref, void*) {
   MOZ_ASSERT(XRE_IsParentProcess());
   if (gPlatform) {
     gPlatform->InitHardwareVideoConfig();
@@ -3121,9 +3124,16 @@ void gfxPlatform::InitHardwareVideoConfig() {
                             "Force disabled by gfxInfo", failureId);
   } else if (Preferences::GetBool("media.hardware-video-decoding.failed",
                                   false)) {
+    // Decoding is better exercised than encoding. If it is broken on this
+    // configuration, encoding is unlikely to be sane either.
     featureEnc.ForceDisable(FeatureStatus::Unavailable,
                             "Force disabled by failed sanity test",
                             "FEATURE_FAILURE_SANITY_TEST_FAILED"_ns);
+  } else if (Preferences::GetBool("media.hardware-video-encoding.failed",
+                                  false)) {
+    featureEnc.ForceDisable(FeatureStatus::Unavailable,
+                            "Force disabled by failed encode sanity test",
+                            "FEATURE_FAILURE_SANITY_TEST_ENCODE_FAILED"_ns);
   }
 #ifdef XP_MACOSX
   else if (isXpcshell) {

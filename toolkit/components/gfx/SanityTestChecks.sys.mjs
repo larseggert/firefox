@@ -32,12 +32,23 @@ export const SanityCheckResult = {
   Crashed: 3,
   Timeout: 4,
   FailedToRun: 5,
+  FailedVideoEncode: 6,
+  PassedNoHardwareEncoder: 7, // internal
 };
 
-/**
- * Thrown by withTimeout, so that a caller can tell a real timeout apart from
- * any other failure.
- */
+export const CodecTestResult = {
+  Passed: "passed",
+  Failed: "failed",
+  Unsupported: "unsupported",
+};
+
+const ENCODE_WIDTH = 320;
+const ENCODE_HEIGHT = 240;
+const ENCODE_CODEC = "avc1.42001E";
+const ENCODE_TIMEOUT_MS = 5000;
+const ENCODE_REPLY_TIMEOUT_MS = 10000;
+
+/** Error thrown for timeouts. */
 class TimeoutError extends Error {}
 
 function withTimeout(promise, timeoutMs, message) {
@@ -185,6 +196,126 @@ function testCompositor(win) {
   return SanityCheckResult.Passed;
 }
 
+function encodeConfig() {
+  return {
+    codec: ENCODE_CODEC,
+    width: ENCODE_WIDTH,
+    height: ENCODE_HEIGHT,
+    hardwareAcceleration: "prefer-hardware",
+    avc: { format: "annexb" },
+  };
+}
+
+function makeEncodeCanvas(win, width, height) {
+  const canvas = win.document.createElementNS(XHTML_NS, "canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "rgb(0, 0, 255)";
+  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = "rgb(255, 255, 0)";
+  ctx.fillRect(0, 0, width / 2, height / 2);
+  ctx.fillStyle = "rgb(255, 0, 0)";
+  ctx.fillRect(width / 2, height / 2, width / 2, height / 2);
+  return canvas;
+}
+
+/**
+ * Encode a single keyframe with a hardware-only H.264 encoder.
+ *
+ * @param {Window} win The window whose WebCodecs implementation to use.
+ * @returns {Promise<{status: string, reason: string}>}
+ */
+export async function testVideoEncode(win) {
+  if (!win.VideoEncoder || !win.VideoFrame) {
+    return {
+      status: CodecTestResult.Unsupported,
+      reason: "WebCodecs is not available",
+    };
+  }
+
+  const config = encodeConfig();
+
+  let support;
+  try {
+    support = await withTimeout(
+      win.VideoEncoder.isConfigSupported(config),
+      ENCODE_TIMEOUT_MS,
+      "isConfigSupported timed out"
+    );
+  } catch (e) {
+    return {
+      status: CodecTestResult.Unsupported,
+      reason: `isConfigSupported failed: ${e}`,
+    };
+  }
+
+  if (!support || !support.supported) {
+    return {
+      status: CodecTestResult.Unsupported,
+      reason: "no hardware H.264 encoder for this configuration",
+    };
+  }
+
+  const chunks = [];
+  let encoderError = null;
+  let encoder;
+
+  try {
+    encoder = new win.VideoEncoder({
+      output: chunk => {
+        chunks.push({ type: chunk.type, byteLength: chunk.byteLength });
+      },
+      error: e => {
+        encoderError = e;
+      },
+    });
+
+    encoder.configure(config);
+
+    const canvas = makeEncodeCanvas(win, ENCODE_WIDTH, ENCODE_HEIGHT);
+    const frame = new win.VideoFrame(canvas, { timestamp: 0 });
+    try {
+      encoder.encode(frame, { keyFrame: true });
+    } finally {
+      frame.close();
+    }
+
+    await withTimeout(
+      encoder.flush(),
+      ENCODE_TIMEOUT_MS,
+      "encoder flush timed out"
+    );
+  } catch (e) {
+    return {
+      status: CodecTestResult.Failed,
+      reason: `encode failed: ${encoderError ?? e}`,
+    };
+  } finally {
+    try {
+      encoder?.close();
+    } catch (e) {
+      // The encoder may already be closed after an error.
+    }
+  }
+
+  if (encoderError) {
+    return {
+      status: CodecTestResult.Failed,
+      reason: `encode errored: ${encoderError}`,
+    };
+  }
+
+  if (!chunks.some(chunk => chunk.type === "key" && chunk.byteLength > 0)) {
+    return {
+      status: CodecTestResult.Failed,
+      reason: `encode produced no keyframe (${chunks.length} chunks)`,
+    };
+  }
+
+  return { status: CodecTestResult.Passed, reason: "" };
+}
+
 /**
  * Open the offscreen window the checks run against.
  *
@@ -269,16 +400,22 @@ function attachTestBrowser(win) {
  * @returns {Promise<number>} A SanityCheckResult.
  */
 export async function runSanityTest() {
-  const win = openSanityTestWindow();
+  let win;
   try {
+    win = openSanityTestWindow();
     return await runSanityChecks(win);
+  } catch (e) {
+    return SanityCheckResult.FailedToRun;
   } finally {
-    win.close();
+    win?.close();
   }
 }
 
 /**
  * Run every sanity check against an already open test window.
+ *
+ * The encoder is only probed when rendering and decoding are healthy as
+ * gfxPlatform force disables hardware encoding alongside decoding.
  *
  * @param {Window} win A window from openSanityTestWindow().
  * @returns {Promise<number>} A SanityCheckResult.
@@ -324,7 +461,41 @@ async function runSanityChecks(win) {
           restoreMediaEngine();
         }
 
-        return result;
+        if (result != SanityCheckResult.Passed) {
+          return result;
+        }
+
+        const encoderResult = new Promise(resolve =>
+          mm.addMessageListener(
+            "gfxSanity:EncoderResult",
+            function onResult(message) {
+              mm.removeMessageListener("gfxSanity:EncoderResult", onResult);
+              resolve(message.data);
+            }
+          )
+        );
+
+        mm.sendAsyncMessage("gfxSanity:RunEncoderTest");
+
+        let encoder;
+        try {
+          encoder = await withTimeout(
+            encoderResult,
+            ENCODE_REPLY_TIMEOUT_MS,
+            "encode check did not reply"
+          );
+        } catch (e) {
+          return SanityCheckResult.FailedVideoEncode;
+        }
+
+        switch (encoder.status) {
+          case CodecTestResult.Failed:
+            return SanityCheckResult.FailedVideoEncode;
+          case CodecTestResult.Unsupported:
+            return SanityCheckResult.PassedNoHardwareEncoder;
+          default:
+            return SanityCheckResult.Passed;
+        }
       })(),
       TIMEOUT_MS,
       "sanity test timed out"

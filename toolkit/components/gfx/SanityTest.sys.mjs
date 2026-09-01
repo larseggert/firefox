@@ -10,8 +10,11 @@ import {
 const TEST_DISABLED_PREF = "media.sanity-test.disabled";
 const DRIVER_PREF = "sanity-test.driver-version";
 const DEVICE_PREF = "sanity-test.device-id";
+const DRIVER2_PREF = "sanity-test.driver-version2";
+const DEVICE2_PREF = "sanity-test.device-id2";
 const VERSION_PREF = "sanity-test.version";
 const DISABLE_VIDEO_DECODE_PREF = "media.hardware-video-decoding.failed";
+const DISABLE_VIDEO_ENCODE_PREF = "media.hardware-video-encoding.failed";
 const RUNNING_PREF = "sanity-test.running";
 
 function annotateCrashReport() {
@@ -32,16 +35,24 @@ function onSanityTestComplete(result) {
     case SanityCheckResult.Crashed:
       Services.prefs.setBoolPref(DISABLE_VIDEO_DECODE_PREF, true);
       break;
+    case SanityCheckResult.FailedVideoEncode:
+      Services.prefs.setBoolPref(DISABLE_VIDEO_ENCODE_PREF, true);
+      break;
   }
 
-  Glean.gfx.sanityTest.accumulateSingleSample(result);
+  // If there is no hardware encoding support, it is the same as passed.
+  Glean.gfx.sanityTest.accumulateSingleSample(
+    result == SanityCheckResult.PassedNoHardwareEncoder
+      ? SanityCheckResult.Passed
+      : result
+  );
   Services.prefs.setBoolPref(RUNNING_PREF, false);
   Services.prefs.savePrefFile(null);
 }
 
 function onSanityTestError(e) {
   console.error("Graphics sanity test failed to run: ", e);
-  onSanityTestComplete(SanityCheckResult.FailedToRun);
+  onSanityTestComplete(SanityCheckResult.Timeout);
 }
 
 export function SanityTest() {}
@@ -90,20 +101,28 @@ SanityTest.prototype = {
       return prefValue == value;
     }
 
-    // TODO: Handle dual GPU setups
+    // The secondary adapter matters as much as the primary one here. MFTEnumEx
+    // does not filter by adapter, so a hardware encoder belonging to the
+    // secondary device can be the one we end up using, and blocklist entries
+    // can match against it. Both are empty strings on a single GPU machine.
     if (
       checkPref(DRIVER_PREF, gfxinfo.adapterDriverVersion) &&
       checkPref(DEVICE_PREF, gfxinfo.adapterDeviceID) &&
+      checkPref(DRIVER2_PREF, gfxinfo.adapterDriverVersion2) &&
+      checkPref(DEVICE2_PREF, gfxinfo.adapterDeviceID2) &&
       checkPref(VERSION_PREF, buildId)
     ) {
       return false;
     }
 
-    // Enable hardware decoding so we can test again
+    // Enable hardware decoding and encoding so we can test again
     // and record the driver version to detect if the driver changes.
     Services.prefs.setBoolPref(DISABLE_VIDEO_DECODE_PREF, false);
+    Services.prefs.setBoolPref(DISABLE_VIDEO_ENCODE_PREF, false);
     Services.prefs.setStringPref(DRIVER_PREF, gfxinfo.adapterDriverVersion);
     Services.prefs.setStringPref(DEVICE_PREF, gfxinfo.adapterDeviceID);
+    Services.prefs.setStringPref(DRIVER2_PREF, gfxinfo.adapterDriverVersion2);
+    Services.prefs.setStringPref(DEVICE2_PREF, gfxinfo.adapterDeviceID2);
     Services.prefs.setStringPref(VERSION_PREF, buildId);
 
     // Update the prefs so that this test doesn't run again until the next update.
