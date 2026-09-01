@@ -172,7 +172,6 @@ struct arena_chunk_t {
   uint16_t mDirtyRunHint = 0;
 
   bool mIsPurging = false;
-  bool mDying = false;
 
   // Map of pages within chunk that keeps track of free/large/small.
   arena_chunk_map_t mPageMap[];  // Dynamically sized.

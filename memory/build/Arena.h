@@ -8,6 +8,7 @@
 #include "mozilla/Atomics.h"
 #include "mozilla/DoublyLinkedList.h"
 #include "mozilla/fallible.h"
+#include "mozilla/Result.h"
 #include "mozilla/XorShift128PlusRNG.h"
 
 #include "mozjemalloc_types.h"
@@ -430,9 +431,9 @@ struct arena_t : public BaseAllocClass {
       MOZ_REQUIRES(mLock);
 
   // Remove the chunk from the arena.  This removes it from all the page counts.
-  // It assumes its run has already been removed and lets the caller clear
-  // mSpare as necessary.
-  bool RemoveChunk(arena_chunk_t* aChunk) MOZ_REQUIRES(mLock);
+  // It assumes its run has already been removed.  The chunk must not be the
+  // spare chunk, in mChunksDirty or actively purging.
+  void RemoveChunk(arena_chunk_t* aChunk) MOZ_REQUIRES(mLock);
 
   // This may return a chunk that should be destroyed with chunk_dealloc outside
   // of the arena lock.  It is not the same chunk as was passed in (since that
@@ -628,7 +629,11 @@ struct arena_t : public BaseAllocClass {
     //
     // FindDirtyPages() will return false purging should not continue purging in
     // this chunk.  Either because it has no dirty pages or is dying.
-    bool FindDirtyPages(bool aPurgedOnce) MOZ_REQUIRES(mArena.mLock);
+    //
+    // On failure FindDirtyPages will return a chunk that the caller should
+    // release after releasing the arena lock.
+    mozilla::Result<mozilla::Ok, arena_chunk_t*> FindDirtyPages(
+        bool aPurgedOnce) MOZ_REQUIRES(mArena.mLock);
 
     // This is used internally by FindDirtyPages to actually perform scanning
     // within a chunk's page tables.  It finds the first dirty page within the
@@ -639,16 +644,18 @@ struct arena_t : public BaseAllocClass {
     // last dirty page within the same run.
     bool ScanForLastDirtyPage() MOZ_REQUIRES(mArena.mLock);
 
-    // Returns a pair, the first field indicates if there are more dirty pages
-    // remaining in the current chunk. The second field if non-null points to a
-    // chunk that must be released by the caller.
-    std::pair<bool, arena_chunk_t*> UpdatePagesAndCounts()
-        MOZ_REQUIRES(mArena.mLock);
+    // Returns true if there are more dirty pages remaining in the current
+    // chunk.
+    bool UpdatePagesAndCounts() MOZ_REQUIRES(mArena.mLock);
 
     // FinishPurgingInChunk() is used whenever we decide to stop purging in a
     // chunk, This could be because there are no more dirty pages, or the chunk
     // is dying, or we hit the arena-level threshold.
-    void FinishPurgingInChunk(bool aAddToMAdvised, bool aAddToDirty)
+    //
+    // The return value if non-null points to a chunk that must be released
+    // by the caller.
+    [[nodiscard]] arena_chunk_t* FinishPurgingInChunk(bool aAddToMAdvised,
+                                                      bool aAddToDirty)
         MOZ_REQUIRES(mArena.mLock);
 
     explicit PurgeInfo(arena_t& arena, arena_chunk_t* chunk,
