@@ -877,8 +877,7 @@ void PlainObjectAssignCache::assertValid() const {
   if (fromPlain->getDenseInitializedLength() > 0 || fromPlain->isIndexed()) {
     return true;
   }
-  MOZ_ASSERT(!fromPlain->getClass()->getNewEnumerate());
-  MOZ_ASSERT(!fromPlain->getClass()->getEnumerate());
+  MOZ_ASSERT(!ClassCanHaveExtraEnumeratedProperties(fromPlain->getClass()));
 
   // Empty |from| objects are common, so check for this first.
   if (fromPlain->empty()) {
@@ -913,10 +912,6 @@ void PlainObjectAssignCache::assertValid() const {
   // Get a list of all enumerable |from| properties.
 
   Rooted<PropertyInfoWithKeyVector> props(cx, PropertyInfoWithKeyVector(cx));
-
-#ifdef DEBUG
-  Rooted<Shape*> fromShape(cx, fromPlain->shape());
-#endif
 
   bool hasPropsWithNonDefaultAttrs = false;
   bool hasOnlyEnumerableProps = true;
@@ -997,7 +992,9 @@ void PlainObjectAssignCache::assertValid() const {
 
   RootedValue propValue(cx);
   RootedId nextKey(cx);
-
+#ifdef DEBUG
+  Rooted<Shape*> fromShape(cx, fromPlain->shape());
+#endif
   for (size_t i = props.length(); i > 0; i--) {
     // Assert |from| still has the same properties.
     MOZ_ASSERT(fromPlain->shape() == fromShape);
@@ -1051,9 +1048,7 @@ static bool TryAssignNative(JSContext* cx, HandleObject to, HandleObject from,
   // properties.
   NativeObject* fromNative = &from->as<NativeObject>();
   if (fromNative->getDenseInitializedLength() > 0 || fromNative->isIndexed() ||
-      fromNative->is<TypedArrayObject>() ||
-      fromNative->getClass()->getNewEnumerate() ||
-      fromNative->getClass()->getEnumerate()) {
+      ClassCanHaveExtraEnumeratedProperties(fromNative->getClass())) {
     return true;
   }
 
