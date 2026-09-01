@@ -26,5 +26,10 @@ skip-if = ["debug"]
 ["browser_searchModeSwitcher.js"]
 
 ["browser_searchTelemetry.js"]
+support-files = [
+  "../../../search/test/browser/telemetry/searchTelemetry.html",
+  "../../../search/test/browser/telemetry/searchTelemetryAd.html",
+  "../../../search/test/browser/telemetry/serp.css",
+]
 
 ["browser_viewBounds.js"]
