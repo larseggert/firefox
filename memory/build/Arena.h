@@ -295,7 +295,8 @@ struct arena_t : public BaseAllocClass {
   // Currently it may have 0, 1 or briefly 2 members.
   //
   // It is a list of chunks that operate as a cache (for small and large
-  // allocations only),
+  // allocations only), and a mechanism to delay releasing memory until idle
+  // time.`
   //
   // Spare chunks will not appear in mChunksDirty and cannot be in purging
   // (they are removed from mSpares when purging begins).  Their pages are
@@ -651,6 +652,16 @@ struct arena_t : public BaseAllocClass {
         : mArena(arena), mChunk(chunk), mPurgeStats(stats) {}
   };
 
+ private:
+  arena_chunk_t* PurgeGetSpareChunk(mozilla::PurgeStats& aStats);
+  arena_chunk_t* PurgeGetDirtyChunk(PurgeCondition aCond,
+                                    mozilla::PurgeStats& aStats);
+
+  ArenaPurgeResult PurgeDirtyPages(
+      arena_chunk_t* aChunk, PurgeCondition aCond, mozilla::PurgeStats& aStats,
+      const mozilla::Maybe<std::function<bool()>>& aKeepGoing);
+
+ public:
   void HardPurge();
 
   // Check mNumDirty against EffectiveMaxDirty and return the appropriate
