@@ -517,9 +517,11 @@ void base_chunk_dealloc(void* aChunk, size_t aSize, ChunkType aType) {
   MOZ_ASSERT((aSize & kChunkSizeMask) == 0);
   MOZ_ASSERT(!gChunkRTree.Get(aChunk));
 
+#ifndef XP_WIN
   if (gCache.TryRecord(aChunk, aSize, aType)) {
     return;
   }
+#endif
 
   pages_unmap(aChunk, aSize);
 }
@@ -575,10 +577,16 @@ void* arena_chunk_alloc(chunk_allocator_t* aChunkAllocator, size_t aSize,
 }
 
 static void* system_pages_map(size_t aSize, size_t aAlignment) {
-  void* ret = gCache.Recycle(aSize, aAlignment);
+  void* ret = nullptr;
+
+#ifndef XP_WIN
+  ret = gCache.Recycle(aSize, aAlignment);
   if (!ret) {
+#endif
     ret = pages_mmap_aligned(aSize, aAlignment, ReserveAndCommit);
+#ifndef XP_WIN
   }
+#endif
 
   return ret;
 }
@@ -602,11 +610,9 @@ bool arena_chunk_t::IsEmpty() {
           (~gPageSizeMask | CHUNK_MAP_ALLOCATED)) == gMaxLargeClass;
 }
 
-bool ChunkCache::TryRecord(void* aChunk, size_t aSize, ChunkType aType) {
-  if (!CanRecycle(aSize)) {
-    return false;
-  }
+#ifndef XP_WIN
 
+bool ChunkCache::TryRecord(void* aChunk, size_t aSize, ChunkType aType) {
   size_t recycled_so_far = mRecycledSize;
 
   // In case some race condition put us above the limit.
@@ -617,17 +623,9 @@ bool ChunkCache::TryRecord(void* aChunk, size_t aSize, ChunkType aType) {
   size_t recycle_remaining = gRecycleLimit - recycled_so_far;
   size_t to_recycle;
   if (aSize > recycle_remaining) {
-#ifndef XP_WIN
     to_recycle = recycle_remaining;
     // Drop pages that would overflow the recycle limit
     pages_trim(aChunk, aSize, 0, to_recycle, ReserveAndCommit);
-#else
-    // On windows pages_trim unallocates and reallocates the whole
-    // chunk, there's no point doing that during recycling so instead we
-    // fail.
-    pages_unmap(aChunk, aSize);
-    return;
-#endif
   } else {
     to_recycle = aSize;
   }
@@ -705,10 +703,6 @@ void ChunkCache::Record(void* aChunk, size_t aSize, ChunkType aType) {
 }
 
 void* ChunkCache::Recycle(size_t aSize, size_t aAlignment) {
-  if (!CanRecycle(aSize)) {
-    return nullptr;
-  }
-
   size_t alloc_size = aSize + aAlignment - kChunkSize;
   // Beware size_t wrap-around.
   if (alloc_size < aSize) {
@@ -780,3 +774,5 @@ void* ChunkCache::Recycle(size_t aSize, size_t aAlignment) {
 
 // The global chunk cache.
 ChunkCache gCache;
+
+#endif /* ! XP_WIN */

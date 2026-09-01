@@ -230,6 +230,13 @@ void* pages_mmap_aligned(size_t size, size_t alignment,
 
 void pages_unmap(void* aAddr, size_t aSize);
 
+// On Windows, calls to VirtualAlloc and VirtualFree must be matched, making
+// it awkward to recycle allocations of varying sizes.
+// Therefore the chunk cache is disabled on windows since arenas have a
+// chunk list for arena chunks, and non-arena chunks arbitrary sizes
+// don't cache well without splitting.
+#ifndef XP_WIN
+
 class ChunkCache {
  private:
   Mutex mMutex;
@@ -251,18 +258,6 @@ class ChunkCache {
 
   void Init() { mMutex.Init(); }
 
-  static constexpr bool CanRecycle(size_t aSize) {
-#ifdef XP_WIN
-    // On Windows, calls to VirtualAlloc and VirtualFree must be matched, making
-    // it awkward to recycle allocations of varying sizes. Therefore we only
-    // allow recycling when the size equals the chunksize, unless deallocation
-    // is entirely disabled.
-    return aSize == kChunkSize;
-#else
-    return true;
-#endif
-  }
-
   // Try to put this chunk in the cache, false if the cache is full.
   bool TryRecord(void* aChunk, size_t aSize, ChunkType aType);
 
@@ -276,5 +271,7 @@ class ChunkCache {
 };
 
 extern ChunkCache gCache;
+
+#endif /* ! XP_WIN */
 
 #endif /* ! CHUNK_H */

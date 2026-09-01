@@ -3448,7 +3448,10 @@ static bool malloc_init_hard() {
   DefineGlobals();
 #endif
 
+#ifndef XP_WIN
   gCache.Init();
+#endif
+
   huge_init();
   sBaseAlloc.Init();
 
