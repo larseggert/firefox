@@ -4528,13 +4528,6 @@
   value: 0
   mirror: always
 
-# A pref that is used to pause EagerMarkAsDirty on the caller thread for
-# testing race conditions in dirty tracking.
-- name: dom.quotaManager.dirtyTracking.pauseOnCallerThreadMs
-  type: RelaxedAtomicUint32
-  value: 0
-  mirror: always
-
 # A pref that is used to slow down group initialization for testing purposes.
 - name: dom.quotaManager.groupInitialization.pauseOnIOThreadMs
   type: RelaxedAtomicUint32

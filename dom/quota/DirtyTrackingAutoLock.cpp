@@ -11,9 +11,6 @@
 #include "GroupInfoPair.h"
 #include "OriginInfo.h"
 #include "QuotaManager.h"
-#include "mozilla/SpinEventLoopUntil.h"
-#include "mozilla/StaticPrefs_dom.h"
-#include "nsITimer.h"
 
 namespace mozilla::dom::quota {
 
@@ -56,20 +53,6 @@ void DirtyTrackingAutoLock::EagerMarkAsDirty() {
   quotaManager->AssertCurrentThreadOwnsQuotaMutex();
 
   quotaManager->FlagOriginInfoAsDirtyOnDisk(*this, stateMetadata);
-
-  uint32_t pauseMs =
-      StaticPrefs::dom_quotaManager_dirtyTracking_pauseOnCallerThreadMs();
-  if (pauseMs > 0 && IsOnIOThread()) {
-    bool timerDone = false;
-    nsCOMPtr<nsITimer> timer;
-    NS_NewTimerWithFuncCallback(
-        getter_AddRefs(timer),
-        [](nsITimer*, void* aClosure) { *static_cast<bool*>(aClosure) = true; },
-        &timerDone, pauseMs, nsITimer::TYPE_ONE_SHOT,
-        "DirtyTrackingAutoLock::EagerMarkAsDirty test pause"_ns);
-    SpinEventLoopUntil("DirtyTrackingAutoLock::EagerMarkAsDirty test pause"_ns,
-                       [&timerDone]() { return timerDone; });
-  }
 }
 
 RefPtr<OriginInfo> DirtyTrackingAutoLock::GetOriginInfo(
