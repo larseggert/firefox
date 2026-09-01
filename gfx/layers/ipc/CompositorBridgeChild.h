@@ -117,7 +117,7 @@ class CompositorBridgeChild final : public PCompositorBridgeChild,
   bool SendPause();
   bool SendResume();
   bool SendResumeAsync();
-  bool SendAdoptChild(const LayersId& id, const LayersId& embedderId);
+  bool SendAdoptChild(const LayersId& id);
   bool SendFlushRendering(const wr::RenderReasons& aReasons);
   bool SendFlushRenderingAsync(const wr::RenderReasons& aReasons);
 

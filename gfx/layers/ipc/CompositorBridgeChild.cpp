@@ -346,12 +346,11 @@ bool CompositorBridgeChild::SendResumeAsync() {
   return PCompositorBridgeChild::SendResumeAsync();
 }
 
-bool CompositorBridgeChild::SendAdoptChild(const LayersId& id,
-                                           const LayersId& embedderId) {
+bool CompositorBridgeChild::SendAdoptChild(const LayersId& id) {
   if (!mCanSend) {
     return false;
   }
-  return PCompositorBridgeChild::SendAdoptChild(id, embedderId);
+  return PCompositorBridgeChild::SendAdoptChild(id);
 }
 
 bool CompositorBridgeChild::SendFlushRendering(
