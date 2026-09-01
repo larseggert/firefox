@@ -1689,8 +1689,7 @@ uint32_t GPUProcessManager::AllocateNamespace() {
 
 bool GPUProcessManager::AllocateAndConnectLayerTreeId(
     PCompositorBridgeChild* aCompositorBridge, base::ProcessId aOtherPid,
-    LayersId aEmbedderLayersId, LayersId* aOutLayersId,
-    CompositorOptions* aOutCompositorOptions) {
+    LayersId* aOutLayersId, CompositorOptions* aOutCompositorOptions) {
   MOZ_ASSERT(aOutLayersId);
 
   LayersId layersId = AllocateLayerTreeId();
@@ -1712,10 +1711,10 @@ bool GPUProcessManager::AllocateAndConnectLayerTreeId(
   if (aCompositorBridge) {
     if (mGPUChild) {
       return aCompositorBridge->SendMapAndNotifyChildCreated(
-          layersId, aEmbedderLayersId, aOtherPid, aOutCompositorOptions);
+          layersId, aOtherPid, aOutCompositorOptions);
     }
-    return aCompositorBridge->SendNotifyChildCreated(
-        layersId, aEmbedderLayersId, aOutCompositorOptions);
+    return aCompositorBridge->SendNotifyChildCreated(layersId,
+                                                     aOutCompositorOptions);
   }
 
   // If we don't have a CompositorBridgeChild, we just need to call

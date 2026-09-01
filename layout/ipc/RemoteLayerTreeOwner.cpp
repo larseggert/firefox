@@ -7,10 +7,8 @@
 #include "base/basictypes.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/dom/BrowserParent.h"
-#include "mozilla/dom/CanonicalBrowsingContext.h"
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/dom/EffectsInfo.h"
-#include "mozilla/dom/WindowGlobalParent.h"
 #include "mozilla/gfx/GPUProcessManager.h"
 #include "mozilla/layers/CompositorBridgeChild.h"
 #include "mozilla/layers/CompositorBridgeParent.h"
@@ -18,9 +16,7 @@
 #include "mozilla/layers/WebRenderLayerManager.h"
 #include "mozilla/layers/WebRenderScrollData.h"
 #include "mozilla/webrender/WebRenderAPI.h"
-#include "nsContentUtils.h"
 #include "nsFrameLoader.h"
-#include "nsIWidget.h"
 #include "nsStyleStructInlines.h"
 #include "nsSubDocumentFrame.h"
 
@@ -55,32 +51,12 @@ RemoteLayerTreeOwner::RemoteLayerTreeOwner()
 
 RemoteLayerTreeOwner::~RemoteLayerTreeOwner() = default;
 
-// The LayersId of the pipeline that embeds aBrowserParent: the parent
-// document's LayersId if aBrowserParent is a nested remote frame, or the
-// LayersId of the chrome window hosting it otherwise. The latter only exists
-// once that window's widget has a CompositorSession, so callers must have
-// obtained its WindowRenderer first.
-static LayersId GetEmbedderLayersId(BrowserParent* aBrowserParent) {
-  if (WindowGlobalParent* embedderWindow =
-          aBrowserParent->GetBrowsingContext()->GetParentWindowContext()) {
-    if (BrowserParent* embedder = embedderWindow->GetBrowserParent()) {
-      return embedder->GetLayersId();
-    }
-  }
-  if (RefPtr<nsIWidget> widget = aBrowserParent->GetWidget()) {
-    return widget->GetLayersId();
-  }
-  return LayersId{};
-}
-
 bool RemoteLayerTreeOwner::Initialize(BrowserParent* aBrowserParent) {
   if (mInitialized || !aBrowserParent) {
     return false;
   }
 
   mBrowserParent = aBrowserParent;
-  // Note that this may be what creates the embedding widget's
-  // CompositorSession, which GetEmbedderLayersId() below relies on.
   RefPtr<WindowRenderer> renderer = GetWindowRenderer(mBrowserParent);
   PCompositorBridgeChild* compositor =
       renderer ? renderer->GetCompositorBridgeChild() : nullptr;
@@ -90,8 +66,7 @@ bool RemoteLayerTreeOwner::Initialize(BrowserParent* aBrowserParent) {
   // and we'll keep an indirect reference to that tree.
   GPUProcessManager* gpm = GPUProcessManager::Get();
   mLayersConnected = gpm->AllocateAndConnectLayerTreeId(
-      compositor, mTabProcessId, GetEmbedderLayersId(mBrowserParent),
-      &mLayersId, &mCompositorOptions);
+      compositor, mTabProcessId, &mLayersId, &mCompositorOptions);
 
   mInitialized = true;
   return true;
@@ -116,7 +91,7 @@ void RemoteLayerTreeOwner::EnsureLayersConnected(
 
   mLayersConnected =
       renderer->GetCompositorBridgeChild()->SendNotifyChildRecreated(
-          mLayersId, GetEmbedderLayersId(mBrowserParent), &mCompositorOptions);
+          mLayersId, &mCompositorOptions);
   aCompositorOptions = Some(mCompositorOptions);
 }
 
@@ -129,8 +104,8 @@ bool RemoteLayerTreeOwner::AttachWindowRenderer() {
   // Perhaps the document containing this frame currently has no presentation?
   if (renderer && renderer->GetCompositorBridgeChild() &&
       renderer != mWindowRenderer) {
-    mLayersConnected = renderer->GetCompositorBridgeChild()->SendAdoptChild(
-        mLayersId, GetEmbedderLayersId(mBrowserParent));
+    mLayersConnected =
+        renderer->GetCompositorBridgeChild()->SendAdoptChild(mLayersId);
   }
 
   mWindowRenderer = std::move(renderer);

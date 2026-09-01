@@ -187,8 +187,7 @@ class CompositorBridgeParentBase : public PCompositorBridgeParent,
   virtual already_AddRefed<PCompositorWidgetParent>
   AllocPCompositorWidgetParent(const CompositorWidgetInitData& aInitData) = 0;
 
-  virtual mozilla::ipc::IPCResult RecvAdoptChild(
-      const LayersId& id, const LayersId& embedderId) = 0;
+  virtual mozilla::ipc::IPCResult RecvAdoptChild(const LayersId& id) = 0;
   virtual mozilla::ipc::IPCResult RecvFlushRenderingAsync(
       const wr::RenderReasons& aReasons) = 0;
   virtual mozilla::ipc::IPCResult RecvForcePresent(
@@ -205,14 +204,12 @@ class CompositorBridgeParentBase : public PCompositorBridgeParent,
   virtual mozilla::ipc::IPCResult RecvResume() = 0;
   virtual mozilla::ipc::IPCResult RecvResumeAsync() = 0;
   virtual mozilla::ipc::IPCResult RecvNotifyChildCreated(
-      const LayersId& id, const LayersId& embedderId,
-      CompositorOptions* compositorOptions) = 0;
+      const LayersId& id, CompositorOptions* compositorOptions) = 0;
   virtual mozilla::ipc::IPCResult RecvMapAndNotifyChildCreated(
-      const LayersId& id, const LayersId& embedderId, const ProcessId& owner,
+      const LayersId& id, const ProcessId& owner,
       CompositorOptions* compositorOptions) = 0;
   virtual mozilla::ipc::IPCResult RecvNotifyChildRecreated(
-      const LayersId& id, const LayersId& embedderId,
-      CompositorOptions* compositorOptions) = 0;
+      const LayersId& id, CompositorOptions* compositorOptions) = 0;
   virtual mozilla::ipc::IPCResult RecvFlushRendering(
       const wr::RenderReasons& aReasons) = 0;
   virtual mozilla::ipc::IPCResult RecvNotifyMemoryPressure() = 0;
@@ -271,16 +268,13 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
   mozilla::ipc::IPCResult RecvResume() override;
   mozilla::ipc::IPCResult RecvResumeAsync() override;
   mozilla::ipc::IPCResult RecvNotifyChildCreated(
-      const LayersId& aChild, const LayersId& aEmbedderId,
-      CompositorOptions* aOptions) override;
+      const LayersId& child, CompositorOptions* aOptions) override;
   mozilla::ipc::IPCResult RecvMapAndNotifyChildCreated(
-      const LayersId& aChild, const LayersId& aEmbedderId,
-      const base::ProcessId& aPid, CompositorOptions* aOptions) override;
-  mozilla::ipc::IPCResult RecvNotifyChildRecreated(
-      const LayersId& aChild, const LayersId& aEmbedderId,
+      const LayersId& child, const base::ProcessId& pid,
       CompositorOptions* aOptions) override;
-  mozilla::ipc::IPCResult RecvAdoptChild(const LayersId& child,
-                                         const LayersId& embedderId) override;
+  mozilla::ipc::IPCResult RecvNotifyChildRecreated(
+      const LayersId& child, CompositorOptions* aOptions) override;
+  mozilla::ipc::IPCResult RecvAdoptChild(const LayersId& child) override;
   mozilla::ipc::IPCResult RecvFlushRendering(
       const wr::RenderReasons& aReasons) override;
   mozilla::ipc::IPCResult RecvFlushRenderingAsync(
@@ -378,7 +372,7 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
    */
   void ForceIsFirstPaint();
 
-  void NotifyChildCreated(LayersId aChild, LayersId aEmbedderId);
+  void NotifyChildCreated(LayersId aChild);
 
   void AsyncRender();
 
@@ -423,9 +417,6 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
     LayerTreeState();
     ~LayerTreeState();
     RefPtr<GeckoContentController> mController;
-    // The LayersId of the pipeline that embeds this one, or an invalid
-    // LayersId if no widget could be found.
-    LayersId mEmbedderLayersId;
     RefPtr<APZCTreeManagerParent> mApzcTreeManagerParent;
     // The mApzInputBridgeParent is only populated for LayerTreeState
     // objects corresponding to root LayerIds (one for each top-level

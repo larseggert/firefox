@@ -161,7 +161,6 @@ class GPUProcessManager final : public GPUProcessHost::Listener {
   // Note that a layer tree id is always allocated, even if this returns false.
   bool AllocateAndConnectLayerTreeId(PCompositorBridgeChild* aCompositorBridge,
                                      base::ProcessId aOtherPid,
-                                     LayersId aEmbedderLayersId,
                                      LayersId* aOutLayersId,
                                      CompositorOptions* aOutCompositorOptions);
 

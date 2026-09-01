@@ -222,7 +222,7 @@ WebRenderScrollData::WebRenderScrollData(WebRenderLayerManager* aManager,
       mIsFirstPaint(false),
       mPaintSequenceNumber(0) {}
 
-bool WebRenderScrollData::ValidateShape() const {
+bool WebRenderScrollData::Validate() const {
   // Attempt to traverse the tree structure encoded by the descendant counts,
   // validating as we go that everything is within bounds and properly nested.
   // In addition, check that the traversal visits every node exactly once.
