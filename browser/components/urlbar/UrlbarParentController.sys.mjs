@@ -1623,7 +1623,6 @@ export class TelemetryEvent {
       // `#internalRecord()`.)
       if (!details.isSessionOngoing) {
         this._startEventInfo = null;
-        this._discarded = false;
       }
     }
   }
@@ -2244,7 +2243,6 @@ export class TelemetryEvent {
   discard() {
     if (this._startEventInfo) {
       this._startEventInfo = null;
-      this._discarded = true;
     }
   }
 
