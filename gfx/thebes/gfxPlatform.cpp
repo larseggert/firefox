@@ -943,6 +943,8 @@ void gfxPlatform::Init() {
         "media.hardware-video-decoding.failed");
     Preferences::RegisterCallbackAndCall(HWDRMFailedChangedCallback,
                                          "media.eme.hwdrm.failed");
+    Preferences::RegisterCallback(HWDRMFailedChangedCallback,
+                                  "media.wmf.media-engine.enabled");
   }
 
 #if defined(XP_WIN)
@@ -2420,7 +2422,7 @@ void gfxPlatform::VideoDecodingFailedChangedCallback(const char* aPref, void*) {
 void gfxPlatform::HWDRMFailedChangedCallback(const char* aPref, void*) {
   MOZ_ASSERT(XRE_IsParentProcess());
   if (gPlatform) {
-    gPlatform->InitPlatformHardwarDRMConfig();
+    gPlatform->InitPlatformHardwareDRMConfig();
   }
 }
 
@@ -3145,7 +3147,7 @@ void gfxPlatform::InitHardwareVideoConfig() {
   gfxVars::SetVideoHDR(featureHdr.IsEnabled());
 
   InitPlatformHardwareVideoConfig();
-  InitPlatformHardwarDRMConfig();
+  InitPlatformHardwareDRMConfig();
 
   nsCString message;
   gfxVars::SetCanUseHardwareVideoDecoding(featureDec.IsEnabled());
