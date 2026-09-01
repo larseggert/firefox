@@ -46,6 +46,20 @@ class NewtabContentTestUtils extends UrlbarInputBaseTestUtils {
   }
 
   /**
+   * @see UrlbarInputBaseTestUtils.promiseSearchComplete
+   *
+   * The waiver taken on the element doesn't survive the await that resolves the
+   * context, and an Xray over the results' class instances reads every property
+   * as undefined, so the callers looking for a result find none.
+   *
+   * @param {ChromeWindow} win
+   * @returns {Promise<UrlbarQueryContext>}
+   */
+  async promiseSearchComplete(win) {
+    return Cu.waiveXrays(await super.promiseSearchComplete(win));
+  }
+
+  /**
    * The window holding the element, for the duration of a {@link run} task.
    *
    * @type {Window}
