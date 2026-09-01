@@ -896,16 +896,8 @@ void PlainObjectAssignCache::assertValid() const {
     SharedShape* newShape = cache.lookup(toPlain->shape(), fromPlain->shape());
     if (newShape) {
       *optimized = true;
-      uint32_t oldSpan = 0;
-      uint32_t newSpan = newShape->slotSpan();
-      if (!toPlain->setShapeAndAddNewSlots(cx, newShape, oldSpan, newSpan)) {
-        return false;
-      }
-      MOZ_ASSERT(fromPlain->slotSpan() == newSpan);
-      for (size_t i = 0; i < newSpan; i++) {
-        toPlain->initSlot(i, fromPlain->getSlot(i));
-      }
-      return true;
+      return CopyPropertiesWithNewShape(cx, toPlain, fromPlain, newShape,
+                                        newShape->slotSpan());
     }
   }
 
@@ -952,40 +944,15 @@ void PlainObjectAssignCache::assertValid() const {
   // enumerable/writable/configurable data properties, try to use its shape or
   // property map.
   if (toWasEmpty && !hasPropsWithNonDefaultAttrs) {
-    CanReuseShape canReuse =
-        toPlain->canReuseShapeForNewProperties(fromPlain->shape());
-    if (canReuse != CanReuseShape::NoReuse) {
-      SharedShape* newShape;
-      if (canReuse == CanReuseShape::CanReuseShape) {
-        newShape = fromPlain->sharedShape();
-      } else {
-        // Get a shape with fromPlain's PropMap and ObjectFlags (because we need
-        // the HasEnumerable flag checked in canReuseShapeForNewProperties) and
-        // the other fields (BaseShape, numFixedSlots) unchanged.
-        MOZ_ASSERT(canReuse == CanReuseShape::CanReusePropMap);
-        ObjectFlags objectFlags = fromPlain->sharedShape()->objectFlags();
-        Rooted<SharedPropMap*> map(cx, fromPlain->sharedShape()->propMap());
-        uint32_t mapLength = fromPlain->sharedShape()->propMapLength();
-        BaseShape* base = toPlain->sharedShape()->base();
-        uint32_t nfixed = toPlain->sharedShape()->numFixedSlots();
-        newShape = SharedShape::getPropMapShape(cx, base, nfixed, map,
-                                                mapLength, objectFlags);
-        if (!newShape) {
-          return false;
-        }
-      }
-      uint32_t oldSpan = 0;
-      uint32_t newSpan = props.length();
-      if (!toPlain->setShapeAndAddNewSlots(cx, newShape, oldSpan, newSpan)) {
-        return false;
-      }
-      MOZ_ASSERT(fromPlain->slotSpan() == newSpan);
-      MOZ_ASSERT(toPlain->slotSpan() == newSpan);
-      for (size_t i = 0; i < newSpan; i++) {
-        toPlain->initSlot(i, fromPlain->getSlot(i));
-      }
+    bool copied;
+    if (!TryCopyPropertiesReusingShapeOrPropMap(cx, toPlain, fromPlain,
+                                                props.length(), &copied)) {
+      return false;
+    }
+    if (copied) {
       PlainObjectAssignCache& cache = cx->realm()->plainObjectAssignCache;
-      cache.fill(&origToShape->asShared(), fromPlain->sharedShape(), newShape);
+      cache.fill(&origToShape->asShared(), fromPlain->sharedShape(),
+                 toPlain->sharedShape());
       return true;
     }
   }
