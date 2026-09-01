@@ -199,3 +199,139 @@ function argsSpread() {
 var argsCopy = argsSpread("a", "b");
 assertEq(keys(argsCopy), "0,1");
 assertEq(argsCopy[1], "b");
+
+// Repeating a shape pair takes the cached path; the result must not differ
+// from the first, uncached one.
+var repeatSrc = {a: 1, b: 2, c: 3};
+var first = {...repeatSrc};
+for (var i = 0; i < 100; i++) {
+  var again = {...repeatSrc};
+  assertEq(keys(again), keys(first));
+  assertEq(again.a, 1);
+  assertEq(again.b, 2);
+  assertEq(again.c, 3);
+}
+
+// Alternating shape pairs defeat a one-entry cache. Results must stay correct.
+var altA = {q: 1, r: 2};
+var altB = {s: 3, t: 4, u: 5};
+for (var i = 0; i < 100; i++) {
+  var copyA = {...altA};
+  var copyB = {...altB};
+  assertEq(keys(copyA), "q,r");
+  assertEq(keys(copyB), "s,t,u");
+  assertEq(copyA.r, 2);
+  assertEq(copyB.u, 5);
+}
+
+// Spread and Object.assign disagree about an own __proto__ data property:
+// spread defines an own property, Object.assign goes through [[Set]] and hits
+// the Object.prototype setter. Neither may serve the other a cached shape.
+var protoSrc = {};
+var protoMarker = {tag: "own"};
+Object.defineProperty(protoSrc, "__proto__", {value: protoMarker,
+                                              enumerable: true, writable: true,
+                                              configurable: true});
+protoSrc.after = 1;
+for (var i = 0; i < 100; i++) {
+  var viaSpread = {...protoSrc};
+  assertEq(Object.hasOwn(viaSpread, "__proto__"), true);
+  assertEq(Object.getPrototypeOf(viaSpread), Object.prototype);
+  assertEq(viaSpread.after, 1);
+
+  var viaAssign = Object.assign({}, protoSrc);
+  assertEq(Object.hasOwn(viaAssign, "__proto__"), false);
+  assertEq(Object.getPrototypeOf(viaAssign), protoMarker);
+  assertEq(viaAssign.after, 1);
+}
+
+// Same, for a symbol-keyed property: spread reuses the shape, Object.assign
+// falls back. Interleaving them must not let either see the other's shape.
+var mixSym = Symbol("mix");
+var mixSrc = {m: 1, [mixSym]: 2, n: 3};
+for (var i = 0; i < 100; i++) {
+  var mixSpread = {...mixSrc};
+  assertEq(keys(mixSpread), "m,n");
+  assertEq(mixSpread[mixSym], 2);
+  assertEq(Reflect.ownKeys(mixSpread).length, 3);
+
+  var mixAssign = Object.assign({}, mixSrc);
+  assertEq(keys(mixAssign), "m,n");
+  assertEq(mixAssign[mixSym], 2);
+  assertEq(Reflect.ownKeys(mixAssign).length, 3);
+}
+
+// Interleaving a plain and a non-plain source must not let the shape cache
+// serve one for the other. An array with named properties and no dense elements
+// is the case that reaches the cache lookup at all.
+var namedArr = [];
+Object.defineProperty(namedArr, "u", {value: 7, enumerable: true,
+                                      writable: true, configurable: true});
+Object.defineProperty(namedArr, "v", {value: 8, enumerable: true,
+                                      writable: true, configurable: true});
+var plainSrc = {u: 1, v: 2};
+for (var i = 0; i < 100; i++) {
+  var p = {...plainSrc};
+  var a = {...namedArr};
+  assertEq(keys(p), "u,v");
+  assertEq(p.u, 1);
+  assertEq(keys(a), "u,v");
+  assertEq(a.u, 7);
+  assertEq(Array.isArray(a), false);
+}
+
+// A |from| whose properties have non-default flags cannot have its Shape or
+// PropMap reused.
+var nonDefaultSrc = {};
+Object.defineProperty(nonDefaultSrc, "a", {value: 1, enumerable: true,
+                                           writable: false,
+                                           configurable: true});
+Object.defineProperty(nonDefaultSrc, "b", {value: 2, enumerable: true,
+                                           writable: false,
+                                           configurable: true});
+for (var i = 0; i < 100; i++) {
+  var ndCopy = {...nonDefaultSrc};
+  assertEq(keys(ndCopy), "a,b");
+  assertEq(ndCopy.a, 1);
+  assertEq(ndCopy.b, 2);
+  var ndDesc = Object.getOwnPropertyDescriptor(ndCopy, "a");
+  assertEq(ndDesc.writable, true);
+  assertEq(ndDesc.configurable, true);
+  assertEq(ndDesc.enumerable, true);
+}
+
+// Same for a frozen source.
+var frozenSrc = Object.freeze({a: 1, b: 2, c: 3});
+for (var i = 0; i < 100; i++) {
+  var frozenCopy = {...frozenSrc};
+  assertEq(keys(frozenCopy), "a,b,c");
+  assertEq(frozenCopy.c, 3);
+  frozenCopy.d = 4;
+  assertEq(frozenCopy.d, 4);
+  assertEq(Object.getOwnPropertyDescriptor(frozenCopy, "a").writable, true);
+}
+
+// A source with a non-enumerable property must not be cached: |target| ends up
+// with fewer slots than |from|, so a cached entry would copy the wrong ones.
+var hiddenSrc = {a: 1};
+Object.defineProperty(hiddenSrc, "hidden", {value: 9, enumerable: false,
+                                            writable: true,
+                                            configurable: true});
+hiddenSrc.b = 2;
+for (var i = 0; i < 100; i++) {
+  var hiddenCopy = {...hiddenSrc};
+  assertEq(keys(hiddenCopy), "a,b");
+  assertEq("hidden" in hiddenCopy, false);
+  assertEq(hiddenCopy.a, 1);
+  assertEq(hiddenCopy.b, 2);
+}
+
+// An interesting symbol sets an ObjectFlag on |from|, so its Shape cannot be
+// reused either.
+var interestingSrc = {a: 1, [Symbol.iterator]: 2, b: 3};
+for (var i = 0; i < 100; i++) {
+  var interestingCopy = {...interestingSrc};
+  assertEq(keys(interestingCopy), "a,b");
+  assertEq(interestingCopy[Symbol.iterator], 2);
+  assertEq(Reflect.ownKeys(interestingCopy).length, 3);
+}

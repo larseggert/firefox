@@ -19,6 +19,7 @@
 #include "vm/Iteration.h"           // js::ClassCanHaveExtraEnumeratedProperties
 #include "vm/JSONPrinter.h"         // js::JSONPrinter
 #include "vm/PlainObject.h"         // js::PlainObject
+#include "vm/Realm.h"               // js::PlainObjectCopyPropsCache
 #include "vm/TypedArrayObject.h"
 #include "vm/Watchtower.h"
 
@@ -2969,6 +2970,17 @@ bool js::CopyDataPropertiesNative(JSContext* cx, Handle<PlainObject*> target,
     }
   }
 
+  // Check the plainObjectSpreadCache.
+  if (!excludedItems) {
+    const PlainObjectCopyPropsCache& cache =
+        cx->realm()->plainObjectSpreadCache;
+    if (SharedShape* newShape = cache.lookup(target->shape(), from->shape())) {
+      *optimized = true;
+      return CopyPropertiesWithNewShape(cx, target, &from->as<PlainObject>(),
+                                        newShape, newShape->slotSpan());
+    }
+  }
+
   // If |target| contains no own properties, we can directly call
   // AddDataPropertyToNativeObjectNoHooks.
   const bool targetHadNoOwnProperties = target->empty();
@@ -3015,6 +3027,7 @@ bool js::CopyDataPropertiesNative(JSContext* cx, Handle<PlainObject*> target,
   *optimized = true;
 
   if (canReuseFromShape && !props.empty()) {
+    Rooted<Shape*> origTargetShape(cx, target->shape());
     Handle<PlainObject*> fromPlain = Handle<JSObject*>(from).as<PlainObject>();
     bool copied;
     if (!TryCopyPropertiesReusingShapeOrPropMap(cx, target, fromPlain,
@@ -3022,6 +3035,9 @@ bool js::CopyDataPropertiesNative(JSContext* cx, Handle<PlainObject*> target,
       return false;
     }
     if (copied) {
+      cx->realm()->plainObjectSpreadCache.fill(&origTargetShape->asShared(),
+                                               fromPlain->sharedShape(),
+                                               target->sharedShape());
       return true;
     }
   }

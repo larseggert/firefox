@@ -844,7 +844,7 @@ static bool CanAddNewPropertyExcludingProtoFast(PlainObject* obj) {
 }
 
 #ifdef DEBUG
-void PlainObjectAssignCache::assertValid() const {
+void PlainObjectCopyPropsCache::assertValid() const {
   MOZ_ASSERT(emptyToShape_);
   MOZ_ASSERT(fromShape_);
   MOZ_ASSERT(newToShape_);
@@ -892,7 +892,8 @@ void PlainObjectAssignCache::assertValid() const {
 
   const bool toWasEmpty = toPlain->empty();
   if (toWasEmpty) {
-    const PlainObjectAssignCache& cache = cx->realm()->plainObjectAssignCache;
+    const PlainObjectCopyPropsCache& cache =
+        cx->realm()->plainObjectAssignCache;
     SharedShape* newShape = cache.lookup(toPlain->shape(), fromPlain->shape());
     if (newShape) {
       *optimized = true;
@@ -950,7 +951,7 @@ void PlainObjectAssignCache::assertValid() const {
       return false;
     }
     if (copied) {
-      PlainObjectAssignCache& cache = cx->realm()->plainObjectAssignCache;
+      PlainObjectCopyPropsCache& cache = cx->realm()->plainObjectAssignCache;
       cache.fill(&origToShape->asShared(), fromPlain->sharedShape(),
                  toPlain->sharedShape());
       return true;
@@ -995,7 +996,7 @@ void PlainObjectAssignCache::assertValid() const {
   // definition order and the slots may contain holes).
   if (toWasEmpty && hasOnlyEnumerableProps && !fromPlain->inDictionaryMode() &&
       !toPlain->inDictionaryMode()) {
-    PlainObjectAssignCache& cache = cx->realm()->plainObjectAssignCache;
+    PlainObjectCopyPropsCache& cache = cx->realm()->plainObjectAssignCache;
     cache.fill(&origToShape->asShared(), fromPlain->sharedShape(),
                toPlain->sharedShape());
   }
