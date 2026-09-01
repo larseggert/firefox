@@ -15656,11 +15656,16 @@ void CodeGenerator::visitNotO(LNotO* lir) {
 }
 
 void CodeGenerator::visitNotV(LNotV* lir) {
-  auto* ool = new (alloc()) OutOfLineTestObjectWithLabels();
-  addOutOfLineCode(ool, lir->mir());
-
-  Label* ifTruthy = ool->label1();
-  Label* ifFalsy = ool->label2();
+  Label defaultTruthy, defaultFalsy;
+  Label* ifTruthy = &defaultTruthy;
+  Label* ifFalsy = &defaultFalsy;
+  OutOfLineTestObjectWithLabels* ool = nullptr;
+  if (!hasSeenObjectEmulateUndefinedFuseIntactAndDependencyNoted()) {
+    ool = new (alloc()) OutOfLineTestObjectWithLabels();
+    addOutOfLineCode(ool, lir->mir());
+    ifTruthy = ool->label1();
+    ifFalsy = ool->label2();
+  }
 
   ValueOperand input = ToValue(lir->input());
   Register tempToUnbox = ToTempUnboxRegister(lir->temp1());
