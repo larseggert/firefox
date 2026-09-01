@@ -153,7 +153,7 @@ export class UrlbarParent extends JSWindowActorParent {
         break;
       case "SpeculativeConnect":
         controller.speculativeConnect(
-          lazy.UrlbarResult.fromWire(message.data.result),
+          this.#resultFromWire(controller, message.data.result),
           lazy.UrlbarQueryContext.fromWire(message.data.queryContext),
           message.data.reason
         );
@@ -177,7 +177,7 @@ export class UrlbarParent extends JSWindowActorParent {
         break;
       case "RemoveResult":
         controller.removeResult(
-          lazy.UrlbarResult.fromWire(message.data.result),
+          this.#resultFromWire(controller, message.data.result),
           message.data.options
         );
         break;
@@ -196,11 +196,13 @@ export class UrlbarParent extends JSWindowActorParent {
       // provider.
       case "OnBeforeSelection":
         controller.onBeforeSelection(
-          lazy.UrlbarResult.fromWire(message.data.result)
+          this.#resultFromWire(controller, message.data.result)
         );
         break;
       case "OnSelection":
-        controller.onSelection(lazy.UrlbarResult.fromWire(message.data.result));
+        controller.onSelection(
+          this.#resultFromWire(controller, message.data.result)
+        );
         break;
       case "InitEngineStore":
         controller.initEngineStore();
@@ -235,6 +237,20 @@ export class UrlbarParent extends JSWindowActorParent {
         break;
     }
     return undefined;
+  }
+
+  /**
+   * Deserializes a result the child sent, resolving it to the controller's own
+   * result. See `UrlbarResult.fromWire()`.
+   *
+   * @param {UrlbarParentController} controller
+   *   The controller the message is routed to.
+   * @param {object} wire
+   *   The result's wire form.
+   * @returns {UrlbarResult} The deserialized result.
+   */
+  #resultFromWire(controller, wire) {
+    return lazy.UrlbarResult.fromWire(wire, controller.liveResults);
   }
 
   /**
