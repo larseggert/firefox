@@ -120,7 +120,10 @@ const SMARTBLOCK_EMBED_INFO = [
     displayName: "TikTok",
   },
   {
-    matchPatterns: ["https://platform.twitter.com/*"],
+    matchPatterns: [
+      "https://platform.twitter.com/*",
+      "https://platform.x.com/*",
+    ],
     shimId: "TwitterEmbed",
     displayName: "X",
   },
