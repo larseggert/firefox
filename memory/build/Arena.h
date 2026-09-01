@@ -291,15 +291,18 @@ struct arena_t : public BaseAllocClass {
       mChunksMAdvised MOZ_GUARDED_BY(mLock);
 #endif
 
-  // In order to avoid rapid chunk allocation/deallocation when an arena
-  // oscillates right on the cusp of needing a new chunk, cache the most
-  // recently freed chunk.  The spare is left in the arena's chunk trees
-  // until it is deleted.
+  // A per-arena cache of recently used but now empty chunks.
   //
-  // There is one spare chunk per arena, rather than one spare total, in
-  // order to avoid interactions between multiple threads that could make
-  // a single spare inadequate.
-  arena_chunk_t* mSpare MOZ_GUARDED_BY(mLock) = nullptr;
+  // Currently it may have 0 or 1 members.
+  //
+  // It is a list of chunks that operate as a cache (for small and large
+  // allocations only),
+  //
+  // Spare chunks will not appear in mChunksDirty and cannot be in purging
+  // (they are removed from mSpares when purging begins).  Their pages are
+  // counted in mNumDirty and other counters.
+  mozilla::DoublyLinkedList<arena_chunk_t, mozilla::DirtyChunkListTrait> mSpares
+      MOZ_GUARDED_BY(mLock);
 
   // A per-arena opt-in to randomize the offset of small allocations
   // Needs no lock, read-only.
@@ -431,13 +434,13 @@ struct arena_t : public BaseAllocClass {
       MOZ_REQUIRES(mLock);
 
   // Remove the chunk from the arena.  This removes it from all the page counts.
-  // It assumes its run has already been removed.  The chunk must not be the
-  // spare chunk, in mChunksDirty or actively purging.
+  // It assumes its run has already been removed.  The chunk must not be
+  // in either mSpares or mChunksDirty, or be actively purging.
   void RemoveChunk(arena_chunk_t* aChunk) MOZ_REQUIRES(mLock);
 
   // This may return a chunk that should be destroyed with chunk_dealloc outside
   // of the arena lock.  It is not the same chunk as was passed in (since that
-  // chunk now becomes mSpare).
+  // chunk is now in mSpares).
   [[nodiscard]] arena_chunk_t* DemoteChunkToSpare(arena_chunk_t* aChunk)
       MOZ_REQUIRES(mLock);
 
@@ -525,7 +528,7 @@ struct arena_t : public BaseAllocClass {
 
   // This may return a chunk that should be destroyed with chunk_dealloc outside
   // of the arena lock.  It is not the same chunk as was passed in (since that
-  // chunk now becomes mSpare).
+  // chunk is added to mSpares).
   [[nodiscard]] inline arena_chunk_t* DallocSmall(arena_chunk_t* aChunk,
                                                   void* aPtr,
                                                   arena_chunk_map_t* aMapElm)
