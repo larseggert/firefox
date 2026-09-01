@@ -870,9 +870,8 @@ export class UrlbarParentController {
   }
 
   /**
-   * Returns the icon URL of the engine with the given id. This can be a blob
-   * URL, which only resolves in this process, so UrlbarParent serializes it
-   * before handing it to another process.
+   * Returns the icon URL of the engine with the given id, in a form the view
+   * can load.
    *
    * @param {string} engineId
    * @returns {Promise<?string>}
@@ -884,7 +883,7 @@ export class UrlbarParentController {
       lazy.logger.warn(`No engine found for id ${engineId}`);
       return null;
     }
-    return (await engine.getIconURL()) ?? null;
+    return (await lazy.UrlbarUtils.getEngineIconUrl(engine, this)) ?? null;
   }
 
   /**

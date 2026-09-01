@@ -13,6 +13,8 @@ skip-if = ["debug"]
 
 ["browser_blur.js"]
 
+["browser_engineIcon.js"]
+
 ["browser_escape.js"]
 
 ["browser_pickResult.js"]
