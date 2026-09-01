@@ -35,14 +35,16 @@ class TestGPUVideoSurfaceManager final : public IGPUVideoSurfaceManager {
     return nullptr;
   }
 
-  already_AddRefed<Image> TransferToImage(
-      const SurfaceDescriptorGPUVideo&, const IntSize&,
-      const ColorDepth& aColorDepth, YUVColorSpace aYUVColorSpace,
-      ColorSpace2 aColorPrimaries, TransferFunction aTransferFunction,
-      ColorRange aColorRange) override {
-    mColorMetadata = Some(ColorMetadata{aColorDepth, aYUVColorSpace,
-                                        aColorPrimaries, aTransferFunction,
-                                        aColorRange});
+  already_AddRefed<Image> TransferToImage(const SurfaceDescriptorGPUVideo&,
+                                          const IntSize&,
+                                          const ColorDepth& aColorDepth,
+                                          YUVColorSpace aYUVColorSpace,
+                                          ColorSpace2 aColorPrimaries,
+                                          TransferFunction aTransferFunction,
+                                          ColorRange aColorRange) override {
+    mColorMetadata =
+        Some(ColorMetadata{aColorDepth, aYUVColorSpace, aColorPrimaries,
+                           aTransferFunction, aColorRange});
     return nullptr;
   }
 
