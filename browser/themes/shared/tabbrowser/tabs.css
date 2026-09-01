@@ -2585,6 +2585,15 @@ tab-group {
     /* A wheel notch, an arrow key and a scrollbar arrow button move rows. */
     -moz-line-scroll-amount: var(--tab-height-with-margin-padding);
   }
+
+  > #tabbrowser-arrowscrollbox-periphery {
+    /* Since tabs-newtab-button is inside tabbrowser-arrowscrollbox, hiding it when the tab strip overflows
+     * collapses the periphery to 0px height. That can put the tab strip back under the overflow threshold,
+     * thus showing the button again and oscillating between tabs-newtab-button and vertical-tabs-newtab-button.
+     * Set a small enough minimum height to stop the periphery from collapsing while keeping the content off the
+     * overflow threshold. */
+    min-height: 2px;
+  }
 }
 
 #tabbrowser-arrowscrollbox[orient="vertical"] > #tabbrowser-arrowscrollbox-periphery > #tabs-newtab-button,

@@ -5257,13 +5257,12 @@ void Preferences::SetPreference(const dom::Pref& aDomPref) {
 /* static */
 void Preferences::GetPreference(dom::Pref* aDomPref,
                                 const GeckoProcessType aDestinationProcessType,
-                                const nsACString& aDestinationRemoteType) {
+                                const dom::RemoteType& aDestinationRemoteType) {
   MOZ_ASSERT(XRE_IsParentProcess());
   bool destIsWebContent =
       aDestinationProcessType == GeckoProcessType_Content &&
-      (StringBeginsWith(aDestinationRemoteType, WEB_REMOTE_TYPE) ||
-       StringBeginsWith(aDestinationRemoteType, PREALLOC_REMOTE_TYPE) ||
-       StringBeginsWith(aDestinationRemoteType, PRIVILEGEDMOZILLA_REMOTE_TYPE));
+      (aDestinationRemoteType.IsWeb() || aDestinationRemoteType.IsPrealloc() ||
+       aDestinationRemoteType.IsPrivilegedMozilla());
 
   Pref* pref = pref_HashTableLookup(aDomPref->name().get());
   if (pref && pref->HasAdvisablySizedValues()) {
@@ -5588,16 +5587,30 @@ nsresult PreferencesImpl::WritePrefFile(
       }
     }
 
-    // Backups target a different file with a filtered pref set and must settle
-    // their promise, so they can't share the single-slot sPendingWriteData
-    // coalescing. Dispatch a standalone write instead.
-    if (aPromiseHolder) {
-      MOZ_ASSERT(aSaveMethod == SaveMethod::Asynchronous,
+    if (mCurrentFile) {
+      rv = mCurrentFile->Equals(aFile, &writingToCurrent);
+      if (NS_FAILED(rv)) {
+        REJECT_IF_PROMISE_HOLDER_EXISTS(rv);
+      }
+    }
+
+    bool async = aSaveMethod == SaveMethod::Asynchronous;
+
+    // The sPendingWriteData coalescing below only works when every writer
+    // targets the same file with an equivalent snapshot, which is only true of
+    // writes to mCurrentFile.
+    if (!writingToCurrent) {
+      MOZ_ASSERT(!aPromiseHolder || async,
                  "Backup writes are always asynchronous");
       PreferencesWriter::sPendingWriteCount++;
-      rv = mAsyncTarget->Dispatch(
-          new PWRunnable(aFile, std::move(prefs), std::move(aPromiseHolder)),
-          nsIEventTarget::DISPATCH_EVENT_MAY_BLOCK);
+      RefPtr<nsIRunnable> runnable =
+          new PWRunnable(aFile, std::move(prefs), std::move(aPromiseHolder));
+      if (async) {
+        rv = mAsyncTarget->Dispatch(runnable,
+                                    nsIEventTarget::DISPATCH_EVENT_MAY_BLOCK);
+      } else {
+        rv = SyncRunnable::DispatchToThread(mAsyncTarget, runnable, true);
+      }
       if (NS_FAILED(rv)) {
         PreferencesWriter::sPendingWriteCount--;
         // The PWRunnable rejected the holder in its destructor.
@@ -5606,28 +5619,10 @@ nsresult PreferencesImpl::WritePrefFile(
       return NS_OK;
     }
 
-    if (mCurrentFile) {
-      rv = mCurrentFile->Equals(aFile, &writingToCurrent);
-      if (NS_FAILED(rv)) {
-        REJECT_IF_PROMISE_HOLDER_EXISTS(rv);
-      }
-    }
-
     // Put the newly constructed preference data into sPendingWriteData
-    // for the next request to pick up
+    // for the next request to pick up. Any data already in the slot is a
+    // superseded snapshot of mCurrentFile, so dropping it is fine.
     prefs.reset(PreferencesWriter::sPendingWriteData.exchange(prefs.release()));
-    if (prefs && !writingToCurrent) {
-      MOZ_ASSERT(!aPromiseHolder,
-                 "Shouldn't be able to enter here if aPromiseHolder is set");
-      // There was a previous request writing to the default location that
-      // hasn't been processed. It will do the work of eventually writing this
-      // latest batch of data to disk.
-      return NS_OK;
-    }
-
-    // There were no previous requests. Dispatch one since sPendingWriteData has
-    // the up to date information.
-    bool async = aSaveMethod == SaveMethod::Asynchronous;
 
     // Increment sPendingWriteCount, even though it's redundant to track this
     // in the case of a sync runnable; it just makes it easier to simply

@@ -67,6 +67,7 @@ import mozilla.components.lib.state.helpers.StoreProvider.Companion.storeProvide
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import mozilla.components.support.ktx.android.view.setNavigationBarTheme
 import mozilla.components.support.ktx.android.view.setStatusBarTheme
+import mozilla.components.support.utils.BuildManufacturerChecker
 import mozilla.components.support.utils.ext.pixelSizeFor
 import mozilla.telemetry.glean.private.NoExtras
 import org.mozilla.fenix.Config
@@ -98,6 +99,7 @@ import org.mozilla.fenix.tabgroups.DeleteTabGroupConfirmationDialog
 import org.mozilla.fenix.tabgroups.EditTabGroup
 import org.mozilla.fenix.tabgroups.ExpandedTabGroup
 import org.mozilla.fenix.tabgroups.ExpandedTabGroupActions
+import org.mozilla.fenix.tabgroups.UngroupTabGroupConfirmationDialog
 import org.mozilla.fenix.tabstray.InactiveTabsBinding
 import org.mozilla.fenix.tabstray.PbmLockStatusBinding
 import org.mozilla.fenix.tabstray.TabManagerCfrController
@@ -517,6 +519,11 @@ class TabManagementFragment : Fragment() {
                                                     action = TabGroupAction.CloseTabGroupClicked(group = expandedGroup)
                                                 )
                                             },
+                                            onUngroupTabGroupClick = {
+                                                tabsTrayStore.dispatch(
+                                                    action = TabGroupAction.UngroupRequested(group = expandedGroup)
+                                                )
+                                            },
                                             onAddNewTabClick =
                                                 if (tabsTrayStore.state.config.homepageAsNewTabEnabled) {
                                                     {
@@ -623,6 +630,24 @@ class TabManagementFragment : Fragment() {
                                         onConfirmDelete = {
                                             tabsTrayStore.dispatch(
                                                 TabGroupAction.CloseTabAndDeleteGroupConfirmed(args.group)
+                                            )
+                                        },
+                                        onCancel = {
+                                            tabsTrayStore.dispatch(TabsTrayAction.NavigateBackInvoked)
+                                        },
+                                    )
+                                }
+
+                                entry<TabManagerNavDestination.UngroupTabGroupConfirmationDialog>(
+                                    metadata = DialogSceneStrategy.dialog()
+                                ) { args ->
+                                    UngroupTabGroupConfirmationDialog(
+                                        onConfirmUngroup = { dontAskAgain ->
+                                            tabsTrayStore.dispatch(
+                                                TabGroupAction.UngroupConfirmed(
+                                                    group = args.group,
+                                                    dontAskAgain = dontAskAgain,
+                                                )
                                             )
                                         },
                                         onCancel = {
@@ -754,6 +779,13 @@ class TabManagementFragment : Fragment() {
         group: TabsTrayItem.TabGroup,
         @ColorInt dotColor: Int,
     ) {
+        // ColorOS-based devices render the system share sheet's content-preview image as a
+        // large graphic rather than a small icon, so we omit the thumbnail on these devices.
+        if (isColorOsBasedDevice) {
+            tabManagerController.handleShareTabGroupClicked(group, dotColor, thumbnailUri = null)
+            return
+        }
+
         val context = requireContext()
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -777,6 +809,10 @@ class TabManagementFragment : Fragment() {
             tabManagerController.handleShareTabGroupClicked(group, dotColor, thumbnailUri)
         }
     }
+
+    /** Whether this device runs a ColorOS-based OS. */
+    private val isColorOsBasedDevice: Boolean
+        get() = BuildManufacturerChecker().let { it.isOppo() || it.isOnePlus() || it.isRealme() }
 
     private fun createTabGroupDotBitmap(@ColorInt color: Int): Bitmap {
         val bitmap = createBitmap(TAB_GROUP_SHARE_DOT_SIZE_PX, TAB_GROUP_SHARE_DOT_SIZE_PX)

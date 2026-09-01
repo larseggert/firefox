@@ -747,7 +747,8 @@ class nsBlockFrame : public nsContainerFrame {
 
  protected:
   nsBlockFrame* GetLineClampRoot() const;
-  nscoord ApplyLineClamp(nscoord aContentBlockEndEdge);
+  nscoord ApplyLineClamp(nscoord aContentBlockEndEdge,
+                         nscoord aCollapsingBEndMargin);
 
   /** grab overflow lines from this block's prevInFlow, and make them
    * part of this block's mLines list.

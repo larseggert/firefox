@@ -38,7 +38,6 @@ import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoSession.TextInputDelegate
 import org.mozilla.geckoview.test.rule.GeckoSessionTestRule.AssertCalled
 import org.mozilla.geckoview.test.rule.GeckoSessionTestRule.NullDelegate
-import org.mozilla.geckoview.test.rule.GeckoSessionTestRule.TimeoutMillis
 import org.mozilla.geckoview.test.rule.GeckoSessionTestRule.WithDisplay
 import org.mozilla.geckoview.test.util.UiThreadUtils
 
@@ -559,8 +558,7 @@ class TextInputDelegateTest : BaseSessionTest() {
     }
 
     // For bug 2048921
-    @Test(expected = UiThreadUtils.TimeoutException::class)
-    @TimeoutMillis(2000)
+    @Test
     @NullDelegate(Autofill.Delegate::class)
     fun noDismissKeyboardAfterlostFocus() {
         assumeThat("input only", id, equalTo("#input"))
@@ -591,15 +589,13 @@ class TextInputDelegateTest : BaseSessionTest() {
                 }
             )
 
-            mainSession.evaluateJS("document.querySelector('#input').blur()")
             activity.view.clearFocus()
+            mainSession.evaluateJS("document.querySelector('#input').blur()")
 
-            UiThreadUtils.waitForCondition(
-                {
-                    dismissCount != 0
-                },
-                sessionRule.timeoutMillis,
-            )
+            // Must outlast DISMISS_VKB_DELAY_MS so HideSoftInputTask runs and hits its hasFocus() return.
+            try {
+                UiThreadUtils.waitForCondition({ dismissCount != 0 }, 2000)
+            } catch (e: UiThreadUtils.TimeoutException) {}
 
             assertThat(
                 "The keyboard should not be dismissed after losing focus.",
@@ -609,7 +605,7 @@ class TextInputDelegateTest : BaseSessionTest() {
         }
     }
 
-    private fun getText(ic: InputConnection) = ic.getExtractedText(ExtractedTextRequest(), 0).text.toString()
+    private fun getText(ic: InputConnection) = ic.getExtractedText(ExtractedTextRequest(), 0)!!.text.toString()
 
     private fun assertText(message: String, actual: String, expected: String) =
         // In an HTML editor, Gecko may insert an additional element that show up as a
@@ -645,7 +641,7 @@ class TextInputDelegateTest : BaseSessionTest() {
             assertThat(message, selectionOffsets, equalTo(Pair(start, end)))
         }
 
-        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0)
+        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0)!!
         assertThat(message, extracted.selectionStart, equalTo(start))
         assertThat(message, extracted.selectionEnd, equalTo(end))
     }
@@ -673,7 +669,7 @@ class TextInputDelegateTest : BaseSessionTest() {
             assertThat(message, selectionOffsets, equalTo(Pair(start, end)))
         }
 
-        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0)
+        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0)!!
         assertText(message, extracted.text.toString(), expected)
         assertThat(message, extracted.selectionStart, equalTo(start))
         assertThat(message, extracted.selectionEnd, equalTo(end))

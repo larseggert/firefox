@@ -135,6 +135,70 @@ static constexpr H264LiteralSetting H264Profiles[]{
     {AV_PROFILE_H264_HIGH, "high"_ns}};
 #endif
 
+static AVColorRange ToAVColorRange(const gfx::ColorRange& aRange) {
+  return aRange == gfx::ColorRange::FULL ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
+}
+
+// Older libavcodec lacks some AVCOL_* constants; those map to unspecified.
+static AVColorSpace ToAVColorSpace(const gfx::YUVColorSpace& aMatrix) {
+  switch (aMatrix) {
+    case gfx::YUVColorSpace::BT601:
+      return AVCOL_SPC_SMPTE170M;
+    case gfx::YUVColorSpace::BT709:
+      return AVCOL_SPC_BT709;
+#if LIBAVCODEC_VERSION_MAJOR >= 57
+    case gfx::YUVColorSpace::BT2020:
+      return AVCOL_SPC_BT2020_NCL;
+#endif
+    case gfx::YUVColorSpace::Identity:
+      return AVCOL_SPC_RGB;
+    default:
+      return AVCOL_SPC_UNSPECIFIED;
+  }
+}
+
+static AVColorPrimaries ToAVColorPrimaries(const gfx::ColorSpace2& aPrimaries) {
+  switch (aPrimaries) {
+    case gfx::ColorSpace2::SRGB:
+    case gfx::ColorSpace2::BT709:
+      return AVCOL_PRI_BT709;
+#if LIBAVCODEC_VERSION_MAJOR >= 58
+    case gfx::ColorSpace2::DISPLAY_P3:
+      return AVCOL_PRI_SMPTE432;
+#endif
+    case gfx::ColorSpace2::BT601_525:
+      return AVCOL_PRI_SMPTE170M;
+#if LIBAVCODEC_VERSION_MAJOR >= 57
+    case gfx::ColorSpace2::BT2020:
+      return AVCOL_PRI_BT2020;
+#endif
+    default:
+      return AVCOL_PRI_UNSPECIFIED;
+  }
+}
+
+static AVColorTransferCharacteristic ToAVColorTransfer(
+    const gfx::TransferFunction& aTransfer) {
+  switch (aTransfer) {
+    case gfx::TransferFunction::BT709:
+      return AVCOL_TRC_BT709;
+#if LIBAVCODEC_VERSION_MAJOR >= 57
+    case gfx::TransferFunction::SRGB:
+      return AVCOL_TRC_IEC61966_2_1;
+    case gfx::TransferFunction::LINEAR:
+      return AVCOL_TRC_LINEAR;
+#endif
+#if LIBAVCODEC_VERSION_MAJOR >= 58
+    case gfx::TransferFunction::PQ:
+      return AVCOL_TRC_SMPTE2084;
+    case gfx::TransferFunction::HLG:
+      return AVCOL_TRC_ARIB_STD_B67;
+#endif
+    default:
+      return AVCOL_TRC_UNSPECIFIED;
+  }
+}
+
 static Maybe<H264Setting> GetH264Profile(const H264_PROFILE& aProfile) {
   switch (aProfile) {
     case H264_PROFILE::H264_PROFILE_UNKNOWN:
@@ -401,22 +465,25 @@ MediaResult FFmpegVideoEncoder<LIBAV_VER>::InitEncoderInternal(bool aHardware) {
       aHardware ? ffmpeg::FFMPEG_PIX_FMT_NV12 : ffmpeg::FFMPEG_PIX_FMT_YUV420P;
 #else
   mCodecContext->pix_fmt = ffmpeg::FFMPEG_PIX_FMT_YUV420P;
-  // // TODO: do this properly, based on the colorspace of the frame. Setting
-  // this like that crashes encoders. if (mConfig.mCodec != CodecType::AV1) {
-  //     if (mConfig.mPixelFormat == dom::ImageBitmapFormat::RGBA32 ||
-  //         mConfig.mPixelFormat == dom::ImageBitmapFormat::BGRA32) {
-  //       mCodecContext->color_primaries = AVCOL_PRI_BT709;
-  //       mCodecContext->colorspace = AVCOL_SPC_RGB;
-  //   #ifdef FFVPX_VERSION
-  //       mCodecContext->color_trc = AVCOL_TRC_IEC61966_2_1;
-  //   #endif
-  //     } else {
-  //       mCodecContext->color_primaries = AVCOL_PRI_BT709;
-  //       mCodecContext->colorspace = AVCOL_SPC_BT709;
-  //       mCodecContext->color_trc = AVCOL_TRC_BT709;
-  //     }
-  // }
 #endif
+
+  // Signal what the config knows; the codec writes it into the bitstream.
+  // Unknown fields stay unspecified.
+  const EncoderConfig::VideoColorSpace& colors = mConfig.mFormat.mColorSpace;
+  if (colors.mRange) {
+    mCodecContext->color_range = ToAVColorRange(colors.mRange.ref());
+  }
+  if (colors.mMatrix) {
+    mCodecContext->colorspace = ToAVColorSpace(colors.mMatrix.ref());
+  }
+  if (colors.mPrimaries) {
+    mCodecContext->color_primaries =
+        ToAVColorPrimaries(colors.mPrimaries.ref());
+  }
+  if (colors.mTransferFunction) {
+    mCodecContext->color_trc =
+        ToAVColorTransfer(colors.mTransferFunction.ref());
+  }
 
   mCodecContext->width = static_cast<int>(mConfig.mSize.width);
   mCodecContext->height = static_cast<int>(mConfig.mSize.height);

@@ -13,9 +13,9 @@ use crate::shared_lock::{DeepCloneWithLock, Locked};
 use crate::shared_lock::{SharedRwLock, SharedRwLockReadGuard, ToCssWithGuard};
 use crate::stylesheets::rule_parser::AtRuleType;
 use crate::stylesheets::{CssRuleType, CssRules};
-use cssparser::{match_ignore_ascii_case, ParseError as CssParseError, ParserInput};
-use cssparser::{parse_important, serialize_identifier};
 use cssparser::{Delimiter, Parser, SourceLocation, Token};
+use cssparser::{ParseError as CssParseError, ParserInput, match_ignore_ascii_case};
+use cssparser::{parse_important, serialize_identifier};
 #[cfg(feature = "gecko")]
 use malloc_size_of::{MallocSizeOfOps, MallocUnconditionalShallowSizeOf};
 use selectors::parser::{Selector, SelectorParseErrorKind};
@@ -64,7 +64,7 @@ impl DeepCloneWithLock for SupportsRule {
             condition: self.condition.clone(),
             rules: Arc::new(lock.wrap(rules.deep_clone_with_lock(lock, guard))),
             enabled: self.enabled,
-            source_location: self.source_location.clone(),
+            source_location: self.source_location,
         }
     }
 }
@@ -113,7 +113,7 @@ impl SupportsCondition {
         let (keyword, wrapper) = match input.next() {
             // End of input
             Err(..) => return Ok(in_parens),
-            Ok(&Token::Ident(ref ident)) => {
+            Ok(Token::Ident(ident)) => {
                 match_ignore_ascii_case! { &ident,
                     "and" => ("and", SupportsCondition::And as fn(_) -> _),
                     "or" => ("or", SupportsCondition::Or as fn(_) -> _),
@@ -324,7 +324,7 @@ impl ToCss for SupportsCondition {
                 feature.to_css(dest)?;
                 dest.write_char(')')
             },
-            SupportsCondition::FutureSyntax(ref s) => dest.write_str(&s),
+            SupportsCondition::FutureSyntax(ref s) => dest.write_str(s),
         }
     }
 }
@@ -411,7 +411,7 @@ impl Declaration {
 
                 let mut declarations = SourcePropertyDeclaration::default();
                 input.parse_until_before(Delimiter::Bang, |input| {
-                    PropertyDeclaration::parse_into(&mut declarations, id, &context, input)
+                    PropertyDeclaration::parse_into(&mut declarations, id, context, input)
                         .map_err(|_| CssParseError::custom(()))
                 })?;
                 let _ = input.try_parse(parse_important);
@@ -467,6 +467,7 @@ impl NamedFeature {
     /// Determine if a named feature is supported.
     ///
     /// <https://drafts.csswg.org/css-conditional-5/#typedef-supports-named-feature-fn>
+    #[cfg(feature = "gecko")]
     pub fn eval(self) -> bool {
         match self {
             Self::AnchorPositionFollowsTransforms => {
@@ -475,5 +476,10 @@ impl NamedFeature {
             // Not implemented. See Bug 2044147.
             Self::SingleAxisScrollContainer => false,
         }
+    }
+
+    #[cfg(feature = "servo")]
+    pub fn eval(self) -> bool {
+        false
     }
 }

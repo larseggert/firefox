@@ -247,7 +247,7 @@ void CanonicalBrowsingContext::GetCurrentRemoteType(nsACString& aRemoteType,
                                                     ErrorResult& aRv) const {
   // If we're in the parent process, dump out the void string.
   if (mProcessId == 0) {
-    aRemoteType = NOT_REMOTE_TYPE;
+    aRemoteType = RemoteType::NotRemote().Stringify();
     return;
   }
 
@@ -257,7 +257,7 @@ void CanonicalBrowsingContext::GetCurrentRemoteType(nsACString& aRemoteType,
     return;
   }
 
-  aRemoteType = cp->GetRemoteType();
+  aRemoteType = cp->GetRemoteType().Stringify();
 }
 
 void CanonicalBrowsingContext::SetOwnerProcessId(uint64_t aProcessId) {
@@ -2546,7 +2546,8 @@ CanonicalBrowsingContext::ChangeRemoteness(
     return RemotenessPromise::CreateAndReject(NS_ERROR_NOT_AVAILABLE, __func__);
   }
 
-  if (aOptions.mRemoteType.IsEmpty() && (!IsTop() || !GetEmbedderElement())) {
+  if (aOptions.mRemoteType.IsNotRemote() &&
+      (!IsTop() || !GetEmbedderElement())) {
     NS_WARNING("Cannot load non-remote subframes");
     return RemotenessPromise::CreateAndReject(NS_ERROR_FAILURE, __func__);
   }
@@ -2615,7 +2616,8 @@ CanonicalBrowsingContext::ChangeRemoteness(
         "which will never perform a process-switch to being in-process with "
         "their embedder");
     MOZ_DIAGNOSTIC_ASSERT(!aOptions.mReplaceBrowsingContext);
-    MOZ_DIAGNOSTIC_ASSERT(!aOptions.mRemoteType.IsEmpty());
+    MOZ_DIAGNOSTIC_ASSERT(aOptions.mRemoteType.IsKnown());
+    MOZ_DIAGNOSTIC_ASSERT(!aOptions.mRemoteType.IsNotRemote());
     MOZ_DIAGNOSTIC_ASSERT(!change->mWaitingForPrepareToChange);
     MOZ_DIAGNOSTIC_ASSERT(!change->mSpecificGroup);
 
@@ -2628,7 +2630,7 @@ CanonicalBrowsingContext::ChangeRemoteness(
   }
 
   // Switching to the parent process.
-  if (aOptions.mRemoteType.IsEmpty()) {
+  if (aOptions.mRemoteType.IsNotRemote()) {
     change->ProcessLaunched();
     return promise.forget();
   }
@@ -3631,7 +3633,7 @@ void CanonicalBrowsingContext::RemovePageAwakeRequest() {
 }
 
 void CanonicalBrowsingContext::CloneDocumentTreeInto(
-    CanonicalBrowsingContext* aSource, const nsACString& aRemoteType,
+    CanonicalBrowsingContext* aSource, const RemoteType& aRemoteType,
     embedding::PrintData&& aPrintData) {
   NavigationIsolationOptions options;
   options.mRemoteType = aRemoteType;

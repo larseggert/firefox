@@ -729,7 +729,7 @@ nsresult ServiceWorkerPrivate::Initialize() {
 
   auto remoteType = RemoteWorkerManager::GetRemoteType(
       principal, WorkerKind::WorkerKindService,
-      SharedWebRemoteType(principal->OriginAttributesRef()));
+      RemoteType::SharedWeb(principal->OriginAttributesRef()));
   if (NS_WARN_IF(remoteType.isErr())) {
     return remoteType.unwrapErr();
   }
@@ -1816,8 +1816,7 @@ void ServiceWorkerPrivate::CreationFailed() {
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_ASSERT(mControllerChild);
 
-  if (mRemoteWorkerData.remoteType().Find(SERVICEWORKER_REMOTE_TYPE) !=
-      kNotFound) {
+  if (mRemoteWorkerData.remoteType().IsWebServiceWorker()) {
     glean::service_worker::isolated_launch_time.AccumulateRawDuration(
         TimeStamp::Now() - mServiceWorkerLaunchTimeStart);
   } else {
@@ -1843,8 +1842,7 @@ void ServiceWorkerPrivate::CreationSucceeded() {
     return;
   }
 
-  if (mRemoteWorkerData.remoteType().Find(SERVICEWORKER_REMOTE_TYPE) !=
-      kNotFound) {
+  if (mRemoteWorkerData.remoteType().IsWebServiceWorker()) {
     glean::service_worker::isolated_launch_time.AccumulateRawDuration(
         TimeStamp::Now() - mServiceWorkerLaunchTimeStart);
   } else {

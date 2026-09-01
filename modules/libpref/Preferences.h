@@ -15,6 +15,7 @@
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/MozPromise.h"
 #include "mozilla/StaticPtr.h"
+#include "mozilla/dom/RemoteType.h"
 #include "mozilla/ipc/SharedMemoryHandle.h"
 #include "nsCOMPtr.h"
 #include "nsIObserver.h"
@@ -436,7 +437,7 @@ class Preferences final : public nsIPrefService,
   // used to pass the update to content processes.
   static void GetPreference(dom::Pref* aPref,
                             const GeckoProcessType aDestinationProcessType,
-                            const nsACString& aDestinationRemoteType);
+                            const dom::RemoteType& aDestinationRemoteType);
   static void SetPreference(const dom::Pref& aPref);
 
 #ifdef DEBUG

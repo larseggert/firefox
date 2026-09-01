@@ -118,7 +118,7 @@ use crate::frame_builder::{FrameBuildingContext, FrameBuildingState, PictureStat
 use plane_split::{Clipper, Polygon};
 use crate::prim_store::{PictureIndex, PrimitiveInstance, PrimitiveKind};
 use crate::prim_store::storage::Index as StorageIndex;
-use crate::visibility::{PrimitiveDrawHeader, PrimitiveDrawIndex};
+use crate::visibility::PrimitiveDrawHeader;
 use crate::prim_store::{PrimitiveScratchBuffer, ClipTaskIndex, ClipMaskKind};
 use crate::prim_store::storage;
 use crate::print_tree::PrintTreePrinter;
@@ -954,8 +954,18 @@ impl PictureInstance {
                         frame_context.spatial_tree,
                     );
 
+                    // The plane's footprint, bounded by the primitive's coverage
+                    // rect. `context.surface_index` is the surface this block
+                    // already resolves the plane's transform against.
+                    let device_rect = frame_state.surfaces[context.surface_index.0]
+                        .map_to_device_rect(
+                            &draw.clip_chain.pic_coverage_rect,
+                            frame_context.spatial_tree,
+                        );
+
                     let prim_cmd = PrimitiveCommand::split_composite(
                         child.anchor.draw_index,
+                        device_rect,
                         child.gpu_address,
                         transform_id,
                         src_task_id,
@@ -966,7 +976,7 @@ impl PictureInstance {
                         &prim_cmd,
                         child.anchor.spatial_node_index,
                         &cmd_buffer_targets,
-                    );
+                    );                        
                 }
             }
         }
@@ -2559,7 +2569,6 @@ pub fn prepare_picture_clips(
 pub fn prepare_picture_primitive(
     pic: &PictureInstance,
     raster_config: &RasterConfig,
-    draw_index: PrimitiveDrawIndex,
     prim_spatial_node_index: SpatialNodeIndex,
     _clip_chain: &ClipChainInstance,
     frame_context: &FrameBuildingContext,
@@ -2804,7 +2813,6 @@ pub fn prepare_picture_primitive(
                     aligned_aa_edges: EdgeMask::empty(),
                     transformed_aa_edges: EdgeMask::all(),
                 },
-                draw_index,
                 &None,
                 &composite_clip_chain,
                 transform,
@@ -2875,7 +2883,6 @@ pub fn prepare_picture_primitive(
             aligned_aa_edges: EdgeMask::empty(),
             transformed_aa_edges: EdgeMask::all(),
         },
-        draw_index,
         &None,
         &composite_clip_chain,
         transform,

@@ -1364,8 +1364,8 @@ SettingGroupManager.registerGroups({
             id: "aiControlDefaultToggle",
             l10nId: "preferences-ai-controls-block-ai",
             control: "moz-toggle",
+            headingLevel: 3,
             controlAttrs: {
-              headinglevel: 3,
               inputlayout: "inline-end",
             },
             options: [
@@ -1401,8 +1401,8 @@ SettingGroupManager.registerGroups({
         l10nId: "preferences-ai-controls-on-device-group",
         supportPage: "on-device-models",
         control: "moz-fieldset",
+        headingLevel: 2,
         controlAttrs: {
-          headinglevel: 2,
           iconsrc: "chrome://browser/skin/device-desktop.svg",
         },
         items: [
@@ -1492,8 +1492,8 @@ SettingGroupManager.registerGroups({
         l10nId: "ai-window-features-group",
         control: "moz-fieldset",
         supportPage: "smart-window",
+        headingLevel: 2,
         controlAttrs: {
-          headinglevel: 2,
           iconsrc: "chrome://browser/skin/smart-window-mono-32.svg",
           badge: "beta",
         },
@@ -1537,8 +1537,8 @@ SettingGroupManager.registerGroups({
         control: "moz-fieldset",
         l10nId: "preferences-ai-controls-sidebar-chatbot-group-3",
         supportPage: "ai-chatbot",
+        headingLevel: 2,
         controlAttrs: {
-          headinglevel: 2,
           iconsrc: "chrome://browser/skin/sidebar-collapsed.svg",
         },
         items: [

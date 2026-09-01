@@ -4054,7 +4054,10 @@ nsresult Element::SetNoNameSpaceAttrOnNewlyCreatedElement(
   }
 
   // No `dir` handling, because the element has neither ancestors nor
-  // descendants, yet.
+  // descendants, yet. Except we might need to invalidate DefinitelyLTR.
+  if (namePtr == nsGkAtoms::dir) {
+    MaybeSetDocNeedsDirHandling(this, valuePtr);
+  }
 
   // No check for `HasElementCreatedFromPrototypeAndHasUnmodifiedL10n()`, since
   // we only call this from the HTML parser and not from the prototype content

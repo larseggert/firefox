@@ -2441,7 +2441,7 @@ export class GeckoDriver {
 
     await lazy.navigate.waitForNavigationCompleted(
       this,
-      () => lazy.navigate.navigateTo(browsingContext, targetURL),
+      () => lazy.navigate.navigateTo(browsingContext, targetURL.URI),
       { loadEventExpected }
     );
 

@@ -780,7 +780,7 @@ impl NoCalcLength {
                     context
                         .device()
                         .calc_line_height(
-                            &context.default_style().get_font(),
+                            context.default_style().get_font(),
                             context.style().writing_mode,
                             None,
                         )
@@ -876,7 +876,7 @@ impl NoCalcLength {
                     context
                         .device()
                         .calc_line_height(
-                            &context.default_style().get_font(),
+                            context.default_style().get_font(),
                             context.style().writing_mode,
                             None,
                         )
@@ -1194,7 +1194,7 @@ impl Length {
                 )?;
                 Ok(Self::new_calc(Box::new(calc)))
             },
-            _ => return Err(ParseError::unexpected_token()),
+            _ => Err(ParseError::unexpected_token()),
         }
     }
 
@@ -1429,16 +1429,16 @@ impl LengthPercentage {
             Token::Dimension {
                 value, ref unit, ..
             } if num_context.is_ok(context.parsing_mode, value) => {
-                return NoCalcLength::parse_dimension_with_context(context, value, unit)
+                NoCalcLength::parse_dimension_with_context(context, value, unit)
                     .map(LengthPercentage::Length)
-                    .map_err(|()| ParseError::unexpected_token());
+                    .map_err(|()| ParseError::unexpected_token())
             },
             Token::Percentage { unit_value, .. }
                 if num_context.is_ok(context.parsing_mode, unit_value) =>
             {
-                return Ok(LengthPercentage::Percentage(NoCalcPercentage::new(
+                Ok(LengthPercentage::Percentage(NoCalcPercentage::new(
                     unit_value,
-                )));
+                )))
             },
             Token::Number { value, .. } if num_context.is_ok(context.parsing_mode, value) => {
                 let allowed = context.parsing_mode.allows_unitless_lengths()
@@ -1462,7 +1462,7 @@ impl LengthPercentage {
                 )?;
                 Ok(LengthPercentage::Calc(Box::new(calc)))
             },
-            _ => return Err(ParseError::unexpected_token()),
+            _ => Err(ParseError::unexpected_token()),
         }
     }
 
@@ -1568,14 +1568,14 @@ impl LengthPercentage {
     pub fn compute_without_context(&self) -> Option<computed::LengthPercentage> {
         use crate::values::normalize;
         match self {
-            Self::Length(ref length) => length
+            Self::Length(length) => length
                 .to_computed_pixel_length_without_context()
                 .map(|v| computed::LengthPercentage::new_length(computed::Length::new(v)))
                 .ok(),
-            Self::Percentage(ref pc) => Some(computed::LengthPercentage::new_percent(
+            Self::Percentage(pc) => Some(computed::LengthPercentage::new_percent(
                 computed::Percentage(normalize(pc.get())),
             )),
-            Self::Calc(ref calc) => calc.compute_without_context(),
+            Self::Calc(calc) => calc.compute_without_context(),
         }
     }
 }

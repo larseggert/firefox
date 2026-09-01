@@ -198,7 +198,7 @@ impl QueryFeatureExpressionKind {
         T: PartialOrd + Zero,
     {
         match *self {
-            Self::Empty => return !context_value.is_zero(),
+            Self::Empty => !context_value.is_zero(),
             Self::Single(ref value) => {
                 let value = compute(value);
                 let cmp = match context_value.partial_cmp(&value) {
@@ -224,7 +224,7 @@ impl QueryFeatureExpressionKind {
                 ref right,
             } => {
                 debug_assert!(left.is_some() || right.is_some());
-                if let Some((ref op, ref value)) = left {
+                if let Some((op, value)) = left {
                     let value = compute(value);
                     let cmp = match value.partial_cmp(&context_value) {
                         Some(c) => c,
@@ -234,7 +234,7 @@ impl QueryFeatureExpressionKind {
                         return false;
                     }
                 }
-                if let Some((ref op, ref value)) = right {
+                if let Some((op, value)) = right {
                     let value = compute(value);
                     let cmp = match context_value.partial_cmp(&value) {
                         Some(c) => c,
@@ -290,14 +290,14 @@ impl ToCss for QueryFeatureExpression {
                 ref left,
                 ref right,
             } => {
-                if let Some((ref op, ref val)) = left {
+                if let Some((op, val)) = left {
                     val.to_css(dest, Some(self))?;
                     dest.write_char(' ')?;
                     op.to_css(dest)?;
                     dest.write_char(' ')?;
                 }
                 self.write_name(dest)?;
-                if let Some((ref op, ref val)) = right {
+                if let Some((op, val)) = right {
                     dest.write_char(' ')?;
                     op.to_css(dest)?;
                     dest.write_char(' ')?;
@@ -313,7 +313,7 @@ fn consume_operation_or_colon(input: &mut Parser) -> Result<Option<Operator>, Pa
     if input.try_parse(|input| input.expect_colon()).is_ok() {
         return Ok(None);
     }
-    Operator::parse(input).map(|op| Some(op))
+    Operator::parse(input).map(Some)
 }
 
 #[allow(unused_variables)]
@@ -720,7 +720,7 @@ impl QueryExpressionValue {
                 .feature()
                 .evaluator
             {
-                Evaluator::Enumerated { serializer, .. } => dest.write_str(&*serializer(value)),
+                Evaluator::Enumerated { serializer, .. } => dest.write_str(&serializer(value)),
                 _ => unreachable!(),
             },
         }
@@ -800,7 +800,7 @@ impl QueryExpressionValue {
         }
         input.skip_whitespace();
         let start = input.position();
-        if let Ok(Token::Function(ref name)) = input.next() {
+        if let Ok(Token::Function(name)) = input.next() {
             // Helper to parse the function arg and store the complete expression (function
             // name and parenthesized argument) into a CustomVariableValue.
             let parse_func = |input: &mut Parser| -> Result<CustomVariableValue, ParseError> {
@@ -821,9 +821,8 @@ impl QueryExpressionValue {
     }
 
     fn collect_attribute_references(&self, references: &mut AttrReferenceSet) {
-        match self {
-            Self::Function(f) => f.collect_attribute_references(references),
-            _ => {},
+        if let Self::Function(f) = self {
+            f.collect_attribute_references(references)
         }
     }
 }
@@ -859,9 +858,9 @@ impl ToCss for QueryStyleRange {
     {
         match self {
             Self::StyleRange2 {
-                ref value1,
-                ref op1,
-                ref value2,
+                value1,
+                op1,
+                value2,
             } => {
                 value1.to_css(dest, None)?;
                 dest.write_char(' ')?;
@@ -870,11 +869,11 @@ impl ToCss for QueryStyleRange {
                 value2.to_css(dest, None)
             },
             Self::StyleRange3 {
-                ref value1,
-                ref op1,
-                ref value2,
-                ref op2,
-                ref value3,
+                value1,
+                op1,
+                value2,
+                op2,
+                value3,
             } => {
                 value1.to_css(dest, None)?;
                 dest.write_char(' ')?;
@@ -931,9 +930,9 @@ impl QueryStyleRange {
     ) -> KleeneValue {
         match self {
             QueryStyleRange::StyleRange2 {
-                ref value1,
-                ref op1,
-                ref value2,
+                value1,
+                op1,
+                value2,
             } => Self::compare_values(
                 Self::resolve_value(
                     value1,
@@ -954,11 +953,11 @@ impl QueryStyleRange {
             .into(),
 
             QueryStyleRange::StyleRange3 {
-                ref value1,
-                ref op1,
-                ref value2,
-                ref op2,
-                ref value3,
+                value1,
+                op1,
+                value2,
+                op2,
+                value3,
             } => {
                 let v1 = Self::resolve_value(
                     value1,
@@ -1046,7 +1045,7 @@ impl QueryStyleRange {
                     .stylist
                     .expect("container queries should have a stylist around");
                 let substituted = custom_properties::substitute(
-                    &value,
+                    value,
                     &sub_funcs,
                     stylist,
                     context,
@@ -1119,14 +1118,14 @@ impl QueryStyleRange {
         let value1 = value1?;
         let value2 = value2?;
         match (value1, value2) {
-            (Component::Length(v1), Component::Length(v2)) => v1.partial_cmp(&v2),
-            (Component::Number(v1), Component::Number(v2)) => v1.partial_cmp(&v2),
+            (Component::Length(v1), Component::Length(v2)) => v1.partial_cmp(v2),
+            (Component::Number(v1), Component::Number(v2)) => v1.partial_cmp(v2),
             (Component::Resolution(v1), Component::Resolution(v2)) => {
                 v1.dppx().partial_cmp(&v2.dppx())
             },
-            (Component::Percentage(v1), Component::Percentage(v2)) => v1.partial_cmp(&v2),
-            (Component::Angle(v1), Component::Angle(v2)) => v1.partial_cmp(&v2),
-            (Component::Time(v1), Component::Time(v2)) => v1.partial_cmp(&v2),
+            (Component::Percentage(v1), Component::Percentage(v2)) => v1.partial_cmp(v2),
+            (Component::Angle(v1), Component::Angle(v2)) => v1.partial_cmp(v2),
+            (Component::Time(v1), Component::Time(v2)) => v1.partial_cmp(v2),
             (Component::Length(v1), Component::Number(v2)) => {
                 if v2.is_zero() {
                     v1.partial_cmp(&CSSPixelLength::zero())
@@ -1136,7 +1135,7 @@ impl QueryStyleRange {
             },
             (Component::Number(v1), Component::Length(v2)) => {
                 if v1.is_zero() {
-                    CSSPixelLength::zero().partial_cmp(&v2)
+                    CSSPixelLength::zero().partial_cmp(v2)
                 } else {
                     None
                 }

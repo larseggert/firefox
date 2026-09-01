@@ -7,6 +7,7 @@ loader: gecko_taskgraph.loader.test:loader
 kind-dependencies:
     - build
     - fetch
+    - openh264-plugin
     - toolchain
 
 transforms:
@@ -241,8 +242,17 @@ tasks:
         chunks: dynamic
         default-chunks: 1
         max-run-time: 1800
-        variants: []  # We don't need sw or nofis testing.
-        run-on-projects: built-projects
+        # We don't need sw or nofis testing, but running with a real OpenH264
+        # plugin will provide better release coverage.
+        variants:
+            - openh264
+        run-on-projects:
+            by-variant:
+                openh264:
+                    by-test-platform:
+                        linux2404-64/.*: ['autoland', 'mozilla-central']
+                        default: []
+                default: built-projects
         mozharness:
             chunked: true
             extra-options:
@@ -292,9 +302,14 @@ tasks:
         # Runs in socket-process mode by default, no need for spi variants.
         # We don't *really* need to be running these in nofis either.
         # We do some things differently in private browsing mode though.
+        # Running with a real OpenH264 plugin reflects release best.
         variants:
             - privatebrowsing
-        run-on-projects: built-projects
+            - openh264
+        run-on-projects:
+            by-variant:
+                openh264: []
+                default: built-projects
         mozharness:
             chunked: true
             extra-options:

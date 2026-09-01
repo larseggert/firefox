@@ -1270,9 +1270,9 @@ nsXULAppInfo::GetUniqueProcessID(uint64_t* aResult) {
 NS_IMETHODIMP
 nsXULAppInfo::GetRemoteType(nsACString& aRemoteType) {
   if (XRE_IsContentProcess()) {
-    aRemoteType = ContentChild::GetSingleton()->GetRemoteType();
+    aRemoteType = ContentChild::GetSingleton()->GetRemoteType().Stringify();
   } else {
-    aRemoteType = NOT_REMOTE_TYPE;
+    aRemoteType = dom::RemoteType::NotRemote().Stringify();
   }
 
   return NS_OK;

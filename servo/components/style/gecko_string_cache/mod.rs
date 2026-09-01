@@ -104,7 +104,7 @@ impl<'de> Deserialize<'de> for Atom {
 pub struct WeakAtom(nsAtom);
 
 /// The number of static atoms we have.
-const STATIC_ATOM_COUNT: usize = kStaticAtomCount as usize;
+const STATIC_ATOM_COUNT: usize = kStaticAtomCount;
 
 impl Deref for Atom {
     type Target = WeakAtom;
@@ -175,7 +175,7 @@ impl WeakAtom {
     /// Construct a `WeakAtom` from a raw `nsAtom`.
     #[inline]
     pub unsafe fn new<'a>(atom: *const nsAtom) -> &'a mut Self {
-        &mut *(atom as *mut WeakAtom)
+        unsafe { &mut *(atom as *mut WeakAtom) }
     }
 
     /// Clone this atom, bumping the refcount if the atom is not static.
@@ -364,22 +364,24 @@ impl fmt::Display for WeakAtom {
 #[inline]
 unsafe fn make_handle(ptr: *const nsAtom) -> NonZeroUsize {
     debug_assert!(!ptr.is_null());
-    if !WeakAtom::new(ptr).is_static() {
-        NonZeroUsize::new_unchecked(ptr as usize)
-    } else {
-        make_static_handle(ptr as *mut nsStaticAtom)
+    unsafe {
+        if !WeakAtom::new(ptr).is_static() {
+            NonZeroUsize::new_unchecked(ptr as usize)
+        } else {
+            make_static_handle(ptr as *mut nsStaticAtom)
+        }
     }
 }
 
 #[inline]
 unsafe fn make_static_handle(ptr: *const nsStaticAtom) -> NonZeroUsize {
-    let index = ptr.offset_from(&gGkAtoms.mAtoms[0] as *const _);
+    let index = unsafe { ptr.offset_from(&gGkAtoms.mAtoms[0] as *const _) };
     debug_assert!(index >= 0, "Should be a non-negative index");
     debug_assert!(
         (index as usize) < STATIC_ATOM_COUNT,
         "Should be a valid static atom index"
     );
-    NonZeroUsize::new_unchecked(((index as usize) << 1) | 1)
+    unsafe { NonZeroUsize::new_unchecked(((index as usize) << 1) | 1) }
 }
 
 impl Atom {
@@ -393,7 +395,7 @@ impl Atom {
     where
         F: FnOnce(&Atom) -> R,
     {
-        let atom = Atom(make_handle(ptr as *mut nsAtom));
+        let atom = unsafe { Atom(make_handle(ptr as *mut nsAtom)) };
         let ret = callback(&atom);
         mem::forget(atom);
         ret
@@ -404,15 +406,15 @@ impl Atom {
     #[inline]
     pub const unsafe fn from_index_unchecked(index: u16) -> Self {
         debug_assert!((index as usize) < STATIC_ATOM_COUNT);
-        Atom(NonZeroUsize::new_unchecked(((index as usize) << 1) | 1))
+        Atom(unsafe { NonZeroUsize::new_unchecked(((index as usize) << 1) | 1) })
     }
 
     /// Creates an atom from an atom pointer.
     #[inline(always)]
     pub unsafe fn from_raw(ptr: *mut nsAtom) -> Self {
-        let atom = Atom(make_handle(ptr));
+        let atom = Atom(unsafe { make_handle(ptr) });
         if !atom.is_static() {
-            Gecko_AddRefAtom(ptr);
+            unsafe { Gecko_AddRefAtom(ptr) };
         }
         atom
     }
@@ -422,7 +424,7 @@ impl Atom {
     #[inline]
     pub unsafe fn from_addrefed(ptr: *mut nsAtom) -> Self {
         assert!(!ptr.is_null());
-        Atom(make_handle(ptr))
+        Atom(unsafe { make_handle(ptr) })
     }
 
     /// Convert this atom into an addrefed nsAtom pointer.
@@ -495,7 +497,7 @@ impl fmt::Display for Atom {
     }
 }
 
-impl<'a> From<&'a str> for Atom {
+impl From<&str> for Atom {
     #[inline]
     fn from(string: &str) -> Atom {
         debug_assert!(string.len() <= u32::MAX as usize);
@@ -508,14 +510,14 @@ impl<'a> From<&'a str> for Atom {
     }
 }
 
-impl<'a> From<&'a [u16]> for Atom {
+impl From<&[u16]> for Atom {
     #[inline]
     fn from(slice: &[u16]) -> Atom {
         Atom::from(&*nsStr::from(slice))
     }
 }
 
-impl<'a> From<&'a nsAString> for Atom {
+impl From<&nsAString> for Atom {
     #[inline]
     fn from(string: &nsAString) -> Atom {
         unsafe { Atom::from_addrefed(Gecko_Atomize16(string)) }

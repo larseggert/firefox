@@ -17,7 +17,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.protobuf.plugin)
-    alias(libs.plugins.python.envs.plugin)
 }
 
 // The OSS-licenses plugin is only needed for shipping builds, so skip it during

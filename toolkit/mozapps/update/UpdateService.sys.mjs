@@ -2096,6 +2096,25 @@ function pollForStagingEnd() {
   lazy.setTimeout(pollingFn, pollingIntervalMs);
 }
 
+function submitUpdateReadyPing(aUpdate) {
+  const ALLOWED_STATES = [
+    STATE_APPLIED,
+    STATE_APPLIED_SERVICE,
+    STATE_PENDING,
+    STATE_PENDING_SERVICE,
+    STATE_PENDING_ELEVATE,
+  ];
+  if (!ALLOWED_STATES.includes(aUpdate.state)) {
+    return;
+  }
+
+  Glean.update.targetChannel.set(aUpdate.channel);
+  Glean.update.targetVersion.set(aUpdate.appVersion);
+  Glean.update.targetBuildId.set(aUpdate.buildID);
+  Glean.update.targetDisplayVersion.set(aUpdate.displayVersion);
+  GleanPings.update.submit("ready");
+}
+
 class UpdatePatch {
   // nsIUpdatePatch attribute names used to prevent nsIWritablePropertyBag from
   // over writing nsIUpdatePatch attributes.
@@ -5191,6 +5210,7 @@ export class UpdateManager {
           update.state
       );
       Services.obs.notifyObservers(update, "update-staged", update.state);
+      submitUpdateReadyPing(update);
     } finally {
       // This function being called is the one thing that tells us that staging
       // is done so be very sure that we don't exit it leaving the current
@@ -7328,6 +7348,7 @@ class Downloader {
         );
         transitionState(Ci.nsIApplicationUpdateService.STATE_PENDING);
         Services.obs.notifyObservers(update, "update-downloaded", update.state);
+        submitUpdateReadyPing(update);
       });
     }
 

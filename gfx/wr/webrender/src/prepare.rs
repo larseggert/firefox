@@ -378,7 +378,6 @@ fn prepare_prim_for_render(
                 scratch,
                 prim_spatial_node_index,
                 device_pixel_scale,
-                draw_index,
                 targets,
                 data_stores,
             );
@@ -416,7 +415,6 @@ fn prepare_prim_for_render(
                     },
                     stretch_size,
                     LayoutSize::zero(),
-                    draw_index,
                     &None,
                     &prim_info.clip_chain,
                     quad_transform,
@@ -436,7 +434,6 @@ fn prepare_prim_for_render(
                         aligned_aa_edges: prim_data.common.aligned_aa_edges,
                         transformed_aa_edges: prim_data.common.transformed_aa_edges,
                     },
-                    draw_index,
                     &None,
                     &prim_info.clip_chain,
                     quad_transform,
@@ -506,6 +503,7 @@ fn prepare_prim_for_render(
 
             let text_run_handle = prim_data.request_resources(
                 pattern_rect,
+                prim_info.clip_chain.local_clip_rect,
                 &transform.to_transform().with_destination::<_>(),
                 surface,
                 prim_spatial_node_index,
@@ -536,7 +534,6 @@ fn prepare_prim_for_render(
                 &prim_info.clip_chain,
                 prim_spatial_node_index,
                 device_pixel_scale,
-                draw_index,
                 quad_transform,
                 frame_context,
                 pic_context,
@@ -577,7 +574,6 @@ fn prepare_prim_for_render(
                     aligned_aa_edges,
                     transformed_aa_edges,
                 },
-                draw_index,
                 &prim_info.clip_chain,
                 quad_transform,
                 frame_context,
@@ -605,7 +601,6 @@ fn prepare_prim_for_render(
                     aligned_aa_edges: prim_data.common.aligned_aa_edges,
                     transformed_aa_edges: prim_data.common.transformed_aa_edges,
                 },
-                draw_index,
                 &None,
                 &prim_info.clip_chain,
                 quad_transform,
@@ -634,7 +629,6 @@ fn prepare_prim_for_render(
                         aligned_aa_edges: common_data.aligned_aa_edges,
                         transformed_aa_edges: common_data.transformed_aa_edges,
                     },
-                    draw_index,
                     &None,
                     &prim_info.clip_chain,
                     quad_transform,
@@ -671,7 +665,6 @@ fn prepare_prim_for_render(
                     aligned_aa_edges: common_data.aligned_aa_edges,
                     transformed_aa_edges: common_data.transformed_aa_edges,
                 },
-                draw_index,
                 &None,
                 &prim_info.clip_chain,
                 quad_transform,
@@ -703,7 +696,6 @@ fn prepare_prim_for_render(
                         aligned_aa_edges: common_data.aligned_aa_edges,
                         transformed_aa_edges: common_data.transformed_aa_edges,
                     },
-                    draw_index,
                     &None,
                     &prim_info.clip_chain,
                     quad_transform,
@@ -723,7 +715,6 @@ fn prepare_prim_for_render(
                 common_data,
                 image_data,
                 &prim_info.clip_chain,
-                draw_index,
                 quad_transform,
                 frame_context,
                 pic_context,
@@ -755,7 +746,6 @@ fn prepare_prim_for_render(
                         transformed_aa_edges: prim_data.common.transformed_aa_edges,
                     },
                     stretch_size,
-                    draw_index,
                     &prim_info.clip_chain,
                     quad_transform,
                     frame_context,
@@ -821,7 +811,6 @@ fn prepare_prim_for_render(
                                 aligned_aa_edges: EdgeMask::empty(),
                                 transformed_aa_edges: edge_aa_mask,
                             },
-                            draw_index,
                             &None,
                             &prim_info.clip_chain,
                             quad_transform,
@@ -876,7 +865,6 @@ fn prepare_prim_for_render(
                 },
                 stretch_size,
                 prim_data.tile_spacing,
-                draw_index,
                 &cache_key,
                 &prim_info.clip_chain,
                 quad_transform,
@@ -910,7 +898,6 @@ fn prepare_prim_for_render(
                         transformed_aa_edges: prim_data.common.transformed_aa_edges,
                     },
                     stretch_size,
-                    draw_index,
                     &prim_info.clip_chain,
                     quad_transform,
                     frame_context,
@@ -933,7 +920,6 @@ fn prepare_prim_for_render(
                 },
                 stretch_size,
                 prim_data.tile_spacing,
-                draw_index,
                 &None,
                 &prim_info.clip_chain,
                 quad_transform,
@@ -966,7 +952,6 @@ fn prepare_prim_for_render(
                         transformed_aa_edges: prim_data.common.transformed_aa_edges,
                     },
                     stretch_size,
-                    draw_index,
                     &prim_info.clip_chain,
                     quad_transform,
                     frame_context,
@@ -1023,7 +1008,6 @@ fn prepare_prim_for_render(
                 },
                 stretch_size,
                 prim_data.tile_spacing,
-                draw_index,
                 &cache_key,
                 &prim_info.clip_chain,
                 quad_transform,
@@ -1048,7 +1032,6 @@ fn prepare_prim_for_render(
             let clip_task_index = prepare_picture_primitive(
                 pic,
                 raster_config,
-                draw_index,
                 prim_spatial_node_index,
                 &prim_info.clip_chain,
                 frame_context,
@@ -1182,7 +1165,6 @@ fn prepare_prim_for_render(
                             aligned_aa_edges,
                             transformed_aa_edges,
                         },
-                        draw_index,
                         &None,
                         &prim_info.clip_chain,
                         quad_transform,
@@ -1210,8 +1192,16 @@ fn prepare_prim_for_render(
             panic!("bug: invalid vis state");
         }
         DrawState::Visible { .. } => {
+            // The kinds that reach here (text runs, backdrop captures) have no
+            // tighter footprint on hand than the primitive's coverage rect.
+            let device_rect = frame_state.surfaces[pic_context.surface_index.0]
+                .map_to_device_rect(
+                    &prim_info.clip_chain.pic_coverage_rect,
+                    frame_context.spatial_tree,
+                );
+
             frame_state.push_prim(
-                &PrimitiveCommand::simple(draw_index),
+                &PrimitiveCommand::simple(draw_index, device_rect),
                 prim_spatial_node_index,
                 targets,
             );

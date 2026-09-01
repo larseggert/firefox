@@ -260,6 +260,31 @@ class ExpandedTabGroupTest {
     }
 
     @Test
+    fun verifyUngroupTabGroupClick() {
+        var ungroupClicked = false
+
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalTabManagementFeatureHelper provides tabManagementFeatureHelper) {
+                FirefoxTheme(theme = Theme.Light) {
+                    Surface {
+                        ExpandedTabGroup(
+                            group = fakeTabGroup(),
+                            actions = expandedTabGroupActions(onUngroupTabGroupClick = { ungroupClicked = true }),
+                            displayTabsInGrid = true,
+                            tabInteractionHandler = NoOpTabInteractionHandler,
+                        )
+                    }
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithTag(TabsTrayTestTag.TAB_GROUP_THREE_DOT_BUTTON).performClick()
+        composeTestRule.onNodeWithTag(TabsTrayTestTag.UNGROUP_TAB_GROUP).performClick()
+
+        assertTrue(ungroupClicked)
+    }
+
+    @Test
     fun verifyAddNewTabClick() {
         var addNewTabClicked = false
 
@@ -296,6 +321,7 @@ class ExpandedTabGroupTest {
         onDeleteTabGroupClick: () -> Unit = {},
         onEditTabGroupClick: () -> Unit = {},
         onCloseTabGroupClick: () -> Unit = {},
+        onUngroupTabGroupClick: () -> Unit = {},
         onAddNewTabClick: (() -> Unit)? = {},
         onShareTabGroupClick: () -> Unit = {},
     ) =
@@ -305,6 +331,7 @@ class ExpandedTabGroupTest {
             onDeleteTabGroupClick = onDeleteTabGroupClick,
             onEditTabGroupClick = onEditTabGroupClick,
             onCloseTabGroupClick = onCloseTabGroupClick,
+            onUngroupTabGroupClick = onUngroupTabGroupClick,
             onAddNewTabClick = onAddNewTabClick,
             onShareTabGroupClick = onShareTabGroupClick,
         )

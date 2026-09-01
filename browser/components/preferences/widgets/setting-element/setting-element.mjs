@@ -45,6 +45,7 @@ function expandPaneName(category) {
  * @property {string} [loadPane]
  *   Friendly pane name loaded by this element, searches matching that pane will
  *   highlight this element.
+ * @property {number} [headingLevel] - Applies a custom heading level (1-6) to the setting element.
  */
 
 /**
@@ -151,7 +152,7 @@ const HEADING_LEVEL_KEYS = ["headinglevel", "headingLevel", ".headingLevel"];
  * @param {boolean} srdEnabled
  * @returns {number | undefined}
  */
-export function bumpHeadingLevelForSrd(level, srdEnabled) {
+function bumpHeadingLevelForSrd(level, srdEnabled) {
   if (!srdEnabled || typeof level !== "number") {
     return level;
   }
@@ -189,6 +190,10 @@ export class SettingElement extends MozLitElement {
       ".supportPage":
         config.supportPage != undefined ? config.supportPage : undefined,
       slot: config.slot,
+      headinglevel: bumpHeadingLevelForSrd(
+        config.headingLevel,
+        lazy.srdEnabled
+      ),
       ...controlAttrs,
     };
   }

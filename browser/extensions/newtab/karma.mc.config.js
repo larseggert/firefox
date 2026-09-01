@@ -211,6 +211,26 @@ module.exports = function (config) {
                 functions: 0,
                 branches: 0,
               },
+            /**
+             * TopicNavigation.jsx is tested via Jest (see test/jest/content-src/components/DiscoveryStreamComponents/TopicNavigation.test.jsx).
+             */
+            "content-src/components/DiscoveryStreamComponents/TopicNavigation/TopicNavigation.jsx":
+              {
+                statements: 0,
+                lines: 0,
+                functions: 0,
+                branches: 0,
+              },
+            /**
+             * useOverflowSplit.jsx is tested via Jest (see test/jest/content-src/components/DiscoveryStreamComponents/useOverflowSplit.test.jsx).
+             */
+            "content-src/components/DiscoveryStreamComponents/TopicNavigation/useOverflowSplit.jsx":
+              {
+                statements: 0,
+                lines: 0,
+                functions: 0,
+                branches: 0,
+              },
             "lib/AboutPreferences.sys.mjs": {
               statements: 98,
               lines: 98,

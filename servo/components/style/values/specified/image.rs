@@ -539,13 +539,13 @@ impl Parse for Gradient {
             }
         };
 
-        Ok(input.parse_nested_block(|i| {
+        input.parse_nested_block(|i| {
             Ok(match shape {
                 Shape::Linear => Self::parse_linear(context, i, repeating, compat_mode)?,
                 Shape::Radial => Self::parse_radial(context, i, repeating, compat_mode)?,
                 Shape::Conic => Self::parse_conic(context, i, repeating)?,
             })
-        })?)
+        })
     }
 }
 
@@ -606,9 +606,9 @@ impl Gradient {
             }
         }
 
-        impl<S: Side> Into<NumberOrPercentage> for Component<S> {
-            fn into(self) -> NumberOrPercentage {
-                match self {
+        impl<S: Side> From<Component<S>> for NumberOrPercentage {
+            fn from(val: Component<S>) -> Self {
+                match val {
                     Component::Center => NumberOrPercentage::Percentage(Percentage::new(0.5)),
                     Component::Number(number) => number,
                     Component::Side(side) => {
@@ -623,9 +623,9 @@ impl Gradient {
             }
         }
 
-        impl<S: Side> Into<PositionComponent<S>> for Component<S> {
-            fn into(self) -> PositionComponent<S> {
-                match self {
+        impl<S: Side> From<Component<S>> for PositionComponent<S> {
+            fn from(val: Component<S>) -> Self {
+                match val {
                     Component::Center => PositionComponent::Center,
                     Component::Number(NumberOrPercentage::Number(number)) => {
                         // Unresolvable calc is rejected in Point::parse.
@@ -752,7 +752,7 @@ impl Gradient {
                         if color == Color::CurrentColor {
                             return Err(ParseError::custom(StyleParseErrorKind::UnspecifiedError));
                         }
-                        Ok((color.into(), p))
+                        Ok((color, p))
                     })?;
                     if reverse_stops {
                         p.reverse();
@@ -763,7 +763,7 @@ impl Gradient {
                     })
                 })
             })
-            .unwrap_or(vec![]);
+            .unwrap_or_default();
 
         if items.is_empty() {
             items = vec![
@@ -781,23 +781,22 @@ impl Gradient {
             items.push(first);
         } else {
             items.sort_by(|a, b| {
-                match (a, b) {
-                    (
-                        &generic::GradientItem::ComplexColorStop {
-                            position: ref a_position,
-                            ..
-                        },
-                        &generic::GradientItem::ComplexColorStop {
-                            position: ref b_position,
-                            ..
-                        },
-                    ) => match (a_position, b_position) {
-                        (&LengthPercentage::Percentage(a), &LengthPercentage::Percentage(b)) => {
-                            return a.get().partial_cmp(&b.get()).unwrap_or(Ordering::Equal);
-                        },
-                        _ => {},
+                if let (
+                    generic::GradientItem::ComplexColorStop {
+                        position: a_position,
+                        ..
                     },
-                    _ => {},
+                    generic::GradientItem::ComplexColorStop {
+                        position: b_position,
+                        ..
+                    },
+                ) = (a, b)
+                {
+                    if let (&LengthPercentage::Percentage(a), &LengthPercentage::Percentage(b)) =
+                        (a_position, b_position)
+                    {
+                        return a.get().partial_cmp(&b.get()).unwrap_or(Ordering::Equal);
+                    }
                 }
                 if reverse_stops {
                     Ordering::Greater
@@ -1190,16 +1189,19 @@ impl EndingShape {
         }
         input.try_parse(|i| {
             let x = Percentage::parse_non_negative(context, i)?;
-            let y = if let Ok(y) = i.try_parse(|i| NonNegativeLengthPercentage::parse(context, i)) {
-                if compat_mode == GradientCompatMode::Modern {
-                    let _ = i.try_parse(|i| i.expect_ident_matching("ellipse"));
-                }
-                y
-            } else {
-                if compat_mode == GradientCompatMode::Modern {
-                    i.expect_ident_matching("ellipse")?;
-                }
-                NonNegativeLengthPercentage::parse(context, i)?
+            let y = match i.try_parse(|i| NonNegativeLengthPercentage::parse(context, i)) {
+                Ok(y) => {
+                    if compat_mode == GradientCompatMode::Modern {
+                        let _ = i.try_parse(|i| i.expect_ident_matching("ellipse"));
+                    }
+                    y
+                },
+                _ => {
+                    if compat_mode == GradientCompatMode::Modern {
+                        i.expect_ident_matching("ellipse")?;
+                    }
+                    NonNegativeLengthPercentage::parse(context, i)?
+                },
             };
             Ok(generic::EndingShape::Ellipse(Ellipse::Radii(
                 NonNegative(x.to_length_percentage()),
@@ -1248,18 +1250,21 @@ impl<T> generic::GradientItem<Color, T> {
 
                 let stop = generic::ColorStop::parse(context, input, parse_position)?;
 
-                if let Ok(multi_position) = input.try_parse(|i| parse_position(context, i)) {
-                    let stop_color = stop.color.clone();
-                    items.push(stop.into_item());
-                    items.push(
-                        generic::ColorStop {
-                            color: stop_color,
-                            position: Some(multi_position),
-                        }
-                        .into_item(),
-                    );
-                } else {
-                    items.push(stop.into_item());
+                match input.try_parse(|i| parse_position(context, i)) {
+                    Ok(multi_position) => {
+                        let stop_color = stop.color.clone();
+                        items.push(stop.into_item());
+                        items.push(
+                            generic::ColorStop {
+                                color: stop_color,
+                                position: Some(multi_position),
+                            }
+                            .into_item(),
+                        );
+                    },
+                    _ => {
+                        items.push(stop.into_item());
+                    },
                 }
 
                 seen_stop = true;

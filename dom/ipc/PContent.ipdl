@@ -186,6 +186,7 @@ using mozilla::dom::UserActivation::Modifiers from "mozilla/dom/UserActivation.h
 using nsIClipboard::ClipboardType from "nsIClipboard.h";
 using nsIUrlClassifierFeature::listType from "nsIUrlClassifierFeature.h";
 using mozilla::dom::ReferrerPolicy from "mozilla/dom/ReferrerPolicyBinding.h";
+using struct mozilla::dom::RemoteType from "mozilla/dom/RemoteType.h";
 
 #ifdef MOZ_WMF_CDM
 using nsIOriginStatusEntry from "nsIWindowsMediaFoundationCDMOriginsListService.h";
@@ -830,7 +831,7 @@ child:
     /**
      * Send the remote type associated with the content process.
      */
-    async RemoteType(nsCString aRemoteType, nsCString aProfile);
+    async SetRemoteType(RemoteType aRemoteType, nsCString aProfile);
 
     /**
      * Record an origin which is being loaded in this content process.

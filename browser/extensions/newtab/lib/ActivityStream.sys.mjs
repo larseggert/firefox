@@ -989,6 +989,13 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
+    "discoverystream.sections.topicNavigation.enabled",
+    {
+      title: "Boolean flag to enable the topic navigation strip above sections",
+      value: false,
+    },
+  ],
+  [
     "discoverystream.carousel.paused",
     {
       title:
@@ -1340,6 +1347,15 @@ export const PREFS_CONFIG = new Map([
     {
       title:
         "Whether the Nova widgets row is expanded beyond its first visual row. Persists the user's Show more / Show less choice across sessions.",
+      value: false,
+    },
+  ],
+  // @experiment(remove) { bug 2066527 }
+  [
+    "widgets.autoMinimize.userOverride",
+    {
+      title:
+        "Set once the user manually expands the auto-minimized widgets section. Suppresses the auto-collapse on every future new tab and returns the section header button to its widget-size toggle behaviour.",
       value: false,
     },
   ],
@@ -2142,8 +2158,17 @@ export const PREFS_CONFIG = new Map([
     "pageLayouts.variant",
     {
       title:
-        "Name of the active newtab page layout variant, for layout experimentation. One of nova-full-width, side-by-side-content-lead, side-by-side-widgets-lead, side-by-side-content-lead-five, side-by-side-widgets-lead-five, spaces-buttons-top, spaces-buttons-bottom. The -five variants reach five card columns counting the widgets column, the others four. The spaces variants split the band into separately-navigable panels and differ only in where the segmented control sits. Overridden by trainhopConfig.pageLayouts.variant.",
+        "Name of the active newtab page layout variant, for layout experimentation. One of nova-full-width, side-by-side-content-lead, side-by-side-widgets-lead, side-by-side-content-lead-five, side-by-side-widgets-lead-five, spaces-buttons-top, spaces-buttons-bottom, auto-minimize-widgets. The -five variants reach five card columns counting the widgets column, the others four. The spaces variants split the band into separately-navigable panels and differ only in where the segmented control sits. The auto-minimize-widgets variant collapses the widgets section to its title row shortly after load. Overridden by trainhopConfig.pageLayouts.variant.",
       value: "nova-full-width",
+    },
+  ],
+  // @experiment(remove) { bug 2066527 }
+  [
+    "pageLayouts.autoMinimizeDelayMs",
+    {
+      title:
+        "How long (in ms) the widgets section stays expanded before the auto-minimize-widgets layout variant collapses it. Overridden by trainhopConfig.pageLayouts.autoMinimizeDelayMs.",
+      value: 3000,
     },
   ],
   [

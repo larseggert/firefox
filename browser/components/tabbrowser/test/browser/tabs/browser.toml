@@ -13,9 +13,6 @@ prefs = [
   "browser.sessionstore.closedTabsFromClosedWindows=true",
   "sidebar.verticalTabs.dragToPinPromo.dismissed=true",
 ]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && tsan", # Bug 2057863
-]
 
 ["browser_1936752_lock_tab_sizing.js"]
 

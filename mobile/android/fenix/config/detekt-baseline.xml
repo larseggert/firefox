@@ -324,7 +324,6 @@
     <ID>HardcodedPaddingUsage:SetupChecklist.kt$(16.dp)</ID>
     <ID>HardcodedPaddingUsage:SetupChecklist.kt$(24.dp)</ID>
     <ID>HardcodedPaddingUsage:SetupChecklist.kt$(horizontal = 16.dp, vertical = 12.dp)</ID>
-    <ID>HardcodedPaddingUsage:Shortcuts.kt$(16.dp)</ID>
     <ID>HardcodedPaddingUsage:Snackbar.kt$(all = 16.dp)</ID>
     <ID>HardcodedPaddingUsage:StartupCrashScreen.kt$(horizontal = 16.dp)</ID>
     <ID>HardcodedPaddingUsage:StoryCard.kt$(16.dp)</ID>
