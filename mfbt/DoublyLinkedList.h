@@ -192,6 +192,11 @@ class DoublyLinkedList final {
     return mHead == nullptr;
   }
 
+  bool isSingle() const {
+    MOZ_ASSERT(isStateValid());
+    return !isEmpty() && mHead == mTail;
+  }
+
   /**
    * Inserts aElm into the list at the head position. |aElm| must not already
    * be in a list.
