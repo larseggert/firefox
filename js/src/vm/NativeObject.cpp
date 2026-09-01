@@ -2969,6 +2969,16 @@ bool js::CopyDataPropertiesNative(JSContext* cx, Handle<PlainObject*> target,
     }
   }
 
+  // If |target| contains no own properties, we can directly call
+  // AddDataPropertyToNativeObjectNoHooks.
+  const bool targetHadNoOwnProperties = target->empty();
+
+  // If |target| is empty and every property of |from| is a plain enumerable
+  // data property, we try to reuse |from|'s Shape or PropMap.
+  bool canReuseFromShape = !excludedItems && targetHadNoOwnProperties &&
+                           fromIsPlain &&
+                           !Watchtower::watchesPropertyAdd(target);
+
   // Collect all enumerable data properties.
   Rooted<PropertyInfoWithKeyVector> props(cx, PropertyInfoWithKeyVector(cx));
 
@@ -2977,6 +2987,7 @@ bool js::CopyDataPropertiesNative(JSContext* cx, Handle<PlainObject*> target,
     MOZ_ASSERT(!id.isInt());
 
     if (!iter->enumerable()) {
+      canReuseFromShape = false;
       continue;
     }
     if (excludedItems && excludedItems->contains(cx, id)) {
@@ -2992,6 +3003,10 @@ bool js::CopyDataPropertiesNative(JSContext* cx, Handle<PlainObject*> target,
       return true;
     }
 
+    if (iter->flags() != PropertyFlags::defaultDataPropFlags) {
+      canReuseFromShape = false;
+    }
+
     if (!props.append(*iter)) {
       return false;
     }
@@ -2999,9 +3014,17 @@ bool js::CopyDataPropertiesNative(JSContext* cx, Handle<PlainObject*> target,
 
   *optimized = true;
 
-  // If |target| contains no own properties, we can directly call
-  // AddDataPropertyNonPrototype.
-  const bool targetHadNoOwnProperties = target->empty();
+  if (canReuseFromShape && !props.empty()) {
+    Handle<PlainObject*> fromPlain = Handle<JSObject*>(from).as<PlainObject>();
+    bool copied;
+    if (!TryCopyPropertiesReusingShapeOrPropMap(cx, target, fromPlain,
+                                                props.length(), &copied)) {
+      return false;
+    }
+    if (copied) {
+      return true;
+    }
+  }
 
   RootedId key(cx);
   RootedValue value(cx);
