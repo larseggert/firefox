@@ -3447,9 +3447,8 @@ static bool malloc_init_hard() {
 #ifndef MALLOC_STATIC_PAGESIZE
   DefineGlobals();
 #endif
-  gRecycledSize = 0;
 
-  chunks_init();
+  gCache.Init();
   huge_init();
   sBaseAlloc.Init();
 
