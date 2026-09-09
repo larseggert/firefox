@@ -86,7 +86,6 @@
   --button-border-radius: var(--border-radius-xlarge);
   --button-border-width-split: 0;
   --button-gap-split: 0;
-  --button-opacity-disabled: 0.7;
   --button-padding-inline-small: var(--space-medium);
   --button-split-separator-background-color: var(--button-border-color);
   --button-text-color: light-dark(var(--color-violet-90), var(--color-gray-0));
@@ -366,7 +365,6 @@
     --button-border-color-primary: ButtonFace;
     --button-border-color-primary-selected: var(--button-border-color-primary-active);
     --button-border-color-selected: var(--button-border-color-active);
-    --button-opacity-disabled: 1;
     --button-text-color: ButtonText;
     --button-text-color-destructive: var(--button-text-color-primary);
     --button-text-color-destructive-disabled: var(--button-text-color-primary);

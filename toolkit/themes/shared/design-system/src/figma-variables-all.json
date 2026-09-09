@@ -866,11 +866,11 @@
       },
       "opacity": {
         "disabled": {
-          "Light": 70,
-          "Dark": 70,
+          "Light": 50,
+          "Dark": 50,
           "HCM": 100,
           "Private": 70,
-          "Smart Light (WIP)": 70
+          "Smart Light (WIP)": 50
         }
       },
       "border": {

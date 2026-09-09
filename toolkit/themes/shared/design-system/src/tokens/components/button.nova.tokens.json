@@ -222,14 +222,6 @@
       "value": "0"
     }
   },
-  "opacity": {
-    "disabled": {
-      "value": {
-        "default": "0.7",
-        "forcedColors": "1"
-      }
-    }
-  },
   "padding": {
     "inline": {
       "small": {

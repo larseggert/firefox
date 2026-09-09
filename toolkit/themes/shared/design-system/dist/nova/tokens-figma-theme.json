@@ -289,11 +289,6 @@
     "dark": "{Theme$button/border/color}",
     "forcedColors": "{Theme$button/border/color/active}"
   },
-  "button/opacity/disabled": {
-    "light": 0.7,
-    "dark": 0.7,
-    "forcedColors": 1
-  },
   "button/split/separator/background/color": {
     "light": "{Theme$button/border/color}",
     "dark": "{Theme$button/border/color}",

@@ -859,15 +859,6 @@
           }
         }
       },
-      "opacity": {
-        "disabled": {
-          "Light": 70,
-          "Dark": 70,
-          "HCM": 100,
-          "Private": 70,
-          "Smart Light (WIP)": 70
-        }
-      },
       "border": {
         "color": {
           "Light": "{color/accent/primary}",
