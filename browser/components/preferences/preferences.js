@@ -494,6 +494,12 @@ const CONFIG_PANES = Object.freeze({
     module: "chrome://browser/content/preferences/config/translations.mjs",
     visible: () => srdSectionEnabled("translations"),
   },
+  vpnSiteRules: {
+    parent: "privacy",
+    l10nId: "ip-protection-site-rules-header",
+    groupIds: ["vpnSiteRules"],
+    replaces: "privacy",
+  },
   containers: {
     parent: srdSectionEnabled("tabsBrowsing") ? "tabsBrowsing" : "general",
     l10nId: "containers-section-header2",

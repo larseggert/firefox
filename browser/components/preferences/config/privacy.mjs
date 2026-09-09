@@ -311,6 +311,9 @@ const SECURITY_PRIVACY_STATUS_CARD_ENABLED =
   );
 
 Preferences.addAll([
+  // Settings UI
+  { id: "browser.settings-redesign.enabled", type: "bool" },
+
   // Content blocking / Tracking Protection
   { id: "privacy.trackingprotection.enabled", type: "bool" },
   { id: "privacy.trackingprotection.pbmode.enabled", type: "bool" },
@@ -401,6 +404,7 @@ Preferences.addAll([
   { id: "browser.ipProtection.enabled", type: "bool" },
   { id: "browser.ipProtection.entitlementCache", type: "string" },
   { id: "browser.ipProtection.features.siteExceptions", type: "bool" },
+  { id: "browser.ipProtection.features.siteInclusions", type: "bool" },
   { id: "browser.ipProtection.features.autoStart", type: "bool" },
   { id: "browser.ipProtection.autoStartEnabled", type: "bool" },
   { id: "browser.ipProtection.autoStartPrivateEnabled", type: "bool" },
@@ -1541,6 +1545,12 @@ SettingGroupManager.registerGroups({
         ],
       },
       {
+        id: "ipProtectionSiteRules",
+        l10nId: "ip-protection-site-rules-button",
+        control: "moz-box-button",
+        loadPane: "vpnSiteRules",
+      },
+      {
         id: "ipProtectionAutoStart",
         l10nId: "ip-protection-autostart",
         control: "moz-fieldset",
@@ -1571,6 +1581,11 @@ SettingGroupManager.registerGroups({
         },
       },
     ],
+  },
+  // TODO: Add items to site rules section - Bug 2068284
+  vpnSiteRules: {
+    headingLevel: 2,
+    items: [],
   },
   privacyPanel: {
     iconSrc: "chrome://devtools/skin/images/globe.svg",
@@ -2111,19 +2126,30 @@ Preferences.addSetting({
   pref: "browser.ipProtection.features.siteExceptions",
 });
 Preferences.addSetting({
+  id: "ipProtectionSiteInclusionsFeatureEnabled",
+  pref: "browser.ipProtection.features.siteInclusions",
+});
+Preferences.addSetting({
+  id: "settingsRedesignEnabled",
+  pref: "browser.settings-redesign.enabled",
+});
+Preferences.addSetting({
   id: "ipProtectionExceptions",
   deps: [
     "ipProtectionVisible",
     "ipProtectionSiteExceptionsFeatureEnabled",
+    "ipProtectionSiteInclusionsFeatureEnabled",
     "ipProtectionNotOptedIn",
   ],
   visible: ({
     ipProtectionVisible,
     ipProtectionSiteExceptionsFeatureEnabled,
+    ipProtectionSiteInclusionsFeatureEnabled,
     ipProtectionNotOptedIn,
   }) =>
     ipProtectionVisible.value &&
     ipProtectionSiteExceptionsFeatureEnabled.value &&
+    !ipProtectionSiteInclusionsFeatureEnabled.value &&
     !ipProtectionNotOptedIn.value,
 });
 
@@ -2132,6 +2158,7 @@ Preferences.addSetting({
   deps: [
     "ipProtectionVisible",
     "ipProtectionSiteExceptionsFeatureEnabled",
+    "ipProtectionSiteInclusionsFeatureEnabled",
     "ipProtectionNotOptedIn",
   ],
   setup(emitChange) {
@@ -2153,10 +2180,12 @@ Preferences.addSetting({
   visible: ({
     ipProtectionVisible,
     ipProtectionSiteExceptionsFeatureEnabled,
+    ipProtectionSiteInclusionsFeatureEnabled,
     ipProtectionNotOptedIn,
   }) =>
     ipProtectionVisible.value &&
     ipProtectionSiteExceptionsFeatureEnabled.value &&
+    !ipProtectionSiteInclusionsFeatureEnabled.value &&
     !ipProtectionNotOptedIn.value,
   onUserClick() {
     let params = {
@@ -2192,6 +2221,30 @@ Preferences.addSetting({
     };
   },
 });
+Preferences.addSetting({
+  id: "ipProtectionSiteRules",
+  deps: [
+    "ipProtectionVisible",
+    "ipProtectionSiteInclusionsFeatureEnabled",
+    "ipProtectionNotOptedIn",
+    "settingsRedesignEnabled",
+  ],
+  visible: ({
+    ipProtectionVisible,
+    ipProtectionSiteInclusionsFeatureEnabled,
+    ipProtectionNotOptedIn,
+    settingsRedesignEnabled,
+  }) =>
+    ipProtectionVisible.value &&
+    ipProtectionSiteInclusionsFeatureEnabled.value &&
+    !ipProtectionNotOptedIn.value &&
+    settingsRedesignEnabled.value,
+  onUserClick(e) {
+    e.preventDefault();
+    gotoPref("vpnSiteRules");
+  },
+});
+
 Preferences.addSetting({
   id: "ipProtectionAutoStartFeatureEnabled",
   pref: "browser.ipProtection.features.autoStart",

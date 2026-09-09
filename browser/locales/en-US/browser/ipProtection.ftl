@@ -295,6 +295,12 @@ ip-protection-site-exceptions-all-sites-button =
        *[other] { $count } websites
     }
 
+ip-protection-site-rules-header =
+  .heading = Manage website rules
+ip-protection-site-rules-button =
+  .label = Manage website rules
+  .description = Set rules for sites that need extra privacy or VPN turned off.
+
 ip-protection-autostart =
   .label = Turn on VPN automatically
 ip-protection-autostart-checkbox =
