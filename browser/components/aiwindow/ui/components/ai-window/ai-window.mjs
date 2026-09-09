@@ -262,6 +262,8 @@ export class AIWindow extends MozLitElement {
   #smartbarReadyPromise;
   #resolveSmartbarReady;
   #sidebarStarterCache = new Map();
+  // The panel-list opened most recently, in any shadow root.
+  #openPanel = null;
   #smartbarResizeObserver = null;
   #windowModeObserver = null;
   #topSitesObserver = null;
@@ -633,6 +635,7 @@ export class AIWindow extends MozLitElement {
     for (const eventName of HISTORY_MENU_EVENTS) {
       this.ownerDocument.addEventListener(eventName, this.#onHistoryMenuEvent);
     }
+    this.ownerDocument.addEventListener("showing", this.#onPanelShowing);
 
     Services.prefs.addObserver(
       PREF_MODEL_CHOICE,
@@ -921,6 +924,8 @@ export class AIWindow extends MozLitElement {
         this.#onHistoryMenuEvent
       );
     }
+    this.ownerDocument.removeEventListener("showing", this.#onPanelShowing);
+    this.#openPanel = null;
     if (this.#smartbar) {
       this.#smartbar.removeEventListener(
         "aiwindow-memories-toggle:on-change",
@@ -3148,6 +3153,21 @@ export class AIWindow extends MozLitElement {
         this.#refreshRecentChats();
         break;
     }
+  };
+
+  // Closes the previously open panel-list before a new one opens. Otherwise the
+  // popover API evicts it from the top layer without panel-list clearing
+  // `open`, leaving it painted at a position that no longer resolves. Only
+  // popovers stack this way, so submenus and XUL-hosted lists are left alone.
+  #onPanelShowing = event => {
+    const panel = event.composedPath()[0];
+    if (panel?.localName !== "panel-list" || !panel.hasAttribute("popover")) {
+      return;
+    }
+    if (panel !== this.#openPanel && this.#openPanel?.open) {
+      this.#openPanel.hide();
+    }
+    this.#openPanel = panel;
   };
 
   // Renders the <smartwindow-history-menu> for the given mode.
