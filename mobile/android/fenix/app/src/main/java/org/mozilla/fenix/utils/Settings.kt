@@ -2937,7 +2937,7 @@ class Settings(
     var importPasswordsFeatureFlagEnabled by
         booleanPreference(
             key = appContext.getPreferenceKey(R.string.pref_key_enable_import_passwords),
-            default = Config.channel.isDebug,
+            default = false,
         )
 
     /**
