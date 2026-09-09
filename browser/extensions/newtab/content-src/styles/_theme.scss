@@ -91,11 +91,7 @@ $shadow-image-inset: inset 0 0 0 0.5px $black-15;
     // If we add color-scheme here, we can still use light-dark
     color-scheme: dark;
     // General styles
-    --newtab-background-color: #{$in-content-page-background-dark};
-    --newtab-background-color-secondary: #{$newtab-background-secondary-dark};
     --newtab-text-primary-color: #{$in-content-page-color-dark};
-    // Card Background includes 20% transparency
-    --newtab-background-card: #{$newtab-background-card-dark};
     --newtab-text-topic-label-color: var(--color-violet-30);
     --newtab-text-secondary-text: #FBFBFEB0;
 
@@ -120,10 +116,7 @@ $shadow-image-inset: inset 0 0 0 0.5px $black-15;
 @media (prefers-color-scheme: dark) {
   :root:not([lwt-newtab]) {
     color-scheme: dark;
-    --newtab-background-color: #{$in-content-page-background-dark};
-    --newtab-background-color-secondary: #{$newtab-background-secondary-dark};
     --newtab-text-primary-color: #{$in-content-page-color-dark};
-    --newtab-background-card: #{$newtab-background-card-dark};
     --newtab-text-topic-label-color: var(--color-violet-30);
     --newtab-text-secondary-text: #FBFBFEB0;
     --newtab-primary-action-background-pocket: #{$primary-blue-dark};
