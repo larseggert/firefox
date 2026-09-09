@@ -503,7 +503,14 @@ void SessionAccessibility::MaybeSendLiveRegionEvents(Accessible* aAccessible,
   }
 
   Maybe<bool> atomic;
-  liveRegion->LiveRegionAttributes(nullptr, nullptr, &atomic, nullptr);
+  nsAutoString busy;
+  liveRegion->LiveRegionAttributes(nullptr, nullptr, &atomic, &busy);
+  if (busy.EqualsIgnoreCase("true")) {
+    // If we are in a busy live region, do nothing. We don't need to climb to a
+    // parent region because the aria-busy of the child region mutes any changes
+    // in it.
+    return;
+  }
 
   if (aStartTextOffset < 0) {
     // This accessible and its subtree have been inserted.
