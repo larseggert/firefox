@@ -150,10 +150,12 @@ static RefPtr<VideoData> DecodeFirstAV1FrameViaFFVPX(
     return nullptr;
   }
 
-  ScopedPrefSetter gpuProcessDecoder("media.gpu-process-decoder", false);
-  ScopedPrefSetter rddProcess("media.rdd-process.enabled", false);
-  ScopedPrefSetter utilityProcess("media.utility-process.enabled", false);
-  ScopedPrefSetter preferNonFFVPX("media.prefer-non-ffvpx", false);
+  ScopedPrefSetter decoderPrefs({
+      {"media.gpu-process-decoder", false},
+      {"media.rdd-process.enabled", false},
+      {"media.utility-process.enabled", false},
+      {"media.prefer-non-ffvpx", false},
+  });
   RefPtr<PDMFactory> factory = MakeRefPtr<PDMFactory>();
 
   RefPtr<layers::ImageContainer> imageContainer =
