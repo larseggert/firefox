@@ -219,11 +219,9 @@ pub struct Value<Component> {
 }
 
 impl<Component: PartialEq> PartialEq for Value<Component> {
-    // Ignore the url_data field when comparing values for equality.
-    // attr_tainted is compared so the cascade doesn't treat a tainted
-    // value as equal to an untainted one, which could lose the taint.
+    // Ignore the url_data and tainting fields when comparing values for equality.
     fn eq(&self, other: &Self) -> bool {
-        self.v == other.v && self.attr_tainted == other.attr_tainted
+        self.v == other.v
     }
 }
 
