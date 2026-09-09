@@ -354,6 +354,7 @@ node-licenses:
             - tools/lint/eslint/eslint-plugin-mozilla/package.json
             - tools/lint/stylelint/stylelint-plugin-mozilla/package.json
             - tools/terser/package.json
+            - third_party/node/**
     fetches:
         toolchain:
             - linux64-node
