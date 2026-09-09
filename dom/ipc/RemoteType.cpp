@@ -8,6 +8,7 @@
 #include "ipc/IPCMessageUtilsSpecializations.h"
 #include "mozilla/BasePrincipal.h"
 #include "mozilla/NeverDestroyed.h"
+#include "mozilla/NullPrincipal.h"
 #include "nsIURI.h"
 #include "nsNetUtil.h"
 #include "nsPrintfCString.h"
@@ -31,7 +32,7 @@ RemoteType RemoteType::SharedWeb(const OriginAttributes& aAttrs) {
   type.mUserContextId = aAttrs.mUserContextId;
   type.mPrivateBrowsingId = aAttrs.mPrivateBrowsingId;
   type.mGeckoViewSessionContextId = aAttrs.mGeckoViewSessionContextId;
-  MOZ_ASSERT(type.CheckValidity());
+  type.DebugAssertValidity();
   return type;
 }
 
@@ -39,7 +40,7 @@ RemoteType::RemoteType() = default;
 RemoteType::~RemoteType() = default;
 
 RemoteType::RemoteType(RemoteType::Kind aKind) : mKind(aKind) {
-  MOZ_RELEASE_ASSERT(CheckValidity());
+  ReleaseAssertValidity();
 }
 
 RemoteType::RemoteType(const RemoteType&) = default;
@@ -178,7 +179,10 @@ static bool ParseAttr(const nsACString& aValue, nsString& aMember) {
 
   // Ensure the type parsed to a valid RemoteType, as we never want to expose an
   // non-Unknown but invalid RemoteType outside of this .cpp file.
-  NS_ENSURE_TRUE(type.CheckValidity(), RemoteType{});
+  if (auto result = type.CheckValidity(); result.isErr()) {
+    NS_WARNING(result.inspectErr());
+    return RemoteType{};
+  }
 
   // Ensure the string representation of the remote type matches aRemoteType.
   // This is much stricter than e.g. principal or OriginAttributes parsing, but
@@ -189,7 +193,7 @@ static bool ParseAttr(const nsACString& aValue, nsString& aMember) {
 }
 
 nsCString RemoteType::StringifyKind() const {
-  MOZ_ASSERT(CheckValidity());
+  DebugAssertValidity();
   switch (mKind) {
     case RemoteType::Kind::NotRemote:
       // NOTE: Unlike other remote types, the full RemoteType string for
@@ -245,7 +249,7 @@ static void SetAttr(URLParams& aParam, const nsACString& aName,
 }
 
 nsAutoCString RemoteType::StringifyMeta() const {
-  MOZ_ASSERT(CheckValidity());
+  DebugAssertValidity();
 
   nsAutoCString meta(mOriginNoSuffix);
 
@@ -267,7 +271,7 @@ nsAutoCString RemoteType::StringifyMeta() const {
 }
 
 nsCString RemoteType::Stringify() const {
-  MOZ_ASSERT(CheckValidity());
+  DebugAssertValidity();
 
   // FIXME: We should change the representation of not-remote! (bug 1508757)
   if (IsNotRemote()) {
@@ -294,25 +298,40 @@ bool RemoteType::HasAttrs() const {
       kAttrs);
 }
 
-bool RemoteType::CheckValidity() const {
+Result<Ok, const char*> RemoteType::CheckValidity() const {
   // If we don't have a WebContent kind, no extra fields can be used.
   if (!IsWeb() && HasMeta()) {
-    NS_WARNING("Invalid RemoteType: Non-web type has metadata");
-    return false;
+    return Err("Invalid RemoteType: Non-web type has metadata");
   }
 
   if (HasOrigin()) {
     nsCOMPtr<nsIURI> uri;
     if (NS_FAILED(NS_NewURI(getter_AddRefs(uri), mOriginNoSuffix))) {
-      NS_WARNING("Invalid RemoteType: Invalid OriginNoSuffix URI");
-      return false;
+      return Err("Invalid RemoteType: Invalid OriginNoSuffix URI");
     }
 
-    nsCOMPtr<nsIPrincipal> principal =
-        BasePrincipal::CreateContentPrincipal(uri, GetOriginAttributes());
-    if (!principal) {
-      NS_WARNING("Invalid RemoteType: Failed to create content principal");
-      return false;
+    nsCOMPtr<nsIPrincipal> principal;
+    if (uri->SchemeIs(NS_NULLPRINCIPAL_SCHEME)) {
+      // The null principal should not have a precursor, as if it does, we
+      // should have constructed the RemoteType using that precursor.
+      bool hasQuery = false;
+      if (NS_FAILED(uri->GetHasQuery(&hasQuery)) || hasQuery) {
+        return Err("Invalid RemoteType: Null principal has precursor");
+      }
+
+      principal = NullPrincipal::Create(GetOriginAttributes(), uri);
+      if (!principal) {
+        return Err("Invalid RemoteType: Failed to create null principal");
+      }
+    } else {
+      principal =
+          BasePrincipal::CreateContentPrincipal(uri, GetOriginAttributes());
+      if (!principal) {
+        return Err("Invalid RemoteType: Failed to create content principal");
+      }
+      if (!principal->GetIsContentPrincipal()) {
+        return Err("Invalid RemoteType: Principal is not a content principal");
+      }
     }
 
     // Currently we always isolate by site, never by origin, so a remote type
@@ -321,18 +340,27 @@ bool RemoteType::CheckValidity() const {
     nsAutoCString siteOrigin;
     MOZ_ALWAYS_SUCCEEDS(principal->GetOriginNoSuffix(origin));
     MOZ_ALWAYS_SUCCEEDS(principal->GetSiteOriginNoSuffix(siteOrigin));
-    if (origin != mOriginNoSuffix || origin != siteOrigin) {
-      NS_WARNING("Invalid RemoteType: Non-canonical OriginNoSuffix");
-      return false;
+    if (origin != mOriginNoSuffix) {
+      return Err("Invalid RemoteType: Non-canonical OriginNoSuffix");
+    }
+    if (origin != siteOrigin) {
+      return Err("Invalid RemoteType: Non-site OriginNoSuffix");
     }
   } else if (IsWebCoopCoep() || IsWebServiceWorker()) {
     // These remote types require a URI specified.
-    NS_WARNING(
+    return Err(
         "Invalid RemoteType: Web{CoopCoep/ServiceWorker} without site origin");
-    return false;
   }
 
-  return true;
+  return Ok{};
+}
+
+void RemoteType::ReleaseAssertValidity() const {
+  auto result = CheckValidity();
+  if (result.isErr()) {
+    // The returned error is one of the above string literals.
+    MOZ_CRASH_UNSAFE(result.inspectErr());
+  }
 }
 
 bool RemoteType::SupportsPrealloc() const {
@@ -358,7 +386,7 @@ RemoteType RemoteType::WithDisableJit(bool aDisableJit) const {
   RemoteType copy(*this);
   copy.mDisableJit = aDisableJit;
 
-  MOZ_ASSERT(copy.CheckValidity());
+  copy.DebugAssertValidity();
   return copy;
 }
 
@@ -371,7 +399,7 @@ RemoteType RemoteType::WithSiteOrigin(const nsACString& aSiteOriginNoSuffix,
 
   // NOTE: We release-assert validity, as an invalid aSiteOriginURI or Kind
   // could create an invalid RemoteType.
-  MOZ_RELEASE_ASSERT(copy.CheckValidity());
+  copy.ReleaseAssertValidity();
   MOZ_RELEASE_ASSERT(copy.IsIsolatedWeb());
   return copy;
 }
