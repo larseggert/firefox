@@ -288,6 +288,8 @@ export class NewTabContentPing {
       event_source,
       // eslint-disable-next-line no-unused-vars
       card_column,
+      // eslint-disable-next-line no-unused-vars
+      is_ad_eligible_position,
       ...result
     } = eventDataDict;
     // @backward-compat { version 157 } layout_name was added as an extra_key to

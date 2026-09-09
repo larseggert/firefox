@@ -332,6 +332,7 @@ export class TopSiteLink extends React.PureComponent {
             visible_topsites: visibleTopSites,
             frecency_boosted: link.type === "frecency-boost",
             attribution: link.attribution,
+            is_ad_eligible_position: link.is_ad_eligible_position,
           }}
           // For testing.
           IntersectionObserver={this.props.IntersectionObserver}
@@ -352,6 +353,7 @@ export class TopSiteLink extends React.PureComponent {
             visible_topsites: visibleTopSites,
             smartScores: this.props.link.scores,
             smartWeights: this.props.link.weights,
+            is_ad_eligible_position: this.props.link.is_ad_eligible_position,
           }}
           // For testing.
           IntersectionObserver={this.props.IntersectionObserver}

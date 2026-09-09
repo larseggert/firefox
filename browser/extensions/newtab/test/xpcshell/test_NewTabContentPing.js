@@ -38,6 +38,7 @@ add_task(async function test_recordEvent_sanitizes_and_buffers() {
     // section_position is stripped from impression/click events.
     section_position: "2",
     card_column: "3",
+    is_ad_eligible_position: "true",
   };
 
   // These fields are expected to survive the sanitization.

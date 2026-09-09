@@ -63,6 +63,17 @@ function isCardColumnSupported() {
   return Services.vc.compare(AppConstants.MOZ_APP_VERSION, "157.0a1") >= 0;
 }
 
+// @backward-compat { version 157 } is_ad_eligible_position was added as an
+// extra_key to the topsites impression event in 157. A train-hopped XPI can run
+// on older platform builds whose schema lacks it, and glean-core drops the
+// whole event when it sees an unknown extra key. Remove this guard, and its
+// call sites, once 157 reaches Release.
+export function isAdEligiblePositionSupported(
+  version = AppConstants.MOZ_APP_VERSION
+) {
+  return Services.vc.compare(version, "157.0a1") >= 0;
+}
+
 export const PREF_IMPRESSION_ID = "impressionId";
 export const TELEMETRY_PREF = "telemetry";
 export const PREF_UNIFIED_ADS_SPOCS_ENABLED = "unifiedAds.spocs.enabled";
@@ -992,6 +1003,7 @@ export class TelemetryFeed {
       tile_id,
       visible_topsites,
       frecency_boosted = false,
+      is_ad_eligible_position,
     } = data;
     // Legacy telemetry expects 1-based tile positions.
     const legacyTelemetryPosition = position + 1;
@@ -1012,6 +1024,9 @@ export class TelemetryFeed {
             visible_topsites,
             frecency_boosted,
             frecency_boosted_has_exposure: this.frecencyBoostedHasExposure(),
+            ...(is_ad_eligible_position && isAdEligiblePositionSupported()
+              ? { is_ad_eligible_position: true }
+              : {}),
           };
           this.recordOrQueueEvent(
             "topSitesImpression",
@@ -1026,6 +1041,9 @@ export class TelemetryFeed {
             is_sponsored: true,
             position,
             visible_topsites,
+            ...(is_ad_eligible_position && isAdEligiblePositionSupported()
+              ? { is_ad_eligible_position: true }
+              : {}),
           });
         }
       }
@@ -1095,6 +1113,10 @@ export class TelemetryFeed {
           visible_topsites,
           smart_scores: JSON.stringify(action.data.smartScores),
           smart_weights: JSON.stringify(action.data.smartWeights),
+          ...(action.data.is_ad_eligible_position &&
+          isAdEligiblePositionSupported()
+            ? { is_ad_eligible_position: true }
+            : {}),
         });
         break;
 
