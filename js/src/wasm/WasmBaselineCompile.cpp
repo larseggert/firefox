@@ -656,7 +656,7 @@ bool BaseCompiler::beginFunction() {
       case MIRType::Float32:
         fr.storeLocalF32(RegF32(i->fpu()), l);
         break;
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
       case MIRType::Simd128:
         fr.storeLocalV128(RegV128(i->fpu()), l);
         break;
@@ -1043,7 +1043,7 @@ void BaseCompiler::saveRegisterReturnValues(const ResultType& resultType) {
         break;
       }
       case ValType::V128:
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
         masm.storeUnalignedSimd128(RegV128(result.fpr()), dest);
         break;
 #else
@@ -1088,7 +1088,7 @@ void BaseCompiler::restoreRegisterReturnValues(const ResultType& resultType) {
         masm.loadPtr(src, RegRef(result.gpr()));
         break;
       case ValType::V128:
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
         masm.loadUnalignedSimd128(src, RegV128(result.fpr()));
         break;
 #else
@@ -1304,7 +1304,7 @@ void BaseCompiler::popRegisterResults(ABIResultIter& iter) {
         popRef(RegRef(result.gpr()));
         break;
       case ValType::V128:
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
         popV128(RegV128(result.fpr()));
 #else
         MOZ_CRASH("No SIMD support");
@@ -1428,7 +1428,7 @@ void BaseCompiler::popStackResults(ABIResultIter& iter, StackHeight stackBase) {
       case Stk::ConstF64:
         fr.storeImmediateF64ToStack(v.f64val_, resultHeight, temp);
         break;
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
       case Stk::ConstV128:
         fr.storeImmediateV128ToStack(v.v128val_, resultHeight, temp);
         break;
@@ -1555,7 +1555,7 @@ bool BaseCompiler::pushResults(ResultType type, StackHeight resultsBase) {
         pushI64(RegI64(result.gpr64()));
         break;
       case ValType::V128:
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
         pushV128(RegV128(result.fpr()));
         break;
 #else
@@ -1759,7 +1759,7 @@ void BaseCompiler::passArg(ValType type, const Stk& arg, FunctionCall* call) {
       break;
     }
     case ValType::V128: {
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
       ABIArg argLoc = call->abi.next(MIRType::Simd128);
       switch (argLoc.kind()) {
         case ABIArg::Stack: {
@@ -2002,7 +2002,7 @@ void BaseCompiler::pushBuiltinCallResult(const FunctionCall& call,
       pushF64(rv);
       break;
     }
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
     case MIRType::Simd128: {
       RegV128 rv = captureReturnedV128(call);
       pushV128(rv);
@@ -4757,7 +4757,7 @@ bool BaseCompiler::emitTryTable() {
           break;
         }
         case ValType::V128: {
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
           RegV128 reg = needV128();
           masm.loadUnalignedSimd128(Address(data, offset), reg);
           pushV128(reg);
@@ -4984,7 +4984,7 @@ bool BaseCompiler::emitCatch() {
         break;
       }
       case ValType::V128: {
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
         RegV128 reg = needV128();
         masm.loadUnalignedSimd128(Address(data, offset), reg);
         pushV128(reg);
@@ -5281,7 +5281,7 @@ bool BaseCompiler::emitThrow() {
         break;
       }
       case ValType::V128: {
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
         RegV128 reg = popV128();
         masm.storeUnalignedSimd128(reg, Address(data, offset));
         freeV128(reg);
@@ -6012,7 +6012,7 @@ bool BaseCompiler::emitGetLocal() {
       pushLocalI64(slot);
       break;
     case ValType::V128:
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
       pushLocalV128(slot);
       break;
 #else
@@ -6085,7 +6085,7 @@ bool BaseCompiler::emitSetOrTeeLocal(uint32_t slot) {
       break;
     }
     case ValType::V128: {
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
       RegV128 rv = popV128();
       syncLocal(slot);
       fr.storeLocalV128(rv, localFromSlot(slot, MIRType::Simd128));
@@ -6163,7 +6163,7 @@ bool BaseCompiler::emitGetGlobal() {
       case ValType::Ref:
         pushRef(intptr_t(value.ref().forCompiledCode()));
         break;
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
       case ValType::V128:
         pushV128(value.v128());
         break;
@@ -6210,7 +6210,7 @@ bool BaseCompiler::emitGetGlobal() {
       pushRef(rv);
       break;
     }
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
     case ValType::V128: {
       RegV128 rv = needV128();
       ScratchPtr tmp(*this);
@@ -6285,7 +6285,7 @@ bool BaseCompiler::emitSetGlobal() {
       freeRef(rv);
       break;
     }
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
     case ValType::V128: {
       RegV128 rv = popV128();
       ScratchPtr tmp(*this);
@@ -6430,7 +6430,7 @@ bool BaseCompiler::emitSelect(bool typed) {
       pushF64(r);
       break;
     }
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
     case ValType::V128: {
       RegV128 r, rs;
       pop2xV128(&r, &rs);
@@ -7791,7 +7791,7 @@ void BaseCompiler::emitGcGet(StorageType type, FieldWideningOp wideningOp,
       pushF64(r);
       break;
     }
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
     case StorageType::V128: {
       MOZ_ASSERT(wideningOp == FieldWideningOp::None);
       RegV128 r = needV128();
@@ -7856,7 +7856,7 @@ void BaseCompiler::emitGcSetScalar(const T& dst, StorageType type,
       NullCheckPolicy::emitTrapSite(this, fcr, TrapMachineInsn::Store64);
       break;
     }
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
     case StorageType::V128: {
       FaultingCodeRange fcr = masm.storeUnalignedSimd128(value.v128(), dst);
       NullCheckPolicy::emitTrapSite(this, fcr, TrapMachineInsn::Store128);
@@ -9306,7 +9306,7 @@ bool BaseCompiler::emitExternConvertAny() {
 //
 // SIMD and Relaxed SIMD.
 
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
 
 // Emitter trampolines used by abstracted SIMD operations.  Naming here follows
 // the SIMD spec pretty closely.
@@ -10539,7 +10539,7 @@ bool BaseCompiler::emitVectorLaneSelect() {
   return true;
 }
 #  endif  // ENABLE_WASM_RELAXED_SIMD
-#endif    // ENABLE_WASM_SIMD
+#endif    // ENABLE_JIT_SIMD
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -11458,7 +11458,7 @@ bool BaseCompiler::emitBody() {
         return iter_.unrecognizedOpcode(&op);
       }
 
-#ifdef ENABLE_WASM_SIMD
+#ifdef ENABLE_JIT_SIMD
       // SIMD operations
       case uint16_t(Op::SimdPrefix): {
         uint32_t laneIndex;
@@ -12072,7 +12072,7 @@ bool BaseCompiler::emitBody() {
         }  // switch (op.b1)
         return iter_.unrecognizedOpcode(&op);
       }
-#endif  // ENABLE_WASM_SIMD
+#endif  // ENABLE_JIT_SIMD
 
       // "Miscellaneous" operations
       case uint16_t(Op::MiscPrefix): {
@@ -12450,7 +12450,7 @@ void BaseCompiler::assertResultRegistersAvailable(ResultType type) {
         MOZ_ASSERT(isAvailableI64(RegI64(result.gpr64())));
         break;
       case ValType::V128:
-#  ifdef ENABLE_WASM_SIMD
+#  ifdef ENABLE_JIT_SIMD
         MOZ_ASSERT(isAvailableV128(RegV128(result.fpr())));
         break;
 #  else
@@ -12501,7 +12501,7 @@ void BaseCompiler::performRegisterLeakCheck() {
       case Stk::RegisterF64:
         check.addKnownF64(item.f64reg());
         break;
-#  ifdef ENABLE_WASM_SIMD
+#  ifdef ENABLE_JIT_SIMD
       case Stk::RegisterV128:
         check.addKnownV128(item.v128reg());
         break;
@@ -12541,7 +12541,7 @@ void BaseCompiler::assertStackInvariants() const {
       case Stk::MemF32:
         size += BaseStackFrame::StackSizeOfFloat;
         break;
-#  ifdef ENABLE_WASM_SIMD
+#  ifdef ENABLE_JIT_SIMD
       case Stk::MemV128:
         size += BaseStackFrame::StackSizeOfV128;
         break;
