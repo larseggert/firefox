@@ -488,6 +488,36 @@
         ok(!secondItem.checked, "The second item is no longer checked.");
       });
 
+      // Verify that checked state does not affect the item's layout.
+      add_task(async function testCheckedStateDoesNotAffectLayout() {
+        let { secondItem } = await renderVisualPicker();
+
+        function measure(item) {
+          let itemRect = item.itemEl.getBoundingClientRect();
+          let contentRect = item
+            .querySelector(".slotted")
+            .getBoundingClientRect();
+          return JSON.stringify({
+            width: itemRect.width,
+            height: itemRect.height,
+            contentInlineStart: contentRect.left - itemRect.left,
+            contentBlockStart: contentRect.top - itemRect.top,
+          });
+        }
+
+        ok(!secondItem.checked, "The second item starts out un-checked.");
+        let uncheckedMeasurements = measure(secondItem);
+
+        secondItem.checked = true;
+        await secondItem.updateComplete;
+
+        is(
+          measure(secondItem),
+          uncheckedMeasurements,
+          "Checking an item doesn't change its size or where its content sits."
+        );
+      });
+
       // Verify that keyboard navigation works as expected.
       add_task(async function testRadioKeyboardNavigation() {
         let { firstItem, secondItem, thirdItem, picker } =
