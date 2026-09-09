@@ -41,7 +41,8 @@ use webrender::sw_compositor::SwCompositor;
 use webrender::{
     api::units::*, api::*, create_webrender_instance, render_api::*, set_profiler_hooks, AsyncPropertySampler,
     AsyncScreenshotHandle, ClipRadius, Compositor, CompositorCapabilities, CompositorConfig, CompositorInputConfig,
-    CompositorKind, CompositorSurfaceTransform, CompositorSurfaceUsage, Device, FrameBuilderConfig, LayerCompositor,
+    CompositorKind, CompositorSurfaceTransform, CompositorSurfaceUsage, Device, DeviceOptions, FrameBuilderConfig,
+    LayerCompositor,
     MappableCompositor, MappedTileInfo, NativeSurfaceHandle, NativeSurfaceId, NativeSurfaceInfo, NativeTileId,
     PartialPresentCompositor,
     PendingShadersToPrecache, PipelineInfo, ProfilerHooks, RecordedFrameHandle, RenderBackendHooks, Renderer,
@@ -1425,17 +1426,19 @@ fn wr_device_new(gl_context: *mut c_void, pc: Option<&mut WrProgramCache>) -> De
 
     Device::new(
         gl,
-        Some(Box::new(MozCrashAnnotator)),
-        resource_override_path,
-        use_optimized_shaders,
-        upload_method,
-        512 * 512,
-        cached_programs,
-        true,
-        true,
-        None,
-        false,
-        false,
+        DeviceOptions {
+            crash_annotator: Some(Box::new(MozCrashAnnotator)),
+            resource_override_path,
+            use_optimized_shaders,
+            upload_method,
+            batched_upload_threshold: 512 * 512,
+            cached_programs,
+            allow_texture_storage_support: true,
+            allow_texture_swizzling: true,
+            dump_shader_source: None,
+            surface_origin_is_top_left: false,
+            panic_on_gl_error: false,
+        },
     )
 }
 
