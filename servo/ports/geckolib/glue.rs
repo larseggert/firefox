@@ -11521,7 +11521,7 @@ pub unsafe extern "C" fn Servo_GetComputationSteps(
     pseudo_type: PseudoStyleType,
     style: &ComputedValues,
     raw_data: &PerDocumentStyleData,
-    out: &mut nsTArray<nsString>,
+    out: &mut nsTArray<nsCString>,
 ) {
     use style::custom_properties::VariableValue;
     use style::properties::ARBITRARY_SUBSTITUTION_FUNCTIONS;
@@ -11623,10 +11623,10 @@ pub unsafe extern "C" fn Servo_GetComputationSteps(
         };
 
         // We successfully substituted, let's add the initial string to the result array
-        out.push(nsString::from(&string));
+        out.push(nsCString::from(&string));
         let result_string = result.css.to_string();
         // …as well as the substituted string.
-        out.push(nsString::from(&result_string));
+        out.push(nsCString::from(&result_string));
         substituted = Some(result_string.clone());
     }
 
@@ -11675,9 +11675,9 @@ pub unsafe extern "C" fn Servo_GetComputationSteps(
         // We only want to put `string` in the array if it's significantly different (as in, it
         // should have more differences than juste whitespace/casing).
         if value.replace(" ", "").to_lowercase() != string.replace(" ", "").to_lowercase() {
-            out.push(nsString::from(&string));
+            out.push(nsCString::from(&string));
         }
-        out.push(nsString::from(&value));
+        out.push(nsCString::from(&value));
     }
 
     // Go through the leaves so we have consistent units to run the computation
@@ -11701,7 +11701,7 @@ pub unsafe extern "C" fn Servo_GetComputationSteps(
     };
     if new_value != value {
         value = new_value;
-        out.push(nsString::from(&value));
+        out.push(nsCString::from(&value));
     }
 
     // We don't want to call node.simplify_and_sort() since it simplifies the whole tree
@@ -11738,7 +11738,7 @@ pub unsafe extern "C" fn Servo_GetComputationSteps(
                 };
                 if new_value != value {
                     value = new_value;
-                    out.push(nsString::from(&value));
+                    out.push(nsCString::from(&value));
                 }
             },
         }

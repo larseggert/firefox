@@ -1443,7 +1443,7 @@ void InspectorUtils::GetComputationSteps(GlobalObject& aGlobalObject,
                                          const nsAString& aExpression,
                                          Element& aElement,
                                          const nsAString& aPseudo,
-                                         nsTArray<nsString>& aResult) {
+                                         nsTArray<nsCString>& aResult) {
   Document* doc = aElement.GetComposedDoc();
   if (!doc) {
     return;
