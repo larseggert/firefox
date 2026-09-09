@@ -220,6 +220,7 @@ private fun LocationOption(
                 role = Role.RadioButton
             },
         description = description,
+        maxDescriptionLines = 3,
         enabled = enabled,
         iconPainter =
             if (isSelected) {
