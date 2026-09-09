@@ -26,3 +26,4 @@ tasks-from:
     - parakeet-models-fetch.yml
     - openh264.yml
     - widevine.yml
+    - pnpm.yml
