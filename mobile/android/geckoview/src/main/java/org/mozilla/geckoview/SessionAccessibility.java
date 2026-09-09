@@ -619,6 +619,8 @@ public class SessionAccessibility {
       event.setMaxScrollX(eventData.getInt("maxScrollX", -1));
       event.setMaxScrollY(eventData.getInt("maxScrollY", -1));
       event.setChecked((eventData.getInt("flags") & FLAG_CHECKED) != 0);
+      event.setContentChangeTypes(
+          eventData.getInt("contentChangeType", AccessibilityEvent.CONTENT_CHANGE_TYPE_UNDEFINED));
     }
 
     // Update stored state from this event.

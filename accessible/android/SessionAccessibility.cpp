@@ -13,6 +13,7 @@
 #include "IDSet.h"
 #include "JavaBuiltins.h"
 #include "LocalAccessible-inl.h"
+#include "Pivot.h"
 #include "mozilla/MouseEvents.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/a11y/Accessible.h"
@@ -30,6 +31,7 @@
 #include "mozilla/widget/GeckoViewSupport.h"
 #include "nsAccUtils.h"
 #include "nsAccessibilityService.h"
+#include "nsIAccessiblePivot.h"
 #include "nsThreadUtils.h"
 
 #ifdef DEBUG
@@ -468,10 +470,104 @@ void SessionAccessibility::SendScrollingEvent(Accessible* aAccessible,
   SendWindowContentChangedEvent();
 }
 
-void SessionAccessibility::SendWindowContentChangedEvent() {
+class NamedLeafRule : public PivotRule {
+ public:
+  uint16_t Match(Accessible* aAcc) override {
+    uint16_t result = nsIAccessibleTraversalRule::FILTER_IGNORE;
+
+    if (nsAccUtils::MustPrune(aAcc)) {
+      result |= nsIAccessibleTraversalRule::FILTER_IGNORE_SUBTREE;
+    }
+
+    if (aAcc->State() & states::INVISIBLE) {
+      result |= nsIAccessibleTraversalRule::FILTER_IGNORE_SUBTREE;
+      return result;
+    }
+
+    if ((!aAcc->HasChildren() || nsAccUtils::MustPrune(aAcc)) &&
+        !aAcc->NameIsEmpty()) {
+      result |= nsIAccessibleTraversalRule::FILTER_MATCH;
+    }
+
+    return result;
+  }
+};
+
+void SessionAccessibility::MaybeSendLiveRegionEvents(Accessible* aAccessible,
+                                                     int32_t aStartTextOffset,
+                                                     int32_t aEndTextOffset) {
+  Accessible* liveRegion = nsAccUtils::GetLiveRegionRoot(aAccessible);
+  if (!liveRegion) {
+    // We are not in a live region, do nothing.
+    return;
+  }
+
+  Maybe<bool> atomic;
+  liveRegion->LiveRegionAttributes(nullptr, nullptr, &atomic, nullptr);
+
+  if (aStartTextOffset < 0) {
+    // This accessible and its subtree have been inserted.
+    // If this region is atomic, walk the region's tree instead of just this
+    // subtree.
+    auto p = a11y::Pivot((atomic && *atomic) ? liveRegion : aAccessible);
+    NamedLeafRule rule = NamedLeafRule();
+    Accessible* match = p.Next(nullptr, rule, true);
+    uint32_t matchCount = 1;
+    while (match) {
+      // Send WINDOW_CONTENT_CHANGED events for each leaf... within a limit.
+      SendWindowContentChangedEvent(match);
+      if (++matchCount > kLiveRegionContentChangedLimit) {
+        break;
+      }
+      match = p.Next(match, rule);
+    }
+  } else if (aEndTextOffset > 0) {
+    // Text leafs have changed within this container, fire an event for each
+    // one.
+    if (HyperTextAccessibleBase* ht = aAccessible->AsHyperTextBase()) {
+      for (Accessible* child = ht->GetChildAtOffset(aStartTextOffset);
+           child && child->StartOffset() < aEndTextOffset;
+           child = child->NextSibling()) {
+        if (!child->IsTextLeaf()) {
+          continue;
+        }
+
+        if (atomic && *atomic) {
+          // A text change in an atomic live region, call this method on the
+          // entire region.
+          MaybeSendLiveRegionEvents(liveRegion);
+          return;
+        }
+
+        // Send WINDOW_CONTENT_CHANGED events on each child leaf that was
+        // inserted.
+        SendWindowContentChangedEvent(child);
+      }
+    }
+  }
+}
+
+void SessionAccessibility::SendWindowContentChangedEvent(
+    Accessible* aAccessible) {
+  int32_t virtualViewId =
+      aAccessible ? AccessibleWrap::GetVirtualViewID(aAccessible) : kNoID;
+  int32_t className = aAccessible
+                          ? AccessibleWrap::AndroidClass(aAccessible)
+                          : java::SessionAccessibility::CLASSNAME_WEBVIEW;
+
+  GECKOBUNDLE_START(eventInfo);
+  if (aAccessible) {
+    // If an accessible has been provided, consider this a subtree change type.
+    GECKOBUNDLE_PUT(
+        eventInfo, "contentChangeType",
+        java::sdk::Integer::ValueOf(
+            java::sdk::AccessibilityEvent::CONTENT_CHANGE_TYPE_SUBTREE));
+  }
+  GECKOBUNDLE_FINISH(eventInfo);
+
   mSessionAccessibility->SendEvent(
-      java::sdk::AccessibilityEvent::TYPE_WINDOW_CONTENT_CHANGED, kNoID,
-      java::SessionAccessibility::CLASSNAME_WEBVIEW, nullptr);
+      java::sdk::AccessibilityEvent::TYPE_WINDOW_CONTENT_CHANGED, virtualViewId,
+      className, eventInfo);
 }
 
 void SessionAccessibility::SendWindowStateChangedEvent(
@@ -532,7 +628,12 @@ void SessionAccessibility::SendTextChangedEvent(Accessible* aAccessible,
                                                 bool aFromUser) {
   MOZ_ASSERT(NS_IsMainThread());
   if (!aFromUser) {
-    // Only dispatch text change events from users, for now.
+    if (aIsInsert) {
+      // This is a non-user insertion. If it is in a live region it needs to be
+      // handled differently.
+      MaybeSendLiveRegionEvents(aAccessible, aStart, aStart + aLen);
+    }
+
     return;
   }
 
