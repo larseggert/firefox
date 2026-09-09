@@ -5688,7 +5688,8 @@ void PresShell::AddCanvasBackgroundColorItem(nsDisplayListBuilder* aBuilder,
   const bool isRootContentDocumentCrossProcess =
       mPresContext->IsRootContentDocumentCrossProcess();
   MOZ_ASSERT_IF(
-      !aFrame->GetParent() && isRootContentDocumentCrossProcess &&
+      aBuilder->IsPaintingToWindow() && !aFrame->GetParent() &&
+          isRootContentDocumentCrossProcess &&
           mPresContext->HasDynamicToolbar(),
       aBounds.Size() ==
           nsLayoutUtils::ExpandHeightForDynamicToolbar(
