@@ -153,9 +153,6 @@ allowed_warnings:
     - "testing/automated-testing/manifest-sandbox\\.md:.*: WARNING: download file not readable"
     - "UITour-lib.Mozilla.UITour.* WARNING: duplicate class description of Mozilla.UITour"
     - "uitour/docs/index\\.md:.*: WARNING: duplicate class description of Mozilla\\.UITour"
-    # Unknown document warnings
-    # myst-parser >= 4 resolves relative links against the source directory
-    - "WARNING: Unknown source document"
     # Undefined label warnings.
     - "dom/navigation/nav_replace\\.md:.*: WARNING: undefined label"
     - "devtools-user/page_inspector/how_to/work_with_animations/index\\.md:.*: WARNING: undefined label"
