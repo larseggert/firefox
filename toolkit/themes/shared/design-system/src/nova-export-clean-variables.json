@@ -3107,7 +3107,7 @@
           },
           "active": {
             "Light": "{button/background/color/active}",
-            "Dark": "{button/background/color/active}",
+            "Dark": "{color/violet-desaturated/60}",
             "HCM": "{button/background/color/active}",
             "Private": "{button/background/color/active}",
             "Smart Light (WIP)": "{button/background/color/active}"

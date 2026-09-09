@@ -631,7 +631,7 @@
   },
   "input-color/background/color/active": {
     "light": "{Theme$button/background/color/active}",
-    "dark": "{Theme$button/background/color/active}",
+    "dark": "{Colors$color/violet-desaturated/60}",
     "forcedColors": "{Theme$button/background/color/active}"
   },
   "input-color/background/color/hover": {
