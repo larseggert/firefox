@@ -102,15 +102,13 @@ browsertime-tp6:
         limit-platforms:
             by-app:
                 chrome:
-                    # - .*shippable.*  # Bug 2038340: temporarily disabled on Windows
-                    - linux.*shippable.*
-                    - macosx.*shippable.*
+                    - .*shippable.*
                 safari:
                     - .*macos.*shippable.*
                 custom-car:
                     - macosx1500.*shippable.*
                     - linux.*shippable.*
-                    # - windows.*-64.*shippable.*  # Bug 2038340: temporarily disabled
+                    - windows.*-64.*shippable.*
                 default: []
         max-run-time:
             by-subtest:
@@ -135,7 +133,7 @@ browsertime-tp6:
                         firefox:
                             by-test-platform:
                                 linux.*shippable.*: [trunk]
-                                # windows.*-64.*shippable.*: [trunk]  # Bug 2038340: temporarily disabled
+                                windows.*-64.*shippable.*: [trunk]
                                 macosx1470.*shippable.*: [trunk]
                                 default: []
                         default: []
@@ -143,17 +141,15 @@ browsertime-tp6:
                     by-app:
                         firefox:
                             by-test-platform:
-                                # windows11-64-24h2.*shippable.*: []
-                                # ^(?!windows11-64-24h2).*64(?!.*nightlyasrelease).*shippable.*: [trunk]
-                                ^(?!.*windows).*64(?!.*nightlyasrelease).*shippable.*: [trunk]  # Bug 2038340: temporarily excludes Windows
+                                windows11-64-24h2.*shippable.*: []
+                                ^(?!windows11-64-24h2).*64(?!.*nightlyasrelease).*shippable.*: [trunk]
                                 default: []
                         default: []
                 default:
                     by-app:
                         firefox:
                             by-test-platform:
-                                # .*64(?!.*nightlyasrelease).*shippable.*: [trunk]  # Bug 2038340: temporarily excludes Windows
-                                ^(?!.*windows).*64(?!.*nightlyasrelease).*shippable.*: [trunk]
+                                .*64(?!.*nightlyasrelease).*shippable.*: [trunk]
                                 default: []
                         default: []
         treeherder-symbol: Btime(tp6)
@@ -232,11 +228,11 @@ browsertime-tp6-essential:
             by-app:
                 chrome:
                     - linux.*shippable.*
-                    # - windows.*shippable.*  # Bug 2038340: temporarily disabled
+                    - windows.*shippable.*
                     - macosx1470.*shippable.*
                 custom-car:
                     - linux.*shippable.*
-                    # - windows.*-64.*shippable.*  # Bug 2038340: temporarily disabled
+                    - windows.*-64.*shippable.*
                 default: []
         mozharness:
             extra-options:
@@ -565,9 +561,7 @@ browsertime-benchmark:
                 by-app:
                     firefox:
                         by-test-platform:
-                            windows.*-64.*shippable.*: []  # Bug 2038340: temporarily disabled
-                            # (?!macosx1400|macosx1500).*64.*shippable.*/.*: [trunk]
-                            ^(?!.*windows)(?!macosx1400|macosx1500).*64.*shippable.*/.*: [trunk]
+                            (?!macosx1400|macosx1500).*64.*shippable.*/.*: [trunk]
                             macosx1400.*shippable.*: [mozilla-central]
                             macosx1500.*shippable.*: [mozilla-central]
                             default: []
@@ -679,9 +673,7 @@ browsertime-benchmark-wasm:
         by-app:
             firefox:
                 by-test-platform:
-                    windows.*-64.*shippable.*: []  # Bug 2038340: temporarily disabled
-                    # .*64(?!.*nightlyasrelease).*shippable.*: [mozilla-central]
-                    ^(?!.*windows).*64(?!.*nightlyasrelease).*shippable.*: [mozilla-central]
+                    .*64(?!.*nightlyasrelease).*shippable.*: [mozilla-central]
                     default: []
             default: []
     max-run-time:
@@ -1032,15 +1024,6 @@ browsertime-regression-tests:
     treeherder-symbol: Btime(regressor)
 
 browsertime-upload:
-    limit-platforms:
-        by-app:
-            chrome:
-                # Bug 2038340: temporarily disabled on Windows
-                - linux.*-64.*shippable.*
-                - macosx.*shippable.*
-            safari:
-                - .*macosx.*shippable.*
-            default: []
     raptor:
         apps: [firefox, chrome, safari]
         subtests:
@@ -1217,19 +1200,6 @@ browsertime-video-playback-latency:
     treeherder-symbol: Btime(vpl)
 
 browsertime-webcodecs:
-    limit-platforms:
-        by-app:
-            chrome:
-                # - .*64.*shippable.*  # Bug 2038340: temporarily disabled on Windows
-                - linux.*-64.*shippable.*
-                - macosx.*shippable.*
-            safari:
-                - .*macosx.*shippable.*
-            custom-car:
-                - macosx1500.*shippable.*
-                - linux.*-64.*shippable.*
-                # - windows.*-64.*shippable.*  # Bug 2038340: temporarily disabled
-            default: []
     raptor:
         apps: [firefox, chrome, safari, custom-car]
         test: webcodecs
@@ -1481,13 +1451,11 @@ browsertime-indexeddb:
     limit-platforms:
         by-app:
             chrome:
-                # - .*shippable.*  # Bug 2038340: temporarily disabled on Windows
-                - linux.*shippable.*
-                - macosx.*shippable.*
+                - .*shippable.*
             custom-car:
                 - macosx1500.*shippable.*
                 - linux.*shippable.*
-                # - windows.*-64.*shippable.*  # Bug 2038340: temporarily disabled
+                - windows.*-64.*shippable.*
             default: []
     raptor:
         apps: [firefox, chrome]

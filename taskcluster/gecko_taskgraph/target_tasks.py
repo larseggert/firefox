@@ -856,14 +856,6 @@ def target_tasks_custom_car_perf_testing(full_task_graph, parameters, graph_conf
                 # Bug 2008058 Linux CaR tp6 tests are broken
                 if "tp6" in try_name and "linux" in platform:
                     return False
-                # Bug 2038340: temporarily limit CaR benchmarks on Windows
-                # to sp3/js3/motionmark during PSU replacement
-                if "windows" in platform and "benchmark" in try_name:
-                    if not any(
-                        x in try_name
-                        for x in ["speedometer3", "jetstream3", "motionmark"]
-                    ):
-                        return False
                 return True
         elif accept_raptor_android_build(platform):
             if "browsertime" in try_name and "cstm-car-m" in try_name:
@@ -947,14 +939,6 @@ def target_tasks_general_perf_testing(full_task_graph, parameters, graph_config)
                 if "chrome" in try_name:
                     if "tp6" in try_name and "essential" not in try_name:
                         return False
-                    # Bug 2038340: temporarily limit Chrome benchmarks on Windows
-                    # to sp3/js3/motionmark during PSU replacement
-                    if "windows" in platform and "benchmark" in try_name:
-                        if not any(
-                            x in try_name
-                            for x in ["speedometer3", "jetstream3", "motionmark"]
-                        ):
-                            return False
                     if "wasm-godot" in try_name:
                         return False
                     return True
@@ -968,14 +952,6 @@ def target_tasks_general_perf_testing(full_task_graph, parameters, graph_config)
                 if "linux" in platform:
                     if "speedometer3" in try_name:
                         return True
-                # Bug 2038340: temporarily limit Firefox benchmarks on Windows
-                # to sp3/js3/motionmark during PSU replacement
-                if "windows" in platform and "benchmark" in try_name:
-                    if not any(
-                        x in try_name
-                        for x in ["speedometer3", "jetstream3", "motionmark"]
-                    ):
-                        return False
                 # Labels for this suite carry no "benchmark" token, so the
                 # check below cannot match them.
                 if "safari" in try_name and "video-playback-latency" in try_name:
