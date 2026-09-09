@@ -4891,7 +4891,15 @@ void nsGlobalWindowOuter::FocusOuter(CallerType aCallerType,
   if (treeOwnerAsWin && (canFocus || isActive)) {
     bool isEnabled = true;
     if (NS_SUCCEEDED(treeOwnerAsWin->GetEnabled(&isEnabled)) && !isEnabled) {
-      NS_WARNING("Should not try to set the focus on a disabled window");
+      // A system caller is typically another application handing us an URL.
+      // It should bring us to the front.
+      if (aCallerType == CallerType::System) {
+        if (nsCOMPtr<nsIWidget> widget = treeOwnerAsWin->GetMainWidget()) {
+          widget->SetFocus(nsIWidget::Raise::Yes, aCallerType);
+        }
+      } else {
+        NS_WARNING("Should not try to set the focus on a disabled window");
+      }
       return;
     }
   }
