@@ -186,6 +186,10 @@ def vendor_tree(tmp_path, monkeypatch):
         vendor_dir / "package.json",
         '{"devDependencies": {"webpack": "5.89.0"}}',
     )
+    write(
+        tmp_path / "browser" / "extensions" / "newtab" / "package.json",
+        '{"devDependencies": {"webpack": "5.89.0", "jest": "29.7.0"}}',
+    )
 
     monkeypatch.setattr(
         mozbuild.bootstrap, "bootstrap_toolchain", lambda toolchain: PNPM
@@ -318,6 +322,35 @@ def test_vendor_accepts_the_pnpm_the_manifest_asks_for(
     monkeypatch.setattr(vendor_node.subprocess, "check_call", mock.Mock())
 
     assert FakeVendorNode(topsrcdir=tmp_path).vendor(force=True) == 0
+
+
+def test_vendor_refuses_to_run_when_a_consumer_wants_another_version(
+    tmp_path, monkeypatch, vendor_tree
+):
+    write(
+        tmp_path / "browser" / "extensions" / "newtab" / "package.json",
+        '{"devDependencies": {"webpack": "5.90.0"}}',
+    )
+    monkeypatch.setattr(
+        vendor_node.subprocess,
+        "check_call",
+        mock.Mock(side_effect=AssertionError("pnpm should not run")),
+    )
+
+    assert FakeVendorNode(topsrcdir=tmp_path).vendor(force=True) == 1
+
+
+def test_vendor_fails_when_a_consumer_manifest_is_missing(
+    tmp_path, monkeypatch, vendor_tree
+):
+    (tmp_path / "browser" / "extensions" / "newtab" / "package.json").unlink()
+    monkeypatch.setattr(
+        vendor_node.subprocess,
+        "check_call",
+        mock.Mock(side_effect=AssertionError("pnpm should not run")),
+    )
+
+    assert FakeVendorNode(topsrcdir=tmp_path).vendor(force=True) == 1
 
 
 def test_vendor_keeps_the_lockfile_when_resolving_fails(

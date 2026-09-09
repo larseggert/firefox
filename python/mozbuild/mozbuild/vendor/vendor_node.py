@@ -15,6 +15,9 @@ from mozfile import json
 from mozbuild.base import MozbuildObject
 from mozbuild.nodeutil import find_node_executable
 
+# Consumer manifests whose pins must match third_party/node/package.json.
+CONSUMER_MANIFESTS = ("browser/extensions/newtab/package.json",)
+
 PRUNED_DIRECTORIES = {
     # Shims pnpm writes for package binaries. They differ per platform and hold
     # absolute paths, and the build runs the tools by their JS entry points.
@@ -155,6 +158,35 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
                 [node, pnpm, "remove"] + PNPM_ISOLATION + [package], cwd=vendor_dir
             )
 
+        missing = [
+            manifest
+            for manifest in CONSUMER_MANIFESTS
+            if not (Path(self.topsrcdir) / manifest).exists()
+        ]
+        if missing:
+            self.log(
+                logging.ERROR,
+                "consumer_missing",
+                {},
+                "Consumer manifests listed in CONSUMER_MANIFESTS do not exist:\n"
+                + "\n".join(f"  {manifest}" for manifest in missing),
+            )
+            return 1
+
+        mismatches = self._consumer_mismatches(vendor_dir)
+        if mismatches:
+            lines = "\n".join(
+                f"  {manifest}: {package} {wanted}, vendored {vendored}"
+                for manifest, package, vendored, wanted in mismatches
+            )
+            self.log(
+                logging.ERROR,
+                "consumer_mismatch",
+                {},
+                f"Versions in third_party/node/package.json disagree with:\n{lines}",
+            )
+            return 1
+
         install_flags = PNPM_ISOLATION + [
             "--node-linker=hoisted",
             "--config.confirmModulesPurge=false",
@@ -216,6 +248,20 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
         self.repository.add_remove_files(vendor_dir)
         return 0
 
+    def _consumer_mismatches(self, vendor_dir):
+        # There is one consumer today, so its pins are checked against the
+        # vendored manifest. With several, third_party/node should become a pnpm
+        # workspace with the consumers as its packages, which needs them to
+        # separate build from test dependencies first.
+        vendored = _package_versions(vendor_dir / "package.json")
+        mismatches = []
+        for manifest in CONSUMER_MANIFESTS:
+            path = Path(self.topsrcdir) / manifest
+            for package, wanted in _package_versions(path).items():
+                if package in vendored and vendored[package] != wanted:
+                    mismatches.append((manifest, package, vendored[package], wanted))
+        return mismatches
+
 
 def _expected_pnpm_version(vendor_dir):
     manifest = json.loads((vendor_dir / "package.json").read_text(encoding="utf-8"))
@@ -254,6 +300,14 @@ def _prune(node_modules):
                 removed.append(_remove(path))
 
     return sum(files for files, _ in removed), sum(size for _, size in removed)
+
+
+def _package_versions(path):
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    versions = {}
+    for field in ("dependencies", "devDependencies"):
+        versions.update(manifest.get(field) or {})
+    return versions
 
 
 def _is_platform_restricted(path):
