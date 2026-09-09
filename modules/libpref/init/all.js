@@ -4082,8 +4082,14 @@ pref("extensions.formautofill.useml.timeoutMS", 120000);
 // Controlled by the autofill-ml-ignore-field-types Nimbus feature.
 pref("extensions.formautofill.useml.ignoreFieldTypes", "");
 
-// Optional AutoFill tokenizer features, as a JSON array of feature keys. Each
-// key adds tokens to every field's exported mlData
+// Optional AutoFill tokenizer features, as a JSON array of feature keys that
+// change a field's exported mlData:
+//   "select_option"    - "<first>...<last>" option-range token for a <select>.
+//   "input_attributes" - "**maxlen<N>"/"**inputmode<mode>" tokens.
+//   "strip_common"     - in forms with 3+ fields, drop tokens present in EVERY
+//                        field (form-wide boilerplate like "form1"/"ctl00").
+//   "strip_frequent"   - like strip_common but drops tokens present in >=85% of
+//                        the form's fields (catches near-universal boilerplate).
 // Default "[]" (none). Each feature changes the mlData contract, so the consuming
 // model must be trained with the same features enabled.
 pref("extensions.formautofill.useml.features", "[]");
