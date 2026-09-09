@@ -762,6 +762,13 @@ menupopup::part(drop-indicator) {
 .private-browsing-indicator-button {
   list-style-image: url("chrome://browser/skin/privatebrowsing/pbm-logo.svg");
   border-radius: var(--border-radius-medium);
+  /* Because --toolbarbutton-outline is set on :root, we have to override the
+     whole shorthand here, not just --toolbarbutton-outline-color. */
+  --toolbarbutton-outline: var(--border-width) solid var(--border-color-interactive-hover);
+
+  @media not (forced-colors) {
+    --toolbarbutton-outline: var(--border-width) solid color-mix(in srgb, var(--color-violet-desaturated-50) 15%, transparent);
+  }
 
   :root:not([privatebrowsingmode="temporary"]) &,
   #navigator-toolbox:not([tabs-hidden]) #nav-bar > & {
@@ -773,21 +780,24 @@ menupopup::part(drop-indicator) {
   }
 
   > .toolbarbutton-icon {
-    --private-browsing-indicator-border-color: var(--border-color-interactive-hover);
     padding: var(--toolbarbutton-padding-inner);
     /* The logo circle uses context-fill; set it here so it isn't washed out by
        the toolbar's default icon fill. */
-    -moz-context-properties: fill;
+    -moz-context-properties: fill, stroke;
     /* Fixed brand purple for the logo circle (matches the SVG fallback and
        about:privatebrowsing); accent tokens are theme-adaptive so unsuitable. */
     /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
     fill: #7338e2;
-    /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
-    border: var(--border-width) solid var(--private-browsing-indicator-border-color);
+  }
 
-    @media not (forced-colors) {
-      --private-browsing-indicator-border-color: color-mix(in srgb, var(--color-violet-desaturated-50) 15%, transparent);
-    }
+  &:is(:hover, [open]) > .toolbarbutton-icon {
+    /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+    stroke: var(--border-color-interactive-hover);
+  }
+
+  &:is(:hover:active, [open]) > .toolbarbutton-icon {
+    /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+    stroke: var(--border-color-interactive-active);
   }
 }
 
