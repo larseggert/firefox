@@ -3,6 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import json
 import os
 import shutil
 import sys
@@ -26,6 +27,22 @@ from mozperftest.utils import silence, temporary_env  # noqa
 
 ITERATION_HOOKS = Path(__file__).parent / "data" / "hooks_iteration.py"
 STATE_HOOKS = Path(__file__).parent / "data" / "hooks_state.py"
+SCRIPT_PACKAGES_HOOKS = Path(__file__).parent / "data" / "hooks_script_packages.py"
+
+
+@contextmanager
+def _shell_test_declaring_hooks(hooks):
+    """Yields a custom-script test that points at its own hooks file."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        script = Path(tmp_dir, "perftest_hooked.sh")
+        options = json.dumps({"default": {"hooks": str(hooks)}})
+        script.write_text(
+            "# Name: hooked-script-test\n"
+            "# Owner: Perftest Team\n"
+            "# Description: Custom script test that brings its own hooks.\n"
+            f"# Options: {options}\n"
+        )
+        yield script
 
 
 class _TestMachEnvironment(MachEnvironment):
@@ -137,6 +154,22 @@ def test_command_iterations(venv, env):
         # the hook changes the iteration value to 5.
         # each iteration generates 5 calls, so we want to see 25
         assert len(env.mock_calls) == 25
+
+
+@mock.patch("mozperftest.MachEnvironment")
+@mock.patch("mozbuild.base.MachCommandBase.activate_virtualenv")
+def test_script_declared_hooks_can_install_packages(venv, env):
+    with _shell_test_declaring_hooks(
+        SCRIPT_PACKAGES_HOOKS
+    ) as script, tempfile.TemporaryDirectory() as marker_dir:
+        marker = Path(marker_dir, "marker")
+        kwargs = {"tests": [str(script)], "flavor": "custom-script"}
+        with _get_command() as (cmd, command_context), silence(command_context):
+            with temporary_env(HOOK_MARKER=str(marker)):
+                cmd(command_context, **kwargs)
+
+        # the test's own hooks file ran before_iterations, with a virtualenv
+        assert marker.read_text() == "True"
 
 
 @mock.patch("mozperftest.MachEnvironment")

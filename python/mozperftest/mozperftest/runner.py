@@ -163,7 +163,17 @@ def run_tests(mach_cmd, kwargs, client_args):
                     args[key] = value
 
             # update the hooks, or use a copy of the general one
-            script_hooks = Hooks(mach_cmd, args.pop("hooks", hooks_file))
+            script_hooks_file = args.pop("hooks", hooks_file)
+            script_hooks = Hooks(mach_cmd, script_hooks_file)
+
+            if script_hooks_file != hooks_file:
+                # Re-run the before_iterations specified by the script hooks
+                # file after parsing it from the options.
+                # XXX Bug 2069491 - a hooks file specified in the script
+                # options silently overrides one given on the command line.
+                args["virtualenv"] = mach_cmd.virtualenv_manager
+                script_hooks.run("before_iterations", args)
+                del args["virtualenv"]
 
             flavor = args["flavor"]
             if flavor == "doc":

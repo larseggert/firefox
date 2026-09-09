@@ -3,6 +3,7 @@
 #name: newssite-applink-startup
 #owner: perftest
 #description: Runs the newssite applink startup(cvne) test for chrome/fenix
+#options: {"default": {"hooks": "testing/performance/mobile-startup/hooks_opencv.py"}}
 
 SCRIPT_PATH="testing/performance/mobile-startup/android_startup_videoapplink.py"
 

@@ -3,6 +3,7 @@
 #name: tab-restore-newssite
 #owner: perftest
 #description: Runs the newssite mobile restore test for chrome/fenix
+#options: {"default": {"hooks": "testing/performance/mobile-startup/hooks_opencv.py"}}
 
 SCRIPT_PATH="testing/performance/mobile-startup/android_startup_videoapplink.py"
 
