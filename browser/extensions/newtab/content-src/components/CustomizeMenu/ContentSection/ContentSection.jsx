@@ -218,6 +218,7 @@ export class ContentSection extends React.PureComponent {
       mayHaveTopicSections,
       weatherDisplay,
       exitEventFired,
+      panelShowing,
       onSubpanelToggle,
       toggleSectionsMgmtPanel,
       showSectionsMgmtPanel,
@@ -299,6 +300,7 @@ export class ContentSection extends React.PureComponent {
                   setPref={setPref}
                   activeWallpaper={activeWallpaper}
                   exitEventFired={exitEventFired}
+                  panelShowing={panelShowing}
                   onSubpanelToggle={onSubpanelToggle}
                 />
               </div>

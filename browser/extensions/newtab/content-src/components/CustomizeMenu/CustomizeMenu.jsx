@@ -222,6 +222,7 @@ export class _CustomizeMenu extends React.PureComponent {
                 ></moz-button>
               </div>
               <ContentSection
+                panelShowing={this.props.showing}
                 openPreferences={this.props.openPreferences}
                 setPref={this.props.setPref}
                 enabledSections={this.props.enabledSections}

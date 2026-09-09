@@ -389,6 +389,10 @@ export class BaseContent extends React.PureComponent {
         prefs["newtabWallpapers.customWallpaper.theme"];
       const prevUploadedWallpaperTheme =
         prevPrefs["newtabWallpapers.customWallpaper.theme"];
+      const uploadedWallpaperPosition =
+        prefs["newtabWallpapers.customWallpaper.position"];
+      const prevUploadedWallpaperPosition =
+        prevPrefs["newtabWallpapers.customWallpaper.position"];
 
       // don't update wallpaper unless the wallpaper is being changed.
       if (
@@ -399,7 +403,8 @@ export class BaseContent extends React.PureComponent {
         wallpaperList !== prevWallpaperList || // remote settings wallpaper list updates
         this.props.App.isForStartupCache.Wallpaper !==
           prevProps.App.isForStartupCache.Wallpaper || // Startup cached page wallpaper is updating
-        uploadedWallpaperTheme !== prevUploadedWallpaperTheme
+        uploadedWallpaperTheme !== prevUploadedWallpaperTheme ||
+        uploadedWallpaperPosition !== prevUploadedWallpaperPosition
       ) {
         this.updateWallpaper();
       }
@@ -600,19 +605,33 @@ export class BaseContent extends React.PureComponent {
     }
   }
 
+  // The saved image the page is showing, used to read its attribution.
+  appliedSavedWallpaper() {
+    const { customWallpapers } = this.props.Wallpapers;
+    const filename =
+      this.props.Prefs.values["newtabWallpapers.customWallpaper.uuid"];
+    if (!filename) {
+      return null;
+    }
+    return customWallpapers?.find(wallpaper => wallpaper.filename === filename);
+  }
+
   renderWallpaperAttribution() {
     const { wallpaperList } = this.props.Wallpapers;
     const activeWallpaper =
       this.props.Prefs.values[`newtabWallpapers.wallpaper`] ||
       this.props.Prefs.values[`newtabWallpapers.initialWallpaper`];
-    const selected = wallpaperList.find(wp => wp.title === activeWallpaper);
+    const attribution =
+      activeWallpaper === "custom"
+        ? this.appliedSavedWallpaper()?.attribution
+        : wallpaperList.find(wp => wp.title === activeWallpaper)?.attribution;
     // make sure a wallpaper is selected and that the attribution also exists
-    if (!selected?.attribution) {
+    if (!attribution) {
       return null;
     }
 
-    const { name: authorDetails, webpage } = selected.attribution;
-    if (activeWallpaper && wallpaperList && authorDetails.url) {
+    const { name: authorDetails, webpage } = attribution;
+    if (activeWallpaper && authorDetails?.url && webpage?.url) {
       return (
         <p
           className={`wallpaper-attribution`}
@@ -682,8 +701,10 @@ export class BaseContent extends React.PureComponent {
     if (selectedWallpaper === "custom" && uploadedWallpaperUrl) {
       url = uploadedWallpaperUrl;
       color = "transparent";
-      // Note: There is no method to set a specific background position for custom wallpapers
-      backgroundPosition = "center";
+      // Nobody picks a position. An upload is centered, and a saved Firefox
+      // wallpaper keeps the crop it shipped with through this pref.
+      backgroundPosition =
+        prefs["newtabWallpapers.customWallpaper.position"] || "center";
       newTheme = uploadedWallpaperTheme || colorMode;
     } else if (wallpaperList) {
       const wallpaper = wallpaperList.find(

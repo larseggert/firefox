@@ -22,6 +22,7 @@ import {
   getThumbnailFilename,
   parseWallpaperFilename,
 } from "resource://newtab/lib/Wallpapers/WallpaperFileNames.mjs";
+import { isWallpaperLibraryEnabled } from "resource://newtab/lib/Wallpapers/WallpaperLibraryPref.mjs";
 
 const PREF_WALLPAPERS_ENABLED =
   "browser.newtabpage.activity-stream.newtabWallpapers.enabled";
@@ -59,9 +60,16 @@ const PREF_WALLPAPERS_USER_ENABLED_MIGRATED =
 // pref: upload, delete, apply, migrate, rescue, cleanup and thumbnail making.
 const WALLPAPER_FILE_LOCK = "newtab-wallpaper-file";
 
+// What content encodes a thumbnail as, so the reply can label the bytes.
+const THUMBNAIL_MIME_TYPE = "image/jpeg";
+
 export class WallpaperFeed {
   constructor() {
     this.loaded = false;
+    // Applying moves several prefs, and this feed reacts to two of them. Held
+    // while they move, so the page is told once at the end instead of once per
+    // pref, each time with a directory sweep behind it.
+    this.applyingWallpaper = false;
     this.wallpaperClient = null;
     this._onSync = this.onSync.bind(this);
   }
@@ -76,14 +84,8 @@ export class WallpaperFeed {
     return PathUtils.join(PathUtils.profileDir, "wallpaper");
   }
 
-  // Off by default. A trainhop rollout turns it on without shipping a new
-  // add-on, the same way the widgets read their own namespaces.
   get libraryEnabled() {
-    const prefs = this.store?.getState()?.Prefs?.values;
-    return !!(
-      prefs?.["newtabWallpapers.customWallpaper.library.enabled"] ||
-      prefs?.trainhopConfig?.customWallpaperLibrary?.enabled
-    );
+    return isWallpaperLibraryEnabled(this.store?.getState()?.Prefs?.values);
   }
 
   // Where every saved image lives. Only the applied one is copied up to the
@@ -292,6 +294,8 @@ export class WallpaperFeed {
         },
       })
     );
+
+    await this.broadcastWallpaperLibrary(isStartup);
 
     if (isStartup) {
       // Nothing else sweeps unless an upload happens, so a .tmp file or a
@@ -506,6 +510,7 @@ export class WallpaperFeed {
       // The pref now names the new file, so the sweep spares it and clears the
       // stale Picture of the Day image along with anything else left over.
       await this.#sweepWallpaperDirectory();
+      await this.broadcastWallpaperLibrary();
 
       return filePath;
     } catch (error) {
@@ -638,90 +643,100 @@ export class WallpaperFeed {
   }
 
   /**
-   * Lists the saved wallpapers, newest first, with the filename breaking ties.
-   * A kept Picture of the Day is one of them.
+   * Applies a saved image, under the file lock. The filename comes from
+   * content, so it is checked against the library rather than trusted.
    *
-   * @returns {Promise<object[]>} One entry per image, each carrying the parsed
-   *   filename fields plus whatever its details file held.
+   * @param {string} filename - The library image to apply.
+   * @returns {Promise<boolean>} Whether the image is now applied.
    */
-  async getSavedWallpapers() {
+  async applySavedWallpaper(filename) {
     try {
-      const children = await IOUtils.getChildren(this.libraryDirectory, {
-        ignoreAbsent: true,
-      });
-
-      const filenames = new Set(children.map(path => PathUtils.filename(path)));
-
-      const wallpapers = [];
-      for (const path of children) {
-        const filename = PathUtils.filename(path);
-        const parsed = parseWallpaperFilename(filename);
-        if (parsed.kind !== "saved") {
-          continue;
-        }
-        // Per file, so one unreadable entry does not lose the whole library.
-        try {
-          const { lastModified, type } = await IOUtils.stat(path);
-          if (type !== "regular") {
-            continue;
-          }
-          const detailsFilename = getDetailsFilename(filename);
-          const details = filenames.has(detailsFilename)
-            ? await this.#readDetails(detailsFilename)
-            : null;
-          // An image's extra file can hold what it is called and, for a
-          // rescued shipped wallpaper, its photographer credit as well.
-          const {
-            fluentId = "",
-            fallbackName = "",
-            publishedDate = "",
-            ...credit
-          } = details ?? {};
-          wallpapers.push({
-            filename,
-            number: parsed.number,
-            type: parsed.type,
-            theme: parsed.theme,
-            position: parsed.position,
-            lastModified,
-            fluentId,
-            fallbackName,
-            publishedDate,
-            attribution: Object.keys(credit).length ? credit : null,
-          });
-        } catch (error) {
-          console.error("Failed to read a saved wallpaper:", error);
-        }
-      }
-
-      return wallpapers.sort(
-        (a, b) =>
-          b.lastModified - a.lastModified ||
-          a.filename.localeCompare(b.filename)
+      return await locks.request(WALLPAPER_FILE_LOCK, () =>
+        this.#applySavedWallpaper(filename)
       );
     } catch (error) {
-      console.error("Failed to list the saved wallpapers:", error);
-      return [];
+      console.error("Could not take the wallpaper file lock:", error);
+      return false;
     }
   }
 
   /**
-   * Reads the details file kept beside a saved image.
+   * Copies the image up, points every pref at it and tells content. Callers
+   * hold the file lock.
    *
-   * @param {string} detailsFilename - The .txt file next to the image.
-   * @returns {Promise<object|null>} Its contents, or null when the file is
-   *   missing or unreadable. The image is still listed either way, just
-   *   without a name or credit.
+   * @param {string} filename - The library image to apply.
+   * @returns {Promise<boolean>} False when the file is not a saved image, is
+   *   not in the library or could not be copied.
    */
-  async #readDetails(detailsFilename) {
-    try {
-      return await IOUtils.readJSON(
-        PathUtils.join(this.libraryDirectory, detailsFilename)
-      );
-    } catch (error) {
-      console.error("Failed to read a wallpaper's details:", error);
-      return null;
+  async #applySavedWallpaper(filename) {
+    const parsed = parseWallpaperFilename(filename);
+    if (parsed.kind !== "saved") {
+      console.error("Refusing to apply a file that is not a saved wallpaper");
+      return false;
     }
+
+    if (
+      !(await IOUtils.exists(PathUtils.join(this.libraryDirectory, filename)))
+    ) {
+      console.error("Refusing to apply a wallpaper that is not in the library");
+      return false;
+    }
+
+    if (!(await this.#copyAppliedWallpaper(filename))) {
+      return false;
+    }
+
+    // Read before the flag goes up: while it is up, wallpaper pref changes are
+    // not sent to content, so nothing may await in between.
+    // Re-applying the picture that is showing puts the widget's "already set"
+    // state back. Anything else is not that picture, so the state goes.
+    const detailsFilename = getDetailsFilename(filename);
+    let publishedDate = "";
+    if (parsed.type === WALLPAPER_TYPES.PictureOfTheDay) {
+      const details = (await IOUtils.exists(
+        PathUtils.join(this.libraryDirectory, detailsFilename)
+      ))
+        ? await this.#readDetails(detailsFilename)
+        : null;
+      publishedDate = details?.publishedDate || "";
+    }
+
+    this.applyingWallpaper = true;
+
+    // In a finally: if any of these throws, leaving the flag up would stop the
+    // page being told about a wallpaper change for the rest of the session.
+    try {
+      Services.prefs.setStringPref(
+        PREF_WALLPAPERS_CUSTOM_WALLPAPER_UUID,
+        filename
+      );
+      this.store.dispatch(
+        ac.SetPref("newtabWallpapers.customWallpaper.theme", parsed.theme)
+      );
+      this.store.dispatch(
+        ac.SetPref("newtabWallpapers.customWallpaper.position", parsed.position)
+      );
+
+      // Set here rather than in the picker, so a refusal above leaves the page
+      // on the wallpaper it already had instead of naming one it cannot show.
+      this.store.dispatch(ac.SetPref("newtabWallpapers.wallpaper", "custom"));
+      this.store.dispatch(ac.SetPref("newtabWallpapers.initialWallpaper", ""));
+      this.store.dispatch(ac.SetPref("newtabWallpapers.user.enabled", true));
+
+      this.store.dispatch(
+        ac.SetPref("widgets.pictureOfTheDay.wallpaperActive", publishedDate)
+      );
+    } finally {
+      this.applyingWallpaper = false;
+    }
+
+    // Every pref agrees now, so this is the one picture content is told about.
+    this.broadcastAppliedWallpaper();
+
+    // The copy this one replaced is no longer applied, so the sweep takes it.
+    await this.#sweepWallpaperDirectory();
+
+    return true;
   }
 
   /**
@@ -789,6 +804,200 @@ export class WallpaperFeed {
         data: this.getWallpaperURL(filename),
       })
     );
+  }
+
+  /**
+   * Sends every open page the list of saved images.
+   *
+   * @param {boolean} [isStartup] - Whether this is the broadcast made at
+   *   startup.
+   */
+  async broadcastWallpaperLibrary(isStartup = false) {
+    const saved = await this.getSavedWallpapers();
+
+    this.store.dispatch(
+      ac.BroadcastToContent({
+        type: at.WALLPAPERS_CUSTOM_LIBRARY_SET,
+        data: saved,
+        meta: {
+          isStartup,
+        },
+      })
+    );
+  }
+
+  /**
+   * Lists the saved wallpapers, newest first, with the filename breaking ties.
+   * A kept Picture of the Day is one of them.
+   *
+   * @returns {Promise<object[]>} One entry per image, each carrying the parsed
+   *   filename fields plus whatever its details file held.
+   */
+  async getSavedWallpapers() {
+    try {
+      const children = await IOUtils.getChildren(this.libraryDirectory, {
+        ignoreAbsent: true,
+      });
+
+      const filenames = new Set(children.map(path => PathUtils.filename(path)));
+
+      const wallpapers = [];
+      for (const path of children) {
+        const filename = PathUtils.filename(path);
+        const parsed = parseWallpaperFilename(filename);
+        if (parsed.kind !== "saved") {
+          continue;
+        }
+        // Per file, so one unreadable entry does not lose the whole library.
+        try {
+          const { lastModified, type } = await IOUtils.stat(path);
+          if (type !== "regular") {
+            continue;
+          }
+          const detailsFilename = getDetailsFilename(filename);
+          const details = filenames.has(detailsFilename)
+            ? await this.#readDetails(detailsFilename)
+            : null;
+          // An image's extra file can hold what it is called and, for a
+          // rescued shipped wallpaper, its photographer credit as well.
+          const {
+            fallbackName = "",
+            publishedDate = "",
+            ...credit
+          } = details ?? {};
+          wallpapers.push({
+            filename,
+            number: parsed.number,
+            type: parsed.type,
+            theme: parsed.theme,
+            position: parsed.position,
+            lastModified,
+            fallbackName,
+            publishedDate,
+            attribution: Object.keys(credit).length ? credit : null,
+          });
+        } catch (error) {
+          console.error("Failed to read a saved wallpaper:", error);
+        }
+      }
+
+      return wallpapers.sort(
+        (a, b) =>
+          b.lastModified - a.lastModified ||
+          a.filename.localeCompare(b.filename)
+      );
+    } catch (error) {
+      console.error("Failed to list the saved wallpapers:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Sends one page the picker thumbnails as bytes, since the library has no
+   * URL. An image with no thumbnail yet goes full size for the page to scale.
+   *
+   * @param {string|null} [target] - The page that asked. Without one the list
+   *   and thumbnails are broadcast and full images are left out.
+   */
+  async sendLibraryThumbnails(target) {
+    let saved = [];
+    let thumbnails = [];
+
+    // The list, the thumbnails it needs and any thumbnail written on the way
+    // are one snapshot under one lock. Read outside it, an upload finishing in
+    // between would broadcast a newer library that this reply then undid.
+    try {
+      await locks.request(WALLPAPER_FILE_LOCK, async () => {
+        saved = await this.getSavedWallpapers();
+        for (const { filename } of saved) {
+          const file = await this.#readThumbnail(filename);
+          if (file) {
+            thumbnails.push({ filename, file });
+            continue;
+          }
+          // Nothing scaled yet: a migrated or rescued image arrived with no
+          // page to scale it. Full size goes only to the page that asked.
+          const full = target ? await this.#readLibraryImage(filename) : null;
+          if (full) {
+            thumbnails.push({ filename, file: full, needsThumbnail: true });
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Could not take the wallpaper file lock:", error);
+    }
+
+    // A page restored from the startup cache never receives a broadcast, only a
+    // direct reply, so its library stays at whatever the snapshot held. Send it
+    // with the thumbnails it just asked for.
+    const libraryAction = {
+      type: at.WALLPAPERS_CUSTOM_LIBRARY_SET,
+      data: saved,
+    };
+    this.store.dispatch(
+      target
+        ? ac.OnlyToOneContent(libraryAction, target)
+        : ac.BroadcastToContent(libraryAction)
+    );
+
+    const action = {
+      type: at.WALLPAPERS_CUSTOM_THUMBNAILS_SET,
+      data: thumbnails,
+    };
+
+    this.store.dispatch(
+      target
+        ? ac.OnlyToOneContent(action, target)
+        : ac.BroadcastToContent(action)
+    );
+
+    // Drop the parent's copy: the startup cache writes the parent store through
+    // JSON, which turns a Blob into {}. A bare dispatch leaves content's bytes.
+    this.store.dispatch({
+      type: at.WALLPAPERS_CUSTOM_THUMBNAILS_SET,
+      data: [],
+    });
+  }
+
+  /**
+   * @param {string} filename - The library image.
+   * @returns {Promise<Blob|null>} Its thumbnail, or null when there is none.
+   */
+  async #readThumbnail(filename) {
+    const libraryDir = this.libraryDirectory;
+    const thumbnailPath = PathUtils.join(
+      libraryDir,
+      getThumbnailFilename(filename)
+    );
+
+    try {
+      const bytes = await IOUtils.read(thumbnailPath);
+      return new Blob([bytes], { type: THUMBNAIL_MIME_TYPE });
+    } catch (error) {
+      // No thumbnail yet, which is the case for anything saved by an earlier
+      // version or rescued from a retired set.
+    }
+
+    return null;
+  }
+
+  /**
+   * Reads the details file kept beside a saved image.
+   *
+   * @param {string} detailsFilename - The .txt file next to the image.
+   * @returns {Promise<object|null>} Its contents, or null when the file is
+   *   missing or unreadable. The image is still listed either way, just
+   *   without a name or credit.
+   */
+  async #readDetails(detailsFilename) {
+    try {
+      return await IOUtils.readJSON(
+        PathUtils.join(this.libraryDirectory, detailsFilename)
+      );
+    } catch (error) {
+      console.error("Failed to read a wallpaper's details:", error);
+      return null;
+    }
   }
 
   /**
@@ -955,8 +1164,52 @@ export class WallpaperFeed {
     }
   }
 
-  // Removes .tmp files, replaced copies and leftovers. The library is a folder
-  // so it survives. Callers hold the file lock.
+  /**
+   * @param {string} filename - The library image.
+   * @returns {Promise<Blob|null>} The image itself, for the picker to scale
+   *   when no thumbnail exists yet.
+   */
+  async #readLibraryImage(filename) {
+    try {
+      const bytes = await IOUtils.read(
+        PathUtils.join(this.libraryDirectory, filename)
+      );
+      return new Blob([bytes]);
+    } catch (error) {
+      console.error("Failed to read a saved wallpaper:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Stores a thumbnail the picker scaled. The filename comes from content, so
+   * it has to parse as one of ours before anything is written next to it.
+   *
+   * @param {string} filename - The library image the thumbnail belongs to.
+   * @param {Blob} thumbnail - The scaled image.
+   */
+  async storeThumbnail(filename, thumbnail) {
+    if (parseWallpaperFilename(filename).kind !== "saved" || !thumbnail) {
+      return;
+    }
+    try {
+      const buffer = await thumbnail.arrayBuffer();
+      await locks.request(WALLPAPER_FILE_LOCK, async () => {
+        if (
+          await IOUtils.exists(PathUtils.join(this.libraryDirectory, filename))
+        ) {
+          await this.#writeThumbnail(filename, new Uint8Array(buffer));
+        }
+      });
+    } catch (error) {
+      console.error("Failed to store a wallpaper thumbnail:", error);
+    }
+  }
+
+  /**
+   * Removes .tmp files, replaced copies and leftovers from the wallpaper
+   * folder. The library is a folder so it survives. Callers hold the file lock.
+   */
   async #sweepWallpaperDirectory() {
     try {
       const wallpaperDir = this.wallpaperDirectory;
@@ -1124,9 +1377,13 @@ export class WallpaperFeed {
           await this.wallpaperSetup(false /* isStartup */);
         }
         if (
-          action.data.name === "newtabWallpapers.customWallpaper.uuid" ||
-          action.data.name === "newtabWallpapers.wallpaper"
+          !this.applyingWallpaper &&
+          (action.data.name === "newtabWallpapers.customWallpaper.uuid" ||
+            action.data.name === "newtabWallpapers.wallpaper")
         ) {
+          // Picking a saved image only changes prefs, so this is where content
+          // finds out which file to show.
+          this.broadcastAppliedWallpaper();
           // Whatever is applied now, a Picture of the Day image that is not it
           // is no longer needed.
           await this.cleanWallpaperDirectory();
@@ -1174,6 +1431,15 @@ export class WallpaperFeed {
         break;
       case at.WALLPAPER_REMOVE_UPLOAD:
         await this.removeCustomWallpaper();
+        break;
+      case at.WALLPAPERS_CUSTOM_APPLY:
+        await this.applySavedWallpaper(action.data?.filename);
+        break;
+      case at.WALLPAPERS_CUSTOM_THUMBNAILS_MADE:
+        await this.storeThumbnail(action.data.filename, action.data.thumbnail);
+        break;
+      case at.WALLPAPERS_CUSTOM_THUMBNAILS_REQUEST:
+        await this.sendLibraryThumbnails(action.meta?.fromTarget);
         break;
     }
   }
