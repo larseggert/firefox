@@ -2222,7 +2222,7 @@
 - name: browser.opaqueResponseBlocking
   type: RelaxedAtomicBool
 #if defined(ANDROID)
-  value: false
+  value: @IS_NIGHTLY_BUILD@
 #else
   value: true
 #endif
