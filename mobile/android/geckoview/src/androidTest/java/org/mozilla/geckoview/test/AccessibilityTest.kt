@@ -1719,6 +1719,42 @@ class AccessibilityTest : BaseSessionTest() {
         )
     }
 
+    @Test
+    fun testLiveRegionAlert() {
+        mainSession.loadUri("data:text/html;charset=utf-8,<div id='alert' role='alert'></div>")
+        waitForInitialFocus()
+
+        val rootNode = createNodeInfo(View.NO_ID)
+        assertThat("Document has 1 child", rootNode.childCount, equalTo(1))
+
+        val status = createNodeInfo(rootNode.getChildId(0))
+        assertThat(
+            "Alert is assertive live region",
+            status.liveRegion,
+            equalTo(View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE),
+        )
+
+        mainSession.evaluateJS("document.querySelector('#alert').textContent = 'hello';")
+        sessionRule.waitUntilCalled(
+            object : EventDelegate {
+                @AssertCalled(count = 2)
+                override fun onWinContentChanged(event: AccessibilityEvent) {
+                    val node = createNodeInfo(getSourceId(event))
+                    assertThat(
+                        "Correct node text for WINDOW_CONTENT_CHANGED",
+                        node.text.toString(),
+                        equalTo(forEachCall("hello", "")),
+                    )
+                    assertThat(
+                        "Correct node class name for WINDOW_CONTENT_CHANGED",
+                        node.className,
+                        equalTo(forEachCall("android.view.View", "android.webkit.WebView")),
+                    )
+                }
+            }
+        )
+    }
+
     private fun screenContainsNode(nodeId: Int): Boolean {
         var node = createNodeInfo(nodeId)
         var nodeBounds = Rect()
