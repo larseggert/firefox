@@ -862,6 +862,7 @@ describe("ASRouterTriggerListeners", () => {
             totalVisitsCount: 1,
             url: "www.mozilla.org",
             host: "www.mozilla.org",
+            isAddressBarUrlNavigation: false,
           },
         });
       });
@@ -920,6 +921,7 @@ describe("ASRouterTriggerListeners", () => {
             totalVisitsCount: 1,
             url: "www.mozilla.org",
             host: "www.mozilla.org",
+            isAddressBarUrlNavigation: false,
           },
         });
       });
@@ -978,6 +980,7 @@ describe("ASRouterTriggerListeners", () => {
             totalVisitsCount: 1,
             url: "www.mozilla.org",
             host: "www.mozilla.org",
+            isAddressBarUrlNavigation: false,
           },
         });
       });
@@ -1073,6 +1076,7 @@ describe("ASRouterTriggerListeners", () => {
             totalVisitsCount: 1,
             url: "www.mozilla.org",
             host: "www.mozilla.org",
+            isAddressBarUrlNavigation: false,
           },
         });
       });

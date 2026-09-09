@@ -17,6 +17,7 @@ const lazy = XPCOMUtils.declareLazy({
     "resource:///modules/asrouter/FeatureCalloutBroker.sys.mjs",
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
+  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   clearTimeout: "resource://gre/modules/Timer.sys.mjs",
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
 
@@ -48,6 +49,12 @@ const lazy = XPCOMUtils.declareLazy({
 });
 
 const FEW_MINUTES = 15 * 60 * 1000; // 15 mins
+
+// How long after a "urlbar-user-start-navigation" notification matching
+// onLocationChange is still considered to be the result of that address bar
+// interaction. Location changes normally follow within milliseconds; this is
+// generous to allow for slow loads and redirect chains.
+const RECENT_URLBAR_NAVIGATION_MAX_AGE_MS = 10000;
 
 function isPrivateWindow(win) {
   return (
@@ -135,6 +142,31 @@ function checkURLMatch(
   }
 
   return false;
+}
+
+/**
+ * Classifies a urlbar result picked from "urlbar-user-start-navigation" as a
+ * direct navigation to a URL destination (typed, pasted, autofilled, or
+ * picked from the dropdown as a bookmark/history/top-site match), as opposed
+ * to a search query, a sponsored/Suggest result, or a synced-device (remote
+ * tab) result.
+ *
+ * @returns {boolean}
+ */
+function isDirectNavigationUrlbarResult(result) {
+  if (!result) {
+    // The heuristic default match was accepted verbatim, e.g. by pressing
+    // Enter without picking anything from the results list.
+    return true;
+  }
+  return (
+    result.type === lazy.UrlbarShared.RESULT_TYPE.URL &&
+    [
+      lazy.UrlbarShared.RESULT_SOURCE.HISTORY,
+      lazy.UrlbarShared.RESULT_SOURCE.BOOKMARKS,
+      lazy.UrlbarShared.RESULT_SOURCE.OTHER_LOCAL,
+    ].includes(result.source)
+  );
 }
 
 function createMatchPatternSet(patterns, flags) {
@@ -644,6 +676,15 @@ export const ASRouterTriggerListeners = new Map([
       // and patterns registered by any active openURL message.
       _totalVisits: 0,
       _regexPatterns: null,
+      // WeakMap<browser, timestamp> of browsers whose most recent address
+      // bar interaction was a direct navigation to a URL, per
+      // `isDirectNavigationUrlbarResult`. Populated from
+      // "urlbar-user-start-navigation" and consumed by the next
+      // `onLocationChange` for that browser, so we can tell `openURL` matches
+      // caused by that navigation apart from ones caused by a search
+      // redirect, a link click, back/forward navigation, or another
+      // programmatic load.
+      _recentUrlbarNavigations: null,
 
       /*
        * If the listener is already initialised, `init` will replace the trigger
@@ -665,9 +706,11 @@ export const ASRouterTriggerListeners = new Map([
               }
             }
           );
+          Services.obs.addObserver(this, "urlbar-user-start-navigation");
 
           this._visits = new Map();
           this._totalVisits = 0;
+          this._recentUrlbarNavigations = new WeakMap();
           this._initialized = true;
         }
         this._triggerHandler = triggerHandler;
@@ -694,6 +737,7 @@ export const ASRouterTriggerListeners = new Map([
       uninit() {
         if (this._initialized) {
           lazy.EveryWindow.unregisterCallback(this.id);
+          Services.obs.removeObserver(this, "urlbar-user-start-navigation");
 
           this._initialized = false;
           this._triggerHandler = null;
@@ -702,7 +746,40 @@ export const ASRouterTriggerListeners = new Map([
           this._visits = null;
           this._totalVisits = 0;
           this._regexPatterns = null;
+          this._recentUrlbarNavigations = null;
         }
+      },
+
+      observe(subject, topic) {
+        if (topic !== "urlbar-user-start-navigation") {
+          return;
+        }
+        if (!isDirectNavigationUrlbarResult(subject.wrappedJSObject.result)) {
+          return;
+        }
+        const window = lazy.BrowserWindowTracker.getTopWindow();
+        if (!window || isPrivateWindow(window)) {
+          return;
+        }
+        const browser = window.gBrowser?.selectedBrowser;
+        if (browser) {
+          this._recentUrlbarNavigations.set(browser, Date.now());
+        }
+      },
+
+      /**
+       * Returns whether `browser`'s most recent address bar interaction was
+       * a direct navigation to a URL, per `isDirectNavigationUrlbarResult`,
+       * and consumes that record so it can't be attributed to a later,
+       * unrelated navigation.
+       */
+      _isAddressBarUrlNavigation(browser) {
+        const timestamp = this._recentUrlbarNavigations.get(browser);
+        this._recentUrlbarNavigations.delete(browser);
+        return (
+          !!timestamp &&
+          Date.now() - timestamp <= RECENT_URLBAR_NAVIGATION_MAX_AGE_MS
+        );
       },
 
       onLocationChange(aBrowser, aWebProgress, aRequest, aLocationURI, aFlags) {
@@ -713,6 +790,8 @@ export const ASRouterTriggerListeners = new Map([
           aFlags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT
         );
         if (aWebProgress.isTopLevel && !isSameDocument) {
+          const isAddressBarUrlNavigation =
+            this._isAddressBarUrlNavigation(aBrowser);
           const match = checkURLMatch(
             aLocationURI,
             {
@@ -734,6 +813,7 @@ export const ASRouterTriggerListeners = new Map([
                 totalVisitsCount: this._totalVisits,
                 url: match.url,
                 host: match.host,
+                isAddressBarUrlNavigation,
               },
             });
           }
