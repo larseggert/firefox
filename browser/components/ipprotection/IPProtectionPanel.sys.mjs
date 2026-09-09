@@ -1113,8 +1113,12 @@ export class IPProtectionPanel {
       lazy.IPPPrincipalRules.EXCLUDED;
 
     //TODO: Check the exceptions manager for inclusions as well as exclusions - Bug 2066802
+    //const isInclusion = lazy.IPPExceptionsManager.hasInclusion(principal);
+    const isInclusion = false;
+
+    //TODO: Check the exceptions manager for inclusions as well as exclusions - Bug 2066802
     const hasSiteRule = lazy.IPPExceptionsManager.hasExclusion(principal);
-    return { isExclusion, hasSiteRule };
+    return { isExclusion, isInclusion, hasSiteRule };
   }
 
   /**

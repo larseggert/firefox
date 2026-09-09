@@ -147,6 +147,13 @@ site-exclusion-toggle-description = Site not working? Try turning VPN off.
 # Manages rules for VPN to turn on or off automatically for certain websites
 site-rules-manage-rules-link-text = Manage VPN rules
 
+# Heading for user defined rules on VPN usage for particular websites
+site-rules-status-heading = Your rule
+# Used in the panel when a user navigates to a site where the VPN is off due to a site exclusion
+site-rules-description-exclusion = VPN is off for this site
+# Used in the panel when a user navigates to a site where the VPN is on due to a site inclusion
+site-rules-description-inclusion = VPN is on for this site
+
 ipprotection-settings-link =
   .label = Settings
 

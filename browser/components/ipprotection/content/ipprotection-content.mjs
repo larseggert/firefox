@@ -107,6 +107,10 @@ export default class IPProtectionContentElement extends MozLitElement {
     return this.state?.siteData?.isExclusion ?? false;
   }
 
+  get hasSiteInclusion() {
+    return this.state?.siteData?.isInclusion ?? false;
+  }
+
   get hasSiteRule() {
     return this.state?.siteData?.hasSiteRule ?? false;
   }
@@ -414,6 +418,54 @@ export default class IPProtectionContentElement extends MozLitElement {
     `;
   }
 
+  siteRulesStatusTemplate() {
+    if (
+      !this.state.isSiteInclusionsEnabled ||
+      !this.state.siteData ||
+      this.#hasErrors ||
+      !this.hasSiteRule
+    ) {
+      return null;
+    }
+
+    // Check to see if the rule is actually taking effect i.e. is it opposite of the state of the global VPN
+    if (
+      (this.hasSiteInclusion && this.state.isProtectionEnabled) ||
+      (this.hasSiteExclusion && !this.state.isProtectionEnabled)
+    ) {
+      return null;
+    }
+
+    let dataL10nId;
+    let imgSrc;
+
+    // hasSiteRule can be set without a rule that classifies this site, so the
+    // rule type has to be resolved before we commit to rendering anything.
+    if (this.hasSiteInclusion) {
+      dataL10nId = "site-rules-description-inclusion";
+      imgSrc =
+        "chrome://browser/content/ipprotection/assets/states/ipprotection-on.svg";
+    } else if (this.hasSiteExclusion) {
+      dataL10nId = "site-rules-description-exclusion";
+      imgSrc =
+        "chrome://browser/content/ipprotection/assets/states/ipprotection-off.svg";
+    } else {
+      return null;
+    }
+
+    return html`<div id="site-rule-status-container">
+      <div id="site-rule-status-text-container">
+        <span
+          id="site-rule-heading"
+          data-l10n-id="site-rules-status-heading"
+          class="text-deemphasized"
+        ></span>
+        <span id="site-rule-description" data-l10n-id=${dataL10nId}></span>
+      </div>
+      <img src=${imgSrc} alt="" />
+    </div>`;
+  }
+
   siteRulesSettingsLinkTemplate() {
     if (
       !this.state.isSiteInclusionsEnabled ||
@@ -521,6 +573,7 @@ export default class IPProtectionContentElement extends MozLitElement {
       return html`
         ${this.statusCardTemplate()}
         <div class="vpn-bottom-content">
+          ${this.siteRulesStatusTemplate()}
           ${this.siteRulesSettingsLinkTemplate()} ${this.footerTemplate()}
         </div>
       `;
