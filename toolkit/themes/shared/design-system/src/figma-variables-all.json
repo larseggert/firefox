@@ -554,12 +554,12 @@
           "Smart Light (WIP)": "{color/gray/20}"
         },
         "interactive": {
-          "Light": "{color/gray/40}",
+          "Light": "{color/gray/45}",
           "Dark": "{color/gray/40}",
           "HCM": "{ButtonText}",
           "Private": "{color/gray/40}",
           "hover": {
-            "Light": "{color/gray/45}",
+            "Light": "{color/gray/50}",
             "Dark": "{color/gray/20}",
             "HCM": "{SelectedItem}",
             "Private": "{color/gray/20}",
