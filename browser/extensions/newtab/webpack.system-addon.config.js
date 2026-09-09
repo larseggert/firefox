@@ -4,7 +4,7 @@
 
 const path = require("path");
 const webpack = require("webpack");
-const TerserPlugin = require("terser-webpack-plugin");
+const MinimizerPlugin = require("minimizer-webpack-plugin");
 const { ResourceUriPlugin } = require("../../tools/resourceUriPlugin");
 const { MozSrcUriPlugin } = require("../../tools/mozsrcUriPlugin");
 
@@ -40,7 +40,7 @@ const baseConfig = env => ({
 const vendorOptimization = {
   minimize: true,
   minimizer: [
-    new TerserPlugin({
+    new MinimizerPlugin({
       extractComments: false,
       terserOptions: {
         format: {
