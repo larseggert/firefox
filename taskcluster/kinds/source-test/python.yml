@@ -225,6 +225,8 @@ mozlint:
                     - win64-node
                     - win64-rust
                     - win64-mozcheck
+        fetch:
+            - pnpm
         clang-tidy:
             - artifact: clang-tidy.tar.zst
               dest: clang-tools
