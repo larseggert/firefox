@@ -63,6 +63,12 @@ export class ThemeAppearanceMode extends MozLitElement {
         appearance === "light" ? 0 : 1
       );
     }
+    Glean.themePicker.change.record({
+      source: "about:addons",
+      layout: "full",
+      property: "appearance",
+      appearance,
+    });
   }
 
   render() {
