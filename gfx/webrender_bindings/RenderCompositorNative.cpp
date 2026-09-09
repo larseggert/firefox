@@ -614,7 +614,7 @@ bool RenderCompositorNativeOGL::WaitForGPU() {
 
 void RenderCompositorNativeOGL::Bind(wr::NativeTileId aId,
                                      wr::DeviceIntPoint* aOffset,
-                                     uint32_t* aFboId,
+                                     uint64_t* aSurfaceHandle,
                                      wr::DeviceIntRect aDirtyRect,
                                      wr::DeviceIntRect aValidRect) {
   gfx::IntRect validRect(aValidRect.min.x, aValidRect.min.y, aValidRect.width(),
@@ -627,7 +627,7 @@ void RenderCompositorNativeOGL::Bind(wr::NativeTileId aId,
   Maybe<GLuint> fbo = mCurrentlyBoundNativeLayer->NextSurfaceAsFramebuffer(
       validRect, dirtyRect, true);
 
-  *aFboId = *fbo;
+  *aSurfaceHandle = *fbo;
   *aOffset = wr::DeviceIntPoint{0, 0};
 }
 

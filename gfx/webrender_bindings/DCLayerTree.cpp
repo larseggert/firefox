@@ -759,7 +759,7 @@ void DCLayerTree::PresentSwapChain(wr::NativeSurfaceId aId,
 }
 
 void DCLayerTree::Bind(wr::NativeTileId aId, wr::DeviceIntPoint* aOffset,
-                       uint32_t* aFboId, wr::DeviceIntRect aDirtyRect,
+                       uint64_t* aSurfaceHandle, wr::DeviceIntRect aDirtyRect,
                        wr::DeviceIntRect aValidRect) {
   MOZ_ASSERT_UNREACHABLE("Unexpected to be called!");
 }

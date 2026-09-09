@@ -42,7 +42,8 @@ use webrender::{
     api::units::*, api::*, create_webrender_instance, render_api::*, set_profiler_hooks, AsyncPropertySampler,
     AsyncScreenshotHandle, ClipRadius, Compositor, CompositorCapabilities, CompositorConfig, CompositorInputConfig,
     CompositorKind, CompositorSurfaceTransform, CompositorSurfaceUsage, Device, FrameBuilderConfig, LayerCompositor,
-    MappableCompositor, MappedTileInfo, NativeSurfaceId, NativeSurfaceInfo, NativeTileId, PartialPresentCompositor,
+    MappableCompositor, MappedTileInfo, NativeSurfaceHandle, NativeSurfaceId, NativeSurfaceInfo, NativeTileId,
+    PartialPresentCompositor,
     PendingShadersToPrecache, PipelineInfo, ProfilerHooks, RecordedFrameHandle, RenderBackendHooks, Renderer,
     RendererStats, SWGLCompositeSurfaceInfo, SceneBuilderHooks, ShaderPrecacheFlags, Shaders, SharedShaders,
     TextureCacheConfig, UploadMethod, WebRenderOptions, WindowProperties, WindowVisibility, ONE_TIME_USAGE_HINT,
@@ -401,7 +402,7 @@ struct WrExternalImage {
     image_type: WrExternalImageType,
 
     // external texture handle
-    handle: u32,
+    handle: u64,
     // external texture coordinate
     u0: f32,
     v0: f32,
@@ -436,7 +437,7 @@ impl ExternalImageHandler for WrExternalImageHandler {
         ExternalImage {
             uv: TexelRect::new(image.u0, image.v0, image.u1, image.v1),
             source: match image.image_type {
-                WrExternalImageType::NativeTexture => ExternalImageSource::NativeTexture(image.handle),
+                WrExternalImageType::NativeTexture => ExternalImageSource::NativeTexture(ExternalTextureHandle(image.handle)),
                 WrExternalImageType::RawData => {
                     ExternalImageSource::RawData(unsafe { make_slice(image.buff, image.size) })
                 },
@@ -1468,7 +1469,7 @@ extern "C" {
         compositor: *mut c_void,
         id: NativeTileId,
         offset: &mut DeviceIntPoint,
-        fbo_id: &mut u32,
+        handle: &mut u64,
         dirty_rect: DeviceIntRect,
         valid_rect: DeviceIntRect,
     );
@@ -1586,7 +1587,7 @@ impl Compositor for WrCompositor {
     ) -> NativeSurfaceInfo {
         let mut surface_info = NativeSurfaceInfo {
             origin: DeviceIntPoint::zero(),
-            fbo_id: 0,
+            handle: NativeSurfaceHandle::DEFAULT,
         };
 
         unsafe {
@@ -1594,7 +1595,7 @@ impl Compositor for WrCompositor {
                 self.0,
                 id,
                 &mut surface_info.origin,
-                &mut surface_info.fbo_id,
+                &mut surface_info.handle.0,
                 dirty_rect,
                 valid_rect,
             );

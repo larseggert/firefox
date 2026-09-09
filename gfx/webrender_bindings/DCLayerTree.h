@@ -162,8 +162,9 @@ class DCLayerTree {
   // Interface for wr::Compositor
   void CompositorBeginFrame();
   void CompositorEndFrame();
-  void Bind(wr::NativeTileId aId, wr::DeviceIntPoint* aOffset, uint32_t* aFboId,
-            wr::DeviceIntRect aDirtyRect, wr::DeviceIntRect aValidRect);
+  void Bind(wr::NativeTileId aId, wr::DeviceIntPoint* aOffset,
+            uint64_t* aSurfaceHandle, wr::DeviceIntRect aDirtyRect,
+            wr::DeviceIntRect aValidRect);
   void Unbind();
   void CreateSurface(wr::NativeSurfaceId aId, wr::DeviceIntPoint aVirtualOffset,
                      wr::DeviceIntSize aTileSize, bool aIsOpaque);
