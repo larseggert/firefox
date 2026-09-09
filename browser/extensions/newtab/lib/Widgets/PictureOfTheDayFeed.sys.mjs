@@ -236,7 +236,9 @@ export class PictureOfTheDayFeed {
   // only be read from the privileged main process. Fetch the current picture,
   // verify it's an image, derive a light/dark theme, upload it as a custom
   // wallpaper, and select it — the same end state as a manual Customize upload.
-  async setWallpaper() {
+  // Takes the page that asked, so the save can be reported against it. Without
+  // one the parent has nobody to report to and the event is dropped.
+  async setWallpaper(target = null) {
     // The CTA is only shown when wallpapers and custom wallpapers are enabled,
     // so reaching here with either disabled means something dispatched the
     // action out of band.
@@ -298,6 +300,7 @@ export class PictureOfTheDayFeed {
           name: description,
           publishedDate,
         },
+        meta: { fromTarget: target },
       });
       // Select the uploaded image as the active custom wallpaper and turn on
       // the user's wallpaper display. The wallpaper feature pref
@@ -367,7 +370,7 @@ export class PictureOfTheDayFeed {
         await this.onPrefChangedAction(action);
         break;
       case at.WIDGETS_PICTURE_SET_WALLPAPER:
-        await this.setWallpaper();
+        await this.setWallpaper(action.meta?.fromTarget);
         break;
       case at.WALLPAPER_UPLOAD:
         this.onWallpaperUpload();

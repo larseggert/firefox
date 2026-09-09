@@ -562,6 +562,8 @@ export class WallpaperFeed {
    * @param {string} [info.publishedDate] - The day a Picture of the Day was
    *   published, so setting the same picture twice applies the saved copy.
    * @param {Blob} [info.thumbnail] - A small copy scaled by the page.
+   * @param {string|null} [target] - The id of the content port that asked, so
+   *   the save can be reported against it.
    * @returns {Promise<string|null>} The path of the image now applied, or null
    *   when the save failed.
    */
@@ -569,7 +571,8 @@ export class WallpaperFeed {
     file,
     wallpaperTheme,
     type = WALLPAPER_TYPES.Custom,
-    info = {}
+    info = {},
+    target = null
   ) {
     if (!Blob.isInstance(file)) {
       console.error("wallpaperUpload: file is not a Blob");
@@ -588,7 +591,7 @@ export class WallpaperFeed {
     }
     try {
       return await locks.request(WALLPAPER_FILE_LOCK, () =>
-        this.#writeWallpaper(file, wallpaperTheme, type, info)
+        this.#writeWallpaper(file, wallpaperTheme, type, info, target)
       );
     } catch (error) {
       console.error("Could not take the wallpaper file lock:", error);
@@ -604,10 +607,12 @@ export class WallpaperFeed {
    * @param {string} type - One of WALLPAPER_TYPES.
    * @param {object} info - The name, publishedDate and thumbnail described on
    *   wallpaperUpload, any of which may be missing.
+   * @param {string|null} [target] - The id of the content port that asked, so
+   *   the save can be reported against it.
    * @returns {Promise<string|null>} The path of the image now applied, or null
    *   when the save failed.
    */
-  async #writeWallpaper(file, wallpaperTheme, type, info) {
+  async #writeWallpaper(file, wallpaperTheme, type, info, target = null) {
     try {
       const wallpaperDir = this.wallpaperDirectory;
 
@@ -625,8 +630,13 @@ export class WallpaperFeed {
             wallpaper.type === WALLPAPER_TYPES.PictureOfTheDay &&
             wallpaper.publishedDate === info.publishedDate
         );
-        // A copy that cannot be applied is saved fresh instead.
-        if (existing && (await this.#applySavedWallpaper(existing.filename))) {
+        // Nothing is saved here, the copy already in the folder is applied,
+        // so this reports an apply rather than another save. A copy that
+        // cannot be applied is saved fresh instead.
+        if (
+          existing &&
+          (await this.#applySavedWallpaper(existing.filename, target))
+        ) {
           return PathUtils.join(this.libraryDirectory, existing.filename);
         }
       }
@@ -727,6 +737,11 @@ export class WallpaperFeed {
       // The pref now names the new file, so the sweep spares it and clears the
       // stale Picture of the Day image along with anything else left over.
       await this.#sweepWallpaperDirectory();
+
+      this.#recordSavedWallpaperEvent(at.WALLPAPER_SAVED_ADDED, target, {
+        wallpaper_source: type,
+        saved_wallpaper_count: (await this.getSavedWallpapers()).length,
+      });
       await this.broadcastWallpaperLibrary();
 
       return filePath;
@@ -864,12 +879,14 @@ export class WallpaperFeed {
    * content, so it is checked against the library rather than trusted.
    *
    * @param {string} filename - The library image to apply.
+   * @param {string|null} [target] - The id of the content port that asked, so
+   *   the apply can be reported against it.
    * @returns {Promise<boolean>} Whether the image is now applied.
    */
-  async applySavedWallpaper(filename) {
+  async applySavedWallpaper(filename, target) {
     try {
       return await locks.request(WALLPAPER_FILE_LOCK, () =>
-        this.#applySavedWallpaper(filename)
+        this.#applySavedWallpaper(filename, target)
       );
     } catch (error) {
       console.error("Could not take the wallpaper file lock:", error);
@@ -882,10 +899,12 @@ export class WallpaperFeed {
    * hold the file lock.
    *
    * @param {string} filename - The library image to apply.
+   * @param {string|null} [target] - The id of the content port that asked, so
+   *   the apply can be reported against it.
    * @returns {Promise<boolean>} False when the file is not a saved image, is
    *   not in the library or could not be copied.
    */
-  async #applySavedWallpaper(filename) {
+  async #applySavedWallpaper(filename, target) {
     const parsed = parseWallpaperFilename(filename);
     if (parsed.kind !== "saved") {
       console.error("Refusing to apply a file that is not a saved wallpaper");
@@ -952,6 +971,12 @@ export class WallpaperFeed {
 
     // The copy this one replaced is no longer applied, so the sweep takes it.
     await this.#sweepWallpaperDirectory();
+
+    const saved = await this.getSavedWallpapers();
+    this.#recordSavedWallpaperEvent(at.WALLPAPER_SAVED_APPLIED, target, {
+      saved_wallpaper_count: saved.length,
+      wallpaper_source: parsed.type,
+    });
 
     return true;
   }
@@ -1523,17 +1548,17 @@ export class WallpaperFeed {
 
   // Removes one saved image. The only thing that deletes one, and only once
   // someone has confirmed it.
-  async removeCustomWallpaper(filename) {
+  async removeCustomWallpaper(filename, target) {
     try {
       await locks.request(WALLPAPER_FILE_LOCK, () =>
-        this.#deleteCustomWallpaper(filename)
+        this.#deleteCustomWallpaper(filename, target)
       );
     } catch (error) {
       console.error("Could not take the wallpaper file lock:", error);
     }
   }
 
-  async #deleteCustomWallpaper(requestedFilename) {
+  async #deleteCustomWallpaper(requestedFilename, target) {
     try {
       const appliedFilename = Services.prefs.getStringPref(
         PREF_WALLPAPERS_CUSTOM_WALLPAPER_UUID,
@@ -1547,7 +1572,8 @@ export class WallpaperFeed {
 
       // The filename comes from content, so only a saved image can be deleted
       // this way. Everything else in the folder belongs to the sweep.
-      if (parseWallpaperFilename(filename).kind !== "saved") {
+      const parsed = parseWallpaperFilename(filename);
+      if (parsed.kind !== "saved") {
         console.error(
           "Refusing to remove a file that is not a saved wallpaper"
         );
@@ -1596,9 +1622,27 @@ export class WallpaperFeed {
       }
 
       await this.broadcastWallpaperLibrary();
+
+      this.#recordSavedWallpaperEvent(at.WALLPAPER_SAVED_REMOVED, target, {
+        saved_wallpaper_count: (await this.getSavedWallpapers()).length,
+        was_applied: filename === appliedNow,
+        // Off the name, the same as the save and the selection, so all three
+        // can be read together by where the image came from.
+        wallpaper_source: parsed.type,
+      });
     } catch (error) {
       console.error("Failed to remove custom wallpaper:", error);
     }
+  }
+
+  // Telemetry for something that has already happened. Recorded here rather
+  // than where it was asked for, because either can be refused. The tab is
+  // passed through so the event still belongs to that page's session.
+  #recordSavedWallpaperEvent(type, target, data) {
+    if (!target) {
+      return;
+    }
+    this.store.dispatch({ type, data, meta: { fromTarget: target } });
   }
 
   async onAction(action) {
@@ -1647,6 +1691,7 @@ export class WallpaperFeed {
         break;
       case at.WALLPAPER_UPLOAD:
         {
+          const target = action.meta?.fromTarget;
           const savedPath = await this.wallpaperUpload(
             action.data.file,
             action.data.theme,
@@ -1655,9 +1700,9 @@ export class WallpaperFeed {
               name: action.data.name,
               publishedDate: action.data.publishedDate,
               thumbnail: action.data.thumbnail,
-            }
+            },
+            target
           );
-          const target = action.meta?.fromTarget;
           // The reply goes only to the tab that asked. The id is for that tab:
           // it ignores an earlier save's result if a newer save has started.
           if (target && action.data.requestId) {
@@ -1677,10 +1722,16 @@ export class WallpaperFeed {
         }
         break;
       case at.WALLPAPER_REMOVE_UPLOAD:
-        await this.removeCustomWallpaper(action.data?.filename);
+        await this.removeCustomWallpaper(
+          action.data?.filename,
+          action.meta?.fromTarget
+        );
         break;
       case at.WALLPAPERS_CUSTOM_APPLY:
-        await this.applySavedWallpaper(action.data?.filename);
+        await this.applySavedWallpaper(
+          action.data?.filename,
+          action.meta?.fromTarget
+        );
         break;
       case at.WALLPAPERS_CUSTOM_THUMBNAILS_MADE:
         await this.storeThumbnail(action.data.filename, action.data.thumbnail);
