@@ -2656,6 +2656,7 @@ tab-group {
   > .toolbarbutton-text {
     text-align: start;
     padding-inline-start: var(--tab-icon-end-margin);
+    color: var(--toolbarbutton-icon-fill);
   }
 }
 
