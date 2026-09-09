@@ -419,7 +419,7 @@ add_task(async function test_edit_mode_shows_pages_and_scheduler() {
       const shadow = el.shadowRoot;
 
       Assert.equal(
-        shadow.querySelectorAll(".page-pill").length,
+        shadow.querySelectorAll(".page-pills-row ai-website-chip").length,
         1,
         "Edit mode seeds a pill for the monitor's existing URL"
       );
@@ -575,7 +575,7 @@ add_task(async function test_create_mode_empty_state_inputs() {
       );
       await el.updateComplete;
       Assert.equal(
-        shadow.querySelectorAll(".page-pill").length,
+        shadow.querySelectorAll(".page-pills-row ai-website-chip").length,
         1,
         "Adding a URL shows a pill"
       );
@@ -911,7 +911,7 @@ add_task(async function test_draft_restores_over_agent_values() {
         "Condition is restored from the draft, not the agent"
       );
       Assert.equal(
-        shadow.querySelectorAll(".page-pill").length,
+        shadow.querySelectorAll(".page-pills-row ai-website-chip").length,
         2,
         "Added URLs are restored from the draft, replacing the seeded one"
       );
@@ -958,7 +958,7 @@ add_task(async function test_add_and_remove_page_pills() {
       const shadow = el.shadowRoot;
 
       Assert.equal(
-        shadow.querySelectorAll(".page-pill").length,
+        shadow.querySelectorAll(".page-pills-row ai-website-chip").length,
         0,
         "Starts with no page pills when nothing is seeded"
       );
@@ -969,21 +969,19 @@ add_task(async function test_add_and_remove_page_pills() {
       shadow.querySelector("moz-button.add-page-btn").click();
       await el.updateComplete;
       Assert.equal(
-        shadow.querySelectorAll(".page-pill").length,
+        shadow.querySelectorAll(".page-pills-row ai-website-chip").length,
         1,
         "Add button adds the typed URL as a pill"
       );
 
-      const removeButton = shadow.querySelector(".page-pill .page-pill-remove");
-
-      await ContentTaskUtils.waitForCondition(() => {
-        const rect = removeButton.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      }, "Remove button is laid out before clicking");
-      removeButton.click();
+      const chip = shadow.querySelector(".page-pills-row ai-website-chip");
+      await chip.updateComplete;
+      // The chip's remove button only becomes visible on hover, which a test
+      // can't trigger reliably, so click it directly.
+      chip.shadowRoot.querySelector(".chip-remove").click();
       await el.updateComplete;
       Assert.equal(
-        shadow.querySelectorAll(".page-pill").length,
+        shadow.querySelectorAll(".page-pills-row ai-website-chip").length,
         0,
         "Pill remove button removes the URL"
       );
@@ -1019,7 +1017,7 @@ add_task(async function test_invalid_url_shows_error() {
         "An invalid URL surfaces an error message"
       );
       Assert.equal(
-        shadow.querySelectorAll(".page-pill").length,
+        shadow.querySelectorAll(".page-pills-row ai-website-chip").length,
         0,
         "An invalid URL is not added as a pill"
       );
@@ -1050,7 +1048,7 @@ add_task(async function test_max_watch_urls_from_host() {
 
       await addUrl("https://example.com/a");
       Assert.equal(
-        shadow.querySelectorAll(".page-pill").length,
+        shadow.querySelectorAll(".page-pills-row ai-website-chip").length,
         1,
         "The first URL is added"
       );
@@ -1062,7 +1060,7 @@ add_task(async function test_max_watch_urls_from_host() {
       );
 
       Assert.equal(
-        shadow.querySelectorAll(".page-pill").length,
+        shadow.querySelectorAll(".page-pills-row ai-website-chip").length,
         1,
         "A URL past the host's cap is not added"
       );

@@ -117,8 +117,6 @@ ai-tasks-alert-error-max-urls = { $maxUrls ->
 
 ## Accessibility - ARIA labels and accessibility text
 
-ai-tasks-alert-remove-page-label =
-  .aria-label = Remove page
 ai-tasks-alert-show-details =
   .aria-label = Show task details
 ai-tasks-alert-add-url = Add page

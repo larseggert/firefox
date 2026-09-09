@@ -604,18 +604,16 @@ export class AgentMonitorItem extends MozLitElement {
             ? html`<div class="page-pills-row">
                 ${this.pageUrls.map(
                   url =>
-                    html`<span class="page-pill">
-                      <span class="page-pill-url"
-                        >${this.#displayUrl(url)}</span
-                      >
-                      <button
-                        type="button"
-                        class="page-pill-remove"
-                        data-l10n-id="ai-tasks-alert-remove-page-label"
-                        data-l10n-attrs="aria-label"
-                        @click=${() => this.#removeUrl(url)}
-                      ></button>
-                    </span>`
+                    html`<ai-website-chip
+                      type="context-chip"
+                      size="small"
+                      removable
+                      label=${this.agent?.watchUrlTitles?.[url] ??
+                      this.#displayUrl(url)}
+                      .iconSrc=${`page-icon:${url}`}
+                      title=${url}
+                      @ai-website-chip:remove=${() => this.#removeUrl(url)}
+                    ></ai-website-chip>`
                 )}
               </div>`
             : nothing}
