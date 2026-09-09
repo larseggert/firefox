@@ -5,6 +5,7 @@
 package org.mozilla.fenix.settings
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import mozilla.components.ExperimentalAndroidComponentsApi
 import mozilla.components.compose.base.theme.Theme
@@ -22,6 +24,7 @@ import mozilla.components.feature.ipprotection.store.state.BYTES_PER_GB
 import mozilla.components.feature.ipprotection.store.state.EligibilityStatus
 import mozilla.components.feature.ipprotection.store.state.IPProtectionState
 import mozilla.components.support.test.robolectric.testContext
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,24 +50,7 @@ class IPProtectionScreenTest {
                 remainingDataBytes = 0L,
             )
 
-        composeTestRule.setContent {
-            FirefoxTheme(theme = Theme.Light) {
-                IPProtectionScreen(
-                    state = state,
-                    snackbarHostState = SnackbarHostState(),
-                    readyToUse = true,
-                    syncingData = false,
-                    promoDate = null,
-                    onVpnToggle = {},
-                    onLearnMoreClick = {},
-                    onGetStartedClick = {},
-                    showDebugAction = false,
-                    onDebugActionClick = {},
-                    onNavigateBack = {},
-                    onLocationClicked = {},
-                )
-            }
-        }
+        setScreen(state = state)
 
         composeTestRule.onNodeWithText(testContext.getString(R.string.ip_protection_data_limit_label)).assertExists()
 
@@ -89,6 +75,43 @@ class IPProtectionScreenTest {
     }
 
     @Test
+    fun `GIVEN no promo is running WHEN rendering the screen THEN the description is shown instead of the promo card`() {
+        val state =
+            IPProtectionState(
+                eligibilityStatus = EligibilityStatus.Eligible,
+                proxyStatus = Authorized.Active,
+                serviceStatus = ServiceState.Ready,
+                maxDataBytes = 50L * BYTES_PER_GB.toLong(),
+                remainingDataBytes = 40L * BYTES_PER_GB.toLong(),
+            )
+
+        setScreen(state = state)
+
+        composeTestRule.onNode(hasVpnDescription()).assertExists()
+
+        composeTestRule.onNode(hasPromoCardTitle()).assertDoesNotExist()
+    }
+
+    @Test
+    fun `GIVEN no promo is running WHEN the description learn more link is clicked THEN the callback is invoked`() {
+        var learnMoreClicks = 0
+        val state =
+            IPProtectionState(
+                eligibilityStatus = EligibilityStatus.Eligible,
+                proxyStatus = Authorized.Active,
+                serviceStatus = ServiceState.Ready,
+                maxDataBytes = 50L * BYTES_PER_GB.toLong(),
+                remainingDataBytes = 40L * BYTES_PER_GB.toLong(),
+            )
+
+        setScreen(state = state, onLearnMoreClick = { learnMoreClicks++ })
+
+        composeTestRule.onNode(hasVpnDescription()).performSemanticsAction(SemanticsActions.OnClick)
+
+        assertEquals(1, learnMoreClicks)
+    }
+
+    @Test
     fun `GIVEN an unlimited plan and a promo date WHEN rendering the screen THEN the promo description is shown`() {
         val state =
             IPProtectionState(
@@ -98,36 +121,35 @@ class IPProtectionScreenTest {
                 remainingDataBytes = 0L,
             )
 
-        composeTestRule.setContent {
-            FirefoxTheme(theme = Theme.Light) {
-                IPProtectionScreen(
-                    state = state,
-                    snackbarHostState = SnackbarHostState(),
-                    readyToUse = true,
-                    syncingData = false,
-                    promoDate = PROMO_DATE,
-                    onVpnToggle = {},
-                    onLearnMoreClick = {},
-                    onGetStartedClick = {},
-                    showDebugAction = false,
-                    onDebugActionClick = {},
-                    onNavigateBack = {},
-                    onLocationClicked = {},
-                )
-            }
-        }
+        setScreen(state = state, promoDate = PROMO_DATE)
 
         composeTestRule
             .onNode(hasContentDescription("unlimited bandwidth through $PROMO_DATE", substring = true))
             .assertExists()
-        composeTestRule
-            .onNode(hasContentDescription("Browse with extra protection", substring = true))
-            .assertDoesNotExist()
+        composeTestRule.onNode(hasVpnDescription()).assertDoesNotExist()
     }
 
-    // Practically, we shouldn't need to rely on this behaviour - but this fallback is valuable in case of user-error.
+    // The promo card advertises unlimited bandwidth, which must not run alongside a data cap - bug 2045899.
     @Test
-    fun `GIVEN an unlimited plan and a null promo date WHEN rendering the screen THEN the fallback description is shown`() {
+    fun `GIVEN a metered plan and a promo date WHEN rendering the screen THEN the description is shown`() {
+        val state =
+            IPProtectionState(
+                eligibilityStatus = EligibilityStatus.Eligible,
+                proxyStatus = Authorized.Active,
+                serviceStatus = ServiceState.Ready,
+                maxDataBytes = 50L * BYTES_PER_GB.toLong(),
+                remainingDataBytes = 40L * BYTES_PER_GB.toLong(),
+            )
+
+        setScreen(state = state, promoDate = PROMO_DATE)
+
+        composeTestRule.onNode(hasVpnDescription()).assertExists()
+
+        composeTestRule.onNode(hasPromoCardTitle()).assertDoesNotExist()
+    }
+
+    @Test
+    fun `GIVEN an unlimited plan and a null promo date WHEN rendering the screen THEN the description is shown`() {
         val state =
             IPProtectionState(
                 eligibilityStatus = EligibilityStatus.Eligible,
@@ -136,26 +158,28 @@ class IPProtectionScreenTest {
                 remainingDataBytes = 0L,
             )
 
-        composeTestRule.setContent {
-            FirefoxTheme(theme = Theme.Light) {
-                IPProtectionScreen(
-                    state = state,
-                    snackbarHostState = SnackbarHostState(),
-                    readyToUse = true,
-                    syncingData = false,
-                    promoDate = null,
-                    onVpnToggle = {},
-                    onLearnMoreClick = {},
-                    onGetStartedClick = {},
-                    showDebugAction = false,
-                    onDebugActionClick = {},
-                    onNavigateBack = {},
-                    onLocationClicked = {},
-                )
-            }
-        }
+        setScreen(state = state)
 
-        composeTestRule.onNode(hasContentDescription("Browse with extra protection", substring = true)).assertExists()
+        composeTestRule.onNode(hasVpnDescription()).assertExists()
+
+        composeTestRule.onNode(hasPromoCardTitle()).assertDoesNotExist()
+    }
+
+    // maxDataBytes is -1 until the service reports usage, which must not be mistaken for the uncapped promo plan.
+    @Test
+    fun `GIVEN usage data has not arrived and no promo is running WHEN rendering the screen THEN the description is shown`() {
+        setScreen(state = IPProtectionState(eligibilityStatus = EligibilityStatus.Eligible))
+
+        composeTestRule.onNode(hasVpnDescription()).assertExists()
+
+        composeTestRule.onNode(hasPromoCardTitle()).assertDoesNotExist()
+    }
+
+    @Test
+    fun `GIVEN usage data has not arrived and a promo is running WHEN rendering the screen THEN the promo card is shown`() {
+        setScreen(state = IPProtectionState(eligibilityStatus = EligibilityStatus.Eligible), promoDate = PROMO_DATE)
+
+        composeTestRule.onNode(hasPromoCardTitle()).assertExists()
     }
 
     @Test
@@ -169,25 +193,7 @@ class IPProtectionScreenTest {
                 remainingDataBytes = 0L,
             )
 
-        composeTestRule.setContent {
-            FirefoxTheme(theme = Theme.Light) {
-                IPProtectionScreen(
-                    state = state,
-                    snackbarHostState = SnackbarHostState(),
-                    readyToUse = true,
-                    syncingData = false,
-                    promoDate = null,
-                    onVpnToggle = {},
-                    onLearnMoreClick = {},
-                    onGetStartedClick = {},
-                    showDebugAction = false,
-                    onDebugActionClick = {},
-                    onNavigateBack = {},
-                    onLocationClicked = {},
-                    isLocationSelectionEnabled = true,
-                )
-            }
-        }
+        setScreen(state = state, isLocationSelectionEnabled = true)
 
         composeTestRule
             .onNode(hasText(testContext.getString(R.string.ip_protection_toggle_label)) and isToggleable())
@@ -197,4 +203,43 @@ class IPProtectionScreenTest {
             .onNodeWithText(testContext.getString(R.string.ip_protection_location_recommended_label))
             .assertHasNoClickAction()
     }
+
+    private fun setScreen(
+        state: IPProtectionState,
+        promoDate: String? = null,
+        onLearnMoreClick: () -> Unit = {},
+        isLocationSelectionEnabled: Boolean = false,
+    ) {
+        composeTestRule.setContent {
+            FirefoxTheme(theme = Theme.Light) {
+                IPProtectionScreen(
+                    state = state,
+                    snackbarHostState = SnackbarHostState(),
+                    readyToUse = true,
+                    syncingData = false,
+                    promoDate = promoDate,
+                    onVpnToggle = {},
+                    onLearnMoreClick = onLearnMoreClick,
+                    onGetStartedClick = {},
+                    showDebugAction = false,
+                    onDebugActionClick = {},
+                    onNavigateBack = {},
+                    onLocationClicked = {},
+                    isLocationSelectionEnabled = isLocationSelectionEnabled,
+                )
+            }
+        }
+    }
 }
+
+private fun hasPromoCardTitle() =
+    hasText(testContext.getString(R.string.ip_protection_promo_headline, testContext.getString(R.string.firefox)))
+
+private fun hasVpnDescription() =
+    hasContentDescription(
+        testContext.getString(
+            R.string.ip_protection_promo_body_2,
+            testContext.getString(R.string.ip_protection_learn_more),
+        ),
+        substring = true,
+    )

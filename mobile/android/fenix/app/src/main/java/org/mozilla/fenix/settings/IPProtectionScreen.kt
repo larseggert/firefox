@@ -52,6 +52,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import mozilla.components.ExperimentalAndroidComponentsApi
+import mozilla.components.compose.base.LinkText
 import mozilla.components.compose.base.LinkTextState
 import mozilla.components.compose.base.PromoCard
 import mozilla.components.compose.base.Switch
@@ -90,8 +91,8 @@ private val PROMO_ILLUSTRATION_SIZE = 60.dp
  * @param snackbarHostState The [SnackbarHostState] used to display snackbars.
  * @param readyToUse Whether the user is entitled to use the service.
  * @param syncingData Whether the data sync is in progress.
- * @param promoDate Locale-formatted end date used by the promo copy when the user is on a metered plan. `null` means
- *   the promo cannot be rendered (e.g. Nimbus shipped a malformed date) and the card should fall back to the standard
+ * @param promoDate Locale-formatted end date used by the promo copy when the user is not on a metered plan. `null`
+ *   means the promo cannot be rendered (e.g. Nimbus shipped a malformed date) and the header falls back to the plain
  *   description.
  * @param onVpnToggle Called when the VPN switch is toggled.
  * @param onLearnMoreClick Called when any "Learn more" link is tapped.
@@ -140,16 +141,11 @@ fun IPProtectionScreen(
             color = MaterialTheme.colorScheme.surface,
         ) {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Spacer(modifier = Modifier.height(FirefoxTheme.layout.space.static100))
-
-                VpnPromoCard(
+                VpnHeader(
                     isActive = state.proxyStatus is Authorized.Active,
                     promoDate = promoDate.takeIf { state.maxDataGb <= 0F },
                     onLearnMoreClick = onLearnMoreClick,
-                    modifier = Modifier.padding(horizontal = FirefoxTheme.layout.space.dynamic200),
                 )
-
-                Spacer(modifier = Modifier.height(FirefoxTheme.layout.space.static200))
 
                 VpnToggleRow(
                     checked = state.proxyStatus is Authorized.Active,
@@ -410,26 +406,69 @@ private fun VpnToggleRow(
 }
 
 @Composable
-private fun VpnPromoCard(
+private fun VpnHeader(
     isActive: Boolean,
     promoDate: String?,
+    onLearnMoreClick: () -> Unit,
+) {
+    // The promo card only belongs on the screen while a promo is running - bug 2070125.
+    if (promoDate == null) {
+        VpnDescription(onLearnMoreClick = onLearnMoreClick)
+    } else {
+        Spacer(modifier = Modifier.height(FirefoxTheme.layout.space.static100))
+
+        VpnPromoCard(
+            isActive = isActive,
+            promoDate = promoDate,
+            onLearnMoreClick = onLearnMoreClick,
+            modifier = Modifier.padding(horizontal = FirefoxTheme.layout.space.dynamic200),
+        )
+
+        Spacer(modifier = Modifier.height(FirefoxTheme.layout.space.static200))
+    }
+}
+
+@Composable
+private fun VpnDescription(onLearnMoreClick: () -> Unit) {
+    val learnMoreText = stringResource(R.string.ip_protection_learn_more)
+
+    LinkText(
+        text = stringResource(R.string.ip_protection_promo_body_2, learnMoreText),
+        linkTextStates =
+            listOf(
+                LinkTextState(
+                    text = learnMoreText,
+                    url = "",
+                    onClick = { onLearnMoreClick() },
+                )
+            ),
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(horizontal = FirefoxTheme.layout.space.dynamic200)
+                .padding(
+                    top = FirefoxTheme.layout.space.static100,
+                    bottom = FirefoxTheme.layout.space.static200,
+                ),
+        style = FirefoxTheme.typography.body1.copy(color = MaterialTheme.colorScheme.onSurface),
+        linkTextDecoration = TextDecoration.Underline,
+    )
+}
+
+@Composable
+private fun VpnPromoCard(
+    isActive: Boolean,
+    promoDate: String,
     onLearnMoreClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val learnMoreText = stringResource(R.string.ip_protection_learn_more)
-    val description =
-        if (promoDate != null) {
-            stringResource(R.string.ip_protection_onboarding_body_promo, promoDate, learnMoreText)
-        } else {
-            stringResource(R.string.ip_protection_promo_body_2, learnMoreText)
-        }
 
     PromoCard(
         description = null,
         modifier = modifier.fillMaxWidth(),
         title = stringResource(R.string.ip_protection_promo_headline, stringResource(R.string.firefox)),
         footer =
-            description to
+            stringResource(R.string.ip_protection_onboarding_body_promo, promoDate, learnMoreText) to
                 LinkTextState(
                     text = learnMoreText,
                     url = "",
