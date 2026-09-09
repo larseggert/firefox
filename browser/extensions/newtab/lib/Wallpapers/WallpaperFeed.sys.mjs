@@ -147,6 +147,13 @@ export class WallpaperFeed {
     return IOUtils.remove(...args);
   }
 
+  /**
+   * Thin wrapper around IOUtils.copy, so tests can make a copy fail.
+   */
+  copyFile(...args) {
+    return IOUtils.copy(...args);
+  }
+
   async wallpaperSetup(isStartup = false) {
     const wallpapersEnabled = Services.prefs.getBoolPref(
       PREF_WALLPAPERS_ENABLED
@@ -610,6 +617,20 @@ export class WallpaperFeed {
       // Clear out anything left by an earlier version or an interrupted write.
       await this.#sweepWallpaperDirectory();
 
+      // One picture a day, and "Set wallpaper" can be pressed more than once
+      // on it. Applying the copy already saved beats keeping two of the same.
+      if (type === WALLPAPER_TYPES.PictureOfTheDay && info.publishedDate) {
+        const existing = (await this.getSavedWallpapers()).find(
+          wallpaper =>
+            wallpaper.type === WALLPAPER_TYPES.PictureOfTheDay &&
+            wallpaper.publishedDate === info.publishedDate
+        );
+        // A copy that cannot be applied is saved fresh instead.
+        if (existing && (await this.#applySavedWallpaper(existing.filename))) {
+          return PathUtils.join(this.libraryDirectory, existing.filename);
+        }
+      }
+
       const uuid = Services.uuid.generateUUID().toString().slice(1, -1);
       const number = this.#takeNextWallpaperNumber();
       const filename = buildSavedWallpaperFilename({
@@ -784,7 +805,7 @@ export class WallpaperFeed {
    */
   async #copyAppliedWallpaper(filename) {
     try {
-      await IOUtils.copy(
+      await this.copyFile(
         PathUtils.join(this.libraryDirectory, filename),
         PathUtils.join(this.wallpaperDirectory, filename)
       );

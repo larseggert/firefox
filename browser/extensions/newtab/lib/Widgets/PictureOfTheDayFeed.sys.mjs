@@ -55,6 +55,7 @@ import {
   WIDGET_REGISTRY,
   isWidgetEnabled,
 } from "resource://newtab/common/WidgetsRegistry.mjs";
+import { WALLPAPER_TYPES } from "resource://newtab/lib/Wallpapers/WallpaperFileNames.mjs";
 
 const CACHE_KEY = "picture_of_the_day_feed";
 const MERINO_CLIENT_KEY = "HNT_PICTURE_OF_THE_DAY_FEED";
@@ -252,6 +253,16 @@ export class PictureOfTheDayFeed {
     if (!imageUrl) {
       return;
     }
+    // With the URL, not after the download: a refresh landing mid-fetch would
+    // otherwise file yesterday's picture under today's name and date, and the
+    // saved name is the only one that picture ever gets.
+    // The description rather than the title, matching the widget's alt text:
+    // the title is the same generic line every day, and Bug 2050975 rejected
+    // it as unreliable. Merino localizes the description, so it is a real name
+    // in the person's own language. Without one the picture falls back to
+    // being numbered like any other saved image.
+    const { description = "", publishedDate = "" } =
+      this.store.getState().PictureOfTheDay ?? {};
     try {
       const response = await this.fetchImage(imageUrl);
       const contentType = response.headers?.get?.("content-type") || "";
@@ -276,9 +287,17 @@ export class PictureOfTheDayFeed {
         console.error("PictureOfTheDayFeed: theme calculation failed", e);
       }
       this.settingWallpaper = true;
+      // Saved into "Your images" like an upload, so picking a different
+      // wallpaper later does not throw this picture away.
       this.store.dispatch({
         type: at.WALLPAPER_UPLOAD,
-        data: { file: blob, theme },
+        data: {
+          file: blob,
+          theme,
+          type: WALLPAPER_TYPES.PictureOfTheDay,
+          name: description,
+          publishedDate,
+        },
       });
       // Select the uploaded image as the active custom wallpaper and turn on
       // the user's wallpaper display. The wallpaper feature pref
@@ -289,10 +308,7 @@ export class PictureOfTheDayFeed {
       this.store.dispatch(ac.SetPref("newtabWallpapers.wallpaper", "custom"));
       this.store.dispatch(ac.SetPref("newtabWallpapers.initialWallpaper", ""));
       this.store.dispatch(
-        ac.SetPref(
-          "widgets.pictureOfTheDay.wallpaperActive",
-          this.store.getState().PictureOfTheDay?.publishedDate || ""
-        )
+        ac.SetPref("widgets.pictureOfTheDay.wallpaperActive", publishedDate)
       );
     } catch (e) {
       console.error("PictureOfTheDayFeed: failed to set wallpaper", e);
