@@ -6050,7 +6050,7 @@ const EmbeddedMigrationWizard = ({
     "force-show-import-all": options?.force_show_import_all || "false",
     "auto-request-state": "",
     ref: ref,
-    "option-expander-title-string": options?.option_expander_title_string || "",
+    "option-expander-title-string": options?.option_expander_title_string,
     "hide-option-expander-subtitle": options?.hide_option_expander_subtitle || false,
     "data-import-complete-success-string": options?.data_import_complete_success_string || "",
     "selection-header-string": options?.selection_header_string || "",
