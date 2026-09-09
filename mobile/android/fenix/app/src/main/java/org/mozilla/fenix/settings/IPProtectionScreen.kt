@@ -120,7 +120,7 @@ fun IPProtectionScreen(
     onLocationClicked: () -> Unit,
     isLocationSelectionEnabled: Boolean = false,
 ) {
-    val screenTitle = stringResource(R.string.ip_protection_title)
+    val screenTitle = stringResource(R.string.ip_protection_settings_title)
 
     Scaffold(
         modifier = Modifier.semantics { paneTitle = screenTitle },
@@ -196,7 +196,7 @@ private fun IPProtectionTopAppBar(
     TopAppBar(
         title = {
             Text(
-                text = stringResource(R.string.ip_protection_title),
+                text = stringResource(R.string.ip_protection_settings_title),
                 style = FirefoxTheme.typography.headline5,
                 modifier = Modifier.semantics { heading() },
             )
