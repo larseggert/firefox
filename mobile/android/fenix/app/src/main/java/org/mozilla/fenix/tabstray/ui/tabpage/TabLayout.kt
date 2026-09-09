@@ -48,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -720,7 +721,7 @@ private fun InteractableTabGrid(
     val onboardingCardInView by remember {
         derivedStateOf { gridState.layoutInfo.visibleItemsInfo.any { it.key == TAB_GROUP_ONBOARDING_ITEM_KEY } }
     }
-    LaunchedEffect(onboardingCardInView) {
+    SideEffect(onboardingCardInView) {
         if (onboardingCardInView) {
             onTabGroupOnboardingShown()
         }
@@ -1247,7 +1248,7 @@ private fun InteractableTabList(
     val onboardingCardInView by remember {
         derivedStateOf { state.layoutInfo.visibleItemsInfo.any { it.key == TAB_GROUP_ONBOARDING_ITEM_KEY } }
     }
-    LaunchedEffect(onboardingCardInView) {
+    SideEffect(onboardingCardInView) {
         if (onboardingCardInView) {
             onTabGroupOnboardingShown()
         }

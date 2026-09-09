@@ -173,6 +173,65 @@ class TabLayoutTest {
     }
 
     @Test
+    fun `GIVEN the tab groups onboarding card is shown in grid view THEN the shown callback fires once`() {
+        var shownCount = 0
+        var trackersBlockedCount by mutableStateOf<Int?>(null)
+        composeTestRule.setContent {
+            ComposableUnderTest(
+                displayTabsInGrid = true,
+                displayTabGroupOnboarding = true,
+                trackersBlockedCount = trackersBlockedCount,
+                onTabGroupOnboardingShown = { shownCount++ },
+            )
+        }
+
+        composeTestRule.waitForIdle()
+        assertEquals(1, shownCount)
+
+        // Changing an unrelated param recomposes TabLayout, so the keyed SideEffect should not re-fire
+        trackersBlockedCount = 5
+        composeTestRule.waitForIdle()
+        assertEquals(1, shownCount)
+    }
+
+    @Test
+    fun `GIVEN the tab groups onboarding card is shown in list view THEN the shown callback fires once`() {
+        var shownCount = 0
+        var trackersBlockedCount by mutableStateOf<Int?>(null)
+        composeTestRule.setContent {
+            ComposableUnderTest(
+                displayTabsInGrid = false,
+                displayTabGroupOnboarding = true,
+                trackersBlockedCount = trackersBlockedCount,
+                onTabGroupOnboardingShown = { shownCount++ },
+            )
+        }
+
+        composeTestRule.waitForIdle()
+        assertEquals(1, shownCount)
+
+        // Changing an unrelated param recomposes TabLayout, so the keyed SideEffect should not re-fire
+        trackersBlockedCount = 5
+        composeTestRule.waitForIdle()
+        assertEquals(1, shownCount)
+    }
+
+    @Test
+    fun `GIVEN the tab groups onboarding card is not shown THEN the shown callback is not invoked`() {
+        var shownCount = 0
+        composeTestRule.setContent {
+            ComposableUnderTest(
+                displayTabsInGrid = true,
+                displayTabGroupOnboarding = false,
+                onTabGroupOnboardingShown = { shownCount++ },
+            )
+        }
+
+        composeTestRule.waitForIdle()
+        assertEquals(0, shownCount)
+    }
+
+    @Test
     fun `WHEN the tab grid is displayed in landscape THEN it exposes collectionInfo matching the column count`() {
         composeTestRule.setContent {
             DeviceConfigurationOverride(DeviceConfigurationOverride.WindowSize(tabletLandscapeSize)) {
@@ -382,6 +441,7 @@ class TabLayoutTest {
         displayTabGroupOnboarding: Boolean = false,
         header: (@Composable () -> Unit)? = null,
         trackersBlockedCount: Int? = null,
+        onTabGroupOnboardingShown: () -> Unit = {},
     ) {
         CompositionLocalProvider(LocalUnderTest provides true) {
             FirefoxTheme(theme = Theme.Light) {
@@ -404,6 +464,7 @@ class TabLayoutTest {
                         onShareTabGroupClick = { _ -> },
                         onUngroupTabGroupClick = { _ -> },
                         onTabGroupOnboardingDismiss = {},
+                        onTabGroupOnboardingShown = onTabGroupOnboardingShown,
                         liveReorderEnabled = false,
                         header = header,
                         trackersBlockedCount = trackersBlockedCount,
