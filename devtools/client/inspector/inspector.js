@@ -129,6 +129,9 @@ const DEFAULT_COLOR_UNIT_PREF = "devtools.defaultColorUnit";
  *      Fired when the box model updates to a new node
  * - markupmutation
  *      Fired after markup mutations have been processed by the markup-view
+ * - style-changed
+ *      Fired when a change in the page may have changed the styles applied to
+ *      the currently selected node (see InspectorStyleChangeTracker)
  * - computed-view-refreshed
  *      Fired when the computed rules view updates to a new node
  * - computed-view-property-expanded
@@ -186,6 +189,7 @@ class Inspector extends EventEmitter {
     this.defaultColorUnit = Services.prefs.getStringPref(
       DEFAULT_COLOR_UNIT_PREF
     );
+    this.#firstNodeSelectedPromiseResolvers = Promise.withResolvers();
   }
 
   #toolbox;
@@ -194,7 +198,7 @@ class Inspector extends EventEmitter {
   // Stores all the instances of sidebar panels like rule view, computed view, ...
   #panels = new Map();
   #fluentL10n;
-  #defaultNodeSelected = false;
+  #styleChangeTracker;
   #defaultStartupNode;
   #defaultStartupNodeDomReference;
   #defaultStartupNodeSelectionReason;
@@ -218,6 +222,7 @@ class Inspector extends EventEmitter {
   #splitOrientationL10nStrings;
   #splitOrientationPrefValue;
   #updateProgress;
+  #firstNodeSelectedPromiseResolvers;
 
   /**
    * InspectorPanel.open() is effectively an asynchronous constructor.
@@ -272,7 +277,6 @@ class Inspector extends EventEmitter {
     this.#defaultNode = null;
 
     this.breadcrumbs = new HTMLBreadcrumbs(this);
-    this.styleChangeTracker = new InspectorStyleChangeTracker(this);
     this.#setupSearchBox();
     this.#createInspectorShortcuts();
 
@@ -295,9 +299,7 @@ class Inspector extends EventEmitter {
     //
     // We only listen to new root node in the browser toolbox, which is the last
     // configuration to use one target for multiple window global.
-    const isBrowserToolbox =
-      this.commands.descriptorFront.isBrowserProcessDescriptor;
-    if (isBrowserToolbox) {
+    if (this.#isBrowserToolbox) {
       this.#watchedResources.push(TYPES.ROOT_NODE);
     }
 
@@ -308,6 +310,31 @@ class Inspector extends EventEmitter {
     // Store the URL of the target page prior to navigation in order to ensure
     // telemetry counts in the Grid Inspector are not double counted on reload.
     this.previousURL = this.currentTarget.url;
+
+    // Finalize the initialization of all UIs which depend on having a selected
+    // node. This only runs once, and only after a default node was selected and
+    // the target and resource watchers are ready.
+    this.#firstNodeSelectedPromiseResolvers.promise
+      .then(() => {
+        this.#setupSidebar();
+        this.#setupExtensionSidebars();
+        this.#onNewSelection();
+      })
+      .catch(e => {
+        console.error(
+          "Failed to finalize inspector init after the first node selection",
+          e
+        );
+      });
+
+    // StyleChangeTracker will create the inspector front for all frame targets
+    // which triggers many RDP requests in parallel, which can slow down the
+    // earlier inspector initialization.
+    this.#styleChangeTracker = new InspectorStyleChangeTracker(this);
+    this.#styleChangeTracker.on(
+      "style-changed",
+      this.#onStyleChangeTrackerStyleChanged
+    );
 
     this.toolbox.on("host-changed", this.#onHostChanged);
     this.toolbox.nodePicker.on("picker-node-hovered", this.onPickerHovered);
@@ -326,16 +353,9 @@ class Inspector extends EventEmitter {
     return this;
   }
 
-  /**
-   * Finalize the initialization of all UIs which depends on having a selected
-   * node.
-   */
-  #onDefaultNodeSelected() {
-    this.#setupSidebar();
-    this.#setupExtensionSidebars();
-
-    this.#onNewSelection();
-  }
+  #onStyleChangeTrackerStyleChanged = () => {
+    this.emit("style-changed");
+  };
 
   // The onTargetAvailable argument is mandatory for TargetCommand.watchTargets.
   // The inspector ignore all targets but the currently selected one,
@@ -371,11 +391,18 @@ class Inspector extends EventEmitter {
       return;
     }
 
-    const { walker } = await targetFront.getFront("inspector");
-    const rootNodeFront = await walker.getRootNode();
+    const isFirstBrowserToolboxTarget =
+      this.#isBrowserToolbox && !this.#newRootStart;
 
-    // onRootNodeAvailable will take care of populating the markup view
-    await this.onRootNodeAvailable(rootNodeFront);
+    // Skip calling onRootNodeAvailable for the first Browser Toolbox startup,
+    // it will be handled via the ROOT_NODE resource watcher.
+    if (!isFirstBrowserToolboxTarget) {
+      const { walker } = await targetFront.getFront("inspector");
+      const rootNodeFront = await walker.getRootNode();
+
+      // onRootNodeAvailable will take care of populating the markup view
+      await this.onRootNodeAvailable(rootNodeFront);
+    }
   };
 
   #onTargetDestroyed = ({ targetFront }) => {
@@ -471,11 +498,9 @@ class Inspector extends EventEmitter {
       // Setup the toolbar again, since its content may depend on the current document.
       await this.#setupToolbar();
 
-      // Finalize initialization when a default node is successfully selected.
-      if (!this.#defaultNodeSelected) {
-        this.#defaultNodeSelected = true;
-        this.#onDefaultNodeSelected();
-      }
+      // Resolve the firstNodeSelectedPromiseResolvers promise, to finalize the
+      // inspector init.
+      this.#firstNodeSelectedPromiseResolvers.resolve();
     } catch (e) {
       this.#handleRejectionIfNotDestroyed(e);
       // Show the AppErrorBoundary if the markup view failed to render, unless:
@@ -615,6 +640,10 @@ class Inspector extends EventEmitter {
     }
 
     return this.#highlighters;
+  }
+
+  get #isBrowserToolbox() {
+    return this.commands.descriptorFront.isBrowserProcessDescriptor;
   }
 
   get #threePanePrefName() {
@@ -1632,9 +1661,9 @@ class Inspector extends EventEmitter {
    *        The tab title
    */
   addExtensionSidebar(id, { title }) {
-    if (!this.#defaultNodeSelected) {
+    if (!this.sidebar) {
       // The sidebar is not created yet, #setupExtensionSidebars will create
-      // this extension sidebar when the first root node is available.
+      // this extension sidebar when finalizing the setup.
       return;
     }
 
@@ -1672,7 +1701,7 @@ class Inspector extends EventEmitter {
    *        The id of the sidebar tab to destroy.
    */
   removeExtensionSidebar(id) {
-    if (!this.#defaultNodeSelected) {
+    if (!this.sidebar) {
       // The extension sidebars were not created yet, nothing to remove.
       return;
     }
@@ -2035,6 +2064,14 @@ class Inspector extends EventEmitter {
       this.#search = null;
     }
 
+    if (this.#styleChangeTracker) {
+      this.#styleChangeTracker.off(
+        "style-changed",
+        this.#onStyleChangeTrackerStyleChanged
+      );
+      this.#styleChangeTracker.destroy();
+    }
+
     this.ruleViewSideBar?.destroy();
     this.ruleViewSideBar = null;
 
@@ -2045,7 +2082,6 @@ class Inspector extends EventEmitter {
     this.prefObserver.destroy();
 
     this.breadcrumbs.destroy();
-    this.styleChangeTracker.destroy();
     this.inspectorShortcuts.destroy();
     this.inspectorShortcuts = null;
 
