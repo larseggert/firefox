@@ -420,15 +420,21 @@ var gProfiles = {
       /* FxA menu button events */
       case "PanelUI-fxa-menu-all-profiles-button": {
         aEvent.stopPropagation();
+        gSync.emitFxaToolbarTelemetry("view_all_profiles", aEvent.target);
         this._populateAllProfilesPanel();
         PanelUI.showSubView("PanelUI-fxa-menu-all-profiles", aEvent.target);
         break;
       }
       case "PanelUI-fxa-menu-all-profiles-manage-button": {
+        gSync.emitFxaToolbarTelemetry("manage_all_profiles", aEvent.target);
         this.manageProfiles();
         break;
       }
       case "PanelUI-fxa-menu-all-profiles-create-button": {
+        gSync.emitFxaToolbarTelemetry(
+          "create_new_profile_cta_label",
+          aEvent.target
+        );
         this.createNewProfile("profiles-panel");
         break;
       }
@@ -436,14 +442,23 @@ var gProfiles = {
       // fall through
       case "PanelUI-fxa-menu-create-profile-button": {
         aEvent.stopPropagation();
+        gSync.emitFxaToolbarTelemetry(
+          "create_new_profile_submenu",
+          aEvent.target
+        );
         PanelUI.showSubView("PanelUI-fxa-menu-create-profile", aEvent.target);
         break;
       }
       case "PanelUI-fxa-menu-create-profile-confirm-button": {
+        gSync.emitFxaToolbarTelemetry(
+          "create_new_profile_cta_button",
+          aEvent.target
+        );
         this.createNewProfile("profiles-panel");
         break;
       }
       case "PanelUI-fxa-menu-create-profile-learn-more-button": {
+        gSync.emitFxaToolbarTelemetry("what_are_profiles", aEvent.target);
         openTrustedLinkIn(
           "https://support.mozilla.org/kb/profile-management",
           "tab"
@@ -451,10 +466,12 @@ var gProfiles = {
         break;
       }
       case "PanelUI-fxa-menu-create-profile-copy-button": {
+        gSync.emitFxaToolbarTelemetry("copy_primary_profile", aEvent.target);
         this.copyProfile();
         break;
       }
       case "PanelUI-fxa-menu-create-profile-manage-button": {
+        gSync.emitFxaToolbarTelemetry("manage_profiles", aEvent.target);
         this.manageProfiles();
         break;
       }
@@ -464,6 +481,10 @@ var gProfiles = {
           aEvent.target.classList.contains("subviewbutton-nav")
         ) {
           aEvent.stopPropagation();
+          gSync.emitFxaToolbarTelemetry(
+            "manage_primary_profile",
+            aEvent.target
+          );
           this.updateFxAView(aEvent.target);
         }
         break;
@@ -475,18 +496,25 @@ var gProfiles = {
         break;
       }
       case "profiles-edit-this-profile-button": {
+        gSync.emitFxaToolbarTelemetry("edit_primary_profile", aEvent.target);
         openTrustedLinkIn("about:editprofile", "tab");
         break;
       }
       case "profiles-manage-profiles-button": {
+        gSync.emitFxaToolbarTelemetry("manage_profiles", aEvent.target);
         this.manageProfiles();
         break;
       }
       case "profiles-copy-profile-button": {
+        gSync.emitFxaToolbarTelemetry("copy_primary_profile", aEvent.target);
         this.copyProfile();
         break;
       }
       case "profiles-create-profile-button": {
+        gSync.emitFxaToolbarTelemetry(
+          "create_new_profile_cta_label",
+          aEvent.target
+        );
         this.createNewProfile("profiles-panel");
         break;
       }
@@ -522,6 +550,12 @@ var gProfiles = {
       aEvent.target.getAttribute("profileid") !==
         String(SelectableProfileService.currentProfile?.id)
     ) {
+      gSync.emitFxaToolbarTelemetry(
+        aEvent.target.closest("#PanelUI-fxa-menu-all-profiles-list")
+          ? "launch_secondary_profile_all_profiles"
+          : "launch_secondary_profile",
+        aEvent.target
+      );
       this.launchProfile(aEvent);
     }
   },
