@@ -159,3 +159,5 @@ subsuite = "mozbuild"
 skip-if = ["os == 'win'"] # Windows doesn't have the same path seperator as linux, and we just don't need to run it there
 
 ["vendor/test_vendor_manifest.py"]
+
+["vendor/test_vendor_node.py"]
