@@ -1304,24 +1304,36 @@ export class WallpaperFeed {
     }
   }
 
-  async removeCustomWallpaper() {
+  // Removes one saved image. The only thing that deletes one, and only once
+  // someone has confirmed it.
+  async removeCustomWallpaper(filename) {
     try {
       await locks.request(WALLPAPER_FILE_LOCK, () =>
-        this.#deleteCustomWallpaper()
+        this.#deleteCustomWallpaper(filename)
       );
     } catch (error) {
       console.error("Could not take the wallpaper file lock:", error);
     }
   }
 
-  async #deleteCustomWallpaper() {
+  async #deleteCustomWallpaper(requestedFilename) {
     try {
-      const filename = Services.prefs.getStringPref(
+      const appliedFilename = Services.prefs.getStringPref(
         PREF_WALLPAPERS_CUSTOM_WALLPAPER_UUID,
         ""
       );
+      const filename = requestedFilename || appliedFilename;
 
       if (!filename) {
+        return;
+      }
+
+      // The filename comes from content, so only a saved image can be deleted
+      // this way. Everything else in the folder belongs to the sweep.
+      if (parseWallpaperFilename(filename).kind !== "saved") {
+        console.error(
+          "Refusing to remove a file that is not a saved wallpaper"
+        );
         return;
       }
 
@@ -1329,26 +1341,44 @@ export class WallpaperFeed {
         return;
       }
 
-      // Only the copy the page renders from, and the library image it came
-      // from is already gone. Failing here must not keep the selection
-      // pointing at a deleted image: the sweep clears the leftover later.
-      try {
-        await this.removeFile(
-          PathUtils.join(this.wallpaperDirectory, filename),
-          { ignoreAbsent: true }
+      // Read again rather than trusting the value from before the removal: a
+      // selection can land while it is in flight and must not be cleared.
+      const appliedNow = Services.prefs.getStringPref(
+        PREF_WALLPAPERS_CUSTOM_WALLPAPER_UUID,
+        ""
+      );
+
+      if (filename === appliedNow) {
+        // Only the copy the page renders from, and the library image it came
+        // from is already gone. Failing here must not keep the selection
+        // pointing at a deleted image: the sweep clears the leftover later.
+        try {
+          await this.removeFile(
+            PathUtils.join(this.wallpaperDirectory, filename),
+            { ignoreAbsent: true }
+          );
+        } catch (error) {
+          console.error("Failed to remove the applied copy:", error);
+        }
+
+        Services.prefs.clearUserPref(PREF_WALLPAPERS_CUSTOM_WALLPAPER_UUID);
+
+        // Both, so New Tab goes back to its default background. Clearing only
+        // the selection would fall through to an experiment's wallpaper.
+        this.store.dispatch(ac.SetPref("newtabWallpapers.wallpaper", ""));
+        this.store.dispatch(
+          ac.SetPref("newtabWallpapers.initialWallpaper", "")
         );
-      } catch (error) {
-        console.error("Failed to remove the applied copy:", error);
+
+        this.store.dispatch(
+          ac.BroadcastToContent({
+            type: at.WALLPAPERS_CUSTOM_SET,
+            data: null,
+          })
+        );
       }
 
-      Services.prefs.clearUserPref(PREF_WALLPAPERS_CUSTOM_WALLPAPER_UUID);
-
-      this.store.dispatch(
-        ac.BroadcastToContent({
-          type: at.WALLPAPERS_CUSTOM_SET,
-          data: null,
-        })
-      );
+      await this.broadcastWallpaperLibrary();
     } catch (error) {
       console.error("Failed to remove custom wallpaper:", error);
     }
@@ -1430,7 +1460,7 @@ export class WallpaperFeed {
         }
         break;
       case at.WALLPAPER_REMOVE_UPLOAD:
-        await this.removeCustomWallpaper();
+        await this.removeCustomWallpaper(action.data?.filename);
         break;
       case at.WALLPAPERS_CUSTOM_APPLY:
         await this.applySavedWallpaper(action.data?.filename);

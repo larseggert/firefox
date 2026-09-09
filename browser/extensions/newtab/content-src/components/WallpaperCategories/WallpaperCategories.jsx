@@ -116,6 +116,8 @@ export class _WallpaperCategories extends React.PureComponent {
       activeId: null,
       customWallpaperErrorType: null,
       focusedCategoryIndex: 0,
+      pendingRemoveIndex: null,
+      pendingRemoveFilename: null,
       savedFocusIndex: 0,
       // Object URLs for the picker thumbnails, keyed by filename.
       thumbnailUrls: {},
@@ -136,6 +138,7 @@ export class _WallpaperCategories extends React.PureComponent {
   }
 
   componentDidUpdate(prevProps) {
+    this.focusAfterRemoval();
     this.focusAfterUpload();
 
     const wantsThumbnails = !!this.props.panelShowing && this.libraryEnabled;
@@ -585,6 +588,36 @@ export class _WallpaperCategories extends React.PureComponent {
     });
   }
 
+  handleRemoveSavedWallpaper(wallpaper, index) {
+    // The name rather than the slot: the dialog has no cancel callback, so a
+    // canceled removal is told apart by its image still being there.
+    this.setState({
+      pendingRemoveIndex: index,
+      pendingRemoveFilename: wallpaper.filename,
+    });
+
+    this.props.dispatch({
+      type: at.DIALOG_OPEN,
+      data: {
+        onConfirm: [
+          ac.OnlyToMain({
+            type: at.WALLPAPER_REMOVE_UPLOAD,
+            data: { filename: wallpaper.filename },
+          }),
+          ac.AlsoToMain({ type: at.DIALOG_CLOSE }),
+        ],
+        eventSource: "WALLPAPERS",
+        body_string_id: [
+          "newtab-wallpaper-remove-image-title",
+          "newtab-wallpaper-remove-image-body",
+        ],
+        confirm_button_string_id: "newtab-wallpaper-remove-image-confirm",
+        confirm_button_type: "primary",
+        cancel_button_string_id: "newtab-wallpaper-remove-image-cancel",
+      },
+    });
+  }
+
   // What a screen reader calls this image. A kept Picture of the Day carries
   // its description and a rescued Firefox wallpaper its name. An image someone
   // added has neither and goes by its number, which every saved image has.
@@ -658,6 +691,37 @@ export class _WallpaperCategories extends React.PureComponent {
         this.savedWallpaperRef[addedIndex]?.focus();
       }
     });
+  }
+
+  // The removed tile is gone, so focus whatever took its place. The tile that
+  // adds an image is always last, so there is always something to focus.
+  focusAfterRemoval() {
+    const { activeCategory, pendingRemoveIndex, pendingRemoveFilename } =
+      this.state;
+    if (
+      pendingRemoveIndex === null ||
+      activeCategory !== WALLPAPER_CATEGORIES.CustomWallpaper
+    ) {
+      return;
+    }
+
+    const current = this.savedWallpapers;
+    // Still listed means the dialog was canceled, or something else was
+    // removed. Either way this is not the removal that was asked for here.
+    if (current.some(w => w.filename === pendingRemoveFilename)) {
+      return;
+    }
+    const nextIndex = Math.min(pendingRemoveIndex, current.length);
+    this.setState(
+      {
+        pendingRemoveIndex: null,
+        pendingRemoveFilename: null,
+        savedFocusIndex: nextIndex,
+      },
+      () => {
+        this.savedWallpaperRef[nextIndex]?.focus();
+      }
+    );
   }
 
   // Arrow key navigation for "Your images". The last tile adds an image, so it
@@ -918,7 +982,14 @@ export class _WallpaperCategories extends React.PureComponent {
           data-l10n-id="newtab-wallpaper-your-images"
         ></legend>
         {savedWallpapers.map((wallpaper, index) => {
-          const { filename, position } = wallpaper;
+          const { filename, position, number, fallbackName } = wallpaper;
+          // Named the same way as the tile it belongs to.
+          const removeId = fallbackName
+            ? "newtab-wallpaper-remove-image"
+            : "newtab-wallpaper-remove-image-numbered";
+          const removeArgs = JSON.stringify(
+            fallbackName ? { name: fallbackName } : { number }
+          );
           const url = this.thumbnailUrl(filename);
           const id = `your-images-${filename}`;
           const isApplied = applied?.filename === filename;
@@ -950,6 +1021,18 @@ export class _WallpaperCategories extends React.PureComponent {
                 tabIndex={index === this.state.savedFocusIndex ? 0 : -1}
               />
               {this.renderSavedWallpaperLabel(id, wallpaper)}
+              <moz-button
+                type="ghost"
+                size="small"
+                className="your-images-remove"
+                iconSrc="chrome://global/skin/icons/close.svg"
+                data-l10n-id={removeId}
+                data-l10n-args={removeArgs}
+                tabIndex={index === this.state.savedFocusIndex ? 0 : -1}
+                onClick={() =>
+                  this.handleRemoveSavedWallpaper(wallpaper, index)
+                }
+              ></moz-button>
             </div>
           );
         })}
