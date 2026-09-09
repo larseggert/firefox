@@ -319,8 +319,8 @@ def vendor_python(
     "vendor",
     "node",
     description="Vendor node packages needed to build Firefox into "
-    "third_party/node. Resolves third_party/node/package.json with pnpm and "
-    "adds the result to version control.",
+    "third_party/node. Resolves third_party/node/package.json with pnpm, "
+    "prunes documentation and tests, and adds the result to version control.",
 )
 @CommandArgument(
     "--add",
