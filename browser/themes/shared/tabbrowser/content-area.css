@@ -493,10 +493,12 @@
     border-radius: var(--border-radius-medium);
   }
 
-  /* Skip the border on the active panel so its focus outline can sit flush
-   * against the content without a visible gap. */
+  /* Skip the outline on the active panel so its focus outline can sit flush
+   * against the content without a visible gap. We use outline not border to
+   * avoid changing the dimensions of the non-selected panel's content box. */
   #tabbrowser-tabpanels[splitview] .split-view-panel:not(.deck-selected) > .browserContainer {
-    border: var(--border-width) solid var(--chrome-content-separator-color);
+    outline: var(--border-width) solid var(--chrome-content-separator-color);
+    outline-offset: calc(-1 * var(--border-width));
   }
 
   /* In split view the notification box is inside the panel's browserContainer.

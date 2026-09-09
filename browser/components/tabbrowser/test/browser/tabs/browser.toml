@@ -662,6 +662,8 @@ skip-if = [
 
 ["browser_tab_splitview_alt_click.js"]
 
+["browser_tab_splitview_content_size.js"]
+
 ["browser_tab_splitview_contextmenu.js"]
 skip-if = [
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64'", # Bug 1994508
