@@ -160,12 +160,13 @@ private fun SignatureField(state: TextFieldState) {
 
     val signatureStyle =
         TextStyle(
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 36.sp,
             fontFamily = FontFamily.Cursive,
             letterSpacing = 1.25.sp,
             textAlign = TextAlign.Center,
         )
+    val placeholderStyle = signatureStyle.copy(color = MaterialTheme.colorScheme.secondary)
 
     Box(
         modifier =
@@ -187,14 +188,14 @@ private fun SignatureField(state: TextFieldState) {
     ) {
         if (state.text.isEmpty()) {
             // The content description is set on the field, so this does not need to be double processed.
-            Text(text = placeholder, style = signatureStyle, modifier = Modifier.clearAndSetSemantics {})
+            Text(text = placeholder, style = placeholderStyle, modifier = Modifier.clearAndSetSemantics {})
         }
 
         BasicTextField(
             state = state,
             textStyle = signatureStyle,
             lineLimits = TextFieldLineLimits.SingleLine,
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.secondary),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             modifier =
                 Modifier.fillMaxWidth()
                     .testTag(PdfToolsTestTag.SIGNATURE_INPUT)
