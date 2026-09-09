@@ -49,13 +49,13 @@ tasks:
         fetches:
             toolchain:
                 - linux64-clang
-                - linux64-gcc-10
-                - linux64-gcc-10-sixgill
+                - linux64-gcc-11
+                - linux64-gcc-11-sixgill
                 - linux64-rust
                 - linux64-cbindgen
                 - linux64-node
                 - linux64-pkgconf
-                - sysroot-x86_64-linux-gnu
+                - sysroot-x86_64-linux-gnu-gcc11
 
     linux64-haz/debug:
         description: "Browser Hazard Analysis Linux"
@@ -74,14 +74,14 @@ tasks:
         fetches:
             toolchain:
                 - linux64-clang
-                - linux64-gcc-10
-                - linux64-gcc-10-sixgill
+                - linux64-gcc-11
+                - linux64-gcc-11-sixgill
                 - linux64-rust
                 - linux64-cbindgen
                 - linux64-nasm
                 - linux64-node
                 - linux64-pkgconf
-                - sysroot-x86_64-linux-gnu
+                - sysroot-x86_64-linux-gnu-gcc11
                 - sysroot-wasm32-wasi
                 - newtab-node-modules
         optimization:
