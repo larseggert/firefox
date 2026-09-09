@@ -745,6 +745,17 @@ void SessionAccessibility::PopulateNodeInfo(
     inputType = AccessibleWrap::GetInputType(inputTypeAttr);
   }
 
+  // XXX: Instead of generating cpp bindings for `android.view.View`, just use
+  // integers here.
+  nsAutoString live;
+  int32_t liveRegion = 0;  // View.ACCESSIBILITY_LIVE_REGION_NONE
+  nsAccUtils::GetLiveRegionSetting(aAccessible, live);
+  if (live.EqualsLiteral("polite")) {
+    liveRegion = 1;  // View.ACCESSIBILITY_LIVE_REGION_POLITE
+  } else if (live.EqualsLiteral("assertive")) {
+    liveRegion = 2;  // View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE
+  }
+
   auto childCount = aAccessible->ChildCount();
   nsTArray<int32_t> children(childCount);
   if (!nsAccUtils::MustPrune(aAccessible)) {
@@ -763,7 +774,7 @@ void SessionAccessibility::PopulateNodeInfo(
       jni::StringParam(description), jni::StringParam(hint),
       jni::StringParam(geckoRole), jni::StringParam(roleDescription),
       jni::StringParam(nodeID), jni::StringParam(containerTitle),
-      jni::StringParam(language), inputType);
+      jni::StringParam(language), inputType, liveRegion);
 
   if (aAccessible->HasNumericValue()) {
     double curValue = aAccessible->CurValue();

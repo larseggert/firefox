@@ -1465,7 +1465,7 @@ class AccessibilityTest : BaseSessionTest() {
         assertThat("Document has 1 child", rootNode.childCount, equalTo(1))
 
         val liveRegion = createNodeInfo(rootNode.getChildId(0))
-        assertThat("First node is a label", liveRegion.viewIdResourceName.toString(), equalTo("to_change"))
+        assertThat("First node is live region", liveRegion.liveRegion, equalTo(View.ACCESSIBILITY_LIVE_REGION_POLITE))
 
         mainSession.evaluateJS("document.querySelector('#to_change').textContent = 'Hello';")
         sessionRule.waitUntilCalled(
@@ -1484,6 +1484,11 @@ class AccessibilityTest : BaseSessionTest() {
     fun testLiveRegionDescendant() {
         loadTestPage("test-live-region-descendant")
         waitForInitialFocus()
+
+        val rootNode = createNodeInfo(View.NO_ID)
+        assertThat("Document has 1 child", rootNode.childCount, equalTo(1))
+        val liveRegion = createNodeInfo(rootNode.getChildId(0))
+        assertThat("First node is live region", liveRegion.liveRegion, equalTo(View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE))
 
         mainSession.evaluateJS("document.querySelector('#to_show').style.display = 'none';")
         sessionRule.waitUntilCalled(

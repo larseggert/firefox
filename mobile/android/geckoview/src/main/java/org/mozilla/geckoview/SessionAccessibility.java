@@ -767,7 +767,8 @@ public class SessionAccessibility {
         @Nullable final String viewIdResourceName,
         @Nullable final String containerTitle,
         @Nullable final String language,
-        final int inputType) {
+        final int inputType,
+        final int liveRegion) {
       if (mView == null) {
         return;
       }
@@ -805,6 +806,9 @@ public class SessionAccessibility {
       }
 
       node.setContentDescription(addSpansToText(String.join(" ", contentDescription), language));
+
+      // Set live region
+      node.setLiveRegion(liveRegion);
 
       // Add actions
       node.addAction(AccessibilityNodeInfo.ACTION_NEXT_HTML_ELEMENT);
