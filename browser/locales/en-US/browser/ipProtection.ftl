@@ -144,6 +144,9 @@ site-exclusion-toggle-disabled-1 =
   .aria-label = VPN is off for this site
 site-exclusion-toggle-description = Site not working? Try turning VPN off.
 
+# Manages rules for VPN to turn on or off automatically for certain websites
+site-rules-manage-rules-link-text = Manage VPN rules
+
 ipprotection-settings-link =
   .label = Settings
 

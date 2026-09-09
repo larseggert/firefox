@@ -25,6 +25,8 @@ import "chrome://browser/content/ipprotection/ipprotection-status-box.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-toggle.mjs";
 
+const SITE_RULES_SETTINGS_PANE = "privacy-vpnsiterules";
+
 /**
  * Custom element that implements a message bar and status card for IP protection.
  */
@@ -40,6 +42,7 @@ export default class IPProtectionContentElement extends MozLitElement {
     siteExclusionControlEl: "#site-exclusion-control",
     siteExclusionToggleEl: "#site-exclusion-toggle",
     siteExclusionDescriptionEl: '#site-exclusion-toggle > [slot="description"]',
+    siteRulesEl: "#site-rules-control",
     settingsButtonEl: "#vpn-settings-button",
   };
 
@@ -102,6 +105,10 @@ export default class IPProtectionContentElement extends MozLitElement {
 
   get hasSiteExclusion() {
     return this.state?.siteData?.isExclusion ?? false;
+  }
+
+  get hasSiteRule() {
+    return this.state?.siteData?.hasSiteRule ?? false;
   }
 
   get #hasErrors() {
@@ -190,6 +197,15 @@ export default class IPProtectionContentElement extends MozLitElement {
         })
       );
     }
+  }
+
+  handleClickSiteRulesLink(event) {
+    event.preventDefault();
+    const win = event.target.documentGlobal;
+    win.openPreferences(SITE_RULES_SETTINGS_PANE);
+    this.dispatchEvent(
+      new CustomEvent("IPProtection:Close", { bubbles: true, composed: true })
+    );
   }
 
   handleClickSettingsButton(event) {
@@ -398,9 +414,29 @@ export default class IPProtectionContentElement extends MozLitElement {
     `;
   }
 
+  siteRulesSettingsLinkTemplate() {
+    if (
+      !this.state.isSiteInclusionsEnabled ||
+      !this.state.siteData ||
+      this.#hasErrors
+    ) {
+      return null;
+    }
+
+    return html` <moz-button
+      id="site-rules-control"
+      type="ghost"
+      data-l10n-id="site-rules-manage-rules-link-text"
+      iconsrc="chrome://browser/skin/permissions.svg"
+      @click=${this.handleClickSiteRulesLink}
+    >
+    </moz-button>`;
+  }
+
   exclusionToggleTemplate() {
     if (
       !this.state.isSiteExceptionsEnabled ||
+      this.state.isSiteInclusionsEnabled ||
       !this.state.siteData ||
       !this.state.isProtectionEnabled ||
       this.#hasErrors
@@ -434,17 +470,15 @@ export default class IPProtectionContentElement extends MozLitElement {
 
   footerTemplate() {
     return html`
-      <div class="vpn-bottom-content">
-        <moz-button
-          type="ghost"
-          data-l10n-id="ipprotection-settings-link"
-          iconsrc="chrome://global/skin/icons/settings.svg"
-          id="vpn-settings-button"
-          @click=${this.handleClickSettingsButton}
-        >
-          ></moz-button
-        >
-      </div>
+      <moz-button
+        type="ghost"
+        data-l10n-id="ipprotection-settings-link"
+        iconsrc="chrome://global/skin/icons/settings.svg"
+        id="vpn-settings-button"
+        @click=${this.handleClickSettingsButton}
+      >
+        ></moz-button
+      >
     `;
   }
 
@@ -483,9 +517,18 @@ export default class IPProtectionContentElement extends MozLitElement {
       return html` ${this.pausedTemplate()} ${this.footerTemplate()}`;
     }
 
+    if (this.state.isSiteInclusionsEnabled) {
+      return html`
+        ${this.statusCardTemplate()}
+        <div class="vpn-bottom-content">
+          ${this.siteRulesSettingsLinkTemplate()} ${this.footerTemplate()}
+        </div>
+      `;
+    }
+
     return html`
       ${this.statusCardTemplate()} ${this.exclusionToggleTemplate()}
-      ${this.footerTemplate()}
+      <div class="vpn-bottom-content">${this.footerTemplate()}</div>
     `;
   }
 
