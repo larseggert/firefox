@@ -148,6 +148,10 @@ ipprotection-status-card {
   background-image: url("chrome://browser/skin/notification-icons/geo.svg");
 }
 
+#unauthenticated-site-rules::before {
+  background-image: url("chrome://browser/skin/permissions.svg");
+}
+
 #unauthenticated-choose-location::before {
   background-image: url("chrome://global/skin/icons/defaultFavicon.svg");
 }

@@ -133,6 +133,7 @@ unauthenticated-vpn-title = Try { -brand-product-name }’s built-in VPN
 unauthenticated-hide-location-message-3 = <a data-l10n-name="learn-more-vpn">Hide your location</a> while browsing in { -brand-product-name }.
 unauthenticated-private-location-message = Helps <a data-l10n-name="learn-more-vpn">keep your location private</a> in { -brand-product-name }.
 unauthenticated-choose-location-message-1 = Choose from several locations or let { -brand-product-name } pick the fastest one.
+unauthenticated-site-rules-message = Control which sites use VPN and which sites don’t.
 unauthenticated-get-started = Get started
 unauthenticated-terms-of-service-privacy-notice = By proceeding, you agree to the <a data-l10n-name="vpn-terms-of-service">Terms of Service</a> and <a data-l10n-name="vpn-privacy-notice">Privacy Notice</a>.
 
