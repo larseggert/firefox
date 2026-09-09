@@ -1119,6 +1119,8 @@ class PathBuilder : public PathSink {
    */
   virtual already_AddRefed<Path> Finish() = 0;
 
+  virtual bool Reset(FillRule aFillRule) { return false; }
+
   virtual BackendType GetBackendType() const = 0;
 
   virtual bool IsActive() const = 0;

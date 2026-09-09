@@ -42,6 +42,8 @@ class PathOps {
 
   size_t NumberOfOps() const;
 
+  void Clear() { mPathData.clear(); }
+
  private:
   enum class OpType : uint32_t {
     OP_MOVETO = 0,
@@ -182,6 +184,8 @@ class PathBuilderRecording final : public PathBuilder {
            float aEndAngle, bool aAntiClockwise) final;
 
   already_AddRefed<Path> Finish() final;
+
+  bool Reset(FillRule aFillRule) final;
 
   BackendType GetBackendType() const final { return BackendType::RECORDING; }
 

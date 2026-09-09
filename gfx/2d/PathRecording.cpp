@@ -414,6 +414,14 @@ already_AddRefed<Path> PathBuilderRecording::Finish() {
                                       mFillRule, mCurrentPoint, mBeginPoint);
 }
 
+bool PathBuilderRecording::Reset(FillRule aFillRule) {
+  mFillRule = aFillRule;
+  mPathOps.Clear();
+  mCurrentPoint = Point();
+  mBeginPoint = Point();
+  return true;
+}
+
 PathRecording::PathRecording(BackendType aBackend, PathOps&& aOps,
                              FillRule aFillRule, const Point& aCurrentPoint,
                              const Point& aBeginPoint)

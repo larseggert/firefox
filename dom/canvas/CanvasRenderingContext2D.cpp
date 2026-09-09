@@ -1844,6 +1844,10 @@ bool CanvasRenderingContext2D::EnsureTarget(ErrorResult& aError,
     mPath->StreamToSink(builder);
     mPath = builder->Finish();
   }
+  if (mRecycledPathBuilder &&
+      mRecycledPathBuilder->GetBackendType() != mPathType) {
+    mRecycledPathBuilder = nullptr;
+  }
 
   mTarget = std::move(newTarget);
   mBufferProvider = std::move(newProvider);
@@ -4148,7 +4152,7 @@ bool CanvasRenderingContext2D::EnsureWritablePath() {
 
   if (!mPath) {
     if (mBufferProvider) {
-      mPathBuilder = Factory::CreatePathBuilder(mPathType, fillRule);
+      mPathBuilder = CreateOrRecyclePathBuilder(fillRule);
     } else {
       mPathBuilder = mTarget->CreatePathBuilder(fillRule);
     }
@@ -4156,6 +4160,17 @@ bool CanvasRenderingContext2D::EnsureWritablePath() {
     mPathBuilder = Path::ToBuilder(mPath.forget(), fillRule);
   }
   return true;
+}
+
+already_AddRefed<PathBuilder>
+CanvasRenderingContext2D::CreateOrRecyclePathBuilder(FillRule aFillRule) {
+  if (mRecycledPathBuilder) {
+    if (mRecycledPathBuilder->Reset(aFillRule)) {
+      return mRecycledPathBuilder.forget();
+    }
+    mRecycledPathBuilder = nullptr;
+  }
+  return Factory::CreatePathBuilder(mPathType, aFillRule);
 }
 
 bool CanvasRenderingContext2D::EnsureBufferProvider() {
@@ -4182,13 +4197,14 @@ void CanvasRenderingContext2D::EnsureUserSpacePath(
   }
 
   if (!mPath && !mPathBuilder) {
-    mPathBuilder = Factory::CreatePathBuilder(mPathType, fillRule);
+    mPathBuilder = CreateOrRecyclePathBuilder(fillRule);
   }
 
   if (mPathBuilder) {
     EnsureCapped();
-    mPath = mPathBuilder->Finish();
-    mPathBuilder = nullptr;
+    RefPtr<PathBuilder> builder = mPathBuilder.forget();
+    mPath = builder->Finish();
+    mRecycledPathBuilder = std::move(builder);
   }
 
   if (mPath && mPath->GetFillRule() != fillRule) {
