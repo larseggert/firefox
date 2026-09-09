@@ -55,8 +55,6 @@ class CSSMatrixComponent final : public CSSTransformComponent {
 
   // end of CSSMatrixComponent Web IDL declarations
 
-  already_AddRefed<DOMMatrix> ToMatrix(ErrorResult& aRv);
-
   void ToCssTextWithProperty(const CSSPropertyId& aPropertyId,
                              nsACString& aDest) const;
 
