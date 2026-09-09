@@ -971,9 +971,17 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
+    "newtabWallpapers.customWallpaper.library.enabled",
+    {
+      title:
+        'Keeps more than one custom wallpaper, shown as "Your images" in the wallpaper picker. Off by default; can also be turned on via trainhopConfig.customWallpaperLibrary.enabled.',
+      value: false,
+    },
+  ],
+  [
     "newtabWallpapers.customWallpaper.uuid",
     {
-      title: "uuid for uploaded custom wallpaper",
+      title: "Filename of the saved wallpaper currently applied",
       value: "",
     },
   ],
@@ -1000,9 +1008,23 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
+    "newtabWallpapers.customWallpaper.nextNumber",
+    {
+      title: "Number the next saved wallpaper gets; counts up, never reused",
+      value: 1,
+    },
+  ],
+  [
+    "newtabWallpapers.customWallpaper.position",
+    {
+      title: "background-position of the applied saved wallpaper",
+      value: "",
+    },
+  ],
+  [
     "newtabWallpapers.customWallpaper.theme",
     {
-      title: "theme ('light' | 'dark') of user uploaded wallpaper",
+      title: "theme ('light' | 'dark') of the applied saved wallpaper",
       value: "",
     },
   ],
