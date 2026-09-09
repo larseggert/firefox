@@ -1531,7 +1531,6 @@ pub struct WrCompositor(*mut c_void);
 impl Compositor for WrCompositor {
     fn create_surface(
         &mut self,
-        _device: &mut Device,
         id: NativeSurfaceId,
         virtual_offset: DeviceIntPoint,
         tile_size: DeviceIntSize,
@@ -1542,37 +1541,37 @@ impl Compositor for WrCompositor {
         }
     }
 
-    fn create_external_surface(&mut self, _device: &mut Device, id: NativeSurfaceId, is_opaque: bool) {
+    fn create_external_surface(&mut self, id: NativeSurfaceId, is_opaque: bool) {
         unsafe {
             wr_compositor_create_external_surface(self.0, id, is_opaque);
         }
     }
 
-    fn create_backdrop_surface(&mut self, _device: &mut Device, id: NativeSurfaceId, color: ColorF) {
+    fn create_backdrop_surface(&mut self, id: NativeSurfaceId, color: ColorF) {
         unsafe {
             wr_compositor_create_backdrop_surface(self.0, id, color);
         }
     }
 
-    fn destroy_surface(&mut self, _device: &mut Device, id: NativeSurfaceId) {
+    fn destroy_surface(&mut self, id: NativeSurfaceId) {
         unsafe {
             wr_compositor_destroy_surface(self.0, id);
         }
     }
 
-    fn create_tile(&mut self, _device: &mut Device, id: NativeTileId) {
+    fn create_tile(&mut self, id: NativeTileId) {
         unsafe {
             wr_compositor_create_tile(self.0, id.surface_id, id.x, id.y);
         }
     }
 
-    fn destroy_tile(&mut self, _device: &mut Device, id: NativeTileId) {
+    fn destroy_tile(&mut self, id: NativeTileId) {
         unsafe {
             wr_compositor_destroy_tile(self.0, id.surface_id, id.x, id.y);
         }
     }
 
-    fn attach_external_image(&mut self, _device: &mut Device, id: NativeSurfaceId, external_image: ExternalImageId) {
+    fn attach_external_image(&mut self, id: NativeSurfaceId, external_image: ExternalImageId) {
         unsafe {
             wr_compositor_attach_external_image(self.0, id, external_image);
         }
@@ -1580,7 +1579,6 @@ impl Compositor for WrCompositor {
 
     fn bind(
         &mut self,
-        _device: &mut Device,
         id: NativeTileId,
         dirty_rect: DeviceIntRect,
         valid_rect: DeviceIntRect,
@@ -1604,13 +1602,13 @@ impl Compositor for WrCompositor {
         surface_info
     }
 
-    fn unbind(&mut self, _device: &mut Device) {
+    fn unbind(&mut self) {
         unsafe {
             wr_compositor_unbind(self.0);
         }
     }
 
-    fn begin_frame(&mut self, _device: &mut Device) {
+    fn begin_frame(&mut self) {
         unsafe {
             wr_compositor_begin_frame(self.0);
         }
@@ -1618,7 +1616,6 @@ impl Compositor for WrCompositor {
 
     fn add_surface(
         &mut self,
-        _device: &mut Device,
         id: NativeSurfaceId,
         transform: CompositorSurfaceTransform,
         clip_rect: DeviceIntRect,
@@ -1641,7 +1638,6 @@ impl Compositor for WrCompositor {
 
     fn start_compositing(
         &mut self,
-        _device: &mut Device,
         clear_color: ColorF,
         dirty_rects: &[DeviceIntRect],
         opaque_rects: &[DeviceIntRect],
@@ -1658,21 +1654,21 @@ impl Compositor for WrCompositor {
         }
     }
 
-    fn end_frame(&mut self, _device: &mut Device) {
+    fn end_frame(&mut self) {
         unsafe {
             wr_compositor_end_frame(self.0);
         }
     }
 
-    fn enable_native_compositor(&mut self, _device: &mut Device, _enable: bool) {}
+    fn enable_native_compositor(&mut self, _enable: bool) {}
 
-    fn deinit(&mut self, _device: &mut Device) {
+    fn deinit(&mut self) {
         unsafe {
             wr_compositor_deinit(self.0);
         }
     }
 
-    fn get_capabilities(&self, _device: &mut Device) -> CompositorCapabilities {
+    fn get_capabilities(&self) -> CompositorCapabilities {
         unsafe {
             let mut caps: CompositorCapabilities = Default::default();
             wr_compositor_get_capabilities(self.0, &mut caps);
@@ -1680,7 +1676,7 @@ impl Compositor for WrCompositor {
         }
     }
 
-    fn get_window_visibility(&self, _device: &mut Device) -> WindowVisibility {
+    fn get_window_visibility(&self) -> WindowVisibility {
         unsafe {
             let mut visibility: WindowVisibility = Default::default();
             wr_compositor_get_window_visibility(self.0, &mut visibility);
@@ -2025,7 +2021,6 @@ impl MappableCompositor for WrCompositor {
     /// while supporting some form of native layers.
     fn map_tile(
         &mut self,
-        _device: &mut Device,
         id: NativeTileId,
         dirty_rect: DeviceIntRect,
         valid_rect: DeviceIntRect,
@@ -2055,7 +2050,7 @@ impl MappableCompositor for WrCompositor {
 
     /// Unmap a tile that was was previously mapped via map_tile to signal
     /// that SWGL is done rendering to the buffer.
-    fn unmap_tile(&mut self, _device: &mut Device) {
+    fn unmap_tile(&mut self) {
         unsafe {
             wr_compositor_unmap_tile(self.0);
         }
@@ -2063,14 +2058,13 @@ impl MappableCompositor for WrCompositor {
 
     fn lock_composite_surface(
         &mut self,
-        _device: &mut Device,
         ctx: *mut c_void,
         external_image_id: ExternalImageId,
         composite_info: *mut SWGLCompositeSurfaceInfo,
     ) -> bool {
         unsafe { wr_swgl_lock_composite_surface(ctx, external_image_id, composite_info) }
     }
-    fn unlock_composite_surface(&mut self, _device: &mut Device, ctx: *mut c_void, external_image_id: ExternalImageId) {
+    fn unlock_composite_surface(&mut self, ctx: *mut c_void, external_image_id: ExternalImageId) {
         unsafe { wr_swgl_unlock_composite_surface(ctx, external_image_id) }
     }
 }
