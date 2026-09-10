@@ -64,10 +64,10 @@ function isCardColumnSupported() {
 }
 
 // @backward-compat { version 157 } is_ad_eligible_position was added as an
-// extra_key to the topsites impression event in 157. A train-hopped XPI can run
-// on older platform builds whose schema lacks it, and glean-core drops the
-// whole event when it sees an unknown extra key. Remove this guard, and its
-// call sites, once 157 reaches Release.
+// extra_key to the pocket and topsites impression events in 157. A train-hopped
+// XPI can run on older platform builds whose schema lacks it, and glean-core
+// drops the whole event when it sees an unknown extra key. Remove this guard,
+// and its call sites, once 157 reaches Release.
 export function isAdEligiblePositionSupported(
   version = AppConstants.MOZ_APP_VERSION
 ) {
@@ -2712,6 +2712,9 @@ export class TelemetryFeed {
         ...(tile.format ? { format: tile.format } : {}),
         ...(tile.card_column && isCardColumnSupported()
           ? { card_column: tile.card_column }
+          : {}),
+        ...(tile.is_ad_eligible_position && isAdEligiblePositionSupported()
+          ? { is_ad_eligible_position: true }
           : {}),
         ...(tile.section
           ? {

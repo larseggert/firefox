@@ -709,6 +709,7 @@ export class _DSCard extends React.PureComponent {
                 topic: this.props.topic,
                 features: this.props.features,
                 ...(format ? { format } : {}),
+                is_ad_eligible_position: this.props.is_ad_eligible_position,
                 category: this.props.category,
                 attribution: this.props.attribution,
                 ...(this.props.section

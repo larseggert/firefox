@@ -115,6 +115,7 @@ export class ImpressionStats extends React.PureComponent {
           topic: link.topic,
           features: link.features,
           attribution: link.attribution,
+          is_ad_eligible_position: link.is_ad_eligible_position,
           ...(cardColumn ? { card_column: cardColumn } : {}),
           ...(link.format
             ? { format: link.format }

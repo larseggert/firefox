@@ -447,6 +447,7 @@ function CardSection({
         recommended_at={rec.recommended_at}
         received_rank={rec.received_rank}
         format={rec.format}
+        is_ad_eligible_position={rec.is_ad_eligible_position}
         alt_text={rec.alt_text}
         mayHaveSectionsCards={mayHaveSectionsCards}
         selectedTopics={selectedTopics}
