@@ -582,7 +582,9 @@ void MacroAssemblerLOONG64::ma_addPtrTestSigned(Condition cond, Register rd,
 
 // Subtract.
 void MacroAssemblerLOONG64::ma_sub_d(Register rd, Register rj, Imm32 imm) {
-  if (is_intN(-imm.value, 12)) {
+  if (imm.value == 0) {
+    ma_move(rd, rj);
+  } else if (is_intN(-imm.value, 12)) {
     as_addi_d(rd, rj, -imm.value);
   } else {
     UseScratchRegisterScope temps(asMasm());
@@ -593,7 +595,9 @@ void MacroAssemblerLOONG64::ma_sub_d(Register rd, Register rj, Imm32 imm) {
 }
 
 void MacroAssemblerLOONG64::ma_sub_d(Register rd, Register rj, ImmWord imm) {
-  if (is_intN(-imm.value, 12)) {
+  if (imm.value == 0) {
+    ma_move(rd, rj);
+  } else if (is_intN(-imm.value, 12)) {
     as_addi_d(rd, rj, -imm.value);
   } else {
     UseScratchRegisterScope temps(asMasm());
