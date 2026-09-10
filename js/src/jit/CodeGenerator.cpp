@@ -23313,6 +23313,16 @@ void CodeGenerator::visitNewDateObject(LNewDateObject* lir) {
   masm.bind(ool->rejoin());
 }
 
+void CodeGenerator::visitUnpackTime(LUnpackTime* lir) {
+  ValueOperand packedVal = ToValue(lir->packedVal());
+  Register output = ToRegister(lir->output());
+  Register temp = ToTempRegisterOrInvalid(lir->temp0());
+
+  auto* mir = lir->mir();
+
+  masm.unpackTime(packedVal, output, temp, mir->shiftImm(), mir->maskImm());
+}
+
 void CodeGenerator::visitCanonicalizeNaND(LCanonicalizeNaND* ins) {
   auto output = ToFloatRegister(ins->output());
   MOZ_ASSERT(output == ToFloatRegister(ins->input()));

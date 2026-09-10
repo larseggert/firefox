@@ -444,6 +444,8 @@ const JSClass* WarpCacheIRTranspiler::classForGuardClassKind(
     case GuardClassKind::BoundFunction:
     case GuardClassKind::Date:
     case GuardClassKind::Duration:
+    case GuardClassKind::PlainTime:
+    case GuardClassKind::PlainDateTime:
     case GuardClassKind::WeakMap:
     case GuardClassKind::WeakSet:
       return ClassFor(kind);
@@ -6012,6 +6014,18 @@ bool WarpCacheIRTranspiler::emitNewDateObjectResult(
   add(obj);
 
   pushResult(obj);
+  return true;
+}
+
+bool WarpCacheIRTranspiler::emitUnpackTimeResult(ValOperandId packedValId,
+                                                 uint32_t shiftImm,
+                                                 uint32_t maskImm) {
+  MDefinition* packedVal = getOperand(packedValId);
+
+  auto* ins = MUnpackTime::New(alloc(), packedVal, shiftImm, maskImm);
+  add(ins);
+
+  pushResult(ins);
   return true;
 }
 

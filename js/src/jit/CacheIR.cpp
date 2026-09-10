@@ -21,6 +21,8 @@
 #include "builtin/WeakSetObject.h"
 #ifdef JS_HAS_INTL_API
 #  include "builtin/temporal/Duration.h"
+#  include "builtin/temporal/PlainDateTime.h"
+#  include "builtin/temporal/PlainTime.h"
 #endif
 #include "gc/GC.h"
 #include "jit/BaselineIC.h"
@@ -2176,8 +2178,14 @@ const JSClass* js::jit::ClassFor(GuardClassKind kind) {
 #ifdef JS_HAS_INTL_API
     case GuardClassKind::Duration:
       return &temporal::DurationObject::class_;
+    case GuardClassKind::PlainTime:
+      return &temporal::PlainTimeObject::class_;
+    case GuardClassKind::PlainDateTime:
+      return &temporal::PlainDateTimeObject::class_;
 #else
     case GuardClassKind::Duration:
+    case GuardClassKind::PlainTime:
+    case GuardClassKind::PlainDateTime:
       MOZ_CRASH("Intl API disabled");
 #endif
     case GuardClassKind::WeakMap:
@@ -2209,6 +2217,8 @@ void IRGenerator::emitOptimisticClassGuard(ObjOperandId objId, JSObject* obj,
     case GuardClassKind::Map:
     case GuardClassKind::Date:
     case GuardClassKind::Duration:
+    case GuardClassKind::PlainTime:
+    case GuardClassKind::PlainDateTime:
     case GuardClassKind::WeakMap:
     case GuardClassKind::WeakSet:
       MOZ_ASSERT(obj->hasClass(ClassFor(kind)));
@@ -11268,6 +11278,94 @@ AttachDecision InlinableNativeIRGenerator::tryAttachDurationGet(
 #endif
 }
 
+AttachDecision InlinableNativeIRGenerator::tryAttachTemporalTimeGet(
+    InlinableNative native, TemporalTimeObject objectType,
+    PackedTimeComponent component) {
+#ifdef JS_HAS_INTL_API
+  if (!thisval_.isObject()) {
+    return AttachDecision::NoAction;
+  }
+
+  // Ensure |this| is the correct object type.
+  size_t slot;
+  GuardClassKind guardKind;
+  switch (objectType) {
+    case TemporalTimeObject::PlainTime:
+      if (!thisval_.toObject().is<temporal::PlainTimeObject>()) {
+        return AttachDecision::NoAction;
+      }
+      slot = temporal::PlainTimeObject::PACKED_TIME_SLOT.index();
+      guardKind = GuardClassKind::PlainTime;
+      break;
+    case TemporalTimeObject::PlainDateTime:
+      if (!thisval_.toObject().is<temporal::PlainDateTimeObject>()) {
+        return AttachDecision::NoAction;
+      }
+      slot = temporal::PlainDateTimeObject::PACKED_TIME_SLOT.index();
+      guardKind = GuardClassKind::PlainDateTime;
+      break;
+  }
+
+  // Expecting no arguments.
+  if (argsLength() != 0) {
+    return AttachDecision::NoAction;
+  }
+
+  // Initialize the input operand.
+  Int32OperandId argcId = initializeInputOperand();
+
+  // Guard callee is the correct native getter
+  ObjOperandId calleeId = emitNativeCalleeGuard(argcId);
+
+  // Guard |this| is the correct object type.
+  ValOperandId thisValId = loadThis(calleeId);
+  ObjOperandId objId = writer.guardToObject(thisValId);
+  emitOptimisticClassGuard(objId, &thisval_.toObject(), guardKind);
+
+  ValOperandId packedValId =
+      writer.loadFixedSlot(objId, NativeObject::getFixedSlotOffset(slot));
+
+  uint32_t shift;
+  uint32_t bits;
+
+  switch (component) {
+    case PackedTimeComponent::Hour:
+      shift = temporal::PackedTime::HourShift;
+      bits = temporal::PackedTime::HourBits;
+      break;
+    case PackedTimeComponent::Minute:
+      shift = temporal::PackedTime::MinuteShift;
+      bits = temporal::PackedTime::MinuteBits;
+      break;
+    case PackedTimeComponent::Second:
+      shift = temporal::PackedTime::SecondShift;
+      bits = temporal::PackedTime::SecondBits;
+      break;
+    case PackedTimeComponent::Millisecond:
+      shift = temporal::PackedTime::MillisecondShift;
+      bits = temporal::PackedTime::MillisecondBits;
+      break;
+    case PackedTimeComponent::Microsecond:
+      shift = temporal::PackedTime::MicrosecondShift;
+      bits = temporal::PackedTime::MicrosecondBits;
+      break;
+    case PackedTimeComponent::Nanosecond:
+      shift = temporal::PackedTime::NanosecondShift;
+      bits = temporal::PackedTime::NanosecondBits;
+      break;
+  }
+
+  writer.unpackTimeResult(packedValId, shift, BitMask(bits));
+
+  trackAttached(InlinableNativeToString(native));
+
+  return AttachDecision::Attach;
+#else
+  // No inlining when Intl support is disabled.
+  return AttachDecision::NoAction;
+#endif
+}
+
 AttachDecision CallIRGenerator::tryAttachFunCall(HandleFunction callee) {
   MOZ_ASSERT(callee->isNativeWithoutJitEntry());
 
@@ -13580,6 +13678,46 @@ AttachDecision InlinableNativeIRGenerator::tryAttachStub() {
       return tryAttachDurationGet(DurationComponent::Microseconds);
     case InlinableNative::DurationNanoseconds:
       return tryAttachDurationGet(DurationComponent::Nanoseconds);
+
+    // Temporal.PlainTime getters.
+    case InlinableNative::PlainTimeHour:
+      return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainTime,
+                                      PackedTimeComponent::Hour);
+    case InlinableNative::PlainTimeMinute:
+      return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainTime,
+                                      PackedTimeComponent::Minute);
+    case InlinableNative::PlainTimeSecond:
+      return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainTime,
+                                      PackedTimeComponent::Second);
+    case InlinableNative::PlainTimeMillisecond:
+      return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainTime,
+                                      PackedTimeComponent::Millisecond);
+    case InlinableNative::PlainTimeMicrosecond:
+      return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainTime,
+                                      PackedTimeComponent::Microsecond);
+    case InlinableNative::PlainTimeNanosecond:
+      return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainTime,
+                                      PackedTimeComponent::Nanosecond);
+
+    // Temporal.PlainDateTime getters.
+    case InlinableNative::PlainDateTimeHour:
+      return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainDateTime,
+                                      PackedTimeComponent::Hour);
+    case InlinableNative::PlainDateTimeMinute:
+      return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainDateTime,
+                                      PackedTimeComponent::Minute);
+    case InlinableNative::PlainDateTimeSecond:
+      return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainDateTime,
+                                      PackedTimeComponent::Second);
+    case InlinableNative::PlainDateTimeMillisecond:
+      return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainDateTime,
+                                      PackedTimeComponent::Millisecond);
+    case InlinableNative::PlainDateTimeMicrosecond:
+      return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainDateTime,
+                                      PackedTimeComponent::Microsecond);
+    case InlinableNative::PlainDateTimeNanosecond:
+      return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainDateTime,
+                                      PackedTimeComponent::Nanosecond);
 
     // WeakMap/WeakSet natives.
     case InlinableNative::WeakMapGet:

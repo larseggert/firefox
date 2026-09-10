@@ -154,6 +154,20 @@
   _(NumberParseInt)                                \
   _(NumberToString)                                \
                                                    \
+  _(PlainTimeHour)                                 \
+  _(PlainTimeMinute)                               \
+  _(PlainTimeSecond)                               \
+  _(PlainTimeMillisecond)                          \
+  _(PlainTimeMicrosecond)                          \
+  _(PlainTimeNanosecond)                           \
+                                                   \
+  _(PlainDateTimeHour)                             \
+  _(PlainDateTimeMinute)                           \
+  _(PlainDateTimeSecond)                           \
+  _(PlainDateTimeMillisecond)                      \
+  _(PlainDateTimeMicrosecond)                      \
+  _(PlainDateTimeNanosecond)                       \
+                                                   \
   _(ReflectGetPrototypeOf)                         \
                                                    \
   _(RegExpDotAll)                                  \
@@ -305,6 +319,8 @@ INLINABLE_NATIVE_LIST(ADD_NATIVE)
 #undef ADD_NATIVE
 
 const JSClass* InlinableNativeGuardToClass(InlinableNative native);
+
+const char* InlinableNativeToString(InlinableNative native);
 
 bool CanInlineNativeCrossRealm(InlinableNative native);
 

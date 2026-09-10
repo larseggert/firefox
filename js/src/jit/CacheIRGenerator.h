@@ -18,6 +18,7 @@
 #include "jit/CacheIR.h"
 #include "jit/CacheIRWriter.h"
 #include "jit/ICState.h"
+#include "jit/InlinableNatives.h"
 #include "js/Id.h"
 #include "js/RootingAPI.h"
 #include "js/ScalarType.h"
@@ -795,6 +796,20 @@ class MOZ_RAII InlinableNativeIRGenerator {
     Nanoseconds,
   };
 
+  enum class PackedTimeComponent {
+    Hour,
+    Minute,
+    Second,
+    Millisecond,
+    Microsecond,
+    Nanosecond,
+  };
+
+  enum class TemporalTimeObject {
+    PlainTime,
+    PlainDateTime,
+  };
+
   AttachDecision tryAttachArrayPush();
   AttachDecision tryAttachArrayPopShift(InlinableNative native);
   AttachDecision tryAttachArrayJoin();
@@ -941,6 +956,9 @@ class MOZ_RAII InlinableNativeIRGenerator {
   AttachDecision tryAttachDateNow();
   AttachDecision tryAttachDateParse();
   AttachDecision tryAttachDurationGet(DurationComponent component);
+  AttachDecision tryAttachTemporalTimeGet(InlinableNative native,
+                                          TemporalTimeObject objectType,
+                                          PackedTimeComponent component);
   AttachDecision tryAttachWeakMapHas();
   AttachDecision tryAttachWeakMapGet();
   AttachDecision tryAttachWeakSetHas();

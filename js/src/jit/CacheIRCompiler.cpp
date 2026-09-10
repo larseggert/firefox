@@ -2306,6 +2306,8 @@ static const JSClass* ClassFor(JSContext* cx, GuardClassKind kind) {
     case GuardClassKind::BoundFunction:
     case GuardClassKind::Date:
     case GuardClassKind::Duration:
+    case GuardClassKind::PlainTime:
+    case GuardClassKind::PlainDateTime:
     case GuardClassKind::WeakMap:
     case GuardClassKind::WeakSet:
       return ClassFor(kind);
@@ -11819,6 +11821,27 @@ bool CacheIRCompiler::emitNewDateObjectResult(uint32_t templateObjectOffset,
 
   using Fn = JSObject* (*)(JSContext*, double);
   callvm.call<Fn, jit::NewDateObject>();
+  return true;
+}
+
+bool CacheIRCompiler::emitUnpackTimeResult(ValOperandId packedValId,
+                                           uint32_t shiftImm,
+                                           uint32_t maskImm) {
+  JitSpew(JitSpew_Codegen, "%s", __FUNCTION__);
+
+  AutoOutputRegister output(*this);
+  AutoScratchRegister unpackOut(allocator, masm);
+#ifdef JS_NUNBOX32
+  AutoScratchRegisterMaybeOutput temp(allocator, masm, output);
+#else
+  Register temp = InvalidReg;
+#endif
+  ValueOperand packedVal = allocator.useValueRegister(masm, packedValId);
+
+  masm.unpackTime(packedVal, unpackOut, temp, shiftImm, maskImm);
+
+  EmitStoreResult(masm, unpackOut, JSVAL_TYPE_INT32, output);
+
   return true;
 }
 
