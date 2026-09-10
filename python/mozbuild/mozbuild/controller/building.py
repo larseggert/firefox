@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -1878,6 +1879,16 @@ class BuildDriver(MozbuildObject):
             status = process.wait()
         if buildstatus_messages:
             line_handler("BUILDSTATUS TIER_FINISH configure")
+        # config.log is written in the objdir, which automation doesn't upload.
+        if upload_path := os.environ.get("UPLOAD_PATH"):
+            try:
+                mkdir(upload_path)
+                shutil.copy2(
+                    Path(self.topobjdir) / "config.log",
+                    Path(upload_path) / "config.log",
+                )
+            except OSError:
+                pass
         if status:
             self.log(
                 BUILD_ERROR,
