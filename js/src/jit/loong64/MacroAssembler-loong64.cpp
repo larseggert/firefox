@@ -1481,7 +1481,9 @@ void MacroAssemblerLOONG64::ma_and(Register rd, Register rj, Imm32 imm) {
 }
 
 void MacroAssemblerLOONG64::ma_or(Register rd, Register rj, Imm32 imm) {
-  if (is_uintN(imm.value, 12)) {
+  if (imm.value == 0) {
+    ma_move(rd, rj);
+  } else if (is_uintN(imm.value, 12)) {
     as_ori(rd, rj, imm.value);
   } else {
     UseScratchRegisterScope temps(asMasm());
