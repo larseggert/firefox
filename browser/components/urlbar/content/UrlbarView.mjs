@@ -58,11 +58,6 @@ export class UrlbarView {
 
     this.#rows.addEventListener("mousedown", this);
 
-    // For the horizontal fade-out effect, set the overflow attribute on result
-    // rows when they overflow.
-    this.#rows.addEventListener("overflow", this);
-    this.#rows.addEventListener("underflow", this);
-
     this.resultMenu.addEventListener("click", this);
     this.resultMenu.addEventListener("showing", this);
     this.resultMenu.addEventListener("hidden", this);
@@ -79,6 +74,10 @@ export class UrlbarView {
     this.#l10nCache = new L10nCache();
 
     this.input.addEventListener("contextmenu", this);
+
+    this.#overflowObserver = new ResizeObserver(
+      this.#updateOverflowState.bind(this)
+    );
   }
 
   get oneOffSearchButtons() {
@@ -1212,6 +1211,7 @@ export class UrlbarView {
   #mousedownSelectedElement;
   #openPanelInstance;
   #oneOffSearchButtons;
+  #overflowObserver;
   #previousTabToSearchEngine;
   #queryContext;
   #queryUpdatedResults;
@@ -2975,6 +2975,7 @@ export class UrlbarView {
    */
   #updateIndices() {
     this.visibleResults = [];
+    this.#overflowObserver.disconnect();
 
     // `lastVisibleLabel` is the l10n object of the last-seen visible row label
     // as we iterate through the rows. When we encounter a row whose label is
@@ -3005,6 +3006,12 @@ export class UrlbarView {
             result,
             this.#queryContext
           );
+        }
+
+        for (let target of item.querySelectorAll(
+          ".urlbarView-overflowable, .urlbarView-url"
+        )) {
+          this.#overflowObserver.observe(target);
         }
       }
 
@@ -3188,22 +3195,6 @@ export class UrlbarView {
 
   #setRowVisibility(row, visible) {
     row.toggleAttribute("hidden", !visible);
-
-    if (
-      !visible &&
-      row.result.type != UrlbarShared.RESULT_TYPE.TIP &&
-      row.result.type != UrlbarShared.RESULT_TYPE.DYNAMIC
-    ) {
-      // Reset the overflow state of elements that can overflow in case their
-      // content changes while they're hidden. When making the row visible
-      // again, we'll get new overflow events if needed.
-      this.#setElementOverflowing(row._elements.get("title"), false);
-      this.#setElementOverflowing(row._elements.get("url"), false);
-      let tagsContainer = row._elements.get("tagsContainer");
-      if (tagsContainer) {
-        this.#setElementOverflowing(tagsContainer, false);
-      }
-    }
   }
 
   async #ariaNotifyLocalizedString(element, l10nId, l10nArgs) {
@@ -3971,21 +3962,6 @@ export class UrlbarView {
   }
 
   /**
-   * @param {Element} element
-   *   The element
-   * @returns {boolean}
-   *   Whether we track this element's overflow status in order to fade it out
-   *   and add a tooltip when needed.
-   */
-  #canElementOverflow(element) {
-    let { classList } = element;
-    return (
-      classList.contains("urlbarView-overflowable") ||
-      classList.contains("urlbarView-url")
-    );
-  }
-
-  /**
    * Marks an element as overflowing or not overflowing.
    *
    * @param {Element} element
@@ -4017,6 +3993,16 @@ export class UrlbarView {
       element.setAttribute("title", element._tooltip);
     } else {
       element.removeAttribute("title");
+    }
+  }
+
+  #updateOverflowState(entries) {
+    let states = entries.map(({ target }) => ({
+      target,
+      overflowing: target.scrollWidth > target.clientWidth,
+    }));
+    for (let { target, overflowing } of states) {
+      this.#setElementOverflowing(target, overflowing);
     }
   }
 
@@ -4563,30 +4549,6 @@ export class UrlbarView {
       this.clearSelection();
     }
     this.#mousedownSelectedElement = null;
-  }
-
-  #isRelevantOverflowEvent(event) {
-    // We're interested only in the horizontal axis.
-    // 0 - vertical, 1 - horizontal, 2 - both
-    return event.detail != 0;
-  }
-
-  on_overflow(event) {
-    if (
-      this.#isRelevantOverflowEvent(event) &&
-      this.#canElementOverflow(event.target)
-    ) {
-      this.#setElementOverflowing(event.target, true);
-    }
-  }
-
-  on_underflow(event) {
-    if (
-      this.#isRelevantOverflowEvent(event) &&
-      this.#canElementOverflow(event.target)
-    ) {
-      this.#setElementOverflowing(event.target, false);
-    }
   }
 
   on_resize() {
