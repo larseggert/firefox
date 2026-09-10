@@ -2149,8 +2149,6 @@ pref("browser.newtabpage.activity-stream.discoverystream.region-basic-config", "
 pref("browser.newtabpage.activity-stream.discoverystream.pocket-feed-parameters", "");
 pref("browser.newtabpage.activity-stream.discoverystream.merino-feed-experiment", false);
 
-// List of locales that get thumbs up/down on recommended stories by default.
-
 pref("browser.newtabpage.activity-stream.telemetry.privatePing.enabled", true);
 
 // This preference isn't read anymore, but kept around until we eventually end
