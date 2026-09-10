@@ -178,7 +178,7 @@ async function assertBreakablePositions(
     );
     // If we don't have any position, only assert that the line isn't breakable
     if (!positions) {
-      await assertLineIsBreakable(dbg, file, line, false);
+      await assertLineIsBreakable(dbg, line, false);
       continue;
     }
     const { columns } = positions;

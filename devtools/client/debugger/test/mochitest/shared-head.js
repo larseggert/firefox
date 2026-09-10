@@ -325,11 +325,11 @@ function getVisibleSelectedFrameColumn(dbg) {
  * Assert that a given line is breakable or not.
  * Verify that CodeMirror gutter is grayed out via the empty line classname if not breakable.
  */
-async function assertLineIsBreakable(dbg, file, line, shouldBeBreakable) {
+async function assertLineIsBreakable(dbg, line, shouldBeBreakable) {
   const el = await getNodeAtEditorGutterLine(dbg, line);
   const lineText = `${line}| ${el.innerText.substring(0, 50)}${
     el.innerText.length > 50 ? "…" : ""
-  } — in ${file}`;
+  }`;
   // When a line is not breakable, the "empty-line" class is added
   // and the line is greyed out
   if (shouldBeBreakable) {
