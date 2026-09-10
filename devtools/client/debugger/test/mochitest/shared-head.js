@@ -286,10 +286,7 @@ function waitForSelectedSource(dbg, sourceOrUrl) {
         return allSourceActorsProcessed;
       }
 
-      if (
-        !location.source.isStyleSheet &&
-        !getBreakableLines(location.source.id)
-      ) {
+      if (!location.source.isStyleSheet && !getBreakableLines(location)) {
         return false;
       }
 
@@ -1091,10 +1088,10 @@ async function navigateToAbsoluteURL(dbg, url, ...sources) {
 }
 
 function getFirstBreakpointColumn(dbg, source, line) {
-  const position = dbg.selectors.getFirstBreakpointPosition(
+  const position = dbg.selectors.getFirstBreakpointPositionForLocationLine(
     createLocation({
-      line,
       source,
+      line,
     })
   );
 
@@ -2948,7 +2945,10 @@ async function waitForBreakableLine(dbg, source, lineNumber) {
       const currentSource = findSource(dbg, source);
 
       const breakableLines =
-        currentSource && dbg.selectors.getBreakableLines(currentSource.id);
+        currentSource &&
+        dbg.selectors.getBreakableLines(
+          createLocation({ source: currentSource, line: lineNumber })
+        );
 
       return breakableLines && breakableLines.includes(lineNumber);
     },

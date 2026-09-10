@@ -204,11 +204,10 @@ async function assertBreakablePositions(
       continue;
     }
 
-    const selectorPositions = dbg.selectors.getBreakpointPositionsForSource(
-      source.id
-    );
-    ok(selectorPositions, "Selector returned positions");
-    const selectorPositionsForLine = selectorPositions[line];
+    const selectorPositionsForLine =
+      dbg.selectors.getBreakpointPositionsForLocationLine(
+        createLocation({ source, line })
+      );
     ok(selectorPositionsForLine, "Selector returned positions for the line");
     is(
       selectorPositionsForLine.length,
