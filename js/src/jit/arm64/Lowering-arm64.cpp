@@ -747,14 +747,8 @@ void LIRGenerator::visitAtomicTypedArrayElementBinop(
     return;
   }
 
-  LDefinition tempDef1 = temp();
-  LDefinition tempDef2 = LDefinition::BogusTemp();
-  if (ins->arrayType() == Scalar::Uint32) {
-    tempDef2 = temp();
-  }
-
-  LAtomicTypedArrayElementBinop* lir = new (alloc())
-      LAtomicTypedArrayElementBinop(elements, index, value, tempDef1, tempDef2);
+  auto* lir = new (alloc())
+      LAtomicTypedArrayElementBinop(elements, index, value, temp());
 
   define(lir, ins);
 }
@@ -782,18 +776,8 @@ void LIRGenerator::visitCompareExchangeTypedArrayElement(
   const LAllocation oldval = useRegister(ins->oldval());
   const LAllocation newval = useRegister(ins->newval());
 
-  // If the target is an FPReg then we need a temporary at the CodeGenerator
-  // level for creating the result.
-
-  LDefinition outTemp = LDefinition::BogusTemp();
-  if (ins->arrayType() == Scalar::Uint32) {
-    outTemp = temp();
-  }
-
-  LCompareExchangeTypedArrayElement* lir =
-      new (alloc()) LCompareExchangeTypedArrayElement(elements, index, oldval,
-                                                      newval, outTemp);
-
+  auto* lir = new (alloc())
+      LCompareExchangeTypedArrayElement(elements, index, oldval, newval);
   define(lir, ins);
 }
 
@@ -819,14 +803,8 @@ void LIRGenerator::visitAtomicExchangeTypedArrayElement(
 
   const LAllocation value = useRegister(ins->value());
 
-  LDefinition tempDef = LDefinition::BogusTemp();
-  if (ins->arrayType() == Scalar::Uint32) {
-    tempDef = temp();
-  }
-
-  LAtomicExchangeTypedArrayElement* lir = new (alloc())
-      LAtomicExchangeTypedArrayElement(elements, index, value, tempDef);
-
+  auto* lir =
+      new (alloc()) LAtomicExchangeTypedArrayElement(elements, index, value);
   define(lir, ins);
 }
 

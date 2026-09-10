@@ -1489,8 +1489,7 @@ void CodeGeneratorARM::generateInvalidateEpilogue() {
 void CodeGenerator::visitCompareExchangeTypedArrayElement(
     LCompareExchangeTypedArrayElement* lir) {
   Register elements = ToRegister(lir->elements());
-  AnyRegister output = ToAnyRegister(lir->output());
-  Register temp = ToTempRegisterOrInvalid(lir->temp0());
+  Register output = ToRegister(lir->output());
 
   Register oldval = ToRegister(lir->oldval());
   Register newval = ToRegister(lir->newval());
@@ -1501,15 +1500,14 @@ void CodeGenerator::visitCompareExchangeTypedArrayElement(
 
   dest.match([&](const auto& dest) {
     masm.compareExchangeJS(arrayType, Synchronization::Full(), dest, oldval,
-                           newval, temp, output);
+                           newval, output);
   });
 }
 
 void CodeGenerator::visitAtomicExchangeTypedArrayElement(
     LAtomicExchangeTypedArrayElement* lir) {
   Register elements = ToRegister(lir->elements());
-  AnyRegister output = ToAnyRegister(lir->output());
-  Register temp = ToTempRegisterOrInvalid(lir->temp0());
+  Register output = ToRegister(lir->output());
 
   Register value = ToRegister(lir->value());
 
@@ -1518,7 +1516,7 @@ void CodeGenerator::visitAtomicExchangeTypedArrayElement(
   auto dest = ToAddressOrBaseIndex(elements, lir->index(), arrayType);
 
   dest.match([&](const auto& dest) {
-    masm.atomicExchangeJS(arrayType, Synchronization::Full(), dest, value, temp,
+    masm.atomicExchangeJS(arrayType, Synchronization::Full(), dest, value,
                           output);
   });
 }
@@ -1527,10 +1525,9 @@ void CodeGenerator::visitAtomicTypedArrayElementBinop(
     LAtomicTypedArrayElementBinop* lir) {
   MOZ_ASSERT(!lir->mir()->isForEffect());
 
-  AnyRegister output = ToAnyRegister(lir->output());
+  Register output = ToRegister(lir->output());
   Register elements = ToRegister(lir->elements());
   Register flagTemp = ToRegister(lir->temp0());
-  Register outTemp = ToTempRegisterOrInvalid(lir->temp1());
   Register value = ToRegister(lir->value());
 
   Scalar::Type arrayType = lir->mir()->arrayType();
@@ -1539,8 +1536,7 @@ void CodeGenerator::visitAtomicTypedArrayElementBinop(
 
   mem.match([&](const auto& mem) {
     masm.atomicFetchOpJS(arrayType, Synchronization::Full(),
-                         lir->mir()->operation(), value, mem, flagTemp, outTemp,
-                         output);
+                         lir->mir()->operation(), value, mem, flagTemp, output);
   });
 }
 

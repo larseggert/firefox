@@ -2211,9 +2211,7 @@
     newval: WordSized
   # Needs additional temps on LL/SC platforms to extract/insert bits of word.
 #if defined(JS_CODEGEN_MIPS64) || defined(JS_CODEGEN_LOONG64) || defined(JS_CODEGEN_RISCV64)
-  num_temps: 4
-#else
-  num_temps: 1
+  num_temps: 3
 #endif
   mir_op: true
 
@@ -2225,9 +2223,7 @@
     value: WordSized
   # Needs additional temps on LL/SC platforms to extract/insert bits of word.
 #if defined(JS_CODEGEN_MIPS64) || defined(JS_CODEGEN_LOONG64) || defined(JS_CODEGEN_RISCV64)
-  num_temps: 4
-#else
-  num_temps: 1
+  num_temps: 3
 #endif
   mir_op: true
 
@@ -2239,9 +2235,9 @@
     value: WordSized
   # Needs additional temps on LL/SC platforms to extract/insert bits of word.
 #if defined(JS_CODEGEN_MIPS64) || defined(JS_CODEGEN_LOONG64) || defined(JS_CODEGEN_RISCV64)
-  num_temps: 4
+  num_temps: 3
 #else
-  num_temps: 2
+  num_temps: 1
 #endif
   mir_op: true
 
