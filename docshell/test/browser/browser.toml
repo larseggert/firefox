@@ -415,3 +415,5 @@ support-files = ["redirect_to_example.sjs"]
 
 ["browser_viewsource_multipart.js"]
 support-files = ["file_basic_multipart.sjs"]
+
+["browser_watchedByDevTools_canset.js"]
