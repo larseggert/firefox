@@ -642,7 +642,11 @@ child:
                               FileDescriptor? DMDFile)
         returns (uint32_t aGeneration);
 
-    async DecodeImage(nsIURI aURI, ImageIntSize aSize, ColorScheme aColorScheme) returns (nsresult rv, IPCImage? image);
+    async DecodeImage(nsIURI aURI,
+                      ImageIntSize aSize,
+                      bool aStretch,
+                      ColorScheme aColorScheme)
+        returns (nsresult rv, IPCImage? image);
 
 #if defined(XP_WIN)
     /**

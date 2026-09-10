@@ -1460,7 +1460,7 @@ mozilla::ipc::IPCResult ContentChild::RecvRequestMemoryReport(
 }
 
 mozilla::ipc::IPCResult ContentChild::RecvDecodeImage(
-    NotNull<nsIURI*> aURI, const ImageIntSize& aSize,
+    NotNull<nsIURI*> aURI, const ImageIntSize& aSize, const bool& aStretch,
     const ColorScheme& aColorScheme, DecodeImageResolver&& aResolver) {
   // We're about to decode a potentially untrusted image.
   MaybeBecomeUntrusted();
@@ -1471,7 +1471,7 @@ mozilla::ipc::IPCResult ContentChild::RecvDecodeImage(
   image::FetchDecodedImage(aURI, size, nsContentUtils::GetSystemPrincipal())
       ->Then(
           GetCurrentSerialEventTarget(), __func__,
-          [size, aColorScheme,
+          [size, aStretch, aColorScheme,
            aResolver](already_AddRefed<imgIContainer> aImage) {
             using Result = std::tuple<nsresult, mozilla::Maybe<IPCImage>>;
 
@@ -1479,7 +1479,7 @@ mozilla::ipc::IPCResult ContentChild::RecvDecodeImage(
 
             RefPtr<gfx::SourceSurface> surface =
                 image::RemoteImageProtocolHandler::GetImageSurface(
-                    image, size, aColorScheme);
+                    image, size, aStretch, aColorScheme);
             if (!surface) {
               aResolver(Result(NS_ERROR_FAILURE, Nothing()));
               return;

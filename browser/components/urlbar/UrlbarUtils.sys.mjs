@@ -295,7 +295,7 @@ export var UrlbarUtils = {
    * protocol, which keeps the decode out of the parent process (bug 2012436).
    *
    * @param {string} iconUrl The URL of the icon.
-   * @param {number} size The desired size of the icon (currently ignored).
+   * @param {number} size The desired size of the icon.
    * @param {UrlbarParentController} [controller]
    *   The controller the query runs on. It supplies the window the icon renders
    *   in, and whether that window is in a content process, which decodes what
@@ -317,14 +317,13 @@ export var UrlbarUtils = {
         // XPCShell tests don't have a real window, just use fallback values.
         return lazy.FaviconUtils.getMozRemoteImageURL(iconUrl, {
           size,
+          stretch: false,
           colorScheme: "light",
         });
       }
       return lazy.FaviconUtils.getMozRemoteImageURL(iconUrl, {
-        // TODO Bug 2035971: Restore the size property once `FaviconUtils` and
-        // `moz-remote-image` handle the image aspect ratio correctly.
-        //
-        // size: Math.floor(size * controller.browserWindow.devicePixelRatio),
+        size: Math.floor(size * controller.browserWindow.devicePixelRatio),
+        stretch: false,
         colorScheme: controller.browserWindow.matchMedia(
           "(prefers-color-scheme: dark)"
         ).matches
