@@ -24,7 +24,7 @@ task-defaults:
     worker-type: b-linux
     worker:
         max-run-time: 10800
-        docker-image: {in-tree: debian12-amd64-build}
+        docker-image: {in-tree: debian13-amd64-build}
     use-python: default
 
 tasks:
