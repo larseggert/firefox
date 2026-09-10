@@ -163,7 +163,7 @@ void jit::ShutdownJit() {
 }
 
 bool jit::JitSupportsWasmSimd() {
-#if defined(ENABLE_WASM_SIMD)
+#if defined(ENABLE_JIT_SIMD)
   return js::jit::MacroAssembler::SupportsWasmSimd();
 #else
   return false;
