@@ -516,9 +516,13 @@ void SpeechRecognitionParent::InitializeParakeetContext(
   ResolveOrRejectInitOnIPCThread(std::move(aResolver), true);
   LOGD("Parakeet streaming session ready, starting streaming loop");
 
-  // Already running on mRecognitionThread, so just call directly instead of
-  // dispatching back onto it.
-  ProcessAudioStreaming();
+  // Dispatched rather than called directly, even though we are already on
+  // mRecognitionThread: the loop runs for the whole session, and calling it
+  // from here would put all of it inside this runnable, whose profiler marker
+  // would then read as a multi-second "Initialize parakeet context".
+  mRecognitionThread->Dispatch(NS_NewRunnableFunction(
+      "Parakeet streaming loop",
+      [self = RefPtr{this}]() { self->ProcessAudioStreaming(); }));
 }
 
 SpeechRecognitionParent::~SpeechRecognitionParent() {
