@@ -61,11 +61,13 @@ myst_enable_extensions = [
     "fieldlist",
 ]
 
-# sphinxcontrib-mermaid defaults to forcing every diagram into a 100% x 500px
-# box. Tall diagrams get scaled down to fit and their labels become unreadable,
-# while stretching to the full width blows short ones up. Sizing to the content
-# keeps each diagram at its natural size, still shrinking on narrow screens.
-mermaid_width = "fit-content"
+# sphinxcontrib-mermaid otherwise forces every diagram into a 100% x 500px box,
+# which scales tall diagrams down until their labels are unreadable and blows
+# short ones up to the full width. The cap keeps a diagram near its natural size
+# and lets it shrink with the column on a narrow screen. It has to be a definite
+# width: mermaid's SVG carries a viewBox but no intrinsic width, so a
+# content-sized box collapses to the CSS default object size of 300px.
+mermaid_width = "min(100%, 45rem)"
 mermaid_height = "auto"
 
 # startOnLoad must stay off: the extension renders via mermaid.run() itself.
