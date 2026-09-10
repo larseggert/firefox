@@ -1771,6 +1771,26 @@ export const LoginHelper = {
   },
 
   /**
+   * Records the event returned by `requestReauth`. There is none when the
+   * re-authentication was not attempted, for example because a primary
+   * password prompt was already open.
+   *
+   * @param {?object} telemetryEvent
+   *        The `telemetryEvent` of a `requestReauth` result.
+   */
+  recordReauthTelemetryEvent(telemetryEvent) {
+    if (!telemetryEvent) {
+      return;
+    }
+
+    let { name, extra = {}, value = null } = telemetryEvent;
+    if (value) {
+      extra.value = value;
+    }
+    Glean.pwmgr[name].record(extra);
+  },
+
+  /**
    * Send a notification when stored data is changed.
    */
   notifyStorageChanged(changeType, data) {
