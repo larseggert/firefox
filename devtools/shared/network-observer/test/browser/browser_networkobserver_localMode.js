@@ -7,6 +7,9 @@ const LOCAL_FOLDER = "local-mode";
 
 const TEST_ORIGIN = "firefox.localhost";
 const TEST_URL = `https://${TEST_ORIGIN}/`;
+const TEST_URL_PORT_80 = `https://${TEST_ORIGIN}:80/`;
+const TEST_URL_PORT_443 = `https://${TEST_ORIGIN}:443/`;
+const TEST_URL_PORT_9999 = `https://${TEST_ORIGIN}:9999/`;
 const TEST_FOLDER_URL = `${TEST_URL}folder/`;
 const TEST_FOLDER_PAGE_URL = `${TEST_FOLDER_URL}test.html`;
 const TEST_404_URL = `${TEST_URL}404`;
@@ -43,8 +46,8 @@ add_task(async function testLocalMode() {
   );
   await SpecialPowers.spawn(
     gBrowser.selectedBrowser,
-    [TEST_URL],
-    async pageUrl => {
+    [TEST_URL, TEST_URL_PORT_80, TEST_URL_PORT_443, TEST_URL_PORT_9999],
+    async (pageUrl, urlPort80, urlPort443, urlPort9999) => {
       is(
         content.document.contentType,
         "text/html",
@@ -59,6 +62,28 @@ add_task(async function testLocalMode() {
         content.location.href,
         pageUrl,
         "The location of the page is the test url"
+      );
+
+      const fetch = await content.fetch(pageUrl);
+      const text = await fetch.text();
+      Assert.stringContains(
+        text,
+        "Hello local mode!",
+        "Can fetch the html page"
+      );
+
+      const fetch80 = await content.fetch(urlPort80);
+      const text80 = await fetch80.text();
+      is(text80, text, "Can fetch with 80 TCP port");
+
+      const fetch443 = await content.fetch(urlPort443);
+      const text443 = await fetch443.text();
+      is(text443, text, "Can fetch with 443 TCP port");
+
+      await Assert.rejects(
+        content.fetch(urlPort9999),
+        /NetworkError when attempting to fetch resource./,
+        "Can't fetch via a custom TCP port [9999]"
       );
     }
   );
