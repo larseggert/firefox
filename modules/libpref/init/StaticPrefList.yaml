@@ -10043,7 +10043,7 @@
   set_spidermonkey_pref: always
   fuzzing_safe: false
 
-#if defined(ENABLE_JIT_SIMD)
+#if defined(ENABLE_WASM_SIMD)
 #if defined(JS_CODEGEN_X64) || defined(JS_CODEGEN_X86)
   # Enables AVX instructions support on X86/X64 platforms.
   # Changing these prefs requires a restart.

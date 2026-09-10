@@ -876,7 +876,7 @@ void BaseCompiler::doLoadCommon(MemoryAccessDesc* access, AccessCheck check,
       free(rp);
       break;
     }
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
     case ValType::V128: {
       RegType rp = popMemoryAccess<RegType>(access, &check);
       RegV128 rv = needV128();
@@ -966,7 +966,7 @@ void BaseCompiler::doStoreCommon(MemoryAccessDesc* access, AccessCheck check,
       free(rv);
       break;
     }
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
     case ValType::V128: {
       RegV128 rv = popV128();
       RegType rp = popMemoryAccess<RegType>(access, &check);
@@ -2624,7 +2624,7 @@ void BaseCompiler::memCopyInlineM32() {
 
   // Compute the number of copies of each width we will need to do
   size_t remainder = length;
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
   size_t numCopies16 = 0;
   if (MacroAssembler::SupportsFastUnalignedFPAccesses()) {
     numCopies16 = remainder / sizeof(V128);
@@ -2647,7 +2647,7 @@ void BaseCompiler::memCopyInlineM32() {
   bool omitBoundsCheck = false;
   size_t offset = 0;
 
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
   for (uint32_t i = 0; i < numCopies16; i++) {
     RegI32 temp = needI32();
     moveI32(src, temp);
@@ -2802,7 +2802,7 @@ void BaseCompiler::memCopyInlineM32() {
   }
 #endif
 
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
   for (uint32_t i = 0; i < numCopies16; i++) {
     offset -= sizeof(V128);
 
@@ -2843,7 +2843,7 @@ void BaseCompiler::memFillInlineM32() {
 
   // Compute the number of copies of each width we will need to do
   size_t remainder = length;
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
   size_t numCopies16 = 0;
   if (MacroAssembler::SupportsFastUnalignedFPAccesses()) {
     numCopies16 = remainder / sizeof(V128);
@@ -2863,7 +2863,7 @@ void BaseCompiler::memFillInlineM32() {
   MOZ_ASSERT(numCopies2 <= 1 && numCopies1 <= 1);
 
   // Generate splatted definitions for wider fills as needed
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
   V128 val16(value);
 #endif
 #ifdef JS_64BIT
@@ -2948,7 +2948,7 @@ void BaseCompiler::memFillInlineM32() {
   }
 #endif
 
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
   for (uint32_t i = 0; i < numCopies16; i++) {
     offset -= sizeof(V128);
 
@@ -2974,7 +2974,7 @@ void BaseCompiler::memFillInlineM32() {
 //
 // SIMD and Relaxed SIMD.
 
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
 void BaseCompiler::loadSplat(MemoryAccessDesc* access) {
   // We can implement loadSplat mostly as load + splat because the push of the
   // result onto the value stack in loadCommon normally will not generate any
@@ -3118,7 +3118,7 @@ void BaseCompiler::storeLane(MemoryAccessDesc* access, uint32_t laneIndex) {
 
   storeCommon(access, AccessCheck(), type);
 }
-#endif  // ENABLE_JIT_SIMD
+#endif  // ENABLE_WASM_SIMD
 
 }  // namespace wasm
 }  // namespace js

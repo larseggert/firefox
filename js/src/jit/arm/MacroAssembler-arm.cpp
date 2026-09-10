@@ -4216,7 +4216,7 @@ void MacroAssembler::PushRegsInMask(LiveRegisterSet set) {
   // It's possible that the logic is just fine as it is if the reduced set
   // maps SIMD pairs to plain doubles and transferMultipleByRuns() stores
   // and loads doubles.
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
 #  error "Needs more careful logic if SIMD is enabled"
 #endif
 
@@ -4260,7 +4260,7 @@ void MacroAssembler::storeRegsInMask(LiveRegisterSet set, Address dest,
   (void)diffG;
 
   // See above.
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
 #  error "Needs more careful logic if SIMD is enabled"
 #endif
 
@@ -4287,7 +4287,7 @@ void MacroAssembler::PopRegsInMaskIgnore(LiveRegisterSet set,
   const int32_t reservedF = diffF;
 
   // See above.
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
 #  error "Needs more careful logic if SIMD is enabled"
 #endif
 
