@@ -187,6 +187,13 @@ add_task(async function test_themes_mode_change_telemetry() {
     );
   }
 
+  // Check that clicking light again doesn't record a change
+  Services.fog.testResetFOG();
+  getButton("light").click();
+
+  const events = Glean.themePicker.change.testGetValue();
+  Assert.ok(!events, "No theme_picker.change when no change");
+
   await closeView(win);
   await SpecialPowers.popPrefEnv();
 });

@@ -272,7 +272,6 @@ export class SelectControlBaseElement extends MozLitElement {
       if (nextItem && !nextItem.isDisabled) {
         nextItem.focus();
         if (isRadio) {
-          this.value = nextItem.value;
           nextItem.click();
         }
         return;

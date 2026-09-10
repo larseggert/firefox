@@ -140,8 +140,14 @@ export class MozSegmentedControlItem extends SelectControlItemMixin(MozButton) {
 
   handleClick(event) {
     event.stopPropagation();
-    super.handleClick();
+    if (this.isDisabled) {
+      return;
+    }
     this.focus();
+    if (this.checked) {
+      return;
+    }
+    super.handleClick();
 
     // Manually dispatch events since we're not using an input.
     this.dispatchEvent(
