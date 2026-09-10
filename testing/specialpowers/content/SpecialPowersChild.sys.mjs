@@ -1774,7 +1774,7 @@ export class SpecialPowersChild extends JSWindowActorChild {
     return currentCID;
   }
 
-  unregisterFactory(cid, contractID) {
+  unregisterFactory(cid, contractID, currentFactory) {
     if (!cid) {
       throw new Error("cid must be non-null when calling unregisterFactory()");
     }
@@ -1784,10 +1784,6 @@ export class SpecialPowersChild extends JSWindowActorChild {
     );
 
     var currentCID = componentRegistrar.contractIDToCID(contractID);
-    var currentFactory = Components.manager.getClassObject(
-      Cc[contractID],
-      Ci.nsIFactory
-    );
     componentRegistrar.unregisterFactory(currentCID, currentFactory);
 
     // Restore the original factory.

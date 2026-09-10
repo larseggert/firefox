@@ -68,7 +68,11 @@ MockObjectRegisterer.prototype = {
     }
 
     // Free references to the mock factory.
-    SpecialPowers.unregisterFactory(this._originalCID, this._contractID);
+    SpecialPowers.unregisterFactory(
+      this._originalCID,
+      this._contractID,
+      this._mockFactory
+    );
 
     // Allow registering a mock factory again later.
     this._originalCID = null;
