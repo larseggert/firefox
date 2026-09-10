@@ -2168,9 +2168,9 @@ void CodeGeneratorARM::visitOutOfLineWasmTruncateCheck(
     return;
   }
 
-  masm.outOfLineWasmTruncateToIntCheck(ool->input(), ool->fromType(),
-                                       ool->toType(), ool->isUnsigned(),
-                                       ool->rejoin(), ool->trapSiteDesc());
+  masm.outOfLineWasmTruncateToIntCheck(
+      ool->input(), ool->fromType(), ool->toType(), ool->isUnsigned(),
+      ool->rejoin(), ool->trapSiteDesc(), nullptr, nullptr);
 }
 
 void CodeGenerator::visitInt64ToFloatingPointCall(

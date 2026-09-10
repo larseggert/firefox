@@ -168,6 +168,31 @@ using mozilla::Some;
 
 ////////////////////////////////////////////////////////////
 //
+// Stackmap helpers
+
+// This wraps up BaseCompiler::stackMaps_ so it can be piped deep into the
+// innards of the assembler stack, and be given the opportunity to add stackmaps
+// associated with trapsites that are created.
+class BaselineStackMapRegistry : public StackMapRegistry, public TempObject {
+  StackMaps* stackMaps_ = nullptr;
+
+ public:
+  explicit BaselineStackMapRegistry(StackMaps* stackMaps)
+      : stackMaps_(stackMaps) {}
+
+  [[nodiscard]]
+  bool addMap(StackMap* map, FaultingCodeRange insnRange) override {
+    if (insnRange.isValid()) {
+      MOZ_ASSERT(map);
+      return stackMaps_->add(insnRange.resumeOffset(), map);
+    } else {
+      return true;
+    }
+  }
+};
+
+////////////////////////////////////////////////////////////
+//
 // Out of line code management.
 
 // The baseline compiler will use OOL code more sparingly than Ion since our
@@ -2609,19 +2634,30 @@ class OutOfLineTruncateCheckF32OrF64ToI32 : public OutOfLineCode {
   RegI32 dest;
   TruncFlags flags;
   TrapSiteDesc trapSiteDesc;
+  StackMap* stackMapForTraps = nullptr;
+  StackMapRegistry* stackMapRegistry = nullptr;
 
  public:
   OutOfLineTruncateCheckF32OrF64ToI32(AnyReg src, RegI32 dest, TruncFlags flags,
-                                      TrapSiteDesc trapSiteDesc)
-      : src(src), dest(dest), flags(flags), trapSiteDesc(trapSiteDesc) {}
+                                      TrapSiteDesc trapSiteDesc,
+                                      StackMap* stackMapForTraps,
+                                      StackMapRegistry* stackMapRegistry)
+      : src(src),
+        dest(dest),
+        flags(flags),
+        trapSiteDesc(trapSiteDesc),
+        stackMapForTraps(stackMapForTraps),
+        stackMapRegistry(stackMapRegistry) {}
 
   virtual void generate(MacroAssembler* masm, BaseCompiler* bc) override {
     if (src.tag == AnyReg::F32) {
       masm->oolWasmTruncateCheckF32ToI32(src.f32(), dest, flags, trapSiteDesc,
-                                         rejoin());
+                                         rejoin(), stackMapForTraps,
+                                         stackMapRegistry);
     } else if (src.tag == AnyReg::F64) {
       masm->oolWasmTruncateCheckF64ToI32(src.f64(), dest, flags, trapSiteDesc,
-                                         rejoin());
+                                         rejoin(), stackMapForTraps,
+                                         stackMapRegistry);
     } else {
       MOZ_CRASH("unexpected type");
     }
@@ -2629,12 +2665,34 @@ class OutOfLineTruncateCheckF32OrF64ToI32 : public OutOfLineCode {
 };
 
 bool BaseCompiler::truncateF32ToI32(RegF32 src, RegI32 dest, TruncFlags flags) {
+  // If the conversion goes bad (NaN, overflow, etc), we'll trap; and in debug
+  // mode we'll need a stackmap for the trap.  Create it, and
+  // `stackMapRegistry`, which we'll plumb through to the OOL code generation,
+  // which can register the map once it knows what the trapsite offsets are
+  // (there are sometimes two trapsites).  Same scheme is repeated in subsequent
+  // methods.
+  StackMap* debugStackMap;
+  if (!createDebugOnlyStackMapForNonResumingTrap(
+          &debugStackMap, Trap::IntegerOverflow,
+          Trap::InvalidConversionToInteger)) {
+    return false;
+  }
+  BaselineStackMapRegistry* stackMapRegistry = nullptr;
+  if (debugStackMap) {
+    stackMapRegistry = new (alloc_) BaselineStackMapRegistry(stackMaps_);
+    if (!stackMapRegistry) {
+      return false;
+    }
+  }
+  // Set up the OOL code creation, but don't run it yet.
   OutOfLineCode* ool =
       addOutOfLineCode(new (alloc_) OutOfLineTruncateCheckF32OrF64ToI32(
-          AnyReg(src), dest, flags, trapSiteDesc()));
+          AnyReg(src), dest, flags, trapSiteDesc(), debugStackMap,
+          stackMapRegistry));
   if (!ool) {
     return false;
   }
+  // Create the IL code.
   bool isSaturating = flags & TRUNC_SATURATING;
   if (flags & TRUNC_UNSIGNED) {
     masm.wasmTruncateFloat32ToUInt32(src, dest, isSaturating, ool->entry());
@@ -2646,9 +2704,23 @@ bool BaseCompiler::truncateF32ToI32(RegF32 src, RegI32 dest, TruncFlags flags) {
 }
 
 bool BaseCompiler::truncateF64ToI32(RegF64 src, RegI32 dest, TruncFlags flags) {
+  StackMap* debugStackMap;
+  if (!createDebugOnlyStackMapForNonResumingTrap(
+          &debugStackMap, Trap::IntegerOverflow,
+          Trap::InvalidConversionToInteger)) {
+    return false;
+  }
+  BaselineStackMapRegistry* stackMapRegistry = nullptr;
+  if (debugStackMap) {
+    stackMapRegistry = new (alloc_) BaselineStackMapRegistry(stackMaps_);
+    if (!stackMapRegistry) {
+      return false;
+    }
+  }
   OutOfLineCode* ool =
       addOutOfLineCode(new (alloc_) OutOfLineTruncateCheckF32OrF64ToI32(
-          AnyReg(src), dest, flags, trapSiteDesc()));
+          AnyReg(src), dest, flags, trapSiteDesc(), debugStackMap,
+          stackMapRegistry));
   if (!ool) {
     return false;
   }
@@ -2667,19 +2739,30 @@ class OutOfLineTruncateCheckF32OrF64ToI64 : public OutOfLineCode {
   RegI64 dest;
   TruncFlags flags;
   TrapSiteDesc trapSiteDesc;
+  StackMap* stackMapForTraps = nullptr;
+  StackMapRegistry* stackMapRegistry = nullptr;
 
  public:
   OutOfLineTruncateCheckF32OrF64ToI64(AnyReg src, RegI64 dest, TruncFlags flags,
-                                      TrapSiteDesc trapSiteDesc)
-      : src(src), dest(dest), flags(flags), trapSiteDesc(trapSiteDesc) {}
+                                      TrapSiteDesc trapSiteDesc,
+                                      StackMap* stackMapForTraps,
+                                      StackMapRegistry* stackMapRegistry)
+      : src(src),
+        dest(dest),
+        flags(flags),
+        trapSiteDesc(trapSiteDesc),
+        stackMapForTraps(stackMapForTraps),
+        stackMapRegistry(stackMapRegistry) {}
 
   virtual void generate(MacroAssembler* masm, BaseCompiler* bc) override {
     if (src.tag == AnyReg::F32) {
       masm->oolWasmTruncateCheckF32ToI64(src.f32(), dest, flags, trapSiteDesc,
-                                         rejoin());
+                                         rejoin(), stackMapForTraps,
+                                         stackMapRegistry);
     } else if (src.tag == AnyReg::F64) {
       masm->oolWasmTruncateCheckF64ToI64(src.f64(), dest, flags, trapSiteDesc,
-                                         rejoin());
+                                         rejoin(), stackMapForTraps,
+                                         stackMapRegistry);
     } else {
       MOZ_CRASH("unexpected type");
     }
@@ -2699,9 +2782,23 @@ RegF64 BaseCompiler::needTempForFloatingToI64(TruncFlags flags) {
 
 bool BaseCompiler::truncateF32ToI64(RegF32 src, RegI64 dest, TruncFlags flags,
                                     RegF64 temp) {
+  StackMap* debugStackMap;
+  if (!createDebugOnlyStackMapForNonResumingTrap(
+          &debugStackMap, Trap::IntegerOverflow,
+          Trap::InvalidConversionToInteger)) {
+    return false;
+  }
+  BaselineStackMapRegistry* stackMapRegistry = nullptr;
+  if (debugStackMap) {
+    stackMapRegistry = new (alloc_) BaselineStackMapRegistry(stackMaps_);
+    if (!stackMapRegistry) {
+      return false;
+    }
+  }
   OutOfLineCode* ool =
       addOutOfLineCode(new (alloc_) OutOfLineTruncateCheckF32OrF64ToI64(
-          AnyReg(src), dest, flags, trapSiteDesc()));
+          AnyReg(src), dest, flags, trapSiteDesc(), debugStackMap,
+          stackMapRegistry));
   if (!ool) {
     return false;
   }
@@ -2718,9 +2815,23 @@ bool BaseCompiler::truncateF32ToI64(RegF32 src, RegI64 dest, TruncFlags flags,
 
 bool BaseCompiler::truncateF64ToI64(RegF64 src, RegI64 dest, TruncFlags flags,
                                     RegF64 temp) {
+  StackMap* debugStackMap;
+  if (!createDebugOnlyStackMapForNonResumingTrap(
+          &debugStackMap, Trap::IntegerOverflow,
+          Trap::InvalidConversionToInteger)) {
+    return false;
+  }
+  BaselineStackMapRegistry* stackMapRegistry = nullptr;
+  if (debugStackMap) {
+    stackMapRegistry = new (alloc_) BaselineStackMapRegistry(stackMaps_);
+    if (!stackMapRegistry) {
+      return false;
+    }
+  }
   OutOfLineCode* ool =
       addOutOfLineCode(new (alloc_) OutOfLineTruncateCheckF32OrF64ToI64(
-          AnyReg(src), dest, flags, trapSiteDesc()));
+          AnyReg(src), dest, flags, trapSiteDesc(), debugStackMap,
+          stackMapRegistry));
   if (!ool) {
     return false;
   }
@@ -5971,9 +6082,25 @@ bool BaseCompiler::emitConvertFloatingToInt64Callout(SymbolicAddress callee,
   // and we need to produce traps.
   OutOfLineCode* ool = nullptr;
   if (!(flags & TRUNC_SATURATING)) {
+    // When compiling for debugging, we need to take care of creating stackmaps
+    // for the traps we generate here.
+    StackMap* debugStackMap;
+    if (!createDebugOnlyStackMapForNonResumingTrap(
+            &debugStackMap, Trap::IntegerOverflow,
+            Trap::InvalidConversionToInteger)) {
+      return false;
+    }
+    BaselineStackMapRegistry* stackMapRegistry = nullptr;
+    if (debugStackMap) {
+      stackMapRegistry = new (alloc_) BaselineStackMapRegistry(stackMaps_);
+      if (!stackMapRegistry) {
+        return false;
+      }
+    }
     // The OOL check just succeeds or fails, it does not generate a value.
     ool = addOutOfLineCode(new (alloc_) OutOfLineTruncateCheckF32OrF64ToI64(
-        AnyReg(inputVal), rv, flags, trapSiteDesc()));
+        AnyReg(inputVal), rv, flags, trapSiteDesc(), debugStackMap,
+        stackMapRegistry));
     if (!ool) {
       return false;
     }
@@ -12812,12 +12939,19 @@ bool js::wasm::BaselineCompileFunctions(const CodeMetadata& codeMeta,
     }
 
     // Do the check.  This asserts if the check fails.
-    auto checkThisTrapKind = [](Trap t) -> bool {
-      // Temporary setting, to make all of this a no-op.
+    auto checkThisTrapKind_debugMode = [](Trap t) -> bool {
+      // Trap kinds to check in debug mode
+      return t == Trap::InvalidConversionToInteger ||
+             t == Trap::IntegerOverflow || t == Trap::IntegerDivideByZero;
+    };
+    auto checkThisTrapKind_normalMode = [](Trap t) -> bool {
+      // Trap kinds to check in non-debug mode
       return false;
     };
-    CheckStackMapsForTraps(masm, code->stackMaps, trapSitesBefore,
-                           trapSitesAfter, checkThisTrapKind);
+    CheckStackMapsForTraps(
+        masm, code->stackMaps, trapSitesBefore, trapSitesAfter,
+        compilerEnv.debugEnabled() ? checkThisTrapKind_debugMode
+                                   : checkThisTrapKind_normalMode);
 #endif
 
     JitSpew(JitSpew_Codegen,

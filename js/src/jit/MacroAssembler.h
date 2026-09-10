@@ -3790,7 +3790,8 @@ class MacroAssembler : public MacroAssemblerSpecific {
   void appendAndVerify(const wasm::MemoryAccessDesc& access,
                        wasm::TrapMachineInsn insn, FaultingCodeRange fcr);
 
-  void wasmTrap(wasm::Trap trap, const wasm::TrapSiteDesc& trapSiteDesc);
+  FaultingCodeRange wasmTrap(wasm::Trap trap,
+                             const wasm::TrapSiteDesc& trapSiteDesc);
 
   // Load all pinned regs via InstanceReg.  If the trapOffset is something,
   // give the first load a trap descriptor with type IndirectCallToNull, so that
@@ -3935,20 +3936,22 @@ class MacroAssembler : public MacroAssemblerSpecific {
   void wasmTruncateDoubleToInt32(FloatRegister input, Register output,
                                  bool isSaturating,
                                  Label* oolEntry) PER_SHARED_ARCH;
-  void oolWasmTruncateCheckF64ToI32(FloatRegister input, Register output,
-                                    TruncFlags flags,
-                                    const wasm::TrapSiteDesc& trapSiteDesc,
-                                    Label* rejoin) PER_SHARED_ARCH;
+  void oolWasmTruncateCheckF64ToI32(
+      FloatRegister input, Register output, TruncFlags flags,
+      const wasm::TrapSiteDesc& trapSiteDesc, Label* rejoin,
+      wasm::StackMap* stackMapForTraps,
+      wasm::StackMapRegistry* stackMapRegistry) PER_SHARED_ARCH;
 
   void wasmTruncateFloat32ToUInt32(FloatRegister input, Register output,
                                    bool isSaturating, Label* oolEntry) PER_ARCH;
   void wasmTruncateFloat32ToInt32(FloatRegister input, Register output,
                                   bool isSaturating,
                                   Label* oolEntry) PER_SHARED_ARCH;
-  void oolWasmTruncateCheckF32ToI32(FloatRegister input, Register output,
-                                    TruncFlags flags,
-                                    const wasm::TrapSiteDesc& trapSiteDesc,
-                                    Label* rejoin) PER_SHARED_ARCH;
+  void oolWasmTruncateCheckF32ToI32(
+      FloatRegister input, Register output, TruncFlags flags,
+      const wasm::TrapSiteDesc& trapSiteDesc, Label* rejoin,
+      wasm::StackMap* stackMapForTraps,
+      wasm::StackMapRegistry* stackMapRegistry) PER_SHARED_ARCH;
 
   // The truncate-to-int64 methods will always bind the `oolRejoin` label
   // after the last emitted instruction.
@@ -3960,10 +3963,11 @@ class MacroAssembler : public MacroAssemblerSpecific {
                                   bool isSaturating, Label* oolEntry,
                                   Label* oolRejoin, FloatRegister tempDouble)
       DEFINED_ON(arm64, x86, x64, mips64, loong64, riscv64, wasm32);
-  void oolWasmTruncateCheckF64ToI64(FloatRegister input, Register64 output,
-                                    TruncFlags flags,
-                                    const wasm::TrapSiteDesc& trapSiteDesc,
-                                    Label* rejoin) PER_SHARED_ARCH;
+  void oolWasmTruncateCheckF64ToI64(
+      FloatRegister input, Register64 output, TruncFlags flags,
+      const wasm::TrapSiteDesc& trapSiteDesc, Label* rejoin,
+      wasm::StackMap* stackMapForTraps,
+      wasm::StackMapRegistry* stackMapRegistry) PER_SHARED_ARCH;
 
   void wasmTruncateFloat32ToInt64(FloatRegister input, Register64 output,
                                   bool isSaturating, Label* oolEntry,
@@ -3973,10 +3977,11 @@ class MacroAssembler : public MacroAssemblerSpecific {
                                    bool isSaturating, Label* oolEntry,
                                    Label* oolRejoin, FloatRegister tempDouble)
       DEFINED_ON(arm64, x86, x64, mips64, loong64, riscv64, wasm32);
-  void oolWasmTruncateCheckF32ToI64(FloatRegister input, Register64 output,
-                                    TruncFlags flags,
-                                    const wasm::TrapSiteDesc& trapSiteDesc,
-                                    Label* rejoin) PER_SHARED_ARCH;
+  void oolWasmTruncateCheckF32ToI64(
+      FloatRegister input, Register64 output, TruncFlags flags,
+      const wasm::TrapSiteDesc& trapSiteDesc, Label* rejoin,
+      wasm::StackMap* stackMapForTraps,
+      wasm::StackMapRegistry* stackMapRegistry) PER_SHARED_ARCH;
 
   // This function takes care of loading the callee's instance and pinned regs
   // but it is the caller's responsibility to save/restore instance or pinned

@@ -218,17 +218,21 @@ void CodeGeneratorRiscv64::visitOutOfLineWasmTruncateCheck(
 
   if (fromType == MIRType::Float32) {
     if (toType == MIRType::Int32) {
-      masm.oolWasmTruncateCheckF32ToI32(input, output, flags, off, oolRejoin);
+      masm.oolWasmTruncateCheckF32ToI32(input, output, flags, off, oolRejoin,
+                                        nullptr, nullptr);
     } else if (toType == MIRType::Int64) {
-      masm.oolWasmTruncateCheckF32ToI64(input, output64, flags, off, oolRejoin);
+      masm.oolWasmTruncateCheckF32ToI64(input, output64, flags, off, oolRejoin,
+                                        nullptr, nullptr);
     } else {
       MOZ_CRASH("unexpected type");
     }
   } else if (fromType == MIRType::Double) {
     if (toType == MIRType::Int32) {
-      masm.oolWasmTruncateCheckF64ToI32(input, output, flags, off, oolRejoin);
+      masm.oolWasmTruncateCheckF64ToI32(input, output, flags, off, oolRejoin,
+                                        nullptr, nullptr);
     } else if (toType == MIRType::Int64) {
-      masm.oolWasmTruncateCheckF64ToI64(input, output64, flags, off, oolRejoin);
+      masm.oolWasmTruncateCheckF64ToI64(input, output64, flags, off, oolRejoin,
+                                        nullptr, nullptr);
     } else {
       MOZ_CRASH("unexpected type");
     }

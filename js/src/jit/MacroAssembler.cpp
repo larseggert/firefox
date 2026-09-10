@@ -6206,13 +6206,14 @@ void MacroAssembler::appendAndVerify(const wasm::MemoryAccessDesc& access,
   appendAndVerify(wasm::Trap::OutOfBounds, insn, fcr, access.trapDesc());
 }
 
-void MacroAssembler::wasmTrap(wasm::Trap trap,
-                              const wasm::TrapSiteDesc& trapSiteDesc) {
+FaultingCodeRange MacroAssembler::wasmTrap(
+    wasm::Trap trap, const wasm::TrapSiteDesc& trapSiteDesc) {
   FaultingCodeRange fcr = wasmTrapInstruction();
   MOZ_ASSERT_IF(!oom(),
                 currentOffset() - fcr.get() == WasmTrapInstructionLength);
 
   appendAndVerify(trap, wasm::TrapMachineInsn::OfficialUD, fcr, trapSiteDesc);
+  return fcr;
 }
 
 uint32_t MacroAssembler::wasmReserveStackChecked(uint32_t amount, Label* fail) {
