@@ -619,8 +619,6 @@ public class SessionAccessibility {
       event.setMaxScrollX(eventData.getInt("maxScrollX", -1));
       event.setMaxScrollY(eventData.getInt("maxScrollY", -1));
       event.setChecked((eventData.getInt("flags") & FLAG_CHECKED) != 0);
-      event.setContentChangeTypes(
-          eventData.getInt("contentChangeType", AccessibilityEvent.CONTENT_CHANGE_TYPE_UNDEFINED));
     }
 
     // Update stored state from this event.
@@ -769,8 +767,7 @@ public class SessionAccessibility {
         @Nullable final String viewIdResourceName,
         @Nullable final String containerTitle,
         @Nullable final String language,
-        final int inputType,
-        final int liveRegion) {
+        final int inputType) {
       if (mView == null) {
         return;
       }
@@ -808,9 +805,6 @@ public class SessionAccessibility {
       }
 
       node.setContentDescription(addSpansToText(String.join(" ", contentDescription), language));
-
-      // Set live region
-      node.setLiveRegion(liveRegion);
 
       // Add actions
       node.addAction(AccessibilityNodeInfo.ACTION_NEXT_HTML_ELEMENT);

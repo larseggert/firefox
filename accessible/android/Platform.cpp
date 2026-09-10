@@ -120,9 +120,6 @@ void a11y::PlatformEvent(Accessible* aTarget, uint32_t aEventType) {
         sessionAcc->SendValueChangedEvent(aTarget);
       }
       break;
-    case nsIAccessibleEvent::EVENT_NAME_CHANGE:
-      sessionAcc->MaybeSendLiveRegionEvents(aTarget);
-      break;
     default:
       break;
   }
@@ -205,17 +202,8 @@ void a11y::PlatformTextChangeEvent(Accessible* aTarget, const nsAString& aStr,
 
 void a11y::PlatformShowHideEvent(Accessible* aTarget, Accessible* aParent,
                                  bool aInsert, bool aFromUser) {
-  RefPtr<SessionAccessibility> sessionAcc =
-      SessionAccessibility::GetInstanceFor(aTarget);
-
-  if (sessionAcc) {
-    if (aInsert && !aFromUser && !aTarget->IsTextLeaf()) {
-      // If this was a non-user show event, it may be inside of a live region.
-      // If this is a text leaf, we will handle that case in the text change
-      // event of its parent.
-      sessionAcc->MaybeSendLiveRegionEvents(aTarget);
-    }
-  }
+  // We rely on the window content changed events to be dispatched
+  // after the viewport cache is refreshed.
 }
 
 void a11y::PlatformSelectionEvent(Accessible*, Accessible*, uint32_t) {}

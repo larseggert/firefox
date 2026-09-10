@@ -77,17 +77,12 @@ class SessionAccessibility final
                             bool aFromUser);
   void SendSelectedEvent(Accessible* aAccessible, bool aSelected);
   void SendClickedEvent(Accessible* aAccessible, uint32_t aFlags);
-  void SendWindowContentChangedEvent(Accessible* aAccessible = nullptr);
+  void SendWindowContentChangedEvent();
   void SendWindowStateChangedEvent(Accessible* aAccessible);
   void SendAnnouncementEvent(Accessible* aAccessible,
                              const nsAString& aAnnouncement,
                              uint16_t aPriority);
   void SendValueChangedEvent(Accessible* aAccessible);
-
-  static const int32_t kLiveRegionContentChangedLimit = 10;
-  void MaybeSendLiveRegionEvents(Accessible* aAccessible,
-                                 int32_t aStartTextOffset = -1,
-                                 int32_t aEndTextOffset = -1);
 
   Accessible* GetAccessibleByID(int32_t aID) const;
 

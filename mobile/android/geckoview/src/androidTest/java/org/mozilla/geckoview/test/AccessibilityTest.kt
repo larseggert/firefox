@@ -1465,61 +1465,17 @@ class AccessibilityTest : BaseSessionTest() {
         assertThat("Document has 1 child", rootNode.childCount, equalTo(1))
 
         val liveRegion = createNodeInfo(rootNode.getChildId(0))
-        assertThat("First node is live region", liveRegion.liveRegion, equalTo(View.ACCESSIBILITY_LIVE_REGION_POLITE))
+        assertThat("First node is a label", liveRegion.viewIdResourceName.toString(), equalTo("to_change"))
 
-        // This causes a tree mutation, second event is from the reorder.
         mainSession.evaluateJS("document.querySelector('#to_change').textContent = 'Hello';")
         sessionRule.waitUntilCalled(
             object : EventDelegate {
-                @AssertCalled(count = 2)
-                override fun onWinContentChanged(event: AccessibilityEvent) {
-                    val node = createNodeInfo(getSourceId(event))
-                    assertThat(
-                        "Correct node text for WINDOW_CONTENT_CHANGED",
-                        node.text.toString(),
-                        equalTo(forEachCall("Hello", "")),
-                    )
-                    assertThat(
-                        "Correct node class name for WINDOW_CONTENT_CHANGED",
-                        node.className,
-                        equalTo(forEachCall("android.view.View", "android.webkit.WebView")),
-                    )
-                }
-            }
-        )
-
-        // There is no tree mutation, therefore no reorder, and only a single event.
-        mainSession.evaluateJS("document.querySelector('#to_change').firstChild.data = 'Goodbye'")
-        sessionRule.waitUntilCalled(
-            object : EventDelegate {
                 @AssertCalled(count = 1)
-                override fun onWinContentChanged(event: AccessibilityEvent) {
-                    val node = createNodeInfo(getSourceId(event))
-                    assertThat("Correct node text for WINDOW_CONTENT_CHANGED", node.text.toString(), equalTo("Goodbye"))
+                override fun onAnnouncement(event: AccessibilityEvent) {
+                    assertThat("Announcement is correct", event.text[0].toString(), equalTo("Hello"))
                 }
-            }
-        )
 
-        mainSession.evaluateJS(
-            "document.querySelector('div[aria-live=polite]').ariaBusy = true;" +
-                "document.querySelector('#to_change').hidden;"
-        )
-        sessionRule.waitUntilCalled(
-            object : EventDelegate {
-                @AssertCalled(count = 1)
-                override fun onWinContentChanged(event: AccessibilityEvent) {
-                    val node = createNodeInfo(getSourceId(event))
-                    assertThat(
-                        "Correct node text for WINDOW_CONTENT_CHANGED",
-                        node.text.toString(),
-                        equalTo(""),
-                    )
-                    assertThat(
-                        "Correct node class name for WINDOW_CONTENT_CHANGED",
-                        node.className,
-                        equalTo("android.webkit.WebView"),
-                    )
-                }
+                @AssertCalled(count = 1) override fun onWinContentChanged(event: AccessibilityEvent) {}
             }
         )
     }
@@ -1529,33 +1485,24 @@ class AccessibilityTest : BaseSessionTest() {
         loadTestPage("test-live-region-descendant")
         waitForInitialFocus()
 
-        val rootNode = createNodeInfo(View.NO_ID)
-        assertThat("Document has 1 child", rootNode.childCount, equalTo(1))
-        val liveRegion = createNodeInfo(rootNode.getChildId(0))
-        assertThat(
-            "First node is live region",
-            liveRegion.liveRegion,
-            equalTo(View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE),
+        mainSession.evaluateJS("document.querySelector('#to_show').style.display = 'none';")
+        sessionRule.waitUntilCalled(
+            object : EventDelegate {
+                @AssertCalled(count = 0) override fun onAnnouncement(event: AccessibilityEvent) {}
+
+                @AssertCalled(count = 1) override fun onWinContentChanged(event: AccessibilityEvent) {}
+            }
         )
 
         mainSession.evaluateJS("document.querySelector('#to_show').style.display = 'block';")
         sessionRule.waitUntilCalled(
             object : EventDelegate {
-
-                @AssertCalled(count = 2)
-                override fun onWinContentChanged(event: AccessibilityEvent) {
-                    val node = createNodeInfo(getSourceId(event))
-                    assertThat(
-                        "Correct node text for WINDOW_CONTENT_CHANGED",
-                        node.text.toString(),
-                        equalTo(forEachCall("I will be shown", "")),
-                    )
-                    assertThat(
-                        "Correct node class name for WINDOW_CONTENT_CHANGED",
-                        node.className,
-                        equalTo(forEachCall("android.view.View", "android.webkit.WebView")),
-                    )
+                @AssertCalled(count = 1)
+                override fun onAnnouncement(event: AccessibilityEvent) {
+                    assertThat("Announcement is correct", event.text[0].toString(), equalTo("I will be shown"))
                 }
+
+                @AssertCalled(count = 1) override fun onWinContentChanged(event: AccessibilityEvent) {}
             }
         )
     }
@@ -1568,40 +1515,12 @@ class AccessibilityTest : BaseSessionTest() {
         mainSession.evaluateJS("document.querySelector('p').textContent = '4pm';")
         sessionRule.waitUntilCalled(
             object : EventDelegate {
-                @AssertCalled(count = 3)
-                override fun onWinContentChanged(event: AccessibilityEvent) {
-                    val node = createNodeInfo(getSourceId(event))
-                    assertThat(
-                        "Correct node text for WINDOW_CONTENT_CHANGED",
-                        node.text.toString(),
-                        equalTo(forEachCall("The time is ", "4pm", "")),
-                    )
-                    assertThat(
-                        "Correct node class name for WINDOW_CONTENT_CHANGED",
-                        node.className,
-                        equalTo(forEachCall("android.view.View", "android.view.View", "android.webkit.WebView")),
-                    )
+                @AssertCalled(count = 1)
+                override fun onAnnouncement(event: AccessibilityEvent) {
+                    assertThat("Announcement is correct", event.text[0].toString(), equalTo("The time is 4pm"))
                 }
-            }
-        )
 
-        mainSession.evaluateJS("document.querySelector('#container').firstChild.data = 'Son las ';")
-        sessionRule.waitUntilCalled(
-            object : EventDelegate {
-                @AssertCalled(count = 2)
-                override fun onWinContentChanged(event: AccessibilityEvent) {
-                    val node = createNodeInfo(getSourceId(event))
-                    assertThat(
-                        "Correct node text for WINDOW_CONTENT_CHANGED",
-                        node.text.toString(),
-                        equalTo(forEachCall("Son las ", "4pm")),
-                    )
-                    assertThat(
-                        "Correct node class name for WINDOW_CONTENT_CHANGED",
-                        node.className,
-                        equalTo(forEachCall("android.view.View", "android.view.View")),
-                    )
-                }
+                @AssertCalled(count = 1) override fun onWinContentChanged(event: AccessibilityEvent) {}
             }
         )
 
@@ -1611,20 +1530,12 @@ class AccessibilityTest : BaseSessionTest() {
         )
         sessionRule.waitUntilCalled(
             object : EventDelegate {
-                @AssertCalled(count = 2)
-                override fun onWinContentChanged(event: AccessibilityEvent) {
-                    val node = createNodeInfo(getSourceId(event))
-                    assertThat(
-                        "Correct node text for WINDOW_CONTENT_CHANGED",
-                        node.text.toString(),
-                        equalTo(forEachCall("5pm", "")),
-                    )
-                    assertThat(
-                        "Correct node class name for WINDOW_CONTENT_CHANGED",
-                        node.className,
-                        equalTo(forEachCall("android.view.View", "android.webkit.WebView")),
-                    )
+                @AssertCalled(count = 1)
+                override fun onAnnouncement(event: AccessibilityEvent) {
+                    assertThat("Announcement is correct", event.text[0].toString(), equalTo("5pm"))
                 }
+
+                @AssertCalled(count = 1) override fun onWinContentChanged(event: AccessibilityEvent) {}
             }
         )
     }
@@ -1634,77 +1545,28 @@ class AccessibilityTest : BaseSessionTest() {
         loadTestPage("test-live-region-image")
         waitForInitialFocus()
 
-        mainSession.evaluateJS("document.querySelector('img').hidden = false;")
-        sessionRule.waitUntilCalled(
-            object : EventDelegate {
-                @AssertCalled(count = 3)
-                override fun onWinContentChanged(event: AccessibilityEvent) {
-                    val node = createNodeInfo(getSourceId(event))
-                    assertThat(
-                        "Correct node text for WINDOW_CONTENT_CHANGED",
-                        node.text.toString(),
-                        equalTo(forEachCall("This picture is ", "happy", "")),
-                    )
-                    assertThat(
-                        "Correct node class name for WINDOW_CONTENT_CHANGED",
-                        node.className,
-                        equalTo(forEachCall("android.view.View", "android.widget.Image", "android.webkit.WebView")),
-                    )
-                }
-            }
-        )
-
         mainSession.evaluateJS("document.querySelector('img').alt = 'sad';")
         sessionRule.waitUntilCalled(
             object : EventDelegate {
-                @AssertCalled(count = 2)
-                override fun onWinContentChanged(event: AccessibilityEvent) {
-                    val node = createNodeInfo(getSourceId(event))
-                    assertThat(
-                        "Correct node text for WINDOW_CONTENT_CHANGED",
-                        node.text.toString(),
-                        equalTo(forEachCall("This picture is ", "sad")),
-                    )
-                    assertThat(
-                        "Correct node class name for WINDOW_CONTENT_CHANGED",
-                        node.className,
-                        equalTo(forEachCall("android.view.View", "android.widget.Image")),
-                    )
+                @AssertCalled(count = 1)
+                override fun onAnnouncement(event: AccessibilityEvent) {
+                    assertThat("Announcement is correct", event.text[0].toString(), equalTo("This picture is sad"))
                 }
             }
         )
     }
 
     @Test
-    fun testLiveRegionLarge() {
-        loadTestPage("test-live-region-large")
+    fun testLiveRegionImageLabeledBy() {
+        loadTestPage("test-live-region-image-labeled-by")
         waitForInitialFocus()
 
-        mainSession.evaluateJS("document.querySelector('#intermediate').style.display = 'block';")
+        mainSession.evaluateJS("document.querySelector('img').setAttribute('aria-labelledby', 'l2');")
         sessionRule.waitUntilCalled(
             object : EventDelegate {
-                @AssertCalled(count = 11)
-                override fun onWinContentChanged(event: AccessibilityEvent) {
-                    val node = createNodeInfo(getSourceId(event))
-                    assertThat(
-                        "Correct node text for WINDOW_CONTENT_CHANGED",
-                        node.text.toString(),
-                        equalTo(
-                            forEachCall(
-                                "one",
-                                "two",
-                                "three",
-                                "four",
-                                "five",
-                                "six",
-                                "seven",
-                                "eight",
-                                "nine",
-                                "ten",
-                                "",
-                            )
-                        ),
-                    )
+                @AssertCalled(count = 1)
+                override fun onAnnouncement(event: AccessibilityEvent) {
+                    assertThat("Announcement is correct", event.text[0].toString(), equalTo("Goodbye"))
                 }
             }
         )
@@ -1715,64 +1577,12 @@ class AccessibilityTest : BaseSessionTest() {
         loadTestPage("test-live-region-status")
         waitForInitialFocus()
 
-        val rootNode = createNodeInfo(View.NO_ID)
-        assertThat("Document has 1 child", rootNode.childCount, equalTo(1))
-
-        val status = createNodeInfo(rootNode.getChildId(0))
-        assertThat("Status is live region", status.liveRegion, equalTo(View.ACCESSIBILITY_LIVE_REGION_POLITE))
-
         mainSession.evaluateJS("document.querySelector('#status').textContent = 'hello';")
         sessionRule.waitUntilCalled(
             object : EventDelegate {
-                @AssertCalled(count = 2)
-                override fun onWinContentChanged(event: AccessibilityEvent) {
-                    val node = createNodeInfo(getSourceId(event))
-                    assertThat(
-                        "Correct node text for WINDOW_CONTENT_CHANGED",
-                        node.text.toString(),
-                        equalTo(forEachCall("hello", "")),
-                    )
-                    assertThat(
-                        "Correct node class name for WINDOW_CONTENT_CHANGED",
-                        node.className,
-                        equalTo(forEachCall("android.view.View", "android.webkit.WebView")),
-                    )
-                }
-            }
-        )
-    }
-
-    @Test
-    fun testLiveRegionAlert() {
-        mainSession.loadUri("data:text/html;charset=utf-8,<div id='alert' role='alert'></div>")
-        waitForInitialFocus()
-
-        val rootNode = createNodeInfo(View.NO_ID)
-        assertThat("Document has 1 child", rootNode.childCount, equalTo(1))
-
-        val status = createNodeInfo(rootNode.getChildId(0))
-        assertThat(
-            "Alert is assertive live region",
-            status.liveRegion,
-            equalTo(View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE),
-        )
-
-        mainSession.evaluateJS("document.querySelector('#alert').textContent = 'hello';")
-        sessionRule.waitUntilCalled(
-            object : EventDelegate {
-                @AssertCalled(count = 2)
-                override fun onWinContentChanged(event: AccessibilityEvent) {
-                    val node = createNodeInfo(getSourceId(event))
-                    assertThat(
-                        "Correct node text for WINDOW_CONTENT_CHANGED",
-                        node.text.toString(),
-                        equalTo(forEachCall("hello", "")),
-                    )
-                    assertThat(
-                        "Correct node class name for WINDOW_CONTENT_CHANGED",
-                        node.className,
-                        equalTo(forEachCall("android.view.View", "android.webkit.WebView")),
-                    )
+                @AssertCalled(count = 1)
+                override fun onAnnouncement(event: AccessibilityEvent) {
+                    assertThat("Announcement is correct", event.text[0].toString(), equalTo("hello"))
                 }
             }
         )
