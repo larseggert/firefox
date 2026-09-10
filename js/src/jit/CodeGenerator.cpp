@@ -23609,12 +23609,12 @@ void CodeGenerator::visitWasmStoreInstanceScratch2xI32(
 }
 #endif
 
-void CodeGenerator::visitWasmUint32ToDouble(LWasmUint32ToDouble* lir) {
+void CodeGenerator::visitUint32ToDouble(LUint32ToDouble* lir) {
   masm.convertUInt32ToDouble(ToRegister(lir->input()),
                              ToFloatRegister(lir->output()));
 }
 
-void CodeGenerator::visitWasmUint32ToFloat32(LWasmUint32ToFloat32* lir) {
+void CodeGenerator::visitUint32ToFloat32(LUint32ToFloat32* lir) {
   masm.convertUInt32ToFloat32(ToRegister(lir->input()),
                               ToFloatRegister(lir->output()));
 }

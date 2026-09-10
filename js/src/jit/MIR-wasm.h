@@ -163,30 +163,6 @@ class MWasmFloatConstant : public MNullaryInstruction {
   ALLOW_CLONE(MWasmFloatConstant)
 };
 
-// Converts a uint32 to a float32 (coming from wasm).
-class MWasmUnsignedToFloat32 : public MUnaryInstruction,
-                               public NoTypePolicy::Data {
-  explicit MWasmUnsignedToFloat32(MDefinition* def)
-      : MUnaryInstruction(classOpcode, def) {
-    setResultType(MIRType::Float32);
-    setMovable();
-  }
-
- public:
-  INSTRUCTION_HEADER(WasmUnsignedToFloat32)
-  TRIVIAL_NEW_WRAPPERS
-
-  MDefinition* foldsTo(TempAllocator& alloc) override;
-  bool congruentTo(const MDefinition* ins) const override {
-    return congruentIfOperandsEqual(ins);
-  }
-  AliasSet getAliasSet() const override { return AliasSet::None(); }
-
-  bool canProduceFloat32() const override { return true; }
-
-  ALLOW_CLONE(MWasmUnsignedToFloat32)
-};
-
 class MWasmNewI31Ref : public MUnaryInstruction, public NoTypePolicy::Data {
   explicit MWasmNewI31Ref(MDefinition* input)
       : MUnaryInstruction(classOpcode, input) {

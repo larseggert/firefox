@@ -3676,13 +3676,13 @@
   mir_op: Unbox
 
 # Convert a 32-bit unsigned integer to a double.
-- name: WasmUint32ToDouble
+- name: Uint32ToDouble
   result_type: WordSized
   operands:
     input: WordSized
 
 # Convert a 32-bit unsigned integer to a float32.
-- name: WasmUint32ToFloat32
+- name: Uint32ToFloat32
   result_type: WordSized
   operands:
     input: WordSized

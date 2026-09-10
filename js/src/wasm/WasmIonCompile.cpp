@@ -10247,8 +10247,7 @@ bool FunctionCompiler::emitBodyExprs() {
       case uint16_t(Op::F32ConvertI32S):
         CHECK(emitConversion<MToFloat32>(ValType::I32, ValType::F32));
       case uint16_t(Op::F32ConvertI32U):
-        CHECK(
-            emitConversion<MWasmUnsignedToFloat32>(ValType::I32, ValType::F32));
+        CHECK(emitConversion<MUnsignedToFloat32>(ValType::I32, ValType::F32));
       case uint16_t(Op::F32ConvertI64S):
       case uint16_t(Op::F32ConvertI64U):
         CHECK(emitConvertI64ToFloatingPoint(ValType::F32, MIRType::Float32,
@@ -10258,8 +10257,7 @@ bool FunctionCompiler::emitBodyExprs() {
       case uint16_t(Op::F64ConvertI32S):
         CHECK(emitConversion<MToDouble>(ValType::I32, ValType::F64));
       case uint16_t(Op::F64ConvertI32U):
-        CHECK(
-            emitConversion<MWasmUnsignedToDouble>(ValType::I32, ValType::F64));
+        CHECK(emitConversion<MUnsignedToDouble>(ValType::I32, ValType::F64));
       case uint16_t(Op::F64ConvertI64S):
       case uint16_t(Op::F64ConvertI64U):
         CHECK(emitConvertI64ToFloatingPoint(ValType::F64, MIRType::Double,

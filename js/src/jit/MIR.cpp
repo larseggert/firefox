@@ -4926,6 +4926,26 @@ MDefinition* MToFloat16::foldsTo(TempAllocator& alloc) {
   return this;
 }
 
+MDefinition* MUnsignedToDouble::foldsTo(TempAllocator& alloc) {
+  if (input()->isConstant()) {
+    return MConstant::NewDouble(alloc,
+                                uint32_t(input()->toConstant()->toInt32()));
+  }
+
+  return this;
+}
+
+MDefinition* MUnsignedToFloat32::foldsTo(TempAllocator& alloc) {
+  if (input()->isConstant()) {
+    double dval = double(uint32_t(input()->toConstant()->toInt32()));
+    if (IsFloat32Representable(dval)) {
+      return MConstant::NewFloat32(alloc, float(dval));
+    }
+  }
+
+  return this;
+}
+
 MDefinition* MToString::foldsTo(TempAllocator& alloc) {
   MDefinition* in = input();
   if (in->isBox()) {
