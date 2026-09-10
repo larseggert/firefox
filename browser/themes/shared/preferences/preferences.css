@@ -1426,9 +1426,6 @@ setting-group[groupid="aiFeatures"] {
 }
 
 #blockAiGroup {
-  /* aiBlockedMessage overlaps our border on purpose to avoid a corner seam; clip it so it doesn't paint over the border. */
-  overflow: hidden;
-
   @media not (prefers-contrast) {
     --block-ai-background-color: light-dark(color-mix(in srgb, currentColor 3%, transparent), color-mix(in srgb, currentColor 5%, transparent));
     background-color: var(--block-ai-background-color);
@@ -1436,12 +1433,11 @@ setting-group[groupid="aiFeatures"] {
 }
 
 #aiBlockedMessage {
-  /* Overshoot the border by a hair, at odd zoom levels an exact match can round short and leave a gap. */
-  margin: calc(-1 * var(--space-large) - var(--box-border-width) - 1px);
+  margin: calc(-1 * var(--space-large));
   margin-top: var(--space-medium);
-  border-radius: 0;
-  --message-bar-icon-container-border-radius-start-start: 0;
-  border-color: transparent;
+  --message-bar-border-radius: 0 0 var(--box-border-radius) var(--box-border-radius);
+  border-bottom-color: transparent;
+  border-inline-color: transparent;
 }
 
 #aiControlDefaultToggle {
