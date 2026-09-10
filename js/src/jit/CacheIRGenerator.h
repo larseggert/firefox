@@ -782,6 +782,19 @@ class MOZ_RAII InlinableNativeIRGenerator {
     Seconds,
   };
 
+  enum class DurationComponent {
+    Years,
+    Months,
+    Weeks,
+    Days,
+    Hours,
+    Minutes,
+    Seconds,
+    Milliseconds,
+    Microseconds,
+    Nanoseconds,
+  };
+
   AttachDecision tryAttachArrayPush();
   AttachDecision tryAttachArrayPopShift(InlinableNative native);
   AttachDecision tryAttachArrayJoin();
@@ -927,6 +940,7 @@ class MOZ_RAII InlinableNativeIRGenerator {
   AttachDecision tryAttachDateGet(DateComponent component);
   AttachDecision tryAttachDateNow();
   AttachDecision tryAttachDateParse();
+  AttachDecision tryAttachDurationGet(DurationComponent component);
   AttachDecision tryAttachWeakMapHas();
   AttachDecision tryAttachWeakMapGet();
   AttachDecision tryAttachWeakSetHas();

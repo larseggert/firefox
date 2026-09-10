@@ -19,6 +19,9 @@
 #include "builtin/Object.h"
 #include "builtin/WeakMapObject.h"
 #include "builtin/WeakSetObject.h"
+#ifdef JS_HAS_INTL_API
+#  include "builtin/temporal/Duration.h"
+#endif
 #include "gc/GC.h"
 #include "jit/BaselineIC.h"
 #include "jit/CacheIRCloner.h"
@@ -2170,6 +2173,13 @@ const JSClass* js::jit::ClassFor(GuardClassKind kind) {
       return &MapObject::class_;
     case GuardClassKind::Date:
       return &DateObject::class_;
+#ifdef JS_HAS_INTL_API
+    case GuardClassKind::Duration:
+      return &temporal::DurationObject::class_;
+#else
+    case GuardClassKind::Duration:
+      MOZ_CRASH("Intl API disabled");
+#endif
     case GuardClassKind::WeakMap:
       return &WeakMapObject::class_;
     case GuardClassKind::WeakSet:
@@ -2198,6 +2208,7 @@ void IRGenerator::emitOptimisticClassGuard(ObjOperandId objId, JSObject* obj,
     case GuardClassKind::Set:
     case GuardClassKind::Map:
     case GuardClassKind::Date:
+    case GuardClassKind::Duration:
     case GuardClassKind::WeakMap:
     case GuardClassKind::WeakSet:
       MOZ_ASSERT(obj->hasClass(ClassFor(kind)));
@@ -11174,6 +11185,89 @@ AttachDecision InlinableNativeIRGenerator::tryAttachDateConstructor() {
   return AttachDecision::Attach;
 }
 
+AttachDecision InlinableNativeIRGenerator::tryAttachDurationGet(
+    DurationComponent component) {
+#ifdef JS_HAS_INTL_API
+  // Ensure |this| is a DurationObject.
+  if (!thisval_.isObject() ||
+      !thisval_.toObject().is<temporal::DurationObject>()) {
+    return AttachDecision::NoAction;
+  }
+
+  // Expecting no arguments.
+  if (argsLength() != 0) {
+    return AttachDecision::NoAction;
+  }
+
+  // Initialize the input operand.
+  Int32OperandId argcId = initializeInputOperand();
+
+  // Guard callee is the correct native getter
+  ObjOperandId calleeId = emitNativeCalleeGuard(argcId);
+
+  // Guard |this| is a DurationObject.
+  ValOperandId thisValId = loadThis(calleeId);
+  ObjOperandId objId = writer.guardToObject(thisValId);
+  emitOptimisticClassGuard(objId, &thisval_.toObject(),
+                           GuardClassKind::Duration);
+
+  size_t slot;
+  const char* name;
+  switch (component) {
+    case DurationComponent::Years:
+      slot = temporal::DurationObject::YEARS_SLOT.index();
+      name = "DurationYears";
+      break;
+    case DurationComponent::Months:
+      slot = temporal::DurationObject::MONTHS_SLOT.index();
+      name = "DurationMonths";
+      break;
+    case DurationComponent::Weeks:
+      slot = temporal::DurationObject::WEEKS_SLOT.index();
+      name = "DurationWeeks";
+      break;
+    case DurationComponent::Days:
+      slot = temporal::DurationObject::DAYS_SLOT.index();
+      name = "DurationDays";
+      break;
+    case DurationComponent::Hours:
+      slot = temporal::DurationObject::HOURS_SLOT.index();
+      name = "DurationHours";
+      break;
+    case DurationComponent::Minutes:
+      slot = temporal::DurationObject::MINUTES_SLOT.index();
+      name = "DurationMinutes";
+      break;
+    case DurationComponent::Seconds:
+      slot = temporal::DurationObject::SECONDS_SLOT.index();
+      name = "DurationSeconds";
+      break;
+    case DurationComponent::Milliseconds:
+      slot = temporal::DurationObject::MILLISECONDS_SLOT.index();
+      name = "DurationMilliseconds";
+      break;
+    case DurationComponent::Microseconds:
+      slot = temporal::DurationObject::MICROSECONDS_SLOT.index();
+      name = "DurationMicroseconds";
+      break;
+    case DurationComponent::Nanoseconds:
+      slot = temporal::DurationObject::NANOSECONDS_SLOT.index();
+      name = "DurationNanoseconds";
+      break;
+  }
+
+  writer.loadFixedSlotResult(
+      objId, temporal::DurationObject::getFixedSlotOffset(slot));
+
+  trackAttached(name);
+
+  return AttachDecision::Attach;
+#else
+  // No inlining when Intl support is disabled.
+  return AttachDecision::NoAction;
+#endif
+}
+
 AttachDecision CallIRGenerator::tryAttachFunCall(HandleFunction callee) {
   MOZ_ASSERT(callee->isNativeWithoutJitEntry());
 
@@ -13464,6 +13558,28 @@ AttachDecision InlinableNativeIRGenerator::tryAttachStub() {
       return tryAttachDateNow();
     case InlinableNative::DateParse:
       return tryAttachDateParse();
+
+    // Temporal.Duration getters.
+    case InlinableNative::DurationYears:
+      return tryAttachDurationGet(DurationComponent::Years);
+    case InlinableNative::DurationMonths:
+      return tryAttachDurationGet(DurationComponent::Months);
+    case InlinableNative::DurationWeeks:
+      return tryAttachDurationGet(DurationComponent::Weeks);
+    case InlinableNative::DurationDays:
+      return tryAttachDurationGet(DurationComponent::Days);
+    case InlinableNative::DurationHours:
+      return tryAttachDurationGet(DurationComponent::Hours);
+    case InlinableNative::DurationMinutes:
+      return tryAttachDurationGet(DurationComponent::Minutes);
+    case InlinableNative::DurationSeconds:
+      return tryAttachDurationGet(DurationComponent::Seconds);
+    case InlinableNative::DurationMilliseconds:
+      return tryAttachDurationGet(DurationComponent::Milliseconds);
+    case InlinableNative::DurationMicroseconds:
+      return tryAttachDurationGet(DurationComponent::Microseconds);
+    case InlinableNative::DurationNanoseconds:
+      return tryAttachDurationGet(DurationComponent::Nanoseconds);
 
     // WeakMap/WeakSet natives.
     case InlinableNative::WeakMapGet:

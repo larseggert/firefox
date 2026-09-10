@@ -90,6 +90,17 @@
   _(DateNow)                                       \
   _(DateParse)                                     \
                                                    \
+  _(DurationYears)                                 \
+  _(DurationMonths)                                \
+  _(DurationWeeks)                                 \
+  _(DurationDays)                                  \
+  _(DurationHours)                                 \
+  _(DurationMinutes)                               \
+  _(DurationSeconds)                               \
+  _(DurationMilliseconds)                          \
+  _(DurationMicroseconds)                          \
+  _(DurationNanoseconds)                           \
+                                                   \
   _(FunctionBind)                                  \
                                                    \
   _(IntlGuardToSegments)                           \

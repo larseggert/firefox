@@ -583,6 +583,7 @@ enum class GuardClassKind : uint8_t {
   Set,
   Map,
   Date,
+  Duration,
   WeakMap,
   WeakSet,
 };
@@ -633,6 +634,8 @@ inline const char* GuardClassKindEnumName(GuardClassKind kind) {
       return "Map";
     case GuardClassKind::Date:
       return "Date";
+    case GuardClassKind::Duration:
+      return "Duration";
     case GuardClassKind::WeakMap:
       return "WeakMap";
     case GuardClassKind::WeakSet:

@@ -1233,6 +1233,7 @@ uint64_t ICInterpretOps(uint64_t arg0, uint64_t arg1, ICStub* stub,
           case GuardClassKind::Map:
           case GuardClassKind::BoundFunction:
           case GuardClassKind::Date:
+          case GuardClassKind::Duration:
           case GuardClassKind::WeakMap:
           case GuardClassKind::WeakSet:
             if (object->getClass() != jit::ClassFor(kind)) {
