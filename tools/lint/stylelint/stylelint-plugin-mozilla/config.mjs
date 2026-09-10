@@ -152,7 +152,7 @@ const BackgroundColor = {
     "--tab-group-background-color",
     "--tab-group-text-color",
     "--tab-group-background-color-hover",
-    "--tab-loading-fill",
+    "--tab-icon-fill-loading",
     "--tabgroup-swatch-color-invert",
     "--tabgroup-swatch-color",
     "--toolbar-background-color",
