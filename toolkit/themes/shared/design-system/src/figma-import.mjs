@@ -244,13 +244,10 @@ function walkUpdateNovaTokens(tokens, vars, tokenNames, path = []) {
           );
           if (!figmaName) {
             // Exact match, only one value.
-            // We rarely hit this, values are usually set for each from Figma.
+            // We actually never hit this, values are set for each from Figma.
             newValue = figmaValue;
             delete vars[figmaVar];
-          } else if (
-            TOKEN_VALUE_KEYS.has(figmaName) &&
-            typeof newValue == "object"
-          ) {
+          } else if (TOKEN_VALUE_KEYS.has(figmaName)) {
             // Sometimes comes after, like Light/Dark/HCM.
             newValue[figmaName] = figmaValue;
             delete vars[figmaVar];

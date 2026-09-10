@@ -1,19 +1,7 @@
 {
-  "background": {
-    "color": {
-      "@base": {
-        "value": {
-          "nativeTheme": "transparent",
-          "default": "{button.background.color.@base}"
-        }
-      },
-      "selected": {
-        "value": {
-          "nativeTheme": "{toolbar.background.color}",
-          "default": "{background.color.box.@base}",
-          "forcedColors": "{button.background.color.selected}"
-        }
-      }
+  "margin": {
+    "block": {
+      "value": "6px"
     }
   },
   "border": {
@@ -53,23 +41,21 @@
       }
     }
   },
-  "margin": {
-    "block": {
+  "background": {
+    "color": {
       "@base": {
-        "value": "6px"
-      }
-    },
-    "inline": {
-      "pinned": {
-        "expanded": {
-          "value": "0"
+        "value": {
+          "nativeTheme": "transparent",
+          "default": "{button.background.color.@base}"
+        }
+      },
+      "selected": {
+        "value": {
+          "nativeTheme": "{toolbar.background.color}",
+          "default": "{background.color.box.@base}",
+          "forcedColors": "{button.background.color.selected}"
         }
       }
-    }
-  },
-  "outline": {
-    "offset": {
-      "value": "-1px"
     }
   },
   "text": {
@@ -80,6 +66,11 @@
           "default": "{toolbox.text.color.@base}"
         }
       }
+    }
+  },
+  "outline": {
+    "offset": {
+      "value": "-1px"
     }
   },
   "group": {

@@ -816,7 +816,7 @@ export const tokensTable = {
       name: "--tab-background-color-selected",
     },
     {
-      value: "var(--button-background-color-ghost)",
+      value: "var(--toolbarbutton-background-color)",
       name: "--tab-close-button-background-color",
     },
     {
@@ -2045,8 +2045,8 @@ export const tokensTable = {
         "calc(var(--toggle-width) - 2 * var(--toggle-dot-margin) - 2px - var(--toggle-dot-width))",
       name: "--toggle-dot-transform-x",
     },
-    { value: "40px", name: "--tab-background-width-pinned-expanded" },
     { value: "1.7", name: "--tab-label-line-height" },
+    { value: "40px", name: "--tab-pinned-expanded-background-width" },
     { value: "var(--icon-size)", name: "--urlbarview-favicon-size" },
     { value: "var(--size-item-large)", name: "--urlbarview-row-min-height" },
   ],
@@ -2229,22 +2229,22 @@ export const tokensTable = {
       value: { default: "0px" },
       name: "--panel-item-button-padding-inline-start-offset",
     },
-    { value: "6px", name: "--tab-close-button-padding" },
-    {
-      value: { default: "var(--space-small)" },
-      name: "--tab-container-margin-inline-pinned-expanded",
-    },
-    { value: "5.5px", name: "--tab-icon-margin-inline-end" },
     { value: "4px", name: "--tab-margin-block" },
-    { value: "2px", name: "--tab-margin-block-vertical" },
-    { value: "var(--space-medium)", name: "--tab-margin-inline-inner" },
+    { value: "5.5px", name: "--tab-icon-end-margin" },
+    { value: "8px", name: "--tab-inline-padding" },
+    { value: "var(--space-medium)", name: "--tab-inner-inline-margin" },
+    { value: "2px", name: "--tab-overflow-clip-margin" },
+    {
+      value: "var(--space-small)",
+      name: "--tab-pinned-container-margin-inline-expanded",
+    },
     {
       value: "var(--space-xsmall)",
-      name: "--tab-margin-inline-pinned-expanded",
+      name: "--tab-pinned-margin-inline-expanded",
     },
-    { value: "2px", name: "--tab-margin-overflow-clip" },
-    { value: "8px", name: "--tab-padding-inline" },
-    { value: "var(--space-medium)", name: "--tab-padding-inline-vertical" },
+    { value: "2px", name: "--tab-vertical-block-margin" },
+    { value: "var(--space-medium)", name: "--tab-vertical-inline-padding" },
+    { value: "6px", name: "--tab-close-button-padding" },
     { value: "5px", name: "--urlbar-margin-inline" },
     { value: "4px", name: "--urlbar-padding-block" },
     { value: "var(--space-small)", name: "--urlbarview-row-padding-block" },
@@ -2815,21 +2815,6 @@ export const tokensTable = {
       name: "--select-text-color-disabled",
     },
     { value: "var(--text-color)", name: "--panel-list-text-color" },
-    { value: "var(--tab-text-color)", name: "--tab-close-button-text-color" },
-    {
-      value: {
-        default: "var(--tab-text-color)",
-        forcedColors: "var(--button-text-color-hover)",
-      },
-      name: "--tab-close-button-text-color-hover",
-    },
-    {
-      value: {
-        default: "var(--tab-text-color)",
-        forcedColors: "var(--button-text-color-active)",
-      },
-      name: "--tab-close-button-text-color-active",
-    },
     {
       value: {
         default: "var(--toolbox-text-color-current)",
@@ -2861,6 +2846,21 @@ export const tokensTable = {
         },
       },
       name: "--tab-text-color-selected",
+    },
+    { value: "var(--tab-text-color)", name: "--tab-close-button-text-color" },
+    {
+      value: {
+        default: "var(--tab-text-color)",
+        forcedColors: "var(--button-text-color-hover)",
+      },
+      name: "--tab-close-button-text-color-hover",
+    },
+    {
+      value: {
+        default: "var(--tab-text-color)",
+        forcedColors: "var(--button-text-color-active)",
+      },
+      name: "--tab-close-button-text-color-active",
     },
     { value: "inherit", name: "--urlbar-box-text-color" },
     {
@@ -3435,10 +3435,7 @@ export const tokensTable = {
     },
     { value: "var(--button-icon-fill)", name: "--select-icon-fill" },
     { value: "currentColor", name: "--panel-item-fill" },
-    {
-      value: { default: "var(--color-blue-50)" },
-      name: "--tab-icon-fill-loading",
-    },
+    { value: { default: "var(--color-blue-50)" }, name: "--tab-loading-fill" },
     {
       value: {
         default: "0.72",
@@ -5326,6 +5323,13 @@ export const variableLookupTable = {
   "panel-list-border-radius": "var(--panel-border-radius)",
   "panel-list-box-shadow": { default: "var(--popup-box-shadow)" },
   "panel-list-text-color": "var(--text-color)",
+  "tab-margin-block": "4px",
+  "tab-border": "var(--border-width) solid var(--tab-border-color)",
+  "tab-border-radius": "var(--toolbarbutton-border-radius)",
+  "tab-border-color": "var(--toolbarbutton-outline-color)",
+  "tab-border-color-hover": "var(--toolbarbutton-outline-color-hover)",
+  "tab-border-color-selected": "var(--toolbarbutton-outline-color-selected)",
+  "tab-box-shadow-selected": "var(--box-shadow-level-1)",
   "tab-attention-dot-color": "var(--color-accent-attention)",
   "tab-background-color": {
     default: "transparent",
@@ -5355,51 +5359,6 @@ export const variableLookupTable = {
       },
     },
   },
-  "tab-background-width-pinned-expanded": "40px",
-  "tab-border": "var(--border-width) solid var(--tab-border-color)",
-  "tab-border-radius": "var(--toolbarbutton-border-radius)",
-  "tab-border-color": "var(--toolbarbutton-outline-color)",
-  "tab-border-color-hover": "var(--toolbarbutton-outline-color-hover)",
-  "tab-border-color-selected": "var(--toolbarbutton-outline-color-selected)",
-  "tab-box-shadow-selected": "var(--box-shadow-level-1)",
-  "tab-close-button-padding": "6px",
-  "tab-close-button-background-color": "var(--button-background-color-ghost)",
-  "tab-close-button-background-color-hover":
-    "var(--toolbarbutton-background-color-hover)",
-  "tab-close-button-background-color-active":
-    "var(--toolbarbutton-background-color-active)",
-  "tab-close-button-border-color": "var(--tab-border-color)",
-  "tab-close-button-border-color-hover": {
-    default: "var(--tab-border-color)",
-    prefersContrast: "var(--button-border-color-hover)",
-  },
-  "tab-close-button-border-color-active": {
-    default: "var(--tab-border-color)",
-    prefersContrast: "var(--button-border-color-active)",
-  },
-  "tab-close-button-text-color": "var(--tab-text-color)",
-  "tab-close-button-text-color-hover": {
-    default: "var(--tab-text-color)",
-    forcedColors: "var(--button-text-color-hover)",
-  },
-  "tab-close-button-text-color-active": {
-    default: "var(--tab-text-color)",
-    forcedColors: "var(--button-text-color-active)",
-  },
-  "tab-container-margin-inline-pinned-expanded": {
-    default: "var(--space-small)",
-  },
-  "tab-icon-fill-loading": { default: "var(--color-blue-50)" },
-  "tab-icon-margin-inline-end": "5.5px",
-  "tab-label-line-height": "1.7",
-  "tab-margin-block": "4px",
-  "tab-margin-block-vertical": "2px",
-  "tab-margin-inline-inner": "var(--space-medium)",
-  "tab-margin-inline-pinned-expanded": "var(--space-xsmall)",
-  "tab-margin-overflow-clip": "2px",
-  "tab-outline-offset": "calc(-1 * var(--border-width))",
-  "tab-padding-inline": "8px",
-  "tab-padding-inline-vertical": "var(--space-medium)",
   "tab-text-color": {
     default: "var(--toolbox-text-color-current)",
     forcedColors: "var(--button-text-color)",
@@ -5422,6 +5381,42 @@ export const variableLookupTable = {
         default: "light-dark(rgb(21, 20, 26), var(--color-white))",
       },
     },
+  },
+  "tab-icon-end-margin": "5.5px",
+  "tab-inline-padding": "8px",
+  "tab-inner-inline-margin": "var(--space-medium)",
+  "tab-label-line-height": "1.7",
+  "tab-loading-fill": { default: "var(--color-blue-50)" },
+  "tab-outline-offset": "calc(-1 * var(--border-width))",
+  "tab-overflow-clip-margin": "2px",
+  "tab-pinned-container-margin-inline-expanded": "var(--space-small)",
+  "tab-pinned-expanded-background-width": "40px",
+  "tab-pinned-margin-inline-expanded": "var(--space-xsmall)",
+  "tab-vertical-block-margin": "2px",
+  "tab-vertical-inline-padding": "var(--space-medium)",
+  "tab-close-button-padding": "6px",
+  "tab-close-button-background-color": "var(--toolbarbutton-background-color)",
+  "tab-close-button-background-color-hover":
+    "var(--toolbarbutton-background-color-hover)",
+  "tab-close-button-background-color-active":
+    "var(--toolbarbutton-background-color-active)",
+  "tab-close-button-border-color": "var(--tab-border-color)",
+  "tab-close-button-border-color-hover": {
+    default: "var(--tab-border-color)",
+    prefersContrast: "var(--button-border-color-hover)",
+  },
+  "tab-close-button-border-color-active": {
+    default: "var(--tab-border-color)",
+    prefersContrast: "var(--button-border-color-active)",
+  },
+  "tab-close-button-text-color": "var(--tab-text-color)",
+  "tab-close-button-text-color-hover": {
+    default: "var(--tab-text-color)",
+    forcedColors: "var(--button-text-color-hover)",
+  },
+  "tab-close-button-text-color-active": {
+    default: "var(--tab-text-color)",
+    forcedColors: "var(--button-text-color-active)",
   },
   "tab-group-blue": {
     light: "var(--color-blue-50)",
