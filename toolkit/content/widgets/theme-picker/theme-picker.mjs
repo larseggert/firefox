@@ -207,7 +207,6 @@ export class ThemePicker extends MozLitElement {
       device: "chrome://global/skin/icons/local-host.svg",
     };
     return html`<moz-segmented-control
-      data-l10n-id="theme-picker-mode"
       .value=${this.appearance}
       @change=${this.appearanceChange}
     >

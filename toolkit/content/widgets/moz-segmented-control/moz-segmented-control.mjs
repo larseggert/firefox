@@ -128,10 +128,13 @@ export class MozSegmentedControlItem extends SelectControlItemMixin(MozButton) {
     super.willUpdate(changedProperties);
     if (changedProperties.has("checked")) {
       this.type = this.checked ? "primary" : "ghost";
-      this.ariaChecked = this.checked ? "true" : "false";
+      this.setAttribute("aria-checked", this.checked ? "true" : "false");
     }
     if (changedProperties.has("itemTabIndex")) {
       this.setAttribute("tabindex", this.itemTabIndex);
+    }
+    if (changedProperties.has("role")) {
+      this.setAttribute("role", this.role);
     }
   }
 
