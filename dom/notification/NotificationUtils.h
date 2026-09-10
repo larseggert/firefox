@@ -69,6 +69,14 @@ NotificationPermission GetNotificationPermission(
     nsIPrincipal* aPrincipal, nsIPrincipal* aEffectiveStoragePrincipal,
     bool isSecureContext, PermissionCheckPurpose aPurpose);
 
+using NotificationPermissionPromise = MozPromise<Ok, nsresult, false>;
+// Check notification permission and check aPrincipal against Safe Browsing
+// list (removes notification permission if it is on it).
+// Resolves if notifications are allowed, rejects otherwise.
+RefPtr<NotificationPermissionPromise> EnsureValidNotificationPermission(
+    nsIPrincipal* aPrincipal, nsIPrincipal* aEffectiveStoragePrincipal,
+    bool aIsSecureContext);
+
 nsCOMPtr<nsINotificationStorage> GetNotificationStorage(bool isPrivate);
 
 using NotificationsPromise =
