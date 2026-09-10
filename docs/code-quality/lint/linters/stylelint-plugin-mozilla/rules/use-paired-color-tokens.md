@@ -84,8 +84,9 @@ text color for it:
 ```
 
 The fix rewrites the `color` declaration the rule reported, and only that: it
-never adds a declaration, so a block that sets a background color without a text
-color stays as it is.
+never adds a declaration. Filling in the missing one where a block paints a
+background is
+[no-background-without-text-color](no-background-without-text-color.md)'s fix.
 
 A violation the rule can only report against a token that does not exist is
 left alone, since choosing between the component's base text color and a new

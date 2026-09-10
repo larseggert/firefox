@@ -95,16 +95,32 @@ cannot see.
 
 ## Autofix functionality
 
-None yet;
-[bug 2068773](https://bugzilla.mozilla.org/show_bug.cgi?id=2068773) adds it. The
-counterpart is fixed by the design system rather than chosen by the author,
-which is why the message can name it, and the rule only reports where that
-counterpart exists, so the declaration to insert is determined. What the block
-alone does not say is whether the surface takes its text color from elsewhere on
-purpose, where inserting one is a silent rendering change. Such a block carries
-a disable comment, which stylelint honours for fixes as well as reports — so the
-fix goes in ungated and the disable comment described below is what holds it
-off.
+`--fix` declares the counterpart of the background token, after the declaration
+that paints the surface:
+
+```css
+/* Before autofix */
+#header {
+  background-color: var(--sidebar-background-color);
+}
+
+/* After autofix */
+#header {
+  background-color: var(--sidebar-background-color);
+  color: var(--sidebar-text-color);
+}
+```
+
+The counterpart is fixed by the design system rather than chosen by the author,
+and the rule reports only where that counterpart exists, so the declaration to
+insert is determined. What the block alone does not say is whether the surface
+takes its text color from elsewhere on purpose, where inserting one is a silent
+rendering change. A surface like that carries the disable comment described
+below, which stylelint honours for fixes as well as reports.
+
+A comment ending the background declaration's line is the one case the rule
+reports without fixing, since the insertion would take the comment onto the new
+line.
 
 ## Disabling the rule
 

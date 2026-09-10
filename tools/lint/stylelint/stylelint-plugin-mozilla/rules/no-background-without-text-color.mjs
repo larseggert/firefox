@@ -23,7 +23,7 @@ let messages = ruleMessages(ruleName, {
 });
 let meta = {
   url: "https://firefox-source-docs.mozilla.org/code-quality/lint/linters/stylelint-plugin-mozilla/rules/no-background-without-text-color.html",
-  fixable: false,
+  fixable: true,
 };
 
 // A state variant usually restyles an element its base rule has already given a
@@ -123,6 +123,30 @@ let definesTextColor = block =>
   );
 
 /**
+ * Whether a comment sits at the end of the background declaration's line.
+ * PostCSS models it as the declaration's next sibling, so a declaration
+ * inserted between the two takes the comment onto its own line.
+ *
+ * @param {object} background - A PostCSS Declaration.
+ * @returns {boolean}
+ */
+let hasTrailingComment = background => {
+  let next = background.next();
+  return next?.type == "comment" && !next.raws.before?.includes("\n");
+};
+
+/**
+ * Declares the counterpart text color beside the background that paints the
+ * surface. Cloning carries the background declaration's own raws over, so the
+ * new declaration takes its indentation and spacing.
+ *
+ * @param {object} background - The PostCSS Declaration painting the background.
+ * @param {string} text - The name of the paired text color token.
+ */
+let insertTextColor = (background, text) =>
+  background.cloneAfter({ prop: "color", value: `var(${text})` });
+
+/**
  * Reports a declaration block that paints a paired background token and sets
  * no text color, leaving the surface to inherit one no theme guarantees the
  * contrast of. Only the declarations that win the cascade within the block are
@@ -149,11 +173,15 @@ let checkBlock = (block, result) => {
     return;
   }
 
+  let text = backgroundToText.get(paired);
   report({
-    message: messages.noTextColor(paired, backgroundToText.get(paired)),
+    message: messages.noTextColor(paired, text),
     node: background,
     result,
     ruleName,
+    fix: hasTrailingComment(background)
+      ? undefined
+      : () => insertTextColor(background, text),
   });
 };
 
