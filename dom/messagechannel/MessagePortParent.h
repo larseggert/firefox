@@ -20,9 +20,10 @@ class MessagePortParent final
       public SupportsCheckedUnsafePtr<CheckIf<DiagnosticAssertEnabled>> {
   friend class PMessagePortParent;
 
+  NS_INLINE_DECL_REFCOUNTING(MessagePortParent, override)
+
  public:
   explicit MessagePortParent(const nsID& aUUID);
-  ~MessagePortParent();
 
   bool Entangle(const nsID& aDestinationUUID, const uint32_t& aSequenceID);
 
@@ -39,6 +40,8 @@ class MessagePortParent final
                          const uint32_t& aSequenceID);
 
  private:
+  ~MessagePortParent();
+
   mozilla::ipc::IPCResult RecvPostMessages(
       nsTArray<NotNull<RefPtr<SharedMessageBody>>>&& aMessages);
 
