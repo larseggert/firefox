@@ -53,16 +53,11 @@ MockObjectRegisterer.prototype = {
       this._mockFactory = SpecialPowers.wrapCallbackObject(this._mockFactory);
     }
 
-    var retVal = SpecialPowers.swapFactoryRegistration(
+    this._originalCID = SpecialPowers.swapFactoryRegistration(
       null,
       this._contractID,
       this._mockFactory
     );
-    if ("error" in retVal) {
-      throw new Error("ERROR: " + retVal.error);
-    } else {
-      this._originalCID = retVal.originalCID;
-    }
   },
 
   /**

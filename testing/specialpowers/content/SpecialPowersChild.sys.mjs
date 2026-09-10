@@ -1782,7 +1782,7 @@ export class SpecialPowersChild extends JSWindowActorChild {
 
     // Restore the original factory.
     componentRegistrar.registerFactory(cid, "", contractID, newFactory);
-    return { originalCID: currentCID };
+    return currentCID;
   }
 
   _getElement(aWindow, id) {
