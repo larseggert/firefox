@@ -3327,22 +3327,37 @@ var gUIDensity = {
     if (!(threshold > 0)) {
       return false;
     }
+    const { width, height } = this._densityReferenceSize();
     if (
-      window.innerHeight &&
-      this.AUTO_COMPACT_REFERENCE_TABSTRIP_HEIGHT / window.innerHeight >
-        threshold
+      height &&
+      this.AUTO_COMPACT_REFERENCE_TABSTRIP_HEIGHT / height > threshold
     ) {
       return true;
     }
     if (
-      window.innerWidth &&
+      width &&
       this._isSidebarLauncherCollapsed() &&
-      this.AUTO_COMPACT_REFERENCE_SIDEBAR_LAUNCHER_WIDTH / window.innerWidth >
-        threshold
+      this.AUTO_COMPACT_REFERENCE_SIDEBAR_LAUNCHER_WIDTH / width > threshold
     ) {
       return true;
     }
     return false;
+  },
+
+  // This function returns our window size, for the purpose of judging whether we
+  // should auto-compact. If we're maximized (as indicated by "sizemode"), we don't
+  // trust window.inner{Width,Height} as authoritative, because we might be a
+  // newly-spawned window, waiting on the OS to tell us our correct size. Hence: for
+  // maximized windows, we use the screen size (if it's larger), since it doesn't
+  // change as often and is likely to be close to the maximized window-size.
+  _densityReferenceSize() {
+    if (document.documentElement.getAttribute("sizemode") == "maximized") {
+      return {
+        width: Math.max(window.screen.availWidth, window.innerWidth),
+        height: Math.max(window.screen.availHeight, window.innerHeight),
+      };
+    }
+    return { width: window.innerWidth, height: window.innerHeight };
   },
 
   // Whether the sidebar.revamp launcher is currently visible (sidebar is
