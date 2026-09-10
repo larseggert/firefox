@@ -16,6 +16,8 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   AIWindowUI:
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindowUI.sys.mjs",
+  MESSAGE_ROLE:
+    "moz-src:///browser/components/aiwindow/models/Conversation.sys.mjs",
 });
 
 const { HttpServer } = ChromeUtils.importESModule(
@@ -772,6 +774,7 @@ add_task(
 add_task(async function test_resume_prompt_click_shows_confirmation_card() {
   const sb = sinon.createSandbox();
   try {
+    Services.fog.testResetFOG();
     sb.stub(openAIEngine, "build").resolves({});
     const fetchWithHistoryStub = sb.stub(Chat, "fetchWithHistory").resolves();
 
@@ -788,6 +791,31 @@ add_task(async function test_resume_prompt_click_shows_confirmation_card() {
         aiWindow.conversationId,
         conversationIdAtClick,
         "Should resume in the conversation the pill was clicked in"
+      );
+
+      const userMessage = aiWindow.conversation.messages.findLast(
+        message => message.role === lazy.MESSAGE_ROLE.USER
+      );
+      const submitEvents = Glean.smartWindow.chatSubmit.testGetValue();
+      Assert.equal(
+        submitEvents?.length,
+        1,
+        "Resume pill click records a single chat submit event"
+      );
+      Assert.equal(
+        submitEvents[0].extra.submit_type,
+        "resume",
+        "Resume pill click records submit_type resume"
+      );
+      Assert.equal(
+        submitEvents[0].extra.chat_id,
+        conversationIdAtClick,
+        "Chat submit event carries the clicked conversation id"
+      );
+      Assert.equal(
+        submitEvents[0].extra.length,
+        String(userMessage.content.body.length),
+        "Chat submit event measures the resume-activity user turn"
       );
 
       const assistantMessage = aiWindow.conversation.messages.at(-1);

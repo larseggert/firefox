@@ -138,7 +138,7 @@ ChromeUtils.defineLazyGetter(lazy, "log", function () {
  */
 
 /**
- * @typedef {"button" | "enter" | "follow-up" | "shortcuts" | "starter" | "suggestion"} ChatSubmitType
+ * @typedef {"button" | "enter" | "follow-up" | "resume" | "retry" | "shortcuts" | "starter" | "suggestion"} ChatSubmitType
  */
 
 const MODE = {
@@ -1908,6 +1908,14 @@ export class AIWindow extends MozLitElement {
    * @param {SmartbarAction} [options.detectedIntent] - The detected smarbar intent
    * @param {number} [options.inlineMentionsCount] - Number of inline mentions
    * @param {string} [options.sourceLocation] - Override smartbar location
+   * @param {boolean} [options.skipPromptGeneration=false] - When true, `text`
+   *   is already present in the conversation as a user turn, so skip
+   *   generatePrompt and only add the assistant message the stream writes
+   *   into. `text` is still used for telemetry.
+   * @param {boolean} [options.skipSystemPromptRefresh=false] - When true, keep
+   *   the conversation's existing system prompt instead of reloading it.
+   * @param {object} [options.assistantToolUIData] - Tool UI attached to the
+   *   assistant message so it renders alongside the streamed response.
    */
   submitChatMessage({
     text,
@@ -1917,6 +1925,9 @@ export class AIWindow extends MozLitElement {
     detectedIntent,
     inlineMentionsCount = 0,
     sourceLocation,
+    skipPromptGeneration = false,
+    skipSystemPromptRefresh = false,
+    assistantToolUIData,
   }) {
     const trimmed = String(text ?? "").trim();
     if (!trimmed) {
@@ -1947,9 +1958,12 @@ export class AIWindow extends MozLitElement {
     }
 
     this.#recordChatInteraction();
-    this.#fetchAIResponse(trimmed, {
+    this.#fetchAIResponse(skipPromptGeneration ? undefined : trimmed, {
       ...this.#createUserRoleOpts(contextMentions),
       pageUrl: contextPageUrl,
+      ensureAssistantResponse: skipPromptGeneration,
+      skipSystemPromptRefresh,
+      assistantToolUIData,
     });
     this.#dispatchChromeEvent(
       "ai-window:smartbar-input",
@@ -2112,15 +2126,29 @@ export class AIWindow extends MozLitElement {
     const strippedHeadline =
       resumePrompt.text.replace(RESUME_HEADLINE_PREFIX_RE, "").trim() ||
       resumePrompt.text.trim();
-    await this.reloadAndGenerate(conversation, {
-      uiType: "tab-group-confirmation",
-      toolCallId: `resume-activity-${resumePrompt.memory.id}`,
-      isResumeActivity: true,
-      properties: {
-        actionType: "open_tabs",
-        tabGroupLabel:
-          strippedHeadline.charAt(0).toUpperCase() + strippedHeadline.slice(1),
-        tabs,
+
+    // The conversation was built with its own bespoke system prompt and its
+    // user turn already appended, so the request only needs real-time context
+    // injected before it goes out.
+    const userMessage = conversation.messages.at(-1);
+    await conversation.injectRealTimeContext(userMessage, {});
+    this.openConversation(conversation);
+    this.submitChatMessage({
+      text: userMessage?.content?.body ?? resumePrompt.content.headline,
+      submitType: "resume",
+      skipPromptGeneration: true,
+      skipSystemPromptRefresh: true,
+      assistantToolUIData: {
+        uiType: "tab-group-confirmation",
+        toolCallId: `resume-activity-${resumePrompt.memory.id}`,
+        isResumeActivity: true,
+        properties: {
+          actionType: "open_tabs",
+          tabGroupLabel:
+            strippedHeadline.charAt(0).toUpperCase() +
+            strippedHeadline.slice(1),
+          tabs,
+        },
       },
     });
   }
@@ -3194,32 +3222,6 @@ export class AIWindow extends MozLitElement {
     }
     this.openConversation(conversation);
     this.#continueAfterToolResult();
-  }
-
-  /**
-   * Opens a pre-built conversation whose last message is a user turn and
-   * generates the assistant reply. Unlike reloadAndContinue (which resumes
-   * an in-flight tool turn), this adds the assistant placeholder the stream
-   * needs, and skips the usual system-prompt reload since the conversation
-   * was just built with its own bespoke system prompt.
-   *
-   * @param {ChatConversation} conversation
-   * @param {object} [assistantToolUIData] - Attached to the assistant
-   *   message so it renders alongside the streamed response (e.g. a
-   *   tab-selection card for resume-activity starters).
-   */
-  async reloadAndGenerate(conversation, assistantToolUIData) {
-    if (!conversation) {
-      return;
-    }
-    const userMessage = conversation.messages.at(-1);
-    await conversation.injectRealTimeContext(userMessage, {});
-    this.openConversation(conversation);
-    this.#fetchAIResponse(undefined, {
-      ensureAssistantResponse: true,
-      skipSystemPromptRefresh: true,
-      assistantToolUIData,
-    });
   }
 
   async #continueAfterToolResult() {
