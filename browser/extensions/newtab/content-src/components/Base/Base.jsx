@@ -46,6 +46,14 @@ import {
   spacesBandClasses,
 } from "common/PageLayoutVariants.mjs";
 
+const CLOSED_SUBPANELS = {
+  showSectionsMgmtPanel: false,
+  showWidgetsManagementPanel: false,
+  showThemesPanel: false,
+  showWallpapersPanel: false,
+  wallpapersPanelCategory: null,
+};
+
 const VISIBLE = "visible";
 const VISIBILITY_CHANGE_EVENT = "visibilitychange";
 // Scroll distances in pixels, in ascending order, that each record a scroll
@@ -142,6 +150,9 @@ export class BaseContent extends React.PureComponent {
     this.toggleWidgetsManagementPanel =
       this.toggleWidgetsManagementPanel.bind(this);
     this.toggleThemesPanel = this.toggleThemesPanel.bind(this);
+    this.openWallpapersPanel = this.openWallpapersPanel.bind(this);
+    this.closeWallpapersPanel = this.closeWallpapersPanel.bind(this);
+    this.closeSubpanels = this.closeSubpanels.bind(this);
     this.openWidgetsPanel = this.openWidgetsPanel.bind(this);
     this.attachSearchSentinel = this.attachSearchSentinel.bind(this);
     this.onSearchSentinelIntersect = this.onSearchSentinelIntersect.bind(this);
@@ -154,9 +165,7 @@ export class BaseContent extends React.PureComponent {
       wallpaperTheme: "",
       showDownloadHighlightOverride: null,
       visible: false,
-      showSectionsMgmtPanel: false,
-      showWidgetsManagementPanel: false,
-      showThemesPanel: false,
+      ...CLOSED_SUBPANELS,
     };
     this.spocPlaceholderStartTime = null;
   }
@@ -847,14 +856,30 @@ export class BaseContent extends React.PureComponent {
     }));
   }
 
+  openWallpapersPanel(categoryId) {
+    this.setState({
+      ...CLOSED_SUBPANELS,
+      showWallpapersPanel: true,
+      wallpapersPanelCategory: categoryId,
+    });
+  }
+
+  // Keeps wallpapersPanelCategory so the heading and wallpaper list stay
+  // populated while the subpanel slides out. The next open overwrites it.
+  closeWallpapersPanel() {
+    this.setState({ showWallpapersPanel: false });
+  }
+
+  closeSubpanels() {
+    this.setState(CLOSED_SUBPANELS);
+  }
+
   openWidgetsPanel() {
     this.openCustomizationMenu();
-    if (!this.state.showWidgetsManagementPanel) {
-      this.setState({
-        showWidgetsManagementPanel: true,
-        showSectionsMgmtPanel: false,
-      });
-    }
+    this.setState({
+      ...CLOSED_SUBPANELS,
+      showWidgetsManagementPanel: true,
+    });
   }
 
   shouldDisplayTopicSelectionModal() {
@@ -1359,6 +1384,11 @@ export class BaseContent extends React.PureComponent {
                 toggleWidgetsManagementPanel={this.toggleWidgetsManagementPanel}
                 toggleThemesPanel={this.toggleThemesPanel}
                 showThemesPanel={this.state.showThemesPanel}
+                showWallpapersPanel={this.state.showWallpapersPanel}
+                wallpapersPanelCategory={this.state.wallpapersPanelCategory}
+                openWallpapersPanel={this.openWallpapersPanel}
+                closeWallpapersPanel={this.closeWallpapersPanel}
+                closeSubpanels={this.closeSubpanels}
                 widgetsEnabled={widgetsEnabled}
                 dispatch={this.props.dispatch}
               />
@@ -1535,6 +1565,11 @@ export class BaseContent extends React.PureComponent {
               showSectionsMgmtPanel={this.state.showSectionsMgmtPanel}
               toggleThemesPanel={this.toggleThemesPanel}
               showThemesPanel={this.state.showThemesPanel}
+              showWallpapersPanel={this.state.showWallpapersPanel}
+              wallpapersPanelCategory={this.state.wallpapersPanelCategory}
+              openWallpapersPanel={this.openWallpapersPanel}
+              closeWallpapersPanel={this.closeWallpapersPanel}
+              closeSubpanels={this.closeSubpanels}
             />
             {shouldShowOMCHighlight(
               this.props.Messages,

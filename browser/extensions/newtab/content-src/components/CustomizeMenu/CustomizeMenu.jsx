@@ -125,12 +125,9 @@ export class _CustomizeMenu extends React.PureComponent {
     if (this.dialogRef.current?.open) {
       this.dialogRef.current.close();
     }
-    if (this.props.showWidgetsManagementPanel) {
-      this.props.toggleWidgetsManagementPanel();
-    }
-    if (this.props.showSectionsMgmtPanel) {
-      this.props.toggleSectionsMgmtPanel();
-    }
+    this.props.closeSubpanels();
+    // Reset local state in case a subpanel does not report that it closed.
+    this.setState({ subpanelOpen: false });
     if (this.personalizeButtonRef.current) {
       this.personalizeButtonRef.current.focus();
     }
@@ -261,6 +258,10 @@ export class _CustomizeMenu extends React.PureComponent {
                 browserNovaEnabled={browserNovaEnabled}
                 toggleThemesPanel={this.props.toggleThemesPanel}
                 showThemesPanel={this.props.showThemesPanel}
+                showWallpapersPanel={this.props.showWallpapersPanel}
+                wallpapersPanelCategory={this.props.wallpapersPanelCategory}
+                openWallpapersPanel={this.props.openWallpapersPanel}
+                closeWallpapersPanel={this.props.closeWallpapersPanel}
                 toggleWidgetsManagementPanel={
                   this.props.toggleWidgetsManagementPanel
                 }

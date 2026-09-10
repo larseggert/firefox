@@ -37,7 +37,6 @@ describe("<SectionsMgmtPanel>", () => {
     const { container } = render(
       <WrapWithProvider state={STATE_WITH_SECTIONS}>
         <SectionsMgmtPanel
-          exitEventFired={false}
           pocketEnabled={true}
           onSubpanelToggle={jest.fn()}
           togglePanel={jest.fn()}
@@ -52,7 +51,6 @@ describe("<SectionsMgmtPanel>", () => {
     const { container } = render(
       <WrapWithProvider state={STATE_WITH_SECTIONS}>
         <SectionsMgmtPanel
-          exitEventFired={false}
           pocketEnabled={true}
           onSubpanelToggle={jest.fn()}
           togglePanel={jest.fn()}

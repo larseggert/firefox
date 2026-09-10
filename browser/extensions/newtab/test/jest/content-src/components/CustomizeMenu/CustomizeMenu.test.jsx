@@ -1,4 +1,5 @@
-import { render } from "@testing-library/react";
+import React from "react";
+import { render, act } from "@testing-library/react";
 import { WrapWithProvider } from "test/jest/test-utils";
 import { _CustomizeMenu as CustomizeMenu } from "content-src/components/CustomizeMenu/CustomizeMenu";
 
@@ -38,6 +39,7 @@ const DEFAULT_PROPS = {
   showSectionsMgmtPanel: false,
   toggleWidgetsManagementPanel: jest.fn(),
   showWidgetsManagementPanel: false,
+  closeSubpanels: jest.fn(),
   Prefs: { values: {} },
 };
 
@@ -47,6 +49,19 @@ const NOVA_PROPS = {
 };
 
 describe("<CustomizeMenu>", () => {
+  // jsdom does not implement dialog showModal() or close(), which the component calls on open and exit.
+  let originalShowModal;
+  let originalClose;
+  beforeEach(() => {
+    originalShowModal = HTMLDialogElement.prototype.showModal;
+    originalClose = HTMLDialogElement.prototype.close;
+  });
+  afterEach(() => {
+    HTMLDialogElement.prototype.showModal = originalShowModal;
+    HTMLDialogElement.prototype.close = originalClose;
+    jest.useRealTimers();
+  });
+
   it("should render", () => {
     const { container } = render(
       <WrapWithProvider>
@@ -109,5 +124,49 @@ describe("<CustomizeMenu>", () => {
       </WrapWithProvider>
     );
     expect(container.querySelector("theme-picker")).toBeInTheDocument();
+  });
+
+  it("closes every subpanel once the dialog has finished exiting", () => {
+    jest.useFakeTimers();
+    HTMLDialogElement.prototype.showModal = jest.fn();
+    HTMLDialogElement.prototype.close = jest.fn();
+    const closeSubpanels = jest.fn();
+    const ref = React.createRef();
+    const props = { ...NOVA_PROPS, closeSubpanels };
+
+    const { container, rerender } = render(
+      <WrapWithProvider>
+        <CustomizeMenu {...props} showing={false} ref={ref} />
+      </WrapWithProvider>
+    );
+    rerender(
+      <WrapWithProvider>
+        <CustomizeMenu {...props} showing={true} ref={ref} />
+      </WrapWithProvider>
+    );
+    act(() => {
+      jest.advanceTimersByTime(250);
+    });
+    act(() => {
+      ref.current.onSubpanelToggle(true);
+    });
+    expect(container.querySelector(".customize-menu-content")).toHaveClass(
+      "subpanel-open"
+    );
+
+    rerender(
+      <WrapWithProvider>
+        <CustomizeMenu {...props} showing={false} ref={ref} />
+      </WrapWithProvider>
+    );
+    expect(closeSubpanels).not.toHaveBeenCalled();
+    act(() => {
+      jest.advanceTimersByTime(250);
+    });
+
+    expect(closeSubpanels).toHaveBeenCalledTimes(1);
+    expect(container.querySelector(".customize-menu-content")).not.toHaveClass(
+      "subpanel-open"
+    );
   });
 });

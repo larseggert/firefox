@@ -29,7 +29,41 @@ const DEFAULT_PROPS = {
   activeWallpaper: "celestial",
   setPref: jest.fn(),
   dispatch: jest.fn(),
+  showPanel: false,
+  activeCategory: null,
+  openPanel: jest.fn(),
+  closePanel: jest.fn(),
 };
+
+// Base.jsx owns the subpanel state in production. This harness stands in for
+// it: openPanel records the category and shows the panel, closePanel hides
+// the panel but keeps the category, exactly as Base does.
+const Harness = React.forwardRef(function Harness(
+  { onOpenPanel, onClosePanel, ...props },
+  ref
+) {
+  const [showPanel, setShowPanel] = React.useState(false);
+  const [activeCategory, setActiveCategory] = React.useState(null);
+  const openPanel = categoryId => {
+    onOpenPanel?.(categoryId);
+    setActiveCategory(categoryId);
+    setShowPanel(true);
+  };
+  const closePanel = () => {
+    onClosePanel?.();
+    setShowPanel(false);
+  };
+  return (
+    <WallpaperCategories
+      ref={ref}
+      {...props}
+      showPanel={showPanel}
+      activeCategory={activeCategory}
+      openPanel={openPanel}
+      closePanel={closePanel}
+    />
+  );
+});
 
 describe("<WallpaperCategories>", () => {
   beforeAll(() => {
@@ -95,7 +129,7 @@ describe("<WallpaperCategories>", () => {
   });
 
   it("should clear initialWallpaper when a wallpaper is set", () => {
-    const { container } = render(<WallpaperCategories {...DEFAULT_PROPS} />);
+    const { container } = render(<Harness {...DEFAULT_PROPS} />);
     fireEvent.click(container.querySelector("#celestial"));
     fireEvent.click(container.querySelector("#moon"));
     expect(DEFAULT_PROPS.setPref).toHaveBeenCalledWith(
@@ -155,7 +189,7 @@ describe("<WallpaperCategories>", () => {
         ],
       },
     };
-    const { container } = render(<WallpaperCategories {...props} />);
+    const { container } = render(<Harness {...props} />);
     fireEvent.click(container.querySelector("#celestial"));
 
     expect(container.querySelector("#moon")).toBeInTheDocument();
@@ -184,7 +218,7 @@ describe("<WallpaperCategories>", () => {
     });
 
     const openCelestial = props => {
-      const { container } = render(<WallpaperCategories {...props} />);
+      const { container } = render(<Harness {...props} />);
       fireEvent.click(container.querySelector("#celestial"));
       return container;
     };
@@ -294,7 +328,7 @@ describe("<WallpaperCategories>", () => {
 
   it("opens the requested category when deep-linked via App state", () => {
     const onSubpanelToggle = jest.fn();
-    const ref = React.createRef();
+    const onOpenPanel = jest.fn();
     const props = {
       ...DEFAULT_PROPS,
       onSubpanelToggle,
@@ -304,46 +338,143 @@ describe("<WallpaperCategories>", () => {
       },
       customizePanelWallpaperCategory: null,
     };
-    const { rerender } = render(<WallpaperCategories {...props} ref={ref} />);
-    expect(ref.current.state.activeCategory).toBeNull();
+    const { container, rerender } = render(
+      <Harness {...props} onOpenPanel={onOpenPanel} />
+    );
+    expect(onOpenPanel).not.toHaveBeenCalled();
 
     act(() => {
       rerender(
-        <WallpaperCategories
+        <Harness
           {...props}
+          onOpenPanel={onOpenPanel}
           customizePanelWallpaperCategory="firefox"
-          ref={ref}
         />
       );
     });
 
-    expect(ref.current.state.activeCategory).toBe("firefox");
-    expect(ref.current.state.activeCategoryFluentID).toBe(
+    expect(onOpenPanel).toHaveBeenCalledWith("firefox");
+    expect(
+      container.querySelector(".wallpaper-list .arrow-button")
+    ).toHaveAttribute(
+      "data-l10n-id",
       "newtab-wallpaper-category-title-firefox"
     );
     expect(onSubpanelToggle).toHaveBeenCalledWith(true);
+    expect(DEFAULT_PROPS.dispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: at.WALLPAPER_CATEGORY_CLICK })
+    );
   });
 
   it("ignores a deep-linked category that is unavailable", () => {
-    const ref = React.createRef();
+    const onOpenPanel = jest.fn();
     const props = {
       ...DEFAULT_PROPS,
       customizePanelWallpaperCategory: null,
     };
-    const { rerender } = render(<WallpaperCategories {...props} ref={ref} />);
+    const { rerender } = render(
+      <Harness {...props} onOpenPanel={onOpenPanel} />
+    );
 
     act(() => {
       rerender(
-        <WallpaperCategories
+        <Harness
           {...props}
+          onOpenPanel={onOpenPanel}
           customizePanelWallpaperCategory="firefox"
-          ref={ref}
         />
       );
     });
 
     // "firefox" is not in DEFAULT_PROPS categories, so nothing should open.
-    expect(ref.current.state.activeCategory).toBeNull();
+    expect(onOpenPanel).not.toHaveBeenCalled();
+  });
+
+  it("opens the panel and records a category click when a tile is clicked", () => {
+    const onOpenPanel = jest.fn();
+    const { container } = render(
+      <Harness {...DEFAULT_PROPS} onOpenPanel={onOpenPanel} />
+    );
+    fireEvent.click(container.querySelector("#celestial"));
+    expect(onOpenPanel).toHaveBeenCalledWith("celestial");
+    expect(DEFAULT_PROPS.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: at.WALLPAPER_CATEGORY_CLICK,
+        data: "celestial",
+      })
+    );
+  });
+
+  it("notifies the customize menu once per open and once per close", () => {
+    const onSubpanelToggle = jest.fn();
+    const onClosePanel = jest.fn();
+    const originalRAF = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = cb => {
+      cb();
+      return 0;
+    };
+    try {
+      const { container } = render(
+        <Harness
+          {...DEFAULT_PROPS}
+          onSubpanelToggle={onSubpanelToggle}
+          onClosePanel={onClosePanel}
+        />
+      );
+      fireEvent.click(container.querySelector("#celestial"));
+      expect(onSubpanelToggle).toHaveBeenCalledTimes(1);
+      expect(onSubpanelToggle).toHaveBeenLastCalledWith(true);
+
+      fireEvent.click(container.querySelector(".wallpaper-list .arrow-button"));
+      expect(onClosePanel).toHaveBeenCalledTimes(1);
+      expect(onSubpanelToggle).toHaveBeenCalledTimes(2);
+      expect(onSubpanelToggle).toHaveBeenLastCalledWith(false);
+      // The synchronous requestAnimationFrame stub makes the refocus observable straight away.
+      expect(document.activeElement).toBe(
+        container.querySelector("#celestial")
+      );
+    } finally {
+      globalThis.requestAnimationFrame = originalRAF;
+    }
+  });
+
+  it("does not notify again when switching to another category while open", () => {
+    const onSubpanelToggle = jest.fn();
+    const onOpenPanel = jest.fn();
+    const { container } = render(
+      <Harness
+        {...DEFAULT_PROPS}
+        onSubpanelToggle={onSubpanelToggle}
+        onOpenPanel={onOpenPanel}
+      />
+    );
+    fireEvent.click(container.querySelector("#celestial"));
+    fireEvent.click(container.querySelector("#solid-colors"));
+    expect(onOpenPanel).toHaveBeenLastCalledWith("solid-colors");
+    expect(onSubpanelToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the category title on the heading after back, for the exit animation", () => {
+    const originalRAF = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = cb => {
+      cb();
+      return 0;
+    };
+    try {
+      const { container } = render(<Harness {...DEFAULT_PROPS} />);
+      fireEvent.click(container.querySelector("#celestial"));
+      fireEvent.click(container.querySelector(".wallpaper-list .arrow-button"));
+      // The harness keeps activeCategory as Base does, so the heading keeps
+      // its title while the CSSTransition plays the exit.
+      expect(
+        container.querySelector(".wallpaper-list .arrow-button")
+      ).toHaveAttribute(
+        "data-l10n-id",
+        "newtab-wallpaper-category-title-celestial"
+      );
+    } finally {
+      globalThis.requestAnimationFrame = originalRAF;
+    }
   });
 
   it("names the back button and keeps the category title as a heading", () => {
@@ -356,7 +487,7 @@ describe("<WallpaperCategories>", () => {
         },
       },
     };
-    const { container } = render(<WallpaperCategories {...novaProps} />);
+    const { container } = render(<Harness {...novaProps} />);
     fireEvent.click(container.querySelector("#celestial"));
 
     const wrapper = container.querySelector(
@@ -440,9 +571,7 @@ describe("<WallpaperCategories>", () => {
     });
 
     it("keeps the add an image tile until something is saved", () => {
-      const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers([])} />
-      );
+      const { container } = render(<Harness {...withSavedWallpapers([])} />);
       const tile = container.querySelector("#custom-wallpaper");
       expect(tile).toHaveClass("theme-custom-wallpaper");
       expect(
@@ -455,7 +584,7 @@ describe("<WallpaperCategories>", () => {
         "newtabWallpapers.customWallpaper.library.enabled": false,
       });
 
-      const { container } = render(<WallpaperCategories {...props} />);
+      const { container } = render(<Harness {...props} />);
       const tile = container.querySelector("#custom-wallpaper");
       expect(tile).toHaveClass("theme-custom-wallpaper");
       expect(tile).not.toHaveClass("your-images-folder");
@@ -470,7 +599,7 @@ describe("<WallpaperCategories>", () => {
       // image, which is worse than showing nothing.
       const props = withSavedWallpapers();
       const { container } = render(
-        <WallpaperCategories
+        <Harness
           {...props}
           Prefs={{
             values: {
@@ -501,7 +630,7 @@ describe("<WallpaperCategories>", () => {
       // folder tile draws nothing at all in that window.
       const props = withSavedWallpapers();
       const { container, rerender } = render(
-        <WallpaperCategories
+        <Harness
           {...props}
           Wallpapers={{ ...props.Wallpapers, customWallpaperThumbnails: [] }}
         />
@@ -513,7 +642,7 @@ describe("<WallpaperCategories>", () => {
       expect(tile().style.backgroundImage).toBe("");
 
       act(() => {
-        rerender(<WallpaperCategories {...props} />);
+        rerender(<Harness {...props} />);
       });
 
       expect(tile()).toHaveClass("your-images-folder");
@@ -522,9 +651,7 @@ describe("<WallpaperCategories>", () => {
     });
 
     it("turns the tile into a folder once an image is saved", () => {
-      const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers()} />
-      );
+      const { container } = render(<Harness {...withSavedWallpapers()} />);
       const tile = container.querySelector("#custom-wallpaper");
       expect(tile).not.toHaveClass("theme-custom-wallpaper");
       expect(tile).toHaveAttribute(
@@ -544,7 +671,7 @@ describe("<WallpaperCategories>", () => {
         "newtabWallpapers.wallpaper": "custom",
         "newtabWallpapers.customWallpaper.uuid": SAVED[1].filename,
       });
-      const { container } = render(<WallpaperCategories {...props} />);
+      const { container } = render(<Harness {...props} />);
       const tile = container.querySelector("#custom-wallpaper");
       expect(tile.style.backgroundImage).toBe(
         `url(${thumbnailUrl(SAVED[1].filename)})`
@@ -553,9 +680,7 @@ describe("<WallpaperCategories>", () => {
     });
 
     it("lists every saved image and a tile to add another", () => {
-      const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers()} />
-      );
+      const { container } = render(<Harness {...withSavedWallpapers()} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const images = container.querySelectorAll(
@@ -572,9 +697,7 @@ describe("<WallpaperCategories>", () => {
     });
 
     it("asks before removing a saved image", () => {
-      const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers()} />
-      );
+      const { container } = render(<Harness {...withSavedWallpapers()} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const removeButtons = container.querySelectorAll(".your-images-remove");
@@ -623,9 +746,7 @@ describe("<WallpaperCategories>", () => {
     it("restores focus when another image is added during removal", () => {
       const props = withSavedWallpapers();
       const ref = React.createRef();
-      const { container, rerender } = render(
-        <WallpaperCategories {...props} ref={ref} />
-      );
+      const { container, rerender } = render(<Harness {...props} ref={ref} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const remove = container.querySelector(".your-images-remove");
@@ -643,7 +764,7 @@ describe("<WallpaperCategories>", () => {
       };
       act(() => {
         rerender(
-          <WallpaperCategories
+          <Harness
             {...props}
             Wallpapers={{
               ...props.Wallpapers,
@@ -661,9 +782,7 @@ describe("<WallpaperCategories>", () => {
     });
 
     it("names each remove button after the tile it belongs to", () => {
-      const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers()} />
-      );
+      const { container } = render(<Harness {...withSavedWallpapers()} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const items = [...container.querySelectorAll(".your-images-item")];
@@ -698,9 +817,7 @@ describe("<WallpaperCategories>", () => {
     it("moves real focus to a new upload when focus was in the folder", () => {
       const props = withSavedWallpapers();
       const ref = React.createRef();
-      const { container, rerender } = render(
-        <WallpaperCategories {...props} ref={ref} />
-      );
+      const { container, rerender } = render(<Harness {...props} ref={ref} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       // Uploading starts from the add tile, so that is what holds focus when
@@ -724,7 +841,7 @@ describe("<WallpaperCategories>", () => {
 
       act(() => {
         rerender(
-          <WallpaperCategories
+          <Harness
             {...props}
             Wallpapers={{
               ...props.Wallpapers,
@@ -753,7 +870,7 @@ describe("<WallpaperCategories>", () => {
     it("does not arm upload focus while the file picker is open", () => {
       const ref = React.createRef();
       const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers()} ref={ref} />
+        <Harness {...withSavedWallpapers()} ref={ref} />
       );
       fireEvent.click(container.querySelector("#custom-wallpaper"));
       fireEvent.click(container.querySelector("#your-images-add"));
@@ -764,11 +881,11 @@ describe("<WallpaperCategories>", () => {
     it("clears upload focus when the parent reports a failure", () => {
       const props = withSavedWallpapers();
       const ref = React.createRef();
-      const { rerender } = render(<WallpaperCategories {...props} ref={ref} />);
+      const { rerender } = render(<Harness {...props} ref={ref} />);
       act(() => {
         ref.current.pendingUploadId = "request-1";
         rerender(
-          <WallpaperCategories
+          <Harness
             {...props}
             Wallpapers={{
               ...props.Wallpapers,
@@ -785,11 +902,11 @@ describe("<WallpaperCategories>", () => {
     it("drops the upload result once it has been acted on", () => {
       const props = withSavedWallpapers();
       const ref = React.createRef();
-      const { rerender } = render(<WallpaperCategories {...props} ref={ref} />);
+      const { rerender } = render(<Harness {...props} ref={ref} />);
       act(() => {
         ref.current.pendingUploadId = "request-1";
         rerender(
-          <WallpaperCategories
+          <Harness
             {...props}
             Wallpapers={{
               ...props.Wallpapers,
@@ -810,9 +927,7 @@ describe("<WallpaperCategories>", () => {
 
     it("leaves focus alone when the library grows without this tab asking", () => {
       const props = withSavedWallpapers();
-      const { container, rerender } = render(
-        <WallpaperCategories {...props} />
-      );
+      const { container, rerender } = render(<Harness {...props} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const images = () =>
@@ -826,7 +941,7 @@ describe("<WallpaperCategories>", () => {
       // arrive as a bigger library with no click here.
       act(() => {
         rerender(
-          <WallpaperCategories
+          <Harness
             {...props}
             Wallpapers={{
               ...props.Wallpapers,
@@ -849,9 +964,7 @@ describe("<WallpaperCategories>", () => {
 
     it("leaves focus alone when an upload lands from outside the folder", () => {
       const props = withSavedWallpapers();
-      const { container, rerender } = render(
-        <WallpaperCategories {...props} />
-      );
+      const { container, rerender } = render(<Harness {...props} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const outside = document.createElement("button");
@@ -860,7 +973,7 @@ describe("<WallpaperCategories>", () => {
 
       act(() => {
         rerender(
-          <WallpaperCategories
+          <Harness
             {...props}
             Wallpapers={{
               ...props.Wallpapers,
@@ -884,9 +997,7 @@ describe("<WallpaperCategories>", () => {
     });
 
     it("names the remove button after a rescued wallpaper's own title", () => {
-      const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers()} />
-      );
+      const { container } = render(<Harness {...withSavedWallpapers()} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const [, remove] = container.querySelectorAll(".your-images-remove");
@@ -902,7 +1013,7 @@ describe("<WallpaperCategories>", () => {
 
     it("names an image someone added by its number", async () => {
       const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers([SAVED[0]])} />
+        <Harness {...withSavedWallpapers([SAVED[0]])} />
       );
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
@@ -922,7 +1033,7 @@ describe("<WallpaperCategories>", () => {
     it("keeps its own title rather than a number when it has one", async () => {
       const withTitle = [{ ...SAVED[0], number: 4, fallbackName: "A heron" }];
       const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers(withTitle)} />
+        <Harness {...withSavedWallpapers(withTitle)} />
       );
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
@@ -943,9 +1054,7 @@ describe("<WallpaperCategories>", () => {
       // A page from the startup cache never sees the library broadcast, so a
       // change to the library alone would never reach it. The applied pref does.
       const props = withSavedWallpapers();
-      const { container, rerender } = render(
-        <WallpaperCategories {...props} />
-      );
+      const { container, rerender } = render(<Harness {...props} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const requests = () =>
@@ -956,14 +1065,14 @@ describe("<WallpaperCategories>", () => {
       // Control: re-rendering with nothing changed must not ask again.
       props.dispatch.mockClear();
       act(() => {
-        rerender(<WallpaperCategories {...props} />);
+        rerender(<Harness {...props} />);
       });
       expect(requests()).toBe(0);
 
       // The applied wallpaper moving is the signal that does reach the page.
       act(() => {
         rerender(
-          <WallpaperCategories
+          <Harness
             {...props}
             Prefs={{
               values: {
@@ -979,9 +1088,7 @@ describe("<WallpaperCategories>", () => {
 
     it("keeps the arrow-key tab stop across a re-render", () => {
       const props = withSavedWallpapers();
-      const { container, rerender } = render(
-        <WallpaperCategories {...props} />
-      );
+      const { container, rerender } = render(<Harness {...props} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const images = () =>
@@ -995,7 +1102,7 @@ describe("<WallpaperCategories>", () => {
       // A library update re-renders the grid; the tab stop must not snap back.
       act(() => {
         rerender(
-          <WallpaperCategories
+          <Harness
             {...props}
             Wallpapers={{ ...props.Wallpapers, customWallpapers: [...SAVED] }}
           />
@@ -1016,9 +1123,7 @@ describe("<WallpaperCategories>", () => {
         type: "custom",
         number: index + 1,
       }));
-      const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers(four)} />
-      );
+      const { container } = render(<Harness {...withSavedWallpapers(four)} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const tiles = () =>
@@ -1046,9 +1151,7 @@ describe("<WallpaperCategories>", () => {
         type: "custom",
         number: index + 1,
       }));
-      const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers(four)} />
-      );
+      const { container } = render(<Harness {...withSavedWallpapers(four)} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const tiles = () =>
@@ -1068,9 +1171,7 @@ describe("<WallpaperCategories>", () => {
     });
 
     it("moves the tab stop when a tile is activated without being focused", () => {
-      const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers()} />
-      );
+      const { container } = render(<Harness {...withSavedWallpapers()} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const images = () =>
@@ -1091,7 +1192,7 @@ describe("<WallpaperCategories>", () => {
         "newtabWallpapers.customWallpaper.uuid": SAVED[1].filename,
         "newtabWallpapers.wallpaper": "custom",
       });
-      const { container } = render(<WallpaperCategories {...props} />);
+      const { container } = render(<Harness {...props} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       // The tile goes straight to the file picker, the way it did before the
@@ -1108,7 +1209,7 @@ describe("<WallpaperCategories>", () => {
         trainhopConfig: { customWallpaperLibrary: { enabled: true } },
       });
 
-      const { container } = render(<WallpaperCategories {...props} />);
+      const { container } = render(<Harness {...props} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       expect(
@@ -1121,13 +1222,11 @@ describe("<WallpaperCategories>", () => {
       globalThis.URL.revokeObjectURL = url => revoked.push(url);
 
       const props = withSavedWallpapers();
-      const { container, rerender } = render(
-        <WallpaperCategories {...props} />
-      );
+      const { container, rerender } = render(<Harness {...props} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
       expect(revoked).toHaveLength(0);
 
-      rerender(<WallpaperCategories {...{ ...props, panelShowing: false }} />);
+      rerender(<Harness {...{ ...props, panelShowing: false }} />);
 
       expect(revoked.sort()).toEqual(
         SAVED.map(({ filename }) => `blob:${filename}`).sort()
@@ -1139,10 +1238,10 @@ describe("<WallpaperCategories>", () => {
       const off = withSavedWallpapers(SAVED, {
         "newtabWallpapers.customWallpaper.library.enabled": false,
       });
-      const { rerender } = render(<WallpaperCategories {...off} />);
+      const { rerender } = render(<Harness {...off} />);
       off.dispatch.mockClear();
 
-      rerender(<WallpaperCategories {...withSavedWallpapers()} />);
+      rerender(<Harness {...withSavedWallpapers()} />);
 
       const asked = off.dispatch.mock.calls.some(
         ([action]) => action.type === at.WALLPAPERS_CUSTOM_THUMBNAILS_REQUEST
@@ -1152,13 +1251,11 @@ describe("<WallpaperCategories>", () => {
 
     it("clears the thumbnail bytes out of this tab when the panel closes", () => {
       const props = withSavedWallpapers();
-      const { container, rerender } = render(
-        <WallpaperCategories {...props} />
-      );
+      const { container, rerender } = render(<Harness {...props} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
       props.dispatch.mockClear();
 
-      rerender(<WallpaperCategories {...{ ...props, panelShowing: false }} />);
+      rerender(<Harness {...{ ...props, panelShowing: false }} />);
 
       const cleared = props.dispatch.mock.calls.filter(
         ([action]) =>
@@ -1174,7 +1271,7 @@ describe("<WallpaperCategories>", () => {
         ({ filename }) => ({ filename, file: {} })
       );
 
-      const { container } = render(<WallpaperCategories {...props} />);
+      const { container } = render(<Harness {...props} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
 
       const images = container.querySelectorAll(
@@ -1192,9 +1289,7 @@ describe("<WallpaperCategories>", () => {
       // away and focus falls to the body.
       const ref = React.createRef();
       const before = withSavedWallpapers([]);
-      const { container, rerender } = render(
-        <WallpaperCategories {...before} ref={ref} />
-      );
+      const { container, rerender } = render(<Harness {...before} ref={ref} />);
 
       const addTile = container.querySelector("#custom-wallpaper");
       addTile.focus();
@@ -1209,7 +1304,7 @@ describe("<WallpaperCategories>", () => {
         requestId: "request-1",
         filename: SAVED[0].filename,
       };
-      rerender(<WallpaperCategories {...after} ref={ref} />);
+      rerender(<Harness {...after} ref={ref} />);
 
       const folderTile = container.querySelector("#custom-wallpaper");
       expect(folderTile).not.toBe(addTile);
@@ -1265,7 +1360,7 @@ describe("<WallpaperCategories>", () => {
 
       it("scales one the parent sent whole and sends it back", async () => {
         const props = propsWith([unscaled(SAVED[0].filename)]);
-        render(<WallpaperCategories {...props} />);
+        render(<Harness {...props} />);
 
         await waitFor(() => {
           const sent = props.dispatch.mock.calls
@@ -1283,7 +1378,7 @@ describe("<WallpaperCategories>", () => {
         const props = propsWith([
           { filename: SAVED[0].filename, file: new Blob(["thumb"]) },
         ]);
-        render(<WallpaperCategories {...props} />);
+        render(<Harness {...props} />);
 
         await Promise.resolve();
         expect(
@@ -1305,7 +1400,7 @@ describe("<WallpaperCategories>", () => {
       it("never starts while the panel is shut", async () => {
         const props = propsWith([unscaled(SAVED[0].filename)]);
         props.panelShowing = false;
-        render(<WallpaperCategories {...props} />);
+        render(<Harness {...props} />);
 
         await Promise.resolve();
         await Promise.resolve();
@@ -1327,13 +1422,13 @@ describe("<WallpaperCategories>", () => {
         };
 
         const props = propsWith([unscaled(SAVED[0].filename)]);
-        const { rerender } = render(<WallpaperCategories {...props} />);
+        const { rerender } = render(<Harness {...props} />);
         await waitFor(() => expect(finishScaling).toBeDefined());
         // Sanity: with the panel left open this same setup does dispatch.
         expect(madeCalls(props)).toHaveLength(0);
 
         const closed = { ...props, panelShowing: false };
-        rerender(<WallpaperCategories {...closed} />);
+        rerender(<Harness {...closed} />);
         finishScaling();
         // Long enough that the positive case below would have dispatched by
         // now, so a pass here means it stopped rather than it being early.
@@ -1360,10 +1455,10 @@ describe("<WallpaperCategories>", () => {
         globalThis.OffscreenCanvas = holding();
 
         const props = propsWith([unscaled(SAVED[0].filename)]);
-        const { rerender } = render(<WallpaperCategories {...props} />);
+        const { rerender } = render(<Harness {...props} />);
         await waitFor(() => expect(finishScaling).toBeDefined());
 
-        rerender(<WallpaperCategories {...props} panelShowing={false} />);
+        rerender(<Harness {...props} panelShowing={false} />);
         finishScaling();
         await new Promise(resolve => setTimeout(resolve, 20));
         expect(madeCalls(props)).toHaveLength(0);
@@ -1380,7 +1475,7 @@ describe("<WallpaperCategories>", () => {
             customWallpaperThumbnails: [unscaled(SAVED[0].filename)],
           },
         };
-        rerender(<WallpaperCategories {...reopened} />);
+        rerender(<Harness {...reopened} />);
         await waitFor(() => expect(finishScaling).toBeDefined());
         finishScaling();
 
@@ -1391,7 +1486,7 @@ describe("<WallpaperCategories>", () => {
         const props = propsWith([unscaled(SAVED[0].filename)], {
           "nova.enabled": false,
         });
-        render(<WallpaperCategories {...props} />);
+        render(<Harness {...props} />);
 
         await waitFor(() => expect(madeCalls(props)).toHaveLength(1));
       });
@@ -1410,7 +1505,7 @@ describe("<WallpaperCategories>", () => {
         };
 
         const props = propsWith([unscaled(SAVED[0].filename)]);
-        render(<WallpaperCategories {...props} />);
+        render(<Harness {...props} />);
         await waitFor(() => expect(finishScaling).toBeDefined());
         finishScaling();
 
@@ -1423,7 +1518,7 @@ describe("<WallpaperCategories>", () => {
         withSavedWallpapers(customWallpapers, { "nova.enabled": false });
 
       it("still opens the folder and lists every saved image", () => {
-        const { container } = render(<WallpaperCategories {...classic()} />);
+        const { container } = render(<Harness {...classic()} />);
         expect(container.querySelector(".nova-enabled")).toBeNull();
 
         fireEvent.click(container.querySelector("#custom-wallpaper"));
@@ -1435,7 +1530,7 @@ describe("<WallpaperCategories>", () => {
       });
 
       it("uses the classic label on the tile before anything is saved", () => {
-        const { container } = render(<WallpaperCategories {...classic([])} />);
+        const { container } = render(<Harness {...classic([])} />);
         // Nova renamed this copy; classic keeps the older string.
         expect(
           container.querySelector(
@@ -1445,7 +1540,7 @@ describe("<WallpaperCategories>", () => {
       });
 
       it("keeps the folder name on the tile once something is saved", () => {
-        const { container } = render(<WallpaperCategories {...classic()} />);
+        const { container } = render(<Harness {...classic()} />);
         expect(
           container.querySelector(
             'label[data-l10n-id="newtab-wallpaper-your-images"]'
@@ -1455,7 +1550,7 @@ describe("<WallpaperCategories>", () => {
 
       it("removes a saved image the same way", () => {
         const props = classic();
-        const { container } = render(<WallpaperCategories {...props} />);
+        const { container } = render(<Harness {...props} />);
         fireEvent.click(container.querySelector("#custom-wallpaper"));
 
         fireEvent.click(container.querySelectorAll(".your-images-remove")[1]);
@@ -1469,7 +1564,7 @@ describe("<WallpaperCategories>", () => {
       });
 
       it("walks the grid with the arrow keys", () => {
-        const { container } = render(<WallpaperCategories {...classic()} />);
+        const { container } = render(<Harness {...classic()} />);
         fireEvent.click(container.querySelector("#custom-wallpaper"));
 
         const images = () =>
@@ -1482,9 +1577,7 @@ describe("<WallpaperCategories>", () => {
     });
 
     it("applies a saved image when it is picked", () => {
-      const { container } = render(
-        <WallpaperCategories {...withSavedWallpapers()} />
-      );
+      const { container } = render(<Harness {...withSavedWallpapers()} />);
       fireEvent.click(container.querySelector("#custom-wallpaper"));
       fireEvent.click(
         container.querySelector(`#your-images-${SAVED[1].filename}`)

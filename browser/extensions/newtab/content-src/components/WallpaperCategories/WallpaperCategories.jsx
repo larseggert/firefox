@@ -110,8 +110,6 @@ export class _WallpaperCategories extends React.PureComponent {
     this.customColorInput = React.createRef(); // Used to determine contrast icon color for custom color picker
     this.wallpaperListRef = React.createRef(); // Used for CSSTransition nodeRef
     this.state = {
-      activeCategory: null,
-      activeCategoryFluentID: null,
       inputType: "radio",
       activeId: null,
       customWallpaperErrorType: null,
@@ -177,12 +175,12 @@ export class _WallpaperCategories extends React.PureComponent {
       this.requestThumbnails();
     }
 
-    // Wallpaper category subpanel should close when parent menu is closed
+    // Notify parent menu when subpanel opens/closes
     if (
-      this.props.exitEventFired &&
-      this.props.exitEventFired !== prevProps.exitEventFired
+      this.props.onSubpanelToggle &&
+      prevProps.showPanel !== this.props.showPanel
     ) {
-      this.handleBack();
+      this.props.onSubpanelToggle(this.props.showPanel);
     }
 
     // A CTA can deep-link into a specific wallpaper category by dispatching
@@ -662,7 +660,7 @@ export class _WallpaperCategories extends React.PureComponent {
 
     // The folder is not open on a first save, since the tile that started it
     // was still "Add an image". Focus the tile that replaced it.
-    if (this.state.activeCategory !== WALLPAPER_CATEGORIES.CustomWallpaper) {
+    if (this.props.activeCategory !== WALLPAPER_CATEGORIES.CustomWallpaper) {
       this.pendingUploadId = null;
       this.clearUploadResult();
       if (this.uploadStartedFromTile) {
@@ -696,11 +694,10 @@ export class _WallpaperCategories extends React.PureComponent {
   // The removed tile is gone, so focus whatever took its place. The tile that
   // adds an image is always last, so there is always something to focus.
   focusAfterRemoval() {
-    const { activeCategory, pendingRemoveIndex, pendingRemoveFilename } =
-      this.state;
+    const { pendingRemoveIndex, pendingRemoveFilename } = this.state;
     if (
       pendingRemoveIndex === null ||
-      activeCategory !== WALLPAPER_CATEGORIES.CustomWallpaper
+      this.props.activeCategory !== WALLPAPER_CATEGORIES.CustomWallpaper
     ) {
       return;
     }
@@ -779,19 +776,11 @@ export class _WallpaperCategories extends React.PureComponent {
     const applied = this.appliedSavedWallpaper;
     const appliedIndex = applied ? this.savedWallpapers.indexOf(applied) : 0;
 
-    this.setState({
-      activeCategory: categoryId,
-      activeCategoryFluentID: this.categoryFluentID(categoryId),
-      savedFocusIndex: Math.max(appliedIndex, 0),
-    });
+    this.setState({ savedFocusIndex: Math.max(appliedIndex, 0) });
+    this.props.openPanel(categoryId);
 
     if (fromUser) {
       this.handleUserEvent(at.WALLPAPER_CATEGORY_CLICK, categoryId);
-    }
-
-    // Notify parent menu when subpanel opens
-    if (this.props.onSubpanelToggle) {
-      this.props.onSubpanelToggle(true);
     }
   }
 
@@ -901,16 +890,10 @@ export class _WallpaperCategories extends React.PureComponent {
   }
 
   handleBack() {
-    this.setState({ activeCategory: null }, () => {
-      // Notify parent menu when subpanel closes
-      if (this.props.onSubpanelToggle) {
-        this.props.onSubpanelToggle(false);
-      }
-
-      // Wait for the category grid to be back in the DOM
-      requestAnimationFrame(() => {
-        this.focusCategory(this.state.focusedCategoryIndex);
-      });
+    this.props.closePanel();
+    // Wait for the parent's state update before moving focus back to the category tile.
+    requestAnimationFrame(() => {
+      this.focusCategory(this.state.focusedCategoryIndex);
     });
   }
 
@@ -1092,9 +1075,8 @@ export class _WallpaperCategories extends React.PureComponent {
     // Without the library the tile stays the single upload button it was, so
     // there is no folder to browse and no folder to put an error in.
     const showYourImagesFolder = hasSavedWallpapers && this.libraryEnabled;
-    const { activeWallpaper } = this.props;
-    const { activeCategory } = this.state;
-    const { activeCategoryFluentID } = this.state;
+    const { activeWallpaper, activeCategory, showPanel } = this.props;
+    const activeCategoryFluentID = this.categoryFluentID(activeCategory);
     // @nova-cleanup(remove-conditional): Remove novaEnabled check, keep arrowIconSrc computation
     let arrowIconSrc;
     if (novaEnabled) {
@@ -1348,7 +1330,7 @@ export class _WallpaperCategories extends React.PureComponent {
 
         <CSSTransition
           nodeRef={this.wallpaperListRef}
-          in={!!activeCategory}
+          in={!!showPanel}
           timeout={300}
           classNames="wallpaper-list"
           unmountOnExit={true}

@@ -3,7 +3,6 @@ import { WrapWithProvider } from "test/jest/test-utils";
 import { WidgetsManagementPanel } from "content-src/components/Nova/CustomizeMenu/WidgetsManagementPanel/WidgetsManagementPanel";
 
 const DEFAULT_PROPS = {
-  exitEventFired: false,
   onSubpanelToggle: jest.fn(),
   togglePanel: jest.fn(),
   showPanel: false,
