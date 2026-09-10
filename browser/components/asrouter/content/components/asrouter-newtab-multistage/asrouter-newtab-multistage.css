@@ -1572,6 +1572,7 @@ html {
 }
 .onboardingContainer:has([pos=center-large][fullscreen]) .section-main .main-content .main-content-inner .secondary-cta .secondary {
   background-color: var(--button-background-color);
+  color: var(--button-text-color);
   border: var(--button-border);
   line-height: 12px;
   font-size: 0.72em;
@@ -1848,6 +1849,7 @@ html {
 }
 .onboardingContainer .screen[pos=center].with-video .main-content .secondary-cta .secondary {
   background-color: var(--button-background-color);
+  color: var(--button-text-color);
   border: var(--button-border);
   line-height: 12px;
   font-size: 0.72em;
@@ -1949,6 +1951,7 @@ html {
 }
 .onboardingContainer .screen[pos=center].addons-picker .main-content .secondary-cta .secondary {
   background-color: var(--button-background-color);
+  color: var(--button-text-color);
   border: var(--button-border);
   line-height: 12px;
   font-size: 0.72em;
@@ -2251,6 +2254,7 @@ html {
 }
 .onboardingContainer .screen[pos=split] .section-main .main-content .action-buttons .secondary-cta .secondary {
   background-color: var(--button-background-color);
+  color: var(--button-text-color);
   border: var(--button-border);
   line-height: 12px;
   font-size: 0.72em;
@@ -2357,6 +2361,7 @@ html {
   }
   .onboardingContainer .screen[pos=split] .section-main .main-content .steps.progress-bar .indicator {
     background-color: var(--button-background-color-primary);
+    color: var(--button-text-color-primary);
   }
 }
 .onboardingContainer .screen[pos=split] .section-secondary {
@@ -3675,6 +3680,7 @@ html {
   /* stylelint-disable-next-line */
   border-radius: 8px 8px 0 0;
   background-color: var(--button-background-color-primary);
+  color: var(--button-text-color-primary);
   position: relative;
   right: unset;
   top: unset;
@@ -4625,6 +4631,7 @@ html {
   height: 100%;
   margin-inline: -1px;
   background-color: var(--button-background-color-primary);
+  color: var(--button-text-color-primary);
   border: 0;
   border-radius: 0;
   opacity: 1;
