@@ -3720,7 +3720,7 @@ bool CacheIRCompiler::emitInt32URightShiftResult(Int32OperandId lhsId,
   masm.mov(lhs, scratch);
   masm.flexibleRshift32(rhs, scratch);
   if (forceDouble) {
-    ScratchDoubleScope fpscratch(masm);
+    AutoAvailableFloatRegister fpscratch(*this, FloatReg0);
     masm.convertUInt32ToDouble(scratch, fpscratch);
     masm.boxDouble(fpscratch, output.valueReg(), fpscratch);
   } else {
@@ -10739,7 +10739,7 @@ bool CacheIRCompiler::emitAtomicsCompareExchangeResult(
   if (elementType != Scalar::Uint32) {
     masm.tagValue(JSVAL_TYPE_INT32, scratch, output->valueReg());
   } else {
-    ScratchDoubleScope fpscratch(masm);
+    AutoAvailableFloatRegister fpscratch(*this, FloatReg0);
     masm.convertUInt32ToDouble(scratch, fpscratch);
     masm.boxDouble(fpscratch, output->valueReg(), fpscratch);
   }
@@ -10793,7 +10793,7 @@ bool CacheIRCompiler::emitAtomicsReadModifyWriteResult(
   if (elementType != Scalar::Uint32) {
     masm.tagValue(JSVAL_TYPE_INT32, scratch, output.valueReg());
   } else {
-    ScratchDoubleScope fpscratch(masm);
+    AutoAvailableFloatRegister fpscratch(*this, FloatReg0);
     masm.convertUInt32ToDouble(scratch, fpscratch);
     masm.boxDouble(fpscratch, output.valueReg(), fpscratch);
   }
