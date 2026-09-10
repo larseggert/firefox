@@ -708,7 +708,7 @@ mozilla::ipc::IPCResult SpeechRecognitionParent::RecvStop(
   if (!mRecognitionThread) {
     // No streaming loop was ever started: nothing to flush, and nothing was
     // ever finalized.
-    aResolver(false);
+    aResolver(std::tuple(false, 0.0, 0.0));
     return IPC_OK();
   }
 
@@ -722,11 +722,19 @@ mozilla::ipc::IPCResult SpeechRecognitionParent::RecvStop(
       [self = RefPtr{this}, resolver = std::move(aResolver)]() mutable {
         self->GetActorEventTarget()->Dispatch(NS_NewRunnableFunction(
             "SpeechRecognitionParent::ResolveStop",
-            [resolver = std::move(resolver),
-             any = self->mEmittedFinalResult]() { resolver(any); }));
+            [resolver = std::move(resolver), any = self->mEmittedFinalResult,
+             perf = self->PerfCounters()]() {
+              resolver(std::tuple(any, perf.first, perf.second));
+            }));
       }));
 
   return IPC_OK();
+}
+
+std::pair<double, double> SpeechRecognitionParent::PerfCounters() {
+  MutexAutoLock lock(mTimingLock);
+  return {1000.0 * double(mFedAudioFrames) / PARAKEET_SAMPLE_RATE,
+          double(mInferenceMicroseconds) / 1000.0};
 }
 
 void SpeechRecognitionParent::SignalError(const nsCString& aErrorMessage) {
@@ -849,9 +857,16 @@ void SpeechRecognitionParent::ProcessAudioStreaming() {
     if (fed) {
       lib->parakeet_capi_free_string(fed);  // text comes from drain_words
     }
+    TimeStamp feedEnd = TimeStamp::Now();
+    {
+      MutexAutoLock lock(mTimingLock);
+      mFedAudioFrames += got;
+      mInferenceMicroseconds +=
+          uint64_t((feedEnd - feedStart).ToMicroseconds());
+    }
     PROFILER_MARKER_TEXT(
         "Parakeet stream_feed", MEDIA_PLAYBACK,
-        MarkerOptions(MarkerTiming::IntervalUntilNowFrom(feedStart)),
+        MarkerOptions(MarkerTiming::Interval(feedStart, feedEnd)),
         nsFmtCString("fed={:.0f}ms queued={:.0f}ms",
                      1000.0 * got / PARAKEET_SAMPLE_RATE,
                      1000.0 * available / PARAKEET_SAMPLE_RATE));
