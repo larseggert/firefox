@@ -610,6 +610,7 @@
               "comment": "Preserve token structure that can't be replicated in Figma",
               "value": {
                 "brand": {
+                  "default": "{button.text.color.@base}",
                   "forcedColors": "ButtonText"
                 }
               }

@@ -385,9 +385,9 @@
     "forcedColors": "{Theme$color/accent/primary}"
   },
   "button/text/color/ghost": {
-    "light": "transparent",
-    "dark": "transparent",
-    "forcedColors": "transparent"
+    "light": "{Theme$button/text/color}",
+    "dark": "{Theme$button/text/color}",
+    "forcedColors": "{Theme$button/text/color}"
   },
   "button/text/color/ghost/active": {
     "light": "{Theme$button/text/color/ghost}",

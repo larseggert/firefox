@@ -92,6 +92,7 @@
     --button-text-color-destructive: light-dark(var(--color-white), var(--button-text-color-primary));
     --button-text-color-destructive-disabled: var(--button-text-color-destructive);
     --button-text-color-destructive-selected: light-dark(var(--button-text-color-destructive), var(--button-text-color-destructive-active));
+    --button-text-color-ghost: var(--button-text-color);
     --button-text-color-ghost-hover: var(--button-text-color-ghost);
     --button-text-color-ghost-active: var(--button-text-color-ghost);
     --button-text-color-ghost-disabled: var(--button-text-color-ghost);
