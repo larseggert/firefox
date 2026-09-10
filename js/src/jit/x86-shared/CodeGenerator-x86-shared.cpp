@@ -1951,8 +1951,8 @@ void CodeGenerator::visitCompareExchangeTypedArrayElement(
   auto dest = ToAddressOrBaseIndex(elements, lir->index(), arrayType);
 
   dest.match([&](const auto& dest) {
-    masm.compareExchangeJS(arrayType, Synchronization::Full(), dest, oldval,
-                           newval, output);
+    masm.compareExchange(arrayType, Synchronization::Full(), dest, oldval,
+                         newval, output);
   });
 }
 
@@ -1968,8 +1968,8 @@ void CodeGenerator::visitAtomicExchangeTypedArrayElement(
   auto dest = ToAddressOrBaseIndex(elements, lir->index(), arrayType);
 
   dest.match([&](const auto& dest) {
-    masm.atomicExchangeJS(arrayType, Synchronization::Full(), dest, value,
-                          output);
+    masm.atomicExchange(arrayType, Synchronization::Full(), dest, value,
+                        output);
   });
 }
 
@@ -1989,11 +1989,11 @@ void CodeGenerator::visitAtomicTypedArrayElementBinop(
 
   mem.match([&](const auto& mem) {
     if (value->isConstant()) {
-      masm.atomicFetchOpJS(arrayType, Synchronization::Full(), atomicOp,
-                           Imm32(ToInt32(value)), mem, temp, output);
+      masm.atomicFetchOp(arrayType, Synchronization::Full(), atomicOp,
+                         Imm32(ToInt32(value)), mem, temp, output);
     } else {
-      masm.atomicFetchOpJS(arrayType, Synchronization::Full(), atomicOp,
-                           ToRegister(value), mem, temp, output);
+      masm.atomicFetchOp(arrayType, Synchronization::Full(), atomicOp,
+                         ToRegister(value), mem, temp, output);
     }
   });
 }

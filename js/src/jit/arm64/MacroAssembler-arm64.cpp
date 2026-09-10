@@ -3202,47 +3202,6 @@ void MacroAssembler::wasmAtomicEffectOp64(const wasm::MemoryAccessDesc& access,
 // ========================================================================
 // JS atomic operations.
 
-void MacroAssembler::compareExchangeJS(Scalar::Type arrayType,
-                                       Synchronization sync, const Address& mem,
-                                       Register oldval, Register newval,
-                                       Register output) {
-  compareExchange(arrayType, sync, mem, oldval, newval, output);
-}
-
-void MacroAssembler::compareExchangeJS(Scalar::Type arrayType,
-                                       Synchronization sync,
-                                       const BaseIndex& mem, Register oldval,
-                                       Register newval, Register output) {
-  compareExchange(arrayType, sync, mem, oldval, newval, output);
-}
-
-void MacroAssembler::atomicExchangeJS(Scalar::Type arrayType,
-                                      Synchronization sync, const Address& mem,
-                                      Register value, Register output) {
-  atomicExchange(arrayType, sync, mem, value, output);
-}
-
-void MacroAssembler::atomicExchangeJS(Scalar::Type arrayType,
-                                      Synchronization sync,
-                                      const BaseIndex& mem, Register value,
-                                      Register output) {
-  atomicExchange(arrayType, sync, mem, value, output);
-}
-
-void MacroAssembler::atomicFetchOpJS(Scalar::Type arrayType,
-                                     Synchronization sync, AtomicOp op,
-                                     Register value, const Address& mem,
-                                     Register temp, Register output) {
-  atomicFetchOp(arrayType, sync, op, value, mem, temp, output);
-}
-
-void MacroAssembler::atomicFetchOpJS(Scalar::Type arrayType,
-                                     Synchronization sync, AtomicOp op,
-                                     Register value, const BaseIndex& mem,
-                                     Register temp, Register output) {
-  atomicFetchOp(arrayType, sync, op, value, mem, temp, output);
-}
-
 void MacroAssembler::atomicEffectOpJS(Scalar::Type arrayType,
                                       Synchronization sync, AtomicOp op,
                                       Register value, const BaseIndex& mem,

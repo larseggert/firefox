@@ -1681,9 +1681,9 @@ void CodeGenerator::visitAtomicTypedArrayElementBinop(
   auto mem = ToAddressOrBaseIndex(elements, lir->index(), arrayType);
 
   mem.match([&](const auto& mem) {
-    masm.atomicFetchOpJS(arrayType, Synchronization::Full(),
-                         lir->mir()->operation(), value, mem, valueTemp,
-                         offsetTemp, maskTemp, output);
+    masm.atomicFetchOp(arrayType, Synchronization::Full(),
+                       lir->mir()->operation(), value, mem, valueTemp,
+                       offsetTemp, maskTemp, output);
   });
 }
 
@@ -1723,8 +1723,8 @@ void CodeGenerator::visitCompareExchangeTypedArrayElement(
   auto dest = ToAddressOrBaseIndex(elements, lir->index(), arrayType);
 
   dest.match([&](const auto& dest) {
-    masm.compareExchangeJS(arrayType, Synchronization::Full(), dest, oldval,
-                           newval, valueTemp, offsetTemp, maskTemp, output);
+    masm.compareExchange(arrayType, Synchronization::Full(), dest, oldval,
+                         newval, valueTemp, offsetTemp, maskTemp, output);
   });
 }
 
@@ -1743,8 +1743,8 @@ void CodeGenerator::visitAtomicExchangeTypedArrayElement(
   auto dest = ToAddressOrBaseIndex(elements, lir->index(), arrayType);
 
   dest.match([&](const auto& dest) {
-    masm.atomicExchangeJS(arrayType, Synchronization::Full(), dest, value,
-                          valueTemp, offsetTemp, maskTemp, output);
+    masm.atomicExchange(arrayType, Synchronization::Full(), dest, value,
+                        valueTemp, offsetTemp, maskTemp, output);
   });
 }
 

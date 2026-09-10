@@ -3438,24 +3438,6 @@ void MacroAssembler::atomicExchange64(Synchronization sync,
   AtomicExchange64(*this, nullptr, sync, mem, value, output);
 }
 
-void MacroAssembler::atomicExchangeJS(Scalar::Type arrayType,
-                                      Synchronization sync, const Address& mem,
-                                      Register value, Register valueTemp,
-                                      Register offsetTemp, Register maskTemp,
-                                      Register output) {
-  atomicExchange(arrayType, sync, mem, value, valueTemp, offsetTemp, maskTemp,
-                 output);
-}
-
-void MacroAssembler::atomicExchangeJS(Scalar::Type arrayType,
-                                      Synchronization sync,
-                                      const BaseIndex& mem, Register value,
-                                      Register valueTemp, Register offsetTemp,
-                                      Register maskTemp, Register output) {
-  atomicExchange(arrayType, sync, mem, value, valueTemp, offsetTemp, maskTemp,
-                 output);
-}
-
 void MacroAssembler::atomicExchange(Scalar::Type type, Synchronization sync,
                                     const Address& mem, Register value,
                                     Register valueTemp, Register offsetTemp,
@@ -3470,24 +3452,6 @@ void MacroAssembler::atomicExchange(Scalar::Type type, Synchronization sync,
                                     Register maskTemp, Register output) {
   AtomicExchange(*this, nullptr, type, sync, mem, value, valueTemp, offsetTemp,
                  maskTemp, output);
-}
-
-void MacroAssembler::atomicFetchOpJS(Scalar::Type arrayType,
-                                     Synchronization sync, AtomicOp op,
-                                     Register value, const Address& mem,
-                                     Register valueTemp, Register offsetTemp,
-                                     Register maskTemp, Register output) {
-  atomicFetchOp(arrayType, sync, op, value, mem, valueTemp, offsetTemp,
-                maskTemp, output);
-}
-
-void MacroAssembler::atomicFetchOpJS(Scalar::Type arrayType,
-                                     Synchronization sync, AtomicOp op,
-                                     Register value, const BaseIndex& mem,
-                                     Register valueTemp, Register offsetTemp,
-                                     Register maskTemp, Register output) {
-  atomicFetchOp(arrayType, sync, op, value, mem, valueTemp, offsetTemp,
-                maskTemp, output);
 }
 
 void MacroAssembler::atomicFetchOp(Scalar::Type type, Synchronization sync,
@@ -3830,25 +3794,6 @@ void MacroAssembler::compareExchange64(Synchronization sync,
                                        const BaseIndex& mem, Register64 expect,
                                        Register64 replace, Register64 output) {
   CompareExchange64(*this, nullptr, sync, mem, expect, replace, output);
-}
-
-void MacroAssembler::compareExchangeJS(Scalar::Type arrayType,
-                                       Synchronization sync, const Address& mem,
-                                       Register expected, Register replacement,
-                                       Register valueTemp, Register offsetTemp,
-                                       Register maskTemp, Register output) {
-  compareExchange(arrayType, sync, mem, expected, replacement, valueTemp,
-                  offsetTemp, maskTemp, output);
-}
-
-void MacroAssembler::compareExchangeJS(Scalar::Type arrayType,
-                                       Synchronization sync,
-                                       const BaseIndex& mem, Register expected,
-                                       Register replacement, Register valueTemp,
-                                       Register offsetTemp, Register maskTemp,
-                                       Register output) {
-  compareExchange(arrayType, sync, mem, expected, replacement, valueTemp,
-                  offsetTemp, maskTemp, output);
 }
 
 void MacroAssembler::convertInt64ToDouble(Register64 src, FloatRegister dest) {
