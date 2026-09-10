@@ -18,6 +18,18 @@ namespace mozilla {
 
 class WebrtcVideoDecoder;
 class WebrtcVideoEncoder;
+
+CodecType ToCodecType(const webrtc::VideoCodecType& aType);
+
+using AdjustEncodeSupportSetFunction =
+    media::EncodeSupportSet (*)(media::EncodeSupportSet);
+AdjustEncodeSupportSetFunction AdjustWebrtcEncodeSupportFunctionForCodec(
+    CodecType aCodec);
+using AdjustDecodeSupportSetFunction =
+    media::DecodeSupportSet (*)(media::DecodeSupportSet);
+AdjustDecodeSupportSetFunction AdjustWebrtcDecodeSupportFunctionForCodec(
+    CodecType aCodec);
+
 class MediaDataCodec {
  public:
   /**
