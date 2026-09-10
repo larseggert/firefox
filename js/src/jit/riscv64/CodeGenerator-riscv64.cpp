@@ -2588,9 +2588,9 @@ void CodeGenerator::visitAtomicTypedArrayElementBinopForEffect(
   auto mem = ToAddressOrBaseIndex(elements, ins->index(), arrayType);
 
   mem.match([&](const auto& mem) {
-    masm.atomicEffectOpJS(arrayType, Synchronization::Full(),
-                          ins->mir()->operation(), value, mem, valueTemp,
-                          offsetTemp, maskTemp);
+    masm.atomicEffectOp(arrayType, Synchronization::Full(),
+                        ins->mir()->operation(), value, mem, valueTemp,
+                        offsetTemp, maskTemp);
   });
 }
 

@@ -2011,11 +2011,11 @@ void CodeGenerator::visitAtomicTypedArrayElementBinopForEffect(
 
   mem.match([&](const auto& mem) {
     if (value->isConstant()) {
-      masm.atomicEffectOpJS(arrayType, Synchronization::Full(), atomicOp,
-                            Imm32(ToInt32(value)), mem, InvalidReg);
+      masm.atomicEffectOp(arrayType, Synchronization::Full(), atomicOp,
+                          Imm32(ToInt32(value)), mem, InvalidReg);
     } else {
-      masm.atomicEffectOpJS(arrayType, Synchronization::Full(), atomicOp,
-                            ToRegister(value), mem, InvalidReg);
+      masm.atomicEffectOp(arrayType, Synchronization::Full(), atomicOp,
+                          ToRegister(value), mem, InvalidReg);
     }
   });
 }

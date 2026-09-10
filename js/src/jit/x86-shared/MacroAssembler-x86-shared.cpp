@@ -1637,6 +1637,35 @@ static void AtomicEffectOp(MacroAssembler& masm,
   }
 }
 
+void MacroAssembler::atomicEffectOp(Scalar::Type arrayType, Synchronization,
+                                    AtomicOp op, Register value,
+                                    const BaseIndex& mem, Register temp) {
+  MOZ_ASSERT(temp == InvalidReg);
+  AtomicEffectOp(*this, nullptr, arrayType, op, value, mem);
+}
+
+void MacroAssembler::atomicEffectOp(Scalar::Type arrayType, Synchronization,
+                                    AtomicOp op, Register value,
+                                    const Address& mem, Register temp) {
+  MOZ_ASSERT(temp == InvalidReg);
+  AtomicEffectOp(*this, nullptr, arrayType, op, value, mem);
+}
+
+void MacroAssembler::atomicEffectOp(Scalar::Type arrayType, Synchronization,
+                                    AtomicOp op, Imm32 value,
+                                    const Address& mem, Register temp) {
+  MOZ_ASSERT(temp == InvalidReg);
+  AtomicEffectOp(*this, nullptr, arrayType, op, value, mem);
+}
+
+void MacroAssembler::atomicEffectOp(Scalar::Type arrayType,
+                                    Synchronization sync, AtomicOp op,
+                                    Imm32 value, const BaseIndex& mem,
+                                    Register temp) {
+  MOZ_ASSERT(temp == InvalidReg);
+  AtomicEffectOp(*this, nullptr, arrayType, op, value, mem);
+}
+
 void MacroAssembler::wasmAtomicEffectOp(const wasm::MemoryAccessDesc& access,
                                         AtomicOp op, Register value,
                                         const Address& mem, Register temp) {
@@ -1667,35 +1696,6 @@ void MacroAssembler::wasmAtomicEffectOp(const wasm::MemoryAccessDesc& access,
 
 // ========================================================================
 // JS atomic operations.
-
-void MacroAssembler::atomicEffectOpJS(Scalar::Type arrayType, Synchronization,
-                                      AtomicOp op, Register value,
-                                      const BaseIndex& mem, Register temp) {
-  MOZ_ASSERT(temp == InvalidReg);
-  AtomicEffectOp(*this, nullptr, arrayType, op, value, mem);
-}
-
-void MacroAssembler::atomicEffectOpJS(Scalar::Type arrayType, Synchronization,
-                                      AtomicOp op, Register value,
-                                      const Address& mem, Register temp) {
-  MOZ_ASSERT(temp == InvalidReg);
-  AtomicEffectOp(*this, nullptr, arrayType, op, value, mem);
-}
-
-void MacroAssembler::atomicEffectOpJS(Scalar::Type arrayType, Synchronization,
-                                      AtomicOp op, Imm32 value,
-                                      const Address& mem, Register temp) {
-  MOZ_ASSERT(temp == InvalidReg);
-  AtomicEffectOp(*this, nullptr, arrayType, op, value, mem);
-}
-
-void MacroAssembler::atomicEffectOpJS(Scalar::Type arrayType,
-                                      Synchronization sync, AtomicOp op,
-                                      Imm32 value, const BaseIndex& mem,
-                                      Register temp) {
-  MOZ_ASSERT(temp == InvalidReg);
-  AtomicEffectOp(*this, nullptr, arrayType, op, value, mem);
-}
 
 void MacroAssembler::atomicPause() { masm.pause(); }
 

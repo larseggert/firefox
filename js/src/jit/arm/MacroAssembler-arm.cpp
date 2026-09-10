@@ -5542,6 +5542,20 @@ static void AtomicEffectOp(MacroAssembler& masm,
   masm.memoryBarrierAfter(sync);
 }
 
+void MacroAssembler::atomicEffectOp(Scalar::Type arrayType,
+                                    Synchronization sync, AtomicOp op,
+                                    Register value, const BaseIndex& mem,
+                                    Register temp) {
+  AtomicEffectOp(*this, nullptr, arrayType, sync, op, value, mem, temp);
+}
+
+void MacroAssembler::atomicEffectOp(Scalar::Type arrayType,
+                                    Synchronization sync, AtomicOp op,
+                                    Register value, const Address& mem,
+                                    Register temp) {
+  AtomicEffectOp(*this, nullptr, arrayType, sync, op, value, mem, temp);
+}
+
 void MacroAssembler::wasmAtomicEffectOp(const wasm::MemoryAccessDesc& access,
                                         AtomicOp op, Register value,
                                         const Address& mem, Register temp) {
@@ -5857,20 +5871,6 @@ void MacroAssembler::atomicEffectOp64(Synchronization sync, AtomicOp op,
 
 // ========================================================================
 // JS atomic operations.
-
-void MacroAssembler::atomicEffectOpJS(Scalar::Type arrayType,
-                                      Synchronization sync, AtomicOp op,
-                                      Register value, const BaseIndex& mem,
-                                      Register temp) {
-  AtomicEffectOp(*this, nullptr, arrayType, sync, op, value, mem, temp);
-}
-
-void MacroAssembler::atomicEffectOpJS(Scalar::Type arrayType,
-                                      Synchronization sync, AtomicOp op,
-                                      Register value, const Address& mem,
-                                      Register temp) {
-  AtomicEffectOp(*this, nullptr, arrayType, sync, op, value, mem, temp);
-}
 
 void MacroAssembler::atomicPause() { as_yield(); }
 
