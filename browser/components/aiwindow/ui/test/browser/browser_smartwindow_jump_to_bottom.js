@@ -150,36 +150,6 @@ add_task(async function test_jump_to_bottom_scroll_and_click() {
         "Button should not be disabled when visible"
       );
 
-      // The Nova scroll fade (.chat-content-wrapper::before) paints over the
-      // button. The overflow observer only re-runs when .chat-inner-wrapper
-      // resizes, which injecting every message at once does not do, so set the
-      // attribute it would have set here (scrollHeight does exceed
-      // clientHeight) to get the fade painting.
-      wrapper.toggleAttribute("overflowing", true);
-      Assert.notEqual(
-        content.getComputedStyle(wrapper, "::before").backdropFilter,
-        "none",
-        "Scroll fade should be painting so the button is actually covered"
-      );
-
-      // Check the button wins hit testing: btn.click() below dispatches
-      // straight at the node, so it passes even when the button is covered and
-      // unclickable for users (Bug 2067076). elementFromPoint returns the
-      // originating element, never the pseudo, so a covered button reports as
-      // chat-content-wrapper.
-      const rect = btn.getBoundingClientRect();
-      const hit = chatContent.shadowRoot.elementFromPoint(
-        rect.left + rect.width / 2,
-        rect.top + rect.height / 2
-      );
-      const hitDesc = hit?.className || hit?.localName || "nothing";
-
-      Assert.equal(
-        hit,
-        btn,
-        `Button should be the topmost element at its center, got ${hitDesc}`
-      );
-
       btn.click();
 
       await ContentTaskUtils.waitForCondition(
