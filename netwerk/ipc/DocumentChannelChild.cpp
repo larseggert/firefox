@@ -229,8 +229,6 @@ IPCResult DocumentChannelChild::RecvRedirectToRealChannel(
   LOG(("DocumentChannelChild RecvRedirectToRealChannel [this=%p, uri=%s]", this,
        aArgs.uri()->GetSpecOrDefault().get()));
 
-  ContentChild::MaybeBecomeUntrusted();
-
   // The document that created the cspToInherit.
   // This is used when deserializing LoadInfo from the parent
   // process, since we can't serialize Documents directly.
