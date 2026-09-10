@@ -313,13 +313,16 @@ export const tokensTable = {
       name: "--button-background-color-muted-selected",
     },
     {
-      value: "var(--button-background-color-ghost)",
+      value: {
+        default: "var(--button-background-color-ghost)",
+        forcedColors: "Menu",
+      },
       name: "--button-background-color-menu",
     },
     {
       value: {
         default: "var(--button-background-color-ghost-active)",
-        forcedColors: "var(--button-background-color-primary)",
+        forcedColors: "var(--button-background-color-menu-hover)",
       },
       name: "--button-background-color-menu-active",
     },
@@ -330,7 +333,7 @@ export const tokensTable = {
     {
       value: {
         default: "var(--button-background-color-ghost-hover)",
-        forcedColors: "var(--button-background-color-primary)",
+        forcedColors: "-moz-menuhover",
       },
       name: "--button-background-color-menu-hover",
     },
@@ -2465,13 +2468,16 @@ export const tokensTable = {
       name: "--button-text-color-hover",
     },
     {
-      value: "var(--button-text-color-ghost)",
+      value: {
+        default: "var(--button-text-color-ghost)",
+        forcedColors: "MenuText",
+      },
       name: "--button-text-color-menu",
     },
     {
       value: {
         default: "var(--button-text-color-ghost-active)",
-        forcedColors: "var(--button-text-color-primary)",
+        forcedColors: "var(--button-text-color-menu-hover)",
       },
       name: "--button-text-color-menu-active",
     },
@@ -2482,7 +2488,7 @@ export const tokensTable = {
     {
       value: {
         default: "var(--button-text-color-ghost-hover)",
-        forcedColors: "var(--button-text-color-primary)",
+        forcedColors: "-moz-menuhovertext",
       },
       name: "--button-text-color-menu-hover",
     },
@@ -4139,16 +4145,19 @@ export const variableLookupTable = {
     "var(--button-background-color-disabled)",
   "button-background-color-muted-selected":
     "var(--button-background-color-muted-active)",
-  "button-background-color-menu": "var(--button-background-color-ghost)",
+  "button-background-color-menu": {
+    default: "var(--button-background-color-ghost)",
+    forcedColors: "Menu",
+  },
   "button-background-color-menu-active": {
     default: "var(--button-background-color-ghost-active)",
-    forcedColors: "var(--button-background-color-primary)",
+    forcedColors: "var(--button-background-color-menu-hover)",
   },
   "button-background-color-menu-disabled":
     "var(--button-background-color-ghost-disabled)",
   "button-background-color-menu-hover": {
     default: "var(--button-background-color-ghost-hover)",
-    forcedColors: "var(--button-background-color-primary)",
+    forcedColors: "-moz-menuhover",
   },
   "button-background-color-menu-selected": {
     default: "var(--button-background-color-ghost-selected)",
@@ -4370,15 +4379,18 @@ export const variableLookupTable = {
     default: "var(--button-text-color)",
     forcedColors: "SelectedItem",
   },
-  "button-text-color-menu": "var(--button-text-color-ghost)",
+  "button-text-color-menu": {
+    default: "var(--button-text-color-ghost)",
+    forcedColors: "MenuText",
+  },
   "button-text-color-menu-active": {
     default: "var(--button-text-color-ghost-active)",
-    forcedColors: "var(--button-text-color-primary)",
+    forcedColors: "var(--button-text-color-menu-hover)",
   },
   "button-text-color-menu-disabled": "var(--button-text-color-ghost-disabled)",
   "button-text-color-menu-hover": {
     default: "var(--button-text-color-ghost-hover)",
-    forcedColors: "var(--button-text-color-primary)",
+    forcedColors: "-moz-menuhovertext",
   },
   "button-text-color-menu-selected": {
     default: "var(--button-text-color-ghost-selected)",

@@ -310,12 +310,12 @@
   "button/background/color/menu": {
     "light": "{Theme$button/background/color/ghost}",
     "dark": "{Theme$button/background/color/ghost}",
-    "forcedColors": "{Theme$button/background/color/ghost}"
+    "forcedColors": "Menu"
   },
   "button/background/color/menu/active": {
     "light": "{Theme$button/background/color/ghost/active}",
     "dark": "{Theme$button/background/color/ghost/active}",
-    "forcedColors": "{Theme$button/background/color/primary}"
+    "forcedColors": "{Theme$button/background/color/menu/hover}"
   },
   "button/background/color/menu/disabled": {
     "light": "{Theme$button/background/color/ghost/disabled}",
@@ -325,7 +325,7 @@
   "button/background/color/menu/hover": {
     "light": "{Theme$button/background/color/ghost/hover}",
     "dark": "{Theme$button/background/color/ghost/hover}",
-    "forcedColors": "{Theme$button/background/color/primary}"
+    "forcedColors": "-moz-menuhover"
   },
   "button/background/color/menu/selected": {
     "light": "{Theme$button/background/color/ghost/selected}",
@@ -652,12 +652,12 @@
   "button/text/color/menu": {
     "light": "{Theme$button/text/color/ghost}",
     "dark": "{Theme$button/text/color/ghost}",
-    "forcedColors": "{Theme$button/text/color/ghost}"
+    "forcedColors": "MenuText"
   },
   "button/text/color/menu/active": {
     "light": "{Theme$button/text/color/ghost/active}",
     "dark": "{Theme$button/text/color/ghost/active}",
-    "forcedColors": "{Theme$button/text/color/primary}"
+    "forcedColors": "{Theme$button/text/color/menu/hover}"
   },
   "button/text/color/menu/disabled": {
     "light": "{Theme$button/text/color/ghost/disabled}",
@@ -667,7 +667,7 @@
   "button/text/color/menu/hover": {
     "light": "{Theme$button/text/color/ghost/hover}",
     "dark": "{Theme$button/text/color/ghost/hover}",
-    "forcedColors": "{Theme$button/text/color/primary}"
+    "forcedColors": "-moz-menuhovertext"
   },
   "button/text/color/menu/selected": {
     "light": "{Theme$button/text/color/ghost/selected}",

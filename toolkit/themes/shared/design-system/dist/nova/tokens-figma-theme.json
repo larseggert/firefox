@@ -204,11 +204,6 @@
     "dark": "{Theme$button/background/color/muted/active}",
     "forcedColors": "{Theme$button/background/color/ghost/active}"
   },
-  "button/background/color/menu": {
-    "light": "{Theme$button/background/color/ghost}",
-    "dark": "{Theme$button/background/color/ghost}",
-    "forcedColors": "{Theme$button/background/color}"
-  },
   "button/background/color/selected": {
     "light": "{Theme$button/background/color/active}",
     "dark": "{Theme$button/background/color/active}",
@@ -344,6 +339,11 @@
     "dark": "{Theme$button/text/color/disabled}",
     "forcedColors": "{Theme$button/text/color/disabled}"
   },
+  "button/text/color/menu/hover": {
+    "light": "{Theme$button/text/color/ghost/hover}",
+    "dark": "{Theme$button/text/color/hover}",
+    "forcedColors": "-moz-menuhovertext"
+  },
   "button/text/color/menu/selected": {
     "light": "{Theme$button/text/color/ghost/selected}",
     "dark": "{Theme$button/text/color/selected}",
@@ -379,16 +379,6 @@
     "dark": "{Colors$color/violet-desaturated/40}",
     "forcedColors": "{HCM Theme$SelectedItemText}"
   },
-  "button/background/color/menu/active": {
-    "light": "transparent",
-    "dark": "transparent",
-    "forcedColors": "{HCM Theme$ButtonText}"
-  },
-  "button/background/color/menu/hover": {
-    "light": "transparent",
-    "dark": "transparent",
-    "forcedColors": "{HCM Theme$ButtonText}"
-  },
   "button/border/color": {
     "light": "{Theme$color/accent/primary}",
     "dark": "{Theme$color/accent/primary}",
@@ -417,12 +407,7 @@
   "button/text/color/menu/active": {
     "light": "{Theme$button/text/color/ghost/active}",
     "dark": "{Theme$button/text/color/active}",
-    "forcedColors": "{HCM Theme$ButtonFace}"
-  },
-  "button/text/color/menu/hover": {
-    "light": "{Theme$button/text/color/ghost/hover}",
-    "dark": "{Theme$button/text/color/hover}",
-    "forcedColors": "{HCM Theme$ButtonFace}"
+    "forcedColors": "transparent"
   },
   "card/header/background/color": {
     "light": "{Theme$button/background/color}",
