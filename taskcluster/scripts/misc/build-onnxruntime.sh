@@ -149,7 +149,7 @@ python3 tools/ci_build/build.py \
     --cmake_extra_defines ONNX_USE_LITE_PROTO=ON\
     --disable_exceptions \
     --cmake_extra_defines CMAKE_C_FLAGS_INIT="$HARDENING_FLAGS"\
-    --cmake_extra_defines CMAKE_CXX_FLAGS_INIT="-fno-exceptions $HARDENING_FLAGS $EXTRA_CXX_FLAGS -DORT_NO_EXCEPTIONS -DONNX_NO_EXCEPTIONS -DMLAS_NO_EXCEPTION"\
+    --cmake_extra_defines CMAKE_CXX_FLAGS_INIT="$HARDENING_FLAGS $EXTRA_CXX_FLAGS"\
     "${extra_args[@]}"
 
 ###
