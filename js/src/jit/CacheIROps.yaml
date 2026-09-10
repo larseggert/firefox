@@ -3889,6 +3889,15 @@
     shift: UInt32Imm
     mask: UInt32Imm
 
+- name: EpochMillisecondsResult
+  shared: true
+  transpile: true
+  cost_estimate: 2
+  args:
+    obj: ObjId
+    secondsOffset: UInt32Imm
+    nanosecondsOffset: UInt32Imm
+
 - name: ArrayFromArgumentsObjectResult
   shared: true
   transpile: true

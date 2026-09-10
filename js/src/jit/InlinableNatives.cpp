@@ -304,6 +304,8 @@ bool js::jit::CanInlineNativeCrossRealm(InlinableNative native) {
     case InlinableNative::PlainDateTimeMillisecond:
     case InlinableNative::PlainDateTimeMicrosecond:
     case InlinableNative::PlainDateTimeNanosecond:
+    case InlinableNative::InstantEpochMilliseconds:
+    case InlinableNative::ZonedDateTimeEpochMilliseconds:
     case InlinableNative::FunctionBind:
     case InlinableNative::MapConstructor:
     case InlinableNative::MapGet:

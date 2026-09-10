@@ -2308,6 +2308,8 @@ static const JSClass* ClassFor(JSContext* cx, GuardClassKind kind) {
     case GuardClassKind::Duration:
     case GuardClassKind::PlainTime:
     case GuardClassKind::PlainDateTime:
+    case GuardClassKind::Instant:
+    case GuardClassKind::ZonedDateTime:
     case GuardClassKind::WeakMap:
     case GuardClassKind::WeakSet:
       return ClassFor(kind);
@@ -11841,6 +11843,26 @@ bool CacheIRCompiler::emitUnpackTimeResult(ValOperandId packedValId,
   masm.unpackTime(packedVal, unpackOut, temp, shiftImm, maskImm);
 
   EmitStoreResult(masm, unpackOut, JSVAL_TYPE_INT32, output);
+
+  return true;
+}
+
+bool CacheIRCompiler::emitEpochMillisecondsResult(ObjOperandId objId,
+                                                  uint32_t secondsOffset,
+                                                  uint32_t nanosecondsOffset) {
+  JitSpew(JitSpew_Codegen, "%s", __FUNCTION__);
+
+  AutoOutputRegister output(*this);
+  AutoScratchRegisterMaybeOutput temp(allocator, masm, output);
+  Register obj = allocator.useRegister(masm, objId);
+
+  AutoScratchFloatRegister floatScratch(this);
+
+  masm.unboxDouble(Address(obj, secondsOffset), floatScratch);
+  masm.unboxInt32(Address(obj, nanosecondsOffset), temp);
+
+  masm.epochMilliseconds(floatScratch, temp, floatScratch, temp);
+  masm.boxDouble(floatScratch, output.valueReg(), floatScratch);
 
   return true;
 }

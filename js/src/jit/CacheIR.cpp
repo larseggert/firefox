@@ -21,8 +21,10 @@
 #include "builtin/WeakSetObject.h"
 #ifdef JS_HAS_INTL_API
 #  include "builtin/temporal/Duration.h"
+#  include "builtin/temporal/Instant.h"
 #  include "builtin/temporal/PlainDateTime.h"
 #  include "builtin/temporal/PlainTime.h"
+#  include "builtin/temporal/ZonedDateTime.h"
 #endif
 #include "gc/GC.h"
 #include "jit/BaselineIC.h"
@@ -2182,10 +2184,16 @@ const JSClass* js::jit::ClassFor(GuardClassKind kind) {
       return &temporal::PlainTimeObject::class_;
     case GuardClassKind::PlainDateTime:
       return &temporal::PlainDateTimeObject::class_;
+    case GuardClassKind::Instant:
+      return &temporal::InstantObject::class_;
+    case GuardClassKind::ZonedDateTime:
+      return &temporal::ZonedDateTimeObject::class_;
 #else
     case GuardClassKind::Duration:
     case GuardClassKind::PlainTime:
     case GuardClassKind::PlainDateTime:
+    case GuardClassKind::Instant:
+    case GuardClassKind::ZonedDateTime:
       MOZ_CRASH("Intl API disabled");
 #endif
     case GuardClassKind::WeakMap:
@@ -2219,6 +2227,8 @@ void IRGenerator::emitOptimisticClassGuard(ObjOperandId objId, JSObject* obj,
     case GuardClassKind::Duration:
     case GuardClassKind::PlainTime:
     case GuardClassKind::PlainDateTime:
+    case GuardClassKind::Instant:
+    case GuardClassKind::ZonedDateTime:
     case GuardClassKind::WeakMap:
     case GuardClassKind::WeakSet:
       MOZ_ASSERT(obj->hasClass(ClassFor(kind)));
@@ -11366,6 +11376,72 @@ AttachDecision InlinableNativeIRGenerator::tryAttachTemporalTimeGet(
 #endif
 }
 
+AttachDecision InlinableNativeIRGenerator::tryAttachEpochMilliseconds(
+    TemporalEpochObject objectType) {
+#ifdef JS_HAS_INTL_API
+  if (!thisval_.isObject()) {
+    return AttachDecision::NoAction;
+  }
+
+  // Ensure |this| is the correct object type.
+  size_t secondsSlot;
+  size_t nanosecondsSlot;
+  GuardClassKind guardKind;
+  switch (objectType) {
+    case TemporalEpochObject::Instant:
+      if (!thisval_.toObject().is<temporal::InstantObject>()) {
+        return AttachDecision::NoAction;
+      }
+      secondsSlot = temporal::InstantObject::SECONDS_SLOT.index();
+      nanosecondsSlot = temporal::InstantObject::NANOSECONDS_SLOT.index();
+      guardKind = GuardClassKind::Instant;
+      break;
+    case TemporalEpochObject::ZonedDateTime:
+      if (!thisval_.toObject().is<temporal::ZonedDateTimeObject>()) {
+        return AttachDecision::NoAction;
+      }
+      secondsSlot = temporal::ZonedDateTimeObject::SECONDS_SLOT.index();
+      nanosecondsSlot = temporal::ZonedDateTimeObject::NANOSECONDS_SLOT.index();
+      guardKind = GuardClassKind::ZonedDateTime;
+      break;
+  }
+
+  // Expecting no arguments.
+  if (argsLength() != 0) {
+    return AttachDecision::NoAction;
+  }
+
+  // Initialize the input operand.
+  Int32OperandId argcId = initializeInputOperand();
+
+  // Guard callee is the correct native getter.
+  ObjOperandId calleeId = emitNativeCalleeGuard(argcId);
+
+  // Guard |this| is the correct object type.
+  ValOperandId thisValId = loadThis(calleeId);
+  ObjOperandId objId = writer.guardToObject(thisValId);
+  emitOptimisticClassGuard(objId, &thisval_.toObject(), guardKind);
+
+  writer.epochMillisecondsResult(
+      objId, NativeObject::getFixedSlotOffset(secondsSlot),
+      NativeObject::getFixedSlotOffset(nanosecondsSlot));
+
+  switch (objectType) {
+    case TemporalEpochObject::Instant:
+      trackAttached("InstantEpochMilliseconds");
+      break;
+    case TemporalEpochObject::ZonedDateTime:
+      trackAttached("ZonedDateTimeEpochMilliseconds");
+      break;
+  }
+
+  return AttachDecision::Attach;
+#else
+  // No inlining when Intl support is disabled.
+  return AttachDecision::NoAction;
+#endif
+}
+
 AttachDecision CallIRGenerator::tryAttachFunCall(HandleFunction callee) {
   MOZ_ASSERT(callee->isNativeWithoutJitEntry());
 
@@ -13718,6 +13794,12 @@ AttachDecision InlinableNativeIRGenerator::tryAttachStub() {
     case InlinableNative::PlainDateTimeNanosecond:
       return tryAttachTemporalTimeGet(native, TemporalTimeObject::PlainDateTime,
                                       PackedTimeComponent::Nanosecond);
+
+    // Temporal.Instant and Temporal.ZonedDateTime getters.
+    case InlinableNative::InstantEpochMilliseconds:
+      return tryAttachEpochMilliseconds(TemporalEpochObject::Instant);
+    case InlinableNative::ZonedDateTimeEpochMilliseconds:
+      return tryAttachEpochMilliseconds(TemporalEpochObject::ZonedDateTime);
 
     // WeakMap/WeakSet natives.
     case InlinableNative::WeakMapGet:

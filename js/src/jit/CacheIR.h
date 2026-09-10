@@ -586,6 +586,8 @@ enum class GuardClassKind : uint8_t {
   Duration,
   PlainTime,
   PlainDateTime,
+  Instant,
+  ZonedDateTime,
   WeakMap,
   WeakSet,
 };
@@ -642,6 +644,10 @@ inline const char* GuardClassKindEnumName(GuardClassKind kind) {
       return "PlainTime";
     case GuardClassKind::PlainDateTime:
       return "PlainDateTime";
+    case GuardClassKind::Instant:
+      return "Instant";
+    case GuardClassKind::ZonedDateTime:
+      return "ZonedDateTime";
     case GuardClassKind::WeakMap:
       return "WeakMap";
     case GuardClassKind::WeakSet:

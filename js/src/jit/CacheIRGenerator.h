@@ -810,6 +810,11 @@ class MOZ_RAII InlinableNativeIRGenerator {
     PlainDateTime,
   };
 
+  enum class TemporalEpochObject {
+    Instant,
+    ZonedDateTime,
+  };
+
   AttachDecision tryAttachArrayPush();
   AttachDecision tryAttachArrayPopShift(InlinableNative native);
   AttachDecision tryAttachArrayJoin();
@@ -959,6 +964,7 @@ class MOZ_RAII InlinableNativeIRGenerator {
   AttachDecision tryAttachTemporalTimeGet(InlinableNative native,
                                           TemporalTimeObject objectType,
                                           PackedTimeComponent component);
+  AttachDecision tryAttachEpochMilliseconds(TemporalEpochObject objectType);
   AttachDecision tryAttachWeakMapHas();
   AttachDecision tryAttachWeakMapGet();
   AttachDecision tryAttachWeakSetHas();

@@ -5934,6 +5934,9 @@ class MacroAssembler : public MacroAssemblerSpecific {
   void unpackTime(ValueOperand packedVal, Register dest, Register temp,
                   uint32_t shiftImm, uint32_t maskImm);
 
+  void epochMilliseconds(FloatRegister seconds, Register nanoseconds,
+                         FloatRegister output, Register temp);
+
   void computeImplicitThis(Register env, ValueOperand output, Label* slowPath);
 
  private:

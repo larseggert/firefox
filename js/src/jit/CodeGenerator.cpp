@@ -23323,6 +23323,15 @@ void CodeGenerator::visitUnpackTime(LUnpackTime* lir) {
   masm.unpackTime(packedVal, output, temp, mir->shiftImm(), mir->maskImm());
 }
 
+void CodeGenerator::visitEpochMilliseconds(LEpochMilliseconds* lir) {
+  FloatRegister seconds = ToFloatRegister(lir->seconds());
+  Register nanoseconds = ToRegister(lir->nanoseconds());
+  FloatRegister output = ToFloatRegister(lir->output());
+  Register temp = ToRegister(lir->temp0());
+
+  masm.epochMilliseconds(seconds, nanoseconds, output, temp);
+}
+
 void CodeGenerator::visitCanonicalizeNaND(LCanonicalizeNaND* ins) {
   auto output = ToFloatRegister(ins->output());
   MOZ_ASSERT(output == ToFloatRegister(ins->input()));

@@ -103,6 +103,8 @@
                                                    \
   _(FunctionBind)                                  \
                                                    \
+  _(InstantEpochMilliseconds)                      \
+                                                   \
   _(IntlGuardToSegments)                           \
   _(IntlGuardToSegmentIterator)                    \
                                                    \
@@ -242,6 +244,8 @@
   _(WeakMapGet)                                    \
   _(WeakMapHas)                                    \
   _(WeakSetHas)                                    \
+                                                   \
+  _(ZonedDateTimeEpochMilliseconds)                \
                                                    \
   _(IntrinsicUnsafeSetReservedSlot)                \
   _(IntrinsicUnsafeGetReservedSlot)                \
