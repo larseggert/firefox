@@ -9095,6 +9095,20 @@ void LIRGenerator::visitWasmMulI64WideHI64(MWasmMulI64WideHI64* ins) {
 #endif
 }
 
+void LIRGenerator::visitWasmUnsignedToDouble(MWasmUnsignedToDouble* ins) {
+  MOZ_ASSERT(ins->input()->type() == MIRType::Int32);
+  auto* lir =
+      new (alloc()) LWasmUint32ToDouble(useRegisterAtStart(ins->input()));
+  define(lir, ins);
+}
+
+void LIRGenerator::visitWasmUnsignedToFloat32(MWasmUnsignedToFloat32* ins) {
+  MOZ_ASSERT(ins->input()->type() == MIRType::Int32);
+  auto* lir =
+      new (alloc()) LWasmUint32ToFloat32(useRegisterAtStart(ins->input()));
+  define(lir, ins);
+}
+
 void LIRGenerator::visitAddDisposableResource(MAddDisposableResource* ins) {
   MDefinition* env = ins->environment();
 

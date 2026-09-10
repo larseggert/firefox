@@ -1413,16 +1413,6 @@ void CodeGenerator::visitCompareFAndBranch(LCompareFAndBranch* comp) {
              comp->ifFalse());
 }
 
-void CodeGenerator::visitWasmUint32ToDouble(LWasmUint32ToDouble* lir) {
-  masm.convertUInt32ToDouble(ToRegister(lir->input()),
-                             ToFloatRegister(lir->output()));
-}
-
-void CodeGenerator::visitWasmUint32ToFloat32(LWasmUint32ToFloat32* lir) {
-  masm.convertUInt32ToFloat32(ToRegister(lir->input()),
-                              ToFloatRegister(lir->output()));
-}
-
 void CodeGenerator::visitNotD(LNotD* ins) {
   // Since this operation is not, we want to set a bit if the double is
   // falsey, which means 0.0, -0.0 or NaN. When comparing with 0, an input of

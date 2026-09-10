@@ -23609,6 +23609,16 @@ void CodeGenerator::visitWasmStoreInstanceScratch2xI32(
 }
 #endif
 
+void CodeGenerator::visitWasmUint32ToDouble(LWasmUint32ToDouble* lir) {
+  masm.convertUInt32ToDouble(ToRegister(lir->input()),
+                             ToFloatRegister(lir->output()));
+}
+
+void CodeGenerator::visitWasmUint32ToFloat32(LWasmUint32ToFloat32* lir) {
+  masm.convertUInt32ToFloat32(ToRegister(lir->input()),
+                              ToFloatRegister(lir->output()));
+}
+
 void CodeGenerator::visitAddDisposableResource(LAddDisposableResource* lir) {
   Register environment = ToRegister(lir->environment());
   ValueOperand resource = ToValue(lir->resource());
