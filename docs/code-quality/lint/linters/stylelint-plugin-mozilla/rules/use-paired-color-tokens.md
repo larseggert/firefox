@@ -15,7 +15,10 @@ in the theme the author did not try.
 The rule only reports a declaration block that sets both a background color and
 a text color, because a block that sets one of them takes the other from
 somewhere the rule cannot see: an ancestor, a sibling rule, or another
-pseudo-element.
+pseudo-element. Whether a block that paints a surface owes it a text color at
+all is
+[no-background-without-text-color](no-background-without-text-color.md)'s
+question.
 
 Within such a block it reports two things:
 
