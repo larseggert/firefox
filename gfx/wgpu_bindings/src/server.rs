@@ -3,14 +3,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use crate::{
-    AdapterInformation, BufferMapResult, ByteBuf, DeviceAction, FfiDeviceLostReason,
+    error::{error_to_string, GPUError},
+    make_byte_buf,
+    telemetry::build_telemetry_struct,
+    wgpu_string, AdapterInformation, BufferMapResult, ByteBuf, DeviceAction, FfiDeviceLostReason,
     FfiErrorFilter, FfiPopErrorScopeResultType, FfiSlice, FfiTextureDescriptor, Message,
     PipelineError, QueueWriteAction, QueueWriteDataSource, ServerMessage,
     ShaderModuleCompilationMessage, SwapChainId, TextureAction,
-    error::{GPUError, error_to_string},
-    make_byte_buf,
-    telemetry::build_telemetry_struct,
-    wgpu_string,
 };
 
 use futures_util::StreamExt;
@@ -22,14 +21,13 @@ use wgc::{
 #[allow(unused_imports)]
 use wgh::Instance;
 use wgpu_core_remote_types::{
-    BufferDescriptor, DeviceDescriptor, ShaderModuleDescriptor, TextureDescriptor,
-    TextureViewDescriptor,
     encoders::{CommandBufferDescriptor, TexelCopyBufferInfo, TexelCopyTextureInfo},
-    id,
+    id, BufferDescriptor, DeviceDescriptor, ShaderModuleDescriptor, TextureDescriptor,
+    TextureViewDescriptor,
 };
 use wgt::{
-    CommandEncoderDescriptor, TexelCopyBufferLayout,
     error::{ErrorFilter, ErrorType, WebGpuError},
+    CommandEncoderDescriptor, TexelCopyBufferLayout,
 };
 
 use std::borrow::Cow;
@@ -3455,17 +3453,17 @@ pub unsafe extern "C" fn wgpu_server_device_wait_fence_from_shared_handle(
 mod macos {
     use std::ffi::CString;
 
-    use super::{Global, emit_critical_invalid_note, gfx_critical_note};
+    use super::{emit_critical_invalid_note, gfx_critical_note, Global};
     use crate::{
-        FfiTextureDescriptor, SwapChainId,
         server::{
             wgpu_server_ensure_shared_texture_for_swap_chain,
             wgpu_server_get_external_io_surface_id,
         },
+        FfiTextureDescriptor, SwapChainId,
     };
 
     use objc2::{
-        rc::{Retained, autoreleasepool},
+        rc::{autoreleasepool, Retained},
         runtime::ProtocolObject,
     };
     use objc2_foundation::NSString;
@@ -3474,7 +3472,7 @@ mod macos {
         MTLDevice as _, MTLPixelFormat, MTLResource, MTLStorageMode, MTLTexture,
         MTLTextureDescriptor, MTLTextureType, MTLTextureUsage,
     };
-    use wgpu_core_remote_types::{TextureDescriptor, id};
+    use wgpu_core_remote_types::{id, TextureDescriptor};
 
     /// Imports a Metal texture from the specified plane of an IOSurface.
     #[no_mangle]

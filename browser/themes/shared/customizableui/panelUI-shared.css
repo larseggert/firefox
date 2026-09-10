@@ -2095,7 +2095,6 @@ toolbarbutton[itemtype="showinactivebutton"] {
 
 #PanelUI-panic-timeframe {
   padding: var(--space-large);
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
   border-bottom: var(--border-width) solid var(--panel-separator-color);
 }
 

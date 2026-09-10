@@ -112,7 +112,7 @@ bool IsNotificationForbiddenFor(nsIPrincipal* aPrincipal,
         PropertiesFile::DOM_PROPERTIES,
         "NotificationsCrossOriginIframeRequestIsForbidden");
   }
-  return !StaticPrefs::dom_webnotifications_allowcrossoriginiframe();
+  return true;
 }
 
 NotificationPermission GetRawNotificationPermission(nsIPrincipal* aPrincipal) {

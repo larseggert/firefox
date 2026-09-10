@@ -6244,11 +6244,6 @@
   value: false
   mirror: always
 
-- name: dom.webnotifications.allowcrossoriginiframe
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
 - name: dom.webnotifications.forbid_nested_first_party.enabled
   type: RelaxedAtomicBool
   value: true
