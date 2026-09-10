@@ -16,6 +16,7 @@
 #include "mozilla/UniquePtrExtensions.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/gfx/Types.h"
+#include "mozilla/layers/AndroidHardwareBuffer.h"
 #include "mozilla/layers/TextureClient.h"
 
 namespace mozilla {
@@ -31,6 +32,9 @@ class AndroidHardwareBuffer
     : public SupportsThreadSafeWeakPtr<AndroidHardwareBuffer> {
  public:
   MOZ_DECLARE_REFCOUNTED_TYPENAME(AndroidHardwareBuffer)
+
+  static UniqueFileHandle MergeFences(UniqueFileHandle&& aFence1,
+                                      UniqueFileHandle&& aFence2);
 
   static already_AddRefed<AndroidHardwareBuffer> Create(
       gfx::IntSize aSize, gfx::SurfaceFormat aFormat);
@@ -79,9 +83,6 @@ class AndroidHardwareBuffer
  protected:
   AndroidHardwareBuffer(AHardwareBuffer* aNativeBuffer, gfx::IntSize aSize,
                         uint32_t aStride, gfx::SurfaceFormat aFormat);
-
-  static UniqueFileHandle MergeFences(UniqueFileHandle&& aFence1,
-                                      UniqueFileHandle&& aFence2);
 
   AHardwareBuffer* mNativeBuffer;
 

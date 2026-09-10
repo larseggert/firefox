@@ -32,6 +32,7 @@ namespace wr {
 
 class RenderCompositorLayersSWGL;
 class RenderCompositorD3D11SWGL;
+class RenderTextureHost;
 
 class RenderCompositor {
  public:
@@ -242,6 +243,8 @@ class RenderCompositor {
   virtual RefPtr<layers::Fence> GetAndResetReleaseFence() { return nullptr; }
 
   virtual bool IsPaused() { return false; }
+
+  virtual void MaybeWaitingForPendingReadFence(RenderTextureHost* aTexture) {}
 
  protected:
   // We default this to 2, so that mLatestRenderFrameId.Prev() is always valid.
