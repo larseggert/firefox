@@ -55,7 +55,7 @@ tasks:
                 - linux64-cbindgen
                 - linux64-node
                 - linux64-pkgconf
-                - sysroot-x86_64-linux-gnu-gcc11
+                - sysroot-x86_64-linux-gnu
 
     linux64-haz/debug:
         description: "Browser Hazard Analysis Linux"
@@ -81,7 +81,7 @@ tasks:
                 - linux64-nasm
                 - linux64-node
                 - linux64-pkgconf
-                - sysroot-x86_64-linux-gnu-gcc11
+                - sysroot-x86_64-linux-gnu
                 - sysroot-wasm32-wasi
         optimization:
             skip-unless-backstop: null
