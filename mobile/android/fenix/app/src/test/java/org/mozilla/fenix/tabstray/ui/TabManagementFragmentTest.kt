@@ -2,9 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package org.mozilla.fenix.tabstray
+package org.mozilla.fenix.tabstray.ui
 
 import android.content.Context
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleRegistry
 import androidx.navigation.NavController
 import io.mockk.Runs
 import io.mockk.every
@@ -28,7 +30,6 @@ import org.mozilla.fenix.navigation.NavControllerProvider
 import org.mozilla.fenix.tabstray.data.createTab
 import org.mozilla.fenix.tabstray.redux.state.Page
 import org.mozilla.fenix.tabstray.redux.state.TabsTrayState
-import org.mozilla.fenix.tabstray.ui.TabManagementFragment
 import org.mozilla.fenix.utils.Settings
 import org.robolectric.RobolectricTestRunner
 
@@ -224,6 +225,23 @@ class TabManagementFragmentTest {
                 mode = TabsTrayState.Mode.Normal,
                 tabState = fakeTab(isPrivate = true),
             )
+        )
+    }
+
+    @Test
+    fun `GIVEN fragment is detached WHEN bookmark SnackBar is invoked THEN a crash does not result`() {
+        // Set up a spied fragment with a registry to drive the lifecycle
+        // This is a workaround since the FragmentScenario API can't be easily used alongside the components singleton
+        val detachedFragment = spyk(TabManagementFragment())
+        val registry = LifecycleRegistry.createUnsafe(detachedFragment)
+        every { detachedFragment.lifecycle } returns registry
+
+        registry.currentState = Lifecycle.State.CREATED
+        registry.currentState = Lifecycle.State.DESTROYED
+
+        detachedFragment.showBookmarkSnackbar(
+            tabSize = 1,
+            parentFolderTitle = null,
         )
     }
 
