@@ -5149,7 +5149,7 @@
 # (https://github.com/whatwg/html/pull/12756)
 - name: dom.security.sanitizer.while-parsing
   type: bool
-  value: false
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
 
 # pref controls `digital` credentials being exposed
