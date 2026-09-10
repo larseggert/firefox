@@ -1,9 +1,12 @@
-use crate::{
-    minidump_cpu::{FP_REG_COUNT, GP_REG_COUNT},
-    minidump_format::format,
+use {
+    super::CrashContext,
+    crate::{
+        minidump_cpu::{FP_REG_COUNT, GP_REG_COUNT, RawContextCPU},
+        minidump_format::format,
+    },
 };
 
-impl super::CrashContextExt {
+impl CrashContext {
     pub fn get_instruction_pointer(&self) -> usize {
         self.inner.context.uc_mcontext.pc as usize
     }
@@ -12,7 +15,7 @@ impl super::CrashContextExt {
         self.inner.context.uc_mcontext.sp as usize
     }
 
-    pub fn fill_cpu_context(&self, out: &mut super::RawContextCPU) {
+    pub fn fill_cpu_context(&self, out: &mut RawContextCPU) {
         out.context_flags = format::ContextFlagsArm64Old::CONTEXT_ARM64_OLD_FULL.bits() as u64;
 
         {

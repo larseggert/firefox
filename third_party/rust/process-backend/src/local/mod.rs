@@ -1,8 +1,4 @@
-use crate::{
-    ProcessReaderKind, Stat,
-    regs::*,
-    wrapper::{OwnedFd, errno, set_errno},
-};
+use crate::regs::*;
 use core::{
     cell::RefCell,
     ffi::{CStr, c_int, c_long, c_void},
@@ -11,19 +7,21 @@ use core::{
 use libc::pid_t;
 use syscall_invoker::SyscallInvoker;
 
-pub use error::Error;
-pub use module_reader::MappedModuleMemoryReader;
+pub use self::{error::Error, module_reader::MappedModuleMemoryReader};
 
 mod error;
 mod module_reader;
 mod syscall_invoker;
 
-pub type Result<T> = core::result::Result<T, Error>;
+#[cfg(target_env = "gnu")]
+type PtraceRequestType = core::ffi::c_uint;
+
+#[cfg(not(target_env = "gnu"))]
+type PtraceRequestType = core::ffi::c_int;
 
 #[derive(Debug)]
 pub struct Backend {
     pid: pid_t,
-    process_reader: process_reader::ProcessReader,
     syscall_invoker: RefCell<SyscallInvoker>,
 }
 
@@ -31,29 +29,25 @@ impl Backend {
     pub fn new(pid: libc::pid_t) -> Self {
         Self {
             pid,
-            process_reader: process_reader::ProcessReader::new(pid),
             syscall_invoker: Default::default(),
         }
     }
-    pub fn pid(&self) -> libc::pid_t {
-        self.pid
+    pub fn process_reader(&self) -> ProcessReader {
+        ProcessReader(process_reader::ProcessReader::new(self.pid))
     }
-    pub fn process_reader(&self) -> ProcessReader<'_> {
-        ProcessReader(&self.process_reader)
-    }
-    pub fn stop_process(&self) -> Result<()> {
+    pub fn stop_process(&self) -> Result<(), Error> {
         self.standard_syscall(|| unsafe { libc::kill(self.pid, libc::SIGSTOP) })
             .map_err(Error::SigStopFailed)?;
         Ok(())
     }
 
-    pub fn continue_process(&self) -> Result<()> {
+    pub fn continue_process(&self) -> Result<(), Error> {
         self.standard_syscall(|| unsafe { libc::kill(self.pid, libc::SIGCONT) })
             .map_err(Error::SigContFailed)?;
         Ok(())
     }
 
-    pub fn suspend_thread(&self, tid: libc::pid_t) -> Result<()> {
+    pub fn suspend_thread(&self, tid: libc::pid_t) -> Result<(), Error> {
         self.standard_syscall(|| unsafe {
             ptrace(libc::PTRACE_ATTACH, tid, ptr::null_mut(), ptr::null_mut())
         })
@@ -95,7 +89,7 @@ impl Backend {
         Ok(())
     }
 
-    pub fn resume_thread(&self, tid: libc::pid_t) -> Result<()> {
+    pub fn resume_thread(&self, tid: libc::pid_t) -> Result<(), Error> {
         self.ptrace_detach(tid)
     }
 
@@ -103,24 +97,22 @@ impl Backend {
         &self,
         path: &CStr,
         offset: u64,
-    ) -> Result<MappedModuleMemoryReader> {
+    ) -> Result<MappedModuleMemoryReader, Error> {
         MappedModuleMemoryReader::new(&mut self.syscall_invoker.borrow_mut(), path, offset)
     }
 
-    pub fn stat_file(&self, path: &CStr) -> Result<Stat> {
+    pub fn stat_file(&self, path: &CStr) -> Result<libc::stat, Error> {
         let mut output = unsafe { mem::zeroed::<libc::stat>() };
         self.standard_syscall(|| unsafe { libc::stat(path.as_ptr(), &mut output) })
             .map_err(Error::StatFailed)?;
-        Ok(Stat {
-            st_mode: output.st_mode,
-        })
+        Ok(output)
     }
 
-    pub fn read_file(&self, path: &CStr) -> Result<FileReader> {
+    pub fn read_file(&self, path: &CStr) -> Result<FileReader, Error> {
         self.open_file(path).map(FileReader)
     }
 
-    pub fn read_dir(&self, path: &CStr) -> Result<DirReader> {
+    pub fn read_dir(&self, path: &CStr) -> Result<DirReader, Error> {
         self.special_syscall(|| unsafe {
             let dirp = libc::opendir(path.as_ptr());
             if dirp.is_null() {
@@ -132,7 +124,7 @@ impl Backend {
         .map_err(Error::OpenDirFailed)
     }
 
-    pub fn read_link(&self, path: &CStr, buf: &mut [u8]) -> Result<usize> {
+    pub fn read_link(&self, path: &CStr, buf: &mut [u8]) -> Result<usize, Error> {
         let bytes_read = self
             .standard_syscall(|| unsafe {
                 libc::readlink(path.as_ptr(), buf.as_mut_ptr().cast(), buf.len())
@@ -147,25 +139,31 @@ impl Backend {
         Ok(bytes_read)
     }
 
-    pub fn get_gen_regs(&self, tid: libc::pid_t) -> Result<GenRegs> {
-        self.get_regs::<GenRegsTag>(tid)
+    pub fn get_gen_regs(&self, tid: libc::pid_t) -> Result<GenRegs, Error> {
+        self.getregset(tid).or_else(|_| self.getregs(tid))
     }
-    pub fn get_fp_regs(&self, tid: libc::pid_t) -> Result<FpRegs> {
-        self.get_regs::<FpRegsTag>(tid)
+
+    pub fn get_fp_regs(&self, tid: libc::pid_t) -> Result<FpRegs, Error> {
+        self.getfpregset(tid).or_else(|_| self.getfpregs(tid))
     }
 
     #[cfg(target_arch = "x86")]
-    pub fn get_fpx_regs(&self, tid: libc::pid_t) -> Result<FpxRegs> {
-        self.get_regs::<FpxRegsTag>(tid)
+    pub fn get_fpx_regs(&self, tid: libc::pid_t) -> Result<FpxRegs, Error> {
+        const PTRACE_GETFPXREGS: PtraceRequestType = 18;
+        unsafe { self.ptrace_getregs::<FpxRegs>(PTRACE_GETFPXREGS, tid) }
     }
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    pub fn ptrace_peekuser(&self, addr: usize) -> Result<[u8; crate::PTRACE_DATA_LEN]> {
+    pub fn ptrace_peekuser(
+        &self,
+        pid: libc::pid_t,
+        addr: usize,
+    ) -> Result<[u8; mem::size_of::<libc::c_long>()], Error> {
         self.special_syscall(|| unsafe {
             set_errno(0);
             let rv = ptrace(
                 libc::PTRACE_PEEKUSER,
-                self.pid,
+                pid,
                 addr as *mut _,
                 core::ptr::null_mut(),
             );
@@ -177,20 +175,21 @@ impl Backend {
         .map_err(Error::PtracePeekUserFailed)
     }
 
-    pub fn force_process_reader_kind(&mut self, kind: ProcessReaderKind) -> Result<()> {
-        use ProcessReaderKind as K;
-        self.process_reader = match kind {
-            K::Unspecified => process_reader::ProcessReader::new(self.pid),
-            K::VirtualMem => process_reader::ProcessReader::for_virtual_mem(self.pid),
-            K::File => {
-                process_reader::ProcessReader::for_file(self.pid).map_err(Error::ProcessReader)?
-            }
-            K::Ptrace => process_reader::ProcessReader::for_ptrace(self.pid),
-        };
-        Ok(())
+    pub fn process_reader_for_virtual_mem(&self) -> ProcessReader {
+        ProcessReader(process_reader::ProcessReader::for_virtual_mem(self.pid))
     }
 
-    fn open_file(&self, path: &CStr) -> Result<OwnedFd> {
+    pub fn process_reader_for_file(&self) -> Result<ProcessReader, Error> {
+        process_reader::ProcessReader::for_file(self.pid)
+            .map(ProcessReader)
+            .map_err(Error::ProcessReader)
+    }
+
+    pub fn process_reader_for_ptrace(&self) -> ProcessReader {
+        ProcessReader(process_reader::ProcessReader::for_ptrace(self.pid))
+    }
+
+    fn open_file(&self, path: &CStr) -> Result<OwnedFd, Error> {
         self.standard_syscall(|| unsafe {
             libc::open(path.as_ptr(), libc::O_RDONLY | libc::O_CLOEXEC, 0)
         })
@@ -198,78 +197,94 @@ impl Backend {
         .map_err(Error::OpenFileFailed)
     }
 
-    fn get_regs<T: PtraceRegisterSet>(&self, tid: libc::pid_t) -> Result<T::Output> {
-        let getregset_error = match self.ptrace_getregset::<T>(tid) {
-            Ok(output) => return Ok(output),
-            Err(e) => e,
-        };
-
-        let legacy_error = match self.ptrace_getregs_legacy::<T>(tid) {
-            Ok(output) => return Ok(output),
-            Err(e) => e,
-        };
-
-        Err(Error::GetRegistersFailed {
-            getregset_error,
-            legacy_error,
-        })
+    fn getregset(&self, _pid: libc::pid_t) -> Result<GenRegs, Error> {
+        #[cfg(target_arch = "arm")]
+        {
+            Err(Error::NotSupported)
+        }
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+        {
+            const NT_PRSTATUS: usize = 1;
+            self.ptrace_getregset(NT_PRSTATUS, _pid)
+        }
     }
 
-    fn ptrace_getregs_legacy<T: PtraceRegisterSet>(
-        &self,
-        tid: libc::pid_t,
-    ) -> core::result::Result<T::Output, PtraceGetRegsLegacyError> {
-        let Some(request) = T::LEGACY_REQUEST else {
-            return Err(PtraceGetRegsLegacyError::NotSupported);
-        };
+    fn getregs(&self, pid: libc::pid_t) -> Result<GenRegs, Error> {
+        const PTRACE_GETREGS: PtraceRequestType = 12;
+        unsafe { self.ptrace_getregs::<GenRegs>(PTRACE_GETREGS, pid) }
+    }
 
-        let mut output = T::Output::default();
+    fn getfpregset(&self, pid: libc::pid_t) -> Result<FpRegs, Error> {
+        #[cfg(target_arch = "arm")]
+        {
+            const NT_ARM_VFP: usize = 0x400;
+            self.ptrace_getregset(NT_ARM_VFP, pid)
+        }
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+        {
+            const NT_PRFPREGSET: usize = 2;
+            self.ptrace_getregset(NT_PRFPREGSET, pid)
+        }
+    }
+
+    fn getfpregs(&self, _pid: libc::pid_t) -> Result<FpRegs, Error> {
+        #[cfg(target_arch = "arm")]
+        {
+            Err(Error::NotSupported)
+        }
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+        {
+            const PTRACE_GETFPREGS: PtraceRequestType = 14;
+            unsafe { self.ptrace_getregs::<FpRegs>(PTRACE_GETFPREGS, _pid) }
+        }
+    }
+
+    /// Safety: RequestType and T must agree on the size of the returned type
+    unsafe fn ptrace_getregs<T>(
+        &self,
+        request: PtraceRequestType,
+        pid: libc::pid_t,
+    ) -> Result<T, Error> {
+        let mut output = mem::MaybeUninit::<T>::uninit();
         self.standard_syscall(|| unsafe {
             ptrace(
                 request,
-                tid,
+                pid,
                 core::ptr::null_mut(),
-                (&raw mut output).cast(),
+                output.as_mut_ptr().cast(),
             )
         })
-        .map_err(PtraceGetRegsLegacyError::PtraceFailed)?;
-        Ok(output)
+        .map_err(Error::GetRegistersFailed)?;
+        Ok(unsafe { output.assume_init() })
     }
 
-    fn ptrace_getregset<T: PtraceRegisterSet>(
-        &self,
-        tid: libc::pid_t,
-    ) -> core::result::Result<T::Output, PtraceGetRegSetError> {
-        let output_size = size_of::<T::Output>();
-        assert!(T::KERNEL_SIZE <= output_size);
-
-        let mut output = T::Output::default();
+    fn ptrace_getregset<T>(&self, regset_type: usize, pid: libc::pid_t) -> Result<T, Error> {
+        let mut output = mem::MaybeUninit::<T>::uninit();
         let mut io = libc::iovec {
-            iov_base: (&raw mut output).cast(),
-            iov_len: T::KERNEL_SIZE,
+            iov_base: output.as_mut_ptr().cast(),
+            iov_len: mem::size_of::<T>(),
         };
 
         self.standard_syscall(|| unsafe {
             ptrace(
                 libc::PTRACE_GETREGSET,
-                tid,
-                T::NOTE.0 as *mut _,
+                pid,
+                regset_type as *mut _,
                 (&raw mut io).cast(),
             )
         })
-        .map_err(PtraceGetRegSetError::PtraceFailed)?;
+        .map_err(Error::GetRegistersFailed)?;
 
-        if T::KERNEL_SIZE != io.iov_len {
-            return Err(PtraceGetRegSetError::UnexpectedRegisterSetSize(
-                T::KERNEL_SIZE,
-                io.iov_len,
-            ));
+        // PTRACE_GETREGSET returns the number of bytes actually read in iov_len. Need to ensure
+        // all bytes of T are actually initialized
+        if io.iov_len != mem::size_of::<T>() {
+            Err(Error::GetRegistersFailed(libc::EINVAL))?;
         }
 
-        Ok(output)
+        Ok(unsafe { output.assume_init() })
     }
 
-    fn ptrace_detach(&self, tid: libc::pid_t) -> Result<()> {
+    fn ptrace_detach(&self, tid: libc::pid_t) -> Result<(), Error> {
         self.standard_syscall(|| unsafe {
             ptrace(libc::PTRACE_DETACH, tid, ptr::null_mut(), ptr::null_mut())
         })
@@ -277,7 +292,7 @@ impl Backend {
         Ok(())
     }
 
-    fn standard_syscall<T, F>(&self, f: F) -> core::result::Result<T, c_int>
+    fn standard_syscall<T, F>(&self, f: F) -> Result<T, c_int>
     where
         F: FnOnce() -> T,
         T: From<i8> + core::cmp::PartialEq,
@@ -285,9 +300,9 @@ impl Backend {
         self.syscall_invoker.borrow_mut().invoke_standard(f)
     }
 
-    fn special_syscall<T, F>(&self, f: F) -> core::result::Result<T, c_int>
+    fn special_syscall<T, F>(&self, f: F) -> Result<T, c_int>
     where
-        F: FnOnce() -> core::result::Result<T, ()>,
+        F: FnOnce() -> Result<T, ()>,
     {
         self.syscall_invoker.borrow_mut().invoke(f)
     }
@@ -300,103 +315,18 @@ impl Backend {
     }
 }
 
-impl crate::Backend for Backend {
-    type ProcessReader<'a> = ProcessReader<'a>;
-
-    type FileReader<'a> = FileReader;
-
-    type DirReader<'a> = DirReader;
-
-    type MappedModuleMemoryReader<'a> = MappedModuleMemoryReader;
-
-    fn pid(&self) -> crate::Result<libc::pid_t> {
-        Ok(Backend::pid(self))
-    }
-
-    fn process_reader<'a>(&'a self) -> Self::ProcessReader<'a> {
-        Backend::process_reader(self)
-    }
-
-    fn stop_process(&self) -> crate::Result<()> {
-        Backend::stop_process(self).map_err(crate::Error::Local)
-    }
-
-    fn continue_process(&self) -> crate::Result<()> {
-        Backend::continue_process(self).map_err(crate::Error::Local)
-    }
-
-    fn suspend_thread(&self, tid: libc::pid_t) -> crate::Result<()> {
-        Backend::suspend_thread(self, tid).map_err(crate::Error::Local)
-    }
-
-    fn resume_thread(&self, tid: libc::pid_t) -> crate::Result<()> {
-        Backend::resume_thread(self, tid).map_err(crate::Error::Local)
-    }
-
-    fn map_module_into_memory<'a>(
-        &'a self,
-        path: &CStr,
-        offset: u64,
-    ) -> crate::Result<Self::MappedModuleMemoryReader<'a>> {
-        Backend::map_module_into_memory(self, path, offset).map_err(crate::Error::Local)
-    }
-
-    fn stat_file(&self, path: &CStr) -> crate::Result<Stat> {
-        Backend::stat_file(self, path).map_err(crate::Error::Local)
-    }
-
-    fn read_file<'a>(&'a self, path: &CStr) -> crate::Result<Self::FileReader<'a>> {
-        Backend::read_file(self, path).map_err(crate::Error::Local)
-    }
-
-    fn read_dir<'a>(&'a self, path: &CStr) -> crate::Result<Self::DirReader<'a>> {
-        Backend::read_dir(self, path).map_err(crate::Error::Local)
-    }
-
-    fn read_link(&self, path: &CStr, buf: &mut [u8]) -> crate::Result<usize> {
-        Backend::read_link(self, path, buf).map_err(crate::Error::Local)
-    }
-
-    fn get_gen_regs(&self, tid: libc::pid_t) -> crate::Result<GenRegs> {
-        Backend::get_gen_regs(self, tid).map_err(crate::Error::Local)
-    }
-
-    fn get_fp_regs(&self, tid: libc::pid_t) -> crate::Result<FpRegs> {
-        Backend::get_fp_regs(self, tid).map_err(crate::Error::Local)
-    }
-
-    #[cfg(target_arch = "x86")]
-    fn get_fpx_regs(&self, tid: libc::pid_t) -> crate::Result<FpxRegs> {
-        Backend::get_fpx_regs(self, tid).map_err(crate::Error::Local)
-    }
-
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    fn ptrace_peekuser(&self, addr: usize) -> crate::Result<[u8; crate::PTRACE_DATA_LEN]> {
-        Backend::ptrace_peekuser(self, addr).map_err(crate::Error::Local)
-    }
-
-    fn force_process_reader_kind(&mut self, kind: ProcessReaderKind) -> crate::Result<()> {
-        Backend::force_process_reader_kind(self, kind).map_err(crate::Error::Local)
-    }
-
-    #[cfg(feature = "testing")]
-    fn fail_one_syscall_with(&self, errno: c_int) {
-        Backend::fail_one_syscall_with(self, errno)
-    }
-}
-
 #[derive(Debug)]
 pub struct FileReader(OwnedFd);
 
 impl FileReader {
-    pub fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+    pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         let rv = unsafe { libc::read(self.0.as_raw_fd(), buf.as_mut_ptr().cast(), buf.len()) };
         if rv == -1 {
             return Err(Error::ReadFileFailed(errno()));
         }
         Ok(rv.try_into().unwrap())
     }
-    pub fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
+    pub fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize, Error> {
         let rv = unsafe {
             libc::pread(
                 self.0.as_raw_fd(),
@@ -412,12 +342,6 @@ impl FileReader {
     }
 }
 
-impl crate::FileReader for FileReader {
-    fn read(&mut self, buf: &mut [u8]) -> crate::Result<usize> {
-        FileReader::read(self, buf).map_err(crate::Error::Local)
-    }
-}
-
 #[derive(Debug)]
 pub struct DirReader {
     dirp: *mut libc::DIR,
@@ -425,7 +349,7 @@ pub struct DirReader {
 }
 
 impl DirReader {
-    pub fn read_next_name(&mut self) -> Result<Option<&[u8]>> {
+    pub fn read_name(&mut self) -> Result<Option<&[u8]>, Error> {
         if self.eof {
             return Ok(None);
         }
@@ -462,36 +386,39 @@ impl Drop for DirReader {
     fn drop(&mut self) {
         let rv = unsafe { libc::closedir(self.dirp) };
         if rv == -1 {
-            report_drop_failed!("failed to close directory: {}", errno());
+            log::debug!("failed to close directory: {}", errno());
         }
     }
 }
 
-impl crate::DirReader for DirReader {
-    fn read_next_name(&mut self, buf: &mut [u8]) -> crate::Result<usize> {
-        let Some(name) = DirReader::read_next_name(self).map_err(crate::Error::Local)? else {
-            return Ok(0);
-        };
-        let buf = buf
-            .get_mut(0..name.len())
-            .ok_or(crate::Error::BufferTooSmall)?;
-        buf.copy_from_slice(name);
-        Ok(name.len())
-    }
-}
-
 #[derive(Debug)]
-pub struct ProcessReader<'a>(&'a process_reader::ProcessReader);
+pub struct ProcessReader(process_reader::ProcessReader);
 
-impl<'a> ProcessReader<'a> {
-    pub fn read_at(&self, address: usize, buf: &mut [u8]) -> Result<usize> {
+impl ProcessReader {
+    pub fn read_at(&self, address: usize, buf: &mut [u8]) -> Result<usize, Error> {
         self.0.read_at(address, buf).map_err(Error::ProcessReader)
     }
 }
 
-impl<'a> crate::ProcessReader for ProcessReader<'a> {
-    fn read_at(&self, address: usize, buf: &mut [u8]) -> crate::Result<usize> {
-        ProcessReader::read_at(self, address, buf).map_err(crate::Error::Local)
+#[derive(Debug)]
+struct OwnedFd(c_int);
+
+impl OwnedFd {
+    // SAFETY: Must be a valid fd
+    pub unsafe fn new(fd: c_int) -> Self {
+        Self(fd)
+    }
+    pub fn as_raw_fd(&self) -> c_int {
+        self.0
+    }
+}
+
+impl Drop for OwnedFd {
+    fn drop(&mut self) {
+        let rv = unsafe { libc::close(self.0) };
+        if rv == -1 {
+            log::error!("failed to close file: {}", errno());
+        }
     }
 }
 
@@ -506,18 +433,22 @@ unsafe fn ptrace(
     unsafe { libc::ptrace(request, pid, addr, data) }
 }
 
-#[derive(Debug, thiserror::Error, serde::Deserialize, serde::Serialize)]
-pub enum PtraceGetRegSetError {
-    #[error("ptrace returned error code: {0}")]
-    PtraceFailed(c_int),
-    #[error("unexpected size for register set. Expected: {0}, actual: {0}")]
-    UnexpectedRegisterSetSize(usize, usize),
+fn errno() -> c_int {
+    unsafe { *errno_location() }
 }
 
-#[derive(Debug, thiserror::Error, serde::Deserialize, serde::Serialize)]
-pub enum PtraceGetRegsLegacyError {
-    #[error("ptrace returned error code: {0}")]
-    PtraceFailed(c_int),
-    #[error("legacy API not supported on this architecture")]
-    NotSupported,
+fn set_errno(value: c_int) {
+    unsafe {
+        *errno_location() = value;
+    }
+}
+
+#[cfg(target_os = "android")]
+fn errno_location() -> *mut c_int {
+    unsafe { libc::__errno() }
+}
+
+#[cfg(not(target_os = "android"))]
+fn errno_location() -> *mut c_int {
+    unsafe { libc::__errno_location() }
 }

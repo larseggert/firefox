@@ -1,7 +1,6 @@
 use {
     super::{CpuInfoError, ProcessInspector},
     crate::minidump_format::*,
-    failspot::failspot,
     scroll::Pwrite,
     std::{
         collections::HashSet,
@@ -136,7 +135,7 @@ fn parse_features(_val: &str) -> u32 {
 }
 
 pub fn write_cpu_information(
-    process_inspector: &dyn ProcessInspector,
+    process_inspector: &ProcessInspector,
     sys_info: &mut MDRawSystemInfo,
 ) -> Result<()> {
     // The CPUID value is broken up in several entries in /proc/cpuinfo.
@@ -171,14 +170,12 @@ pub fn write_cpu_information(
     // because the content of /proc/cpuinfo will only mirror the number
     // of 'online' cores, and thus will vary with time.
     // See http://www.kernel.org/doc/Documentation/cputopology.txt
-    if let Ok(mut present_file) =
-        process_inspector.read_file("/sys/devices/system/cpu/present".into())
-    {
+    if let Ok(mut present_file) = process_inspector.read_file("/sys/devices/system/cpu/present") {
         // Ignore unparsable content
         let cpus_present = parse_cpus_from_sysfile(&mut present_file).unwrap_or_default();
 
         if let Ok(mut possible_file) =
-            process_inspector.read_file("/sys/devices/system/cpu/possible".into())
+            process_inspector.read_file("/sys/devices/system/cpu/possible")
         {
             // Ignore unparsable content
             let cpus_possible = parse_cpus_from_sysfile(&mut possible_file).unwrap_or_default();
@@ -194,13 +191,14 @@ pub fn write_cpu_information(
     // readable from regular Android applications on later versions
     // (>= 4.1) of the Android platform.
 
-    if failspot!(CpuInfoFileOpen) {
-        process_inspector.fail_one_syscall_with(libc::EPERM);
-    }
-
-    let cpuinfo_file = process_inspector
-        .read_file("/proc/cpuinfo".into())
-        .map_err(CpuInfoError::ReadFileError)?;
+    let cpuinfo_file = match process_inspector.read_file("/proc/cpuinfo") {
+        Ok(x) => x,
+        Err(_) => {
+            // Do not return Error here to allow the minidump generation
+            // to happen properly.
+            return Ok(());
+        }
+    };
 
     let mut cpuid = 0;
     let mut elf_hwcaps = 0;
@@ -275,10 +273,10 @@ pub fn write_cpu_information(
         }
 
         // Rebuild the ELF hwcaps from the 'Features' field.
-        if field == "Features"
-            && let Some(val) = value
-        {
-            elf_hwcaps = parse_features(val);
+        if field == "Features" {
+            if let Some(val) = value {
+                elf_hwcaps = parse_features(val);
+            }
         }
     }
 
