@@ -976,10 +976,10 @@ void SpeechRecognitionParent::ProcessAudioStreaming() {
         text.Append(w);
         confSum += words[i].conf;
         ++counted;
-        profiler_add_marker(
-            "parakeet word", geckoprofiler::category::MEDIA_PLAYBACK, {},
-            ParakeetWordMarker{}, w, words[i].start, words[i].end,
-            words[i].conf);
+        profiler_add_marker("parakeet word",
+                            geckoprofiler::category::MEDIA_PLAYBACK, {},
+                            ParakeetWordMarker{}, w, words[i].start,
+                            words[i].end, words[i].conf);
         LOGV("  word '{}' [{:.2f}-{:.2f}] conf={:.2f}", w.get(), words[i].start,
              words[i].end, words[i].conf);
       }
