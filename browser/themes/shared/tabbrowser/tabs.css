@@ -1713,6 +1713,8 @@ tab-group > tab-split-view-wrapper {
 
 /* Overrides for split-view-wrapped tabs in a collapsed vertical tabstrip */
 #tabbrowser-tabs[orient="vertical"]:not([expanded]) tab-split-view-wrapper {
+  /* When the user begins to drag a collapsed sidebar, the wrapper should not stretch. */
+  align-self: start;
   margin-inline: calc(var(--tab-inner-inline-margin) - var(--space-xsmall));
 
   /* Prevent the close button from being cutoff by the bookmarks toolbar / nav bar
