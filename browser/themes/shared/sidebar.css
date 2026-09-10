@@ -282,6 +282,12 @@ sidebar-main,
 :root {
   --sidebar-launcher-button-padding-inline: round(var(--space-medium), 0.5px);
 
+  @media -moz-pref("sidebar.verticalTabs") {
+    /* Vertical tabs need device pixel aligned margins on *both* sides.
+     * Otherwise, they may not be properly centered. */
+    --sidebar-launcher-button-padding-inline: round(var(--space-medium), env(hairline));
+  }
+
   &[uidensity="compact"] {
     /* 32px icon button + 2 * 2px = 36px collapsed sidebar. */
     --sidebar-launcher-button-padding-inline: 2px;

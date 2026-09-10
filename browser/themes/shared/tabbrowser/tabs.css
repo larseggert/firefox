@@ -1463,11 +1463,12 @@ tab-group > tab-split-view-wrapper {
 /* Tabs in split-view-wrapper defaults */
 #tabbrowser-tabs tab-split-view-wrapper {
   --tab-context-line-block-offset: var(--tab-context-line-split-view-block-offset);
+  --split-view-wrapper-padding: round(var(--space-xsmall), env(hairline));
 
   display: grid;
   grid-template-columns: 1fr 1fr;
   margin-inline: var(--space-small);
-  padding: var(--space-xsmall);
+  padding: var(--split-view-wrapper-padding);
   border-radius: var(--tab-border-radius);
   position: relative; /* prevents splitview wrappers from shifting during other drag events*/
   -moz-window-dragging: no-drag;
@@ -1520,7 +1521,7 @@ tab-group > tab-split-view-wrapper {
     }
 
     .tab-background {
-      margin-inline: var(--space-xxsmall);
+      margin-inline: 0;
       margin-block: 0;
     }
 
@@ -1539,15 +1540,11 @@ tab-group > tab-split-view-wrapper {
       }
     }
 
-    /* Two-column split only: first/last tab margin and padding for the space between
-       columns. Same pattern for horizontal tab strips and for vertical expanded, with
-       different @container names and the same 211px min-width. */
+    /* Two-column split only: first/last tab adjustments. Same pattern for horizontal
+       tab strips and for vertical expanded, with different @container names and the
+       same 211px min-width. */
     #tabbrowser-tabs[orient="horizontal"] tab-split-view-wrapper & {
       &:first-child {
-        .tab-background {
-          margin-inline-end: 0;
-        }
-
         @container vertical-tabs-container (min-width: 211px) {
           tab-split-view-wrapper:not([hasactivetab]) & {
             border-block-end: transparent;
@@ -1556,10 +1553,6 @@ tab-group > tab-split-view-wrapper {
       }
 
       &:last-child {
-        .tab-background {
-          margin-inline-start: 0;
-        }
-
         @container tab-split-view-horizontal (min-width: 211px) {
           .tab-content {
             padding-inline-start: var(--space-medium);
@@ -1570,12 +1563,6 @@ tab-group > tab-split-view-wrapper {
 
     :root:not([sidebar-expand-on-hover]) #tabbrowser-tabs[orient="vertical"][expanded] tab-split-view-wrapper & {
       &:first-child {
-        @container vertical-tabs-container (min-width: 211px) {
-          .tab-background {
-            margin-inline-end: 0;
-          }
-        }
-
         tab-split-view-wrapper:not([hasactivetab]) & {
           border-block-end: transparent;
         }
@@ -1583,10 +1570,6 @@ tab-group > tab-split-view-wrapper {
 
       &:last-child {
         @container vertical-tabs-container (min-width: 211px) {
-          .tab-background {
-            margin-inline-start: var(--space-xxsmall);
-          }
-
           .tab-content {
             padding-inline-start: var(--space-medium);
           }
@@ -1645,11 +1628,15 @@ tab-group > tab-split-view-wrapper {
 
 /* Overrides for split-view-wrapped tabs in a vertical tabstrip */
 #tabbrowser-tabs[orient="vertical"] tab-split-view-wrapper {
+  --split-view-wrapper-inline-inset: calc(var(--tab-inline-padding) - var(--space-medium));
+
   border-radius: var(--tab-border-radius);
   gap: var(--space-xsmall);
   grid-template-columns: 1fr;
 
-  margin-inline: calc(var(--tab-inline-padding) - var(--space-xsmall) - var(--space-medium));
+  /* Derive the margin from the snapped total inset and padding, so that the
+   * difference remains device pixel aligned. */
+  margin-inline: calc(round(var(--split-view-wrapper-inline-inset), env(hairline)) - var(--split-view-wrapper-padding));
 }
 
 #tabbrowser-tabs[orient="vertical"][expanded] tab-split-view-wrapper {
@@ -1713,9 +1700,10 @@ tab-group > tab-split-view-wrapper {
 
 /* Overrides for split-view-wrapped tabs in a collapsed vertical tabstrip */
 #tabbrowser-tabs[orient="vertical"]:not([expanded]) tab-split-view-wrapper {
+  --split-view-wrapper-inline-inset: calc(var(--tab-inner-inline-margin) + var(--tab-collapsed-split-pill-offset));
+
   /* When the user begins to drag a collapsed sidebar, the wrapper should not stretch. */
   align-self: start;
-  margin-inline: calc(var(--tab-inner-inline-margin) - var(--space-xsmall));
 
   /* Prevent the close button from being cutoff by the bookmarks toolbar / nav bar
     if split view is first in list if non-pinned vertical tabs */
@@ -1736,16 +1724,10 @@ tab-group > tab-split-view-wrapper {
   .tabbrowser-tab {
     overflow: visible;
 
-    .tab-background {
-      margin-inline: var(--tab-collapsed-split-pill-offset);
-      margin-block: 0;
-    }
-
     .tab-content {
       padding-inline: unset;
       width: var(--tab-collapsed-background-width);
       justify-content: center;
-      margin-inline: var(--tab-collapsed-split-pill-offset);
 
       background-position-y: 4px !important;
       background-position-x: left calc(var(--tab-inline-padding) + var(--icon-size) - 10px) !important;
