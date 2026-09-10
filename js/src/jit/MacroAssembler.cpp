@@ -721,7 +721,11 @@ void MacroAssembler::bumpPointerAllocate(Register result, Register temp,
     Register site = allocSite.as<Register>();
     updateAllocSite(temp, result, zone, site);
     // See NurseryCellHeader::MakeValue.
-    orPtr(Imm32(int32_t(traceKind)), site);
+    static_assert(int32_t(JS::TraceKind::Object) == 0,
+                  "Object contributes no tag bits, making the OR a no-op");
+    if (traceKind != JS::TraceKind::Object) {
+      orPtr(Imm32(int32_t(traceKind)), site);
+    }
     storePtr(site, Address(result, -js::Nursery::nurseryCellHeaderSize()));
   }
 }
