@@ -1762,31 +1762,22 @@ export class SpecialPowersChild extends JSWindowActorChild {
     );
   }
 
-  registerFactory(cid, contractID, newFactory) {
+  registerFactory(contractID, newFactory) {
     newFactory = Cu.waiveXrays(newFactory);
 
     var componentRegistrar = Components.manager.QueryInterface(
       Ci.nsIComponentRegistrar
     );
-
     var currentCID = componentRegistrar.contractIDToCID(contractID);
-    var currentFactory = Components.manager.getClassObject(
-      Cc[contractID],
-      Ci.nsIFactory
-    );
-    if (cid) {
-      componentRegistrar.unregisterFactory(currentCID, currentFactory);
-    } else {
-      cid = Services.uuid.generateUUID();
-    }
-
-    // Restore the original factory.
+    var cid = Services.uuid.generateUUID();
     componentRegistrar.registerFactory(cid, "", contractID, newFactory);
     return currentCID;
   }
 
-  unregisterFactory(cid, contractID, newFactory) {
-    newFactory = Cu.waiveXrays(newFactory);
+  unregisterFactory(cid, contractID) {
+    if (!cid) {
+      throw new Error("cid must be non-null when calling unregisterFactory()");
+    }
 
     var componentRegistrar = Components.manager.QueryInterface(
       Ci.nsIComponentRegistrar
@@ -1797,15 +1788,10 @@ export class SpecialPowersChild extends JSWindowActorChild {
       Cc[contractID],
       Ci.nsIFactory
     );
-    if (cid) {
-      componentRegistrar.unregisterFactory(currentCID, currentFactory);
-    } else {
-      cid = Services.uuid.generateUUID();
-    }
+    componentRegistrar.unregisterFactory(currentCID, currentFactory);
 
     // Restore the original factory.
-    componentRegistrar.registerFactory(cid, "", contractID, newFactory);
-    return currentCID;
+    componentRegistrar.registerFactory(cid, "", contractID, null);
   }
 
   _getElement(aWindow, id) {

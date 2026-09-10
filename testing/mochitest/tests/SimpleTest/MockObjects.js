@@ -54,7 +54,6 @@ MockObjectRegisterer.prototype = {
     }
 
     this._originalCID = SpecialPowers.registerFactory(
-      null,
       this._contractID,
       this._mockFactory
     );
