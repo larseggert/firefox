@@ -53,6 +53,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "NOVA_ENABLED",
+  "browser.nova.enabled",
+  true
+);
+
 const PROFILES_CRYPTO_SALT_LENGTH_BYTES = 16;
 
 const COMMAND_LINE_UPDATE = "profiles-updated";
@@ -1031,7 +1038,9 @@ class SelectableProfileServiceClass extends EventEmitter {
 
     let themeFgColor = computedStyles.getPropertyValue("--toolbar-text-color");
     let themeBgColor = computedStyles.getPropertyValue(
-      "--toolbar-background-color"
+      lazy.NOVA_ENABLED
+        ? "--background-color-information"
+        : "--toolbar-background-color"
     );
 
     let bg = window.InspectorUtils.colorToRGBA(themeBgColor);
@@ -1076,15 +1085,22 @@ class SelectableProfileServiceClass extends EventEmitter {
   }
 
   /**
-   * Extract theme colors from theme data, handling Nova themes differently.
+   * Extract theme colors from theme data.
    *
    * @param {object} theme The theme object
    * @returns {{ themeFg: string, themeBg: string }}
    */
   extractThemeColors(theme) {
-    let themeFg =
-      theme.icon_attention_color || theme.toolbar_text || theme.textcolor;
-    let themeBg = theme.accentcolor || theme.toolbarColor;
+    let themeFg;
+    let themeBg;
+
+    if (theme.id === DEFAULT_THEME_ID) {
+      ({ themeBg, themeFg } = this.getColorsForDefaultTheme());
+    } else {
+      themeFg =
+        theme.icon_attention_color || theme.toolbar_text || theme.textcolor;
+      themeBg = theme.accentcolor || theme.toolbarColor;
+    }
 
     return { themeFg, themeBg };
   }
@@ -1106,7 +1122,15 @@ class SelectableProfileServiceClass extends EventEmitter {
 
     let { themeFg, themeBg } = this.extractThemeColors(theme);
 
-    if (theme.id === DEFAULT_THEME_ID || !themeFg || !themeBg) {
+    // Nova themes are installed via `updateThemeState` in ThemesList.sys.mjs,
+    // which causes the theme to be fully updated and `windowlwthemeupdate` to be
+    // dispatched before this code runs. As a result of this change, we can
+    // reliably use the colors from `extractThemeColors` immediately rather than
+    // waiting for an event that already fired.
+    if (
+      !lazy.NOVA_ENABLED &&
+      (theme.id === DEFAULT_THEME_ID || !themeFg || !themeBg)
+    ) {
       window.addEventListener(
         "windowlwthemeupdate",
         () => {
