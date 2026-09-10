@@ -1355,7 +1355,7 @@ export const LoginHelper = {
     const expr = /username/i;
 
     let ac = element.getAutocompleteInfo()?.fieldName;
-    if (ac && ac == "username") {
+    if (ac && (ac == "username" || ac == "webauthn")) {
       return true;
     }
 
