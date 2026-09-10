@@ -6,16 +6,13 @@
 
 #include "NotificationHandler.h"
 #include "NotificationUtils.h"
-#include "mozilla/AlertNotification.h"
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/dom/ServiceWorkerManager.h"
 #include "mozilla/glean/DomNotificationMetrics.h"
 #include "mozilla/glean/bindings/Event.h"
 #include "mozilla/ipc/Endpoint.h"
-#include "nsComponentManagerUtils.h"
 #include "nsIAlertsService.h"
 #include "nsIServiceWorkerManager.h"
-#include "nsISiteCategory.h"
 #include "nsIURIClassifier.h"
 #include "nsNetCID.h"
 #include "nsThreadUtils.h"
@@ -24,39 +21,16 @@ namespace mozilla::dom::notification {
 
 NS_IMPL_ISUPPORTS0(NotificationParent)
 
-class NotificationObserver final : public nsIAlertCallbacks {
+class NotificationCallbacks final : public NotificationCallbacksCommon {
  public:
   NS_DECL_ISUPPORTS
 
-  NotificationObserver(const nsAString& aScope, nsIPrincipal* aPrincipal,
-                       IPCNotification aNotification,
-                       NotificationParent& aParent)
-      : mScope(aScope),
-        mPrincipal(aPrincipal),
-        mNotification(std::move(aNotification)),
-        mActor(&aParent) {
-    if (nsCOMPtr<nsISiteCategory> siteCategory =
-            do_GetService("@mozilla.org/site-category;1")) {
-      nsCString category;
-      if (NS_SUCCEEDED(siteCategory->GetCategory(mPrincipal, category))) {
-        mCategory = Some(category);
-      }
-    }
-  }
-
-  NS_IMETHODIMP OnAlertDisable() override {
-    glean::web_notification::clicked.Record(
-        Some(glean::web_notification::ClickedExtra{.action = Some("disable"_ns),
-                                                   .siteCategory = mCategory}));
-    return RemovePermission(mPrincipal);
-  }
-
-  NS_IMETHODIMP OnAlertSettings() override {
-    glean::web_notification::clicked.Record(
-        Some(glean::web_notification::ClickedExtra{
-            .action = Some("settings"_ns), .siteCategory = mCategory}));
-    return OpenSettings(mPrincipal);
-  }
+  NotificationCallbacks(const nsAString& aScope, nsIPrincipal* aPrincipal,
+                        IPCNotification aNotification,
+                        NotificationParent& aParent)
+      : NotificationCallbacksCommon(aScope, aPrincipal,
+                                    std::move(aNotification)),
+        mActor(&aParent) {}
 
   /**
    * @returns True if the actor ran and no further action is needed, false
@@ -73,31 +47,17 @@ class NotificationObserver final : public nsIAlertCallbacks {
   }
 
   NS_IMETHODIMP OnAlertShow() override {
-    mShown = true;
-    glean::web_notification::shown.Record(
-        Some(glean::web_notification::ShownExtra{.siteCategory = mCategory}));
-
+    MOZ_TRY(NotificationCallbacksCommon::OnAlertShow());
     if (RunActor([](auto* actor) { actor->OnAlertShow(); }) ||
         mScope.IsEmpty()) {
       return NS_OK;
     }
-
-    (void)NS_WARN_IF(NS_FAILED(
-        AdjustPushQuota(mPrincipal, NotificationStatusChange::Shown)));
-    nsresult rv = PersistNotification(mPrincipal, mNotification, mScope);
-    if (NS_FAILED(rv)) {
-      NS_WARNING("Could not persist Notification");
-    }
+    PersistNotification();
     return NS_OK;
   }
 
   NS_IMETHODIMP OnAlertClick(nsIAlertAction* aAction) override {
-    mClicked = true;
-    glean::web_notification::clicked.Record(
-        Some(glean::web_notification::ClickedExtra{
-            .action = Some(aAction ? "action-button"_ns : "body"_ns),
-            .siteCategory = mCategory}));
-
+    MOZ_TRY(NotificationCallbacksCommon::OnAlertClick(aAction));
     nsCOMPtr<nsIURI> navigate;
     if (StaticPrefs::dom_webnotifications_navigate_enabled()) {
       if (aAction) {
@@ -107,7 +67,7 @@ class NotificationObserver final : public nsIAlertCallbacks {
       }
     }
 
-    // If navigation URL is set, we will navigate in RespondOnClick.
+    // If navigation URL is set, don't fire event at SW.
     if (!navigate) {
       if (RunActor([](auto* actor) { actor->FireClickEvent(); })) {
         return NS_OK;
@@ -117,24 +77,11 @@ class NotificationObserver final : public nsIAlertCallbacks {
       }
     }
 
-    nsAutoString actionName;
-    if (aAction) {
-      MOZ_TRY(aAction->GetAction(actionName));
-    }
-    return RespondOnClick(mPrincipal, mScope, mNotification, actionName);
-  }
-
-  NS_IMETHODIMP OnAlertDismissedFromForeground() override {
-    glean::web_notification::ignored.Record(
-        Some(glean::web_notification::IgnoredExtra{.siteCategory = mCategory}));
-    return NS_OK;
+    return RespondOnClick(aAction);
   }
 
   NS_IMETHODIMP OnAlertClosed() override {
-    if (mShown && !mClicked) {
-      glean::web_notification::dismissed.Record(Some(
-          glean::web_notification::DismissedExtra{.siteCategory = mCategory}));
-    }
+    MOZ_TRY(NotificationCallbacksCommon::OnAlertClosed());
     if (RunActor([](auto* actor) { actor->OnAlertFinished(true); }) ||
         mScope.IsEmpty()) {
       return NS_OK;
@@ -143,10 +90,7 @@ class NotificationObserver final : public nsIAlertCallbacks {
   }
 
   NS_IMETHODIMP OnAlertFinished() override {
-    if (mShown && !mClicked) {
-      glean::web_notification::dismissed.Record(Some(
-          glean::web_notification::DismissedExtra{.siteCategory = mCategory}));
-    }
+    MOZ_TRY(NotificationCallbacksCommon::OnAlertFinished());
     if (RunActor([](auto* actor) { actor->OnAlertFinished(false); }) ||
         mScope.IsEmpty()) {
       return NS_OK;
@@ -154,39 +98,27 @@ class NotificationObserver final : public nsIAlertCallbacks {
     return OnAlertFinishedCommon();
   }
 
+ private:
+  virtual ~NotificationCallbacks() = default;
+
   nsresult OnAlertFinishedCommon() {
     RefPtr<ServiceWorkerManager> swm = ServiceWorkerManager::GetInstance();
     if (!swm) {
       return NS_ERROR_FAILURE;
     }
 
+    UnpersistNotification();
     nsAutoCString originSuffix;
     MOZ_TRY(mPrincipal->GetOriginSuffix(originSuffix));
-
-    (void)NS_WARN_IF(NS_FAILED(
-        AdjustPushQuota(mPrincipal, NotificationStatusChange::Closed)));
-    (void)NS_WARN_IF(
-        NS_FAILED(UnpersistNotification(mPrincipal, mNotification.id())));
     (void)swm->SendNotificationCloseEvent(originSuffix, mScope, mNotification);
 
     return NS_OK;
   }
 
- private:
-  virtual ~NotificationObserver() = default;
-
-  // May want to replace with SWR ID, see bug 1881812
-  nsString mScope;
-  nsCOMPtr<nsIPrincipal> mPrincipal;
-  IPCNotification mNotification;
   WeakPtr<NotificationParent> mActor;
-
-  Maybe<nsCString> mCategory;
-  bool mShown = false;
-  bool mClicked = false;
 };
 
-NS_IMPL_ISUPPORTS(NotificationObserver, nsIAlertCallbacks)
+NS_IMPL_ISUPPORTS(NotificationCallbacks, nsIAlertCallbacks)
 
 using SafeBrowsingPromise = MozPromise<bool, nsresult, false>;
 
@@ -380,68 +312,19 @@ mozilla::ipc::IPCResult NotificationParent::RecvShow(Maybe<IPCImage>&& aIcon,
 }
 
 nsresult NotificationParent::Show(Maybe<IPCImage>&& aIcon) {
-  // Step 4.3 the show steps, which are almost all about processing `tag` and
-  // then displaying the notification. Both are handled by
-  // nsIAlertsService::ShowAlert. The below is all about constructing the
-  // observer (for show and close events) right and ultimately call the alerts
-  // service function.
+  auto result = CreateAlertForNotification(mArgs.mNotification.options(),
+                                           *mArgs.mPrincipal, std::move(aIcon));
 
-  // In the case of IPC, the parent process uses the cookie to map to
-  // nsIObserver. Thus the cookie must be unique to differentiate observers.
-  // XXX(krosylight): This is about ContentChild::mAlertObserver which is not
-  // useful when called by the parent process. This should be removed when we
-  // make nsIAlertsService parent process only.
-  nsString obsoleteCookie = u"notification:"_ns;
-
-  const IPCNotificationOptions& options = mArgs.mNotification.options();
-
-  bool requireInteraction = options.requireInteraction();
-  if (!StaticPrefs::dom_webnotifications_requireinteraction_enabled()) {
-    requireInteraction = false;
+  if (result.isErr()) {
+    return result.unwrapErr();
   }
 
-  nsCOMPtr<nsIAlertNotification> alert =
-      do_CreateInstance(ALERT_NOTIFICATION_CONTRACTID);
-  if (!alert) {
-    return NS_ERROR_NOT_AVAILABLE;
-  }
-
-  nsCOMPtr<nsIPrincipal> principal = mArgs.mPrincipal;
-  nsAutoCString iconUrl;
-  if (RefPtr<nsIURI> iconUri = options.icon()) {
-    iconUri->GetSpec(iconUrl);
-  }
-  MOZ_TRY(alert->Init(options.tag(), NS_ConvertUTF8toUTF16(iconUrl),
-                      options.title(), options.body(), true, obsoleteCookie,
-                      NS_ConvertASCIItoUTF16(GetEnumString(options.dir())),
-                      options.lang(), options.dataSerialized(), principal,
-                      principal->GetIsInPrivateBrowsing(), requireInteraction,
-                      options.silent(), options.vibrate()));
-
-  if (aIcon) {
-    if (nsCOMPtr<imgIContainer> image =
-            nsContentUtils::IPCImageToImage(*aIcon)) {
-      alert->SetImage(image);
-    }
-  }
-
-  if (StaticPrefs::dom_webnotifications_actions_enabled()) {
-    nsTArray<RefPtr<nsIAlertAction>> actions;
-    MOZ_ASSERT(options.actions().Length() <= kMaxActions);
-    for (const auto& action : options.actions()) {
-      actions.AppendElement(
-          new AlertAction(action.name(), action.title(), action.navigate()));
-    }
-    alert->SetActions(actions);
-  }
-
+  nsCOMPtr<nsIAlertNotification> alert = result.unwrap();
   MOZ_TRY(alert->GetId(mId));
-
-  RefPtr<NotificationObserver> observer = new NotificationObserver(
-      mArgs.mScope, principal, IPCNotification(mId, options), *this);
-  MOZ_TRY(ShowAlertWithCleanup(alert, observer));
-
-  return NS_OK;
+  RefPtr<NotificationCallbacks> callbacks = new NotificationCallbacks(
+      mArgs.mScope, mArgs.mPrincipal,
+      IPCNotification(mId, mArgs.mNotification.options()), *this);
+  return ShowAlertWithCleanup(alert, callbacks);
 }
 
 mozilla::ipc::IPCResult NotificationParent::RecvClose() {
