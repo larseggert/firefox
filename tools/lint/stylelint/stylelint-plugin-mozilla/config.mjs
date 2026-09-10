@@ -301,7 +301,7 @@ const BorderColor = {
     "0",
   ],
   allowAlias: [...SYSTEM_COLORS],
-  allowedTokens: [...versatileColorTokens],
+  allowedTokens: [...versatileColorTokens, "--panel-separator-color"],
   tokenTypes: ["border-color", "border", "outline-color", "outline"],
   aliasTokenTypes: ["color", "background-color", "text-color"],
   customFixes: customColorFixes,
