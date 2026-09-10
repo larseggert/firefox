@@ -334,12 +334,6 @@ sidebar-main,
      * browser-shared.css. */
     --sidebar-launcher-surface-color: var(--toolbox-background-color);
 
-    @media -moz-pref("browser.nova.enabled") and (not (-moz-native-theme)) {
-      :root:not([lwtheme]) & {
-        --sidebar-launcher-surface-color: var(--toolbar-background-color);
-      }
-    }
-
     background-color: var(--sidebar-launcher-surface-color);
     position: relative;
     inset: 0;
