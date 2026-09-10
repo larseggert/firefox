@@ -6,7 +6,6 @@
 #define MOZILLA_GFX_GpuFence_H
 
 #include "mozilla/TimeStamp.h"
-#include "mozilla/layers/Fence.h"
 #include "nsISupportsImpl.h"
 
 namespace mozilla {
@@ -16,9 +15,9 @@ class GLContext;
 
 namespace layers {
 
-class GpuFence : public Fence {
+class GpuFence {
  public:
-  GpuFence* AsGpuFence() override { return this; }
+  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(GpuFence);
 
   virtual bool HasCompleted() = 0;
   virtual bool ClientWait(TimeDuration aTimeout) = 0;

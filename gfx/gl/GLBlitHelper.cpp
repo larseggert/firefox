@@ -20,7 +20,6 @@
 #include "mozilla/gfx/BuildConstants.h"
 #include "mozilla/gfx/Logging.h"
 #include "mozilla/gfx/Matrix.h"
-#include "mozilla/layers/CompositeProcessFencesHolderMap.h"
 #include "mozilla/layers/GpuFence.h"
 #include "mozilla/layers/ImageDataSerializer.h"
 #include "mozilla/layers/LayersSurfaces.h"
@@ -954,15 +953,9 @@ bool GLBlitHelper::BlitSdToFramebuffer(const layers::SurfaceDescriptor& asd,
 #ifdef XP_MACOSX
     case layers::SurfaceDescriptor::TSurfaceDescriptorMacIOSurface: {
       const auto& sd = asd.get_SurfaceDescriptorMacIOSurface();
-      if (sd.fencesHolderId().isSome()) {
-        auto* fencesHolderMap = layers::CompositeProcessFencesHolderMap::Get();
-        RefPtr<layers::Fence> fence =
-            fencesHolderMap->GeteWriteFence(sd.fencesHolderId().ref());
-        RefPtr<layers::GpuFence> gpuFence =
-            fence ? fence->AsGpuFence() : nullptr;
-        if (gpuFence && gpuFence->ServerWait(mGL, TimeDuration::Forever())) {
-          return false;
-        }
+      if (sd.gpuFence() &&
+          !sd.gpuFence()->ServerWait(mGL, TimeDuration::Forever())) {
+        return false;
       }
       const auto surf = LookupSurface(sd);
       if (!surf) {

@@ -14,7 +14,6 @@ namespace layers {
 
 class FenceD3D11;
 class FenceFileHandle;
-class GpuFence;
 
 class Fence {
  public:
@@ -22,7 +21,6 @@ class Fence {
 
   virtual FenceD3D11* AsFenceD3D11() { return nullptr; }
   virtual FenceFileHandle* AsFenceFileHandle() { return nullptr; }
-  virtual GpuFence* AsGpuFence() { return nullptr; }
 
  protected:
   virtual ~Fence() = default;

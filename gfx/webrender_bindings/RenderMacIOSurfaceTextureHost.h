@@ -7,12 +7,12 @@
 
 #include "RenderTextureHostSWGL.h"
 #include "mozilla/gfx/MacIOSurface.h"
-#include "mozilla/layers/GpuFence.h"
 #include "mozilla/layers/TextureHostOGL.h"
 
 namespace mozilla {
 
 namespace layers {
+class GpuFence;
 class SurfaceDescriptorMacIOSurface;
 }  // namespace layers
 
@@ -20,9 +20,8 @@ namespace wr {
 
 class RenderMacIOSurfaceTextureHost final : public RenderTextureHostSWGL {
  public:
-  explicit RenderMacIOSurfaceTextureHost(
-      MacIOSurface* aSurface,
-      const Maybe<layers::CompositeProcessFencesHolderId>& aFencesHolderId);
+  explicit RenderMacIOSurfaceTextureHost(MacIOSurface* aSurface,
+                                         layers::GpuFence* aGpuFence);
 
   wr::WrExternalImage Lock(uint8_t aChannelIndex, gl::GLContext* aGL) override;
   void Unlock() override;
@@ -48,15 +47,14 @@ class RenderMacIOSurfaceTextureHost final : public RenderTextureHostSWGL {
                 PlaneInfo& aPlaneInfo) override;
   void UnmapPlanes() override;
 
-  RefPtr<layers::GpuFence> GetGpuFence();
-
-  const RefPtr<MacIOSurface> mSurface;
-  const Maybe<layers::CompositeProcessFencesHolderId> mFencesHolderId;
+  layers::GpuFence* GetGpuFence() { return mGpuFence; }
 
  private:
   virtual ~RenderMacIOSurfaceTextureHost();
   void DeleteTextureHandle();
 
+  RefPtr<MacIOSurface> mSurface;
+  RefPtr<layers::GpuFence> mGpuFence;
   RefPtr<gl::GLContext> mGL;
   GLuint mTextureHandles[3];
 };

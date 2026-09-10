@@ -220,7 +220,7 @@ class NativeLayerWayland : public NativeLayer {
 
   void RenderLayer(double aScale);
   // TODO
-  RefPtr<GpuFence> GetGpuFence() override { return nullptr; }
+  GpuFence* GetGpuFence() override { return nullptr; }
 
   RefPtr<widget::WaylandSurface> GetWaylandSurface() { return mSurface; }
 
