@@ -359,6 +359,8 @@
     }
 
     &.has-blocked-trackers {
+      /* The tracker count below takes the box text color; a color here would recolor the shield. */
+      /* stylelint-disable-next-line stylelint-plugin-mozilla/no-background-without-text-color */
       background-color: var(--urlbar-box-background-color);
 
       /* Only the count text takes the box color, so the shield keeps its fill. */

@@ -1019,6 +1019,8 @@ tab-split-view-wrapper[dragtarget] {
 }
 
 .tab-background {
+  /* The label takes its color from the sibling .tab-content. */
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-background-without-text-color */
   background-color: var(--tab-background-color);
   border-radius: var(--tab-border-radius);
   margin-block: var(--tab-margin-block);
@@ -1475,6 +1477,8 @@ tab-group > tab-split-view-wrapper {
   }
 
   &[hasactivetab] {
+    /* The tabs inside the wrapper take their own colors. */
+    /* stylelint-disable-next-line stylelint-plugin-mozilla/no-background-without-text-color */
     background-color: var(--tab-background-color-hover);
 
     @media (forced-colors) {

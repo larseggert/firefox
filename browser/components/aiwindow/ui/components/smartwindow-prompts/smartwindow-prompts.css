@@ -213,6 +213,8 @@
   opacity: 0;
   pointer-events: none;
   width: calc(var(--size-item-large) - var(--border-width));
+  /* The overlay has no content to color; it fades the pill behind it. */
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-background-without-text-color */
   background-color: var(--button-background-color);
   mask-image: linear-gradient(to left, black, transparent);
   /* Round the overlay without clipping the pill's outer border. */
