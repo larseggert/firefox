@@ -528,11 +528,6 @@ bool SMRegExpMacroAssembler::SkipUntilBitInTableUseSimd(int advance_by) {
   if (!js::jit::Assembler::HasSSE3()) {
     return false;
   }
-  // AVX is required for three-operand instructions.
-  // TODO(bug 2042565): Support three-operand instructions pre-AVX.
-  if (!js::jit::Assembler::HasAVX()) {
-    return false;
-  }
 #  endif
   // V8 found that using SIMD instead of the scalar version was only
   // faster when we are advancing by 1 byte per iteration.
