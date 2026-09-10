@@ -5185,7 +5185,7 @@ void MacroAssembler::widenInt32(Register r) {
   move32To64SignExtend(r, Register64(r));
 }
 
-void MacroAssembler::wasmMarkCallAsSlow() { mv(ra, ra); }
+void MacroAssembler::wasmMarkCallAsSlow() { addi(ra, ra, 0); }
 
 const int32_t SlowCallMarker = 0x8093;  // addi ra, ra, 0
 
