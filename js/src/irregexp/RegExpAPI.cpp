@@ -842,7 +842,7 @@ bool CompilePattern(JSContext* cx, MutableHandleRegExpShared re,
     cx->reportResourceExhaustion();
     return false;
   }
-  data.error = AnalyzeRegExp(cx->isolate, isLatin1, flags, data.node);
+  data.error = AnalyzeRegExp(cx->isolate, isLatin1, data.node);
   if (data.error != RegExpError::kNone) {
     MOZ_ASSERT(data.error == RegExpError::kAnalysisStackOverflow);
     ReportOverRecursed(cx);
