@@ -71,6 +71,12 @@ ModelLoader::~ModelLoader(){
     if(device_ctx_) ggml_free(device_ctx_);
     if(gguf_) gguf_free(gguf_); if(ctx_) ggml_free(ctx_);
 }
+// The backend buffer once realized, else ctx_'s mem_buffer.
+size_t ModelLoader::weights_bytes() const {
+    if (weights_buf_) return ggml_backend_buffer_get_size(weights_buf_);
+    return ctx_ ? ggml_get_mem_size(ctx_) : 0;
+}
+
 bool ModelLoader::realize_weights(ggml_backend_t backend){
     if(weights_buf_) return true;                       // idempotent
     if(!backend || !ctx_){ PK_LOG("realize_weights: null backend/ctx"); return false; }
