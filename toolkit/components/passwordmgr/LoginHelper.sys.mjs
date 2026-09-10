@@ -1752,6 +1752,14 @@ export const LoginHelper = {
       gPrimaryPasswordReauthDepth--;
     }
     isAuthorized = token.isLoggedIn;
+    // NSS keeps re-prompting until the password is right or the user gives up,
+    // so a single event can stand for more than one dialog, and a dismissal is
+    // indistinguishable from an internal failure.
+    Glean.pwmgr.primaryPasswordPrompt.record({
+      source: "reauth",
+      trigger: reason ?? "",
+      result: isAuthorized ? "success" : "cancel",
+    });
     telemetryEvent = {
       name: "reauthenticateMasterPassword",
       value: isAuthorized ? "success" : "fail",
