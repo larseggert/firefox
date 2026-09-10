@@ -5709,7 +5709,9 @@ void MacroAssemblerRiscv64::ma_sub32(Register rd, Register rs, Imm32 rt) {
 }
 
 void MacroAssemblerRiscv64::ma_sub64(Register rd, Register rs, Imm64 rt) {
-  if (is_int12(-rt.value)) {
+  if (rt.value == 0) {
+    ma_mv(rd, rs);
+  } else if (is_int12(-rt.value)) {
     // No subi instr, use addi(x, y, -imm).
     addi(rd, rs, static_cast<int32_t>(-rt.value));
   } else if (is_two_int12(-rt.value)) {
