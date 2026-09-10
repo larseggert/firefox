@@ -1956,6 +1956,8 @@ export class DiscoveryStreamFeed {
                   server_score: item.serverScore,
                   recommended_at: feedResponse.recommendedAt,
                   section: sectionKey,
+                  variant_id: item.variantId === undefined ? 0 : item.variantId,
+                  source_section_id: item.sourceSectionId,
                   icon_src: item.iconUrl,
                   isTimeSensitive: item.isTimeSensitive,
                 });

@@ -3221,6 +3221,7 @@ describe("DiscoveryStreamFeed", () => {
               server_score: 0.9,
               recommended_at: 1755834072383,
               section: "section-1",
+              variant_id: 0,
               icon_src: "sectionIconUrl",
               isTimeSensitive: false,
             },
