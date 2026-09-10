@@ -3228,7 +3228,7 @@ fn enqueue_signal_semaphores_destruction(
     let device = global.resolve_device_id(device_id);
     let queue = global.resolve_queue_id(queue_id);
 
-    if !submission_errored {
+    if submission_errored {
         // Unregister the pending signals so that a later submission on this
         // queue does not signal them. This is a no-op for any semaphore that a
         // batch already consumed before `queue_submit` reported the failure.
