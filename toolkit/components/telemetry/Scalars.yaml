@@ -754,7 +754,7 @@ browser.engagement.navigation:
     bug_numbers:
       - 1271313
     description: >
-      The count URI loads triggered in a subsession from the urlbar (awesomebar),
+      The count of URI loads triggered in a subsession from the urlbar (awesomebar),
       broken down by the originating action.
     expires: never
     kind: uint
@@ -773,7 +773,7 @@ browser.engagement.navigation:
     bug_numbers:
       - 1732429
     description: >
-      The count URI loads triggered in a subsession from the urlbar via handoff,
+      The count of URI loads triggered in a subsession from the urlbar via handoff,
       broken down by the originating action.
     expires: never
     kind: uint
@@ -809,7 +809,7 @@ browser.engagement.navigation:
     bug_numbers:
       - 1654680
     description: >
-      The count URI loads triggered in a subsession from the urlbar's search
+      The count of URI loads triggered in a subsession from the urlbar's search
       mode, broken down by the originating action.
     expires: never
     kind: uint
@@ -827,7 +827,7 @@ browser.engagement.navigation:
     bug_numbers:
       - 1271313
     description: >
-      The count URI loads triggered in a subsession from the searchbar,
+      The count of URI loads triggered in a subsession from the searchbar,
       broken down by the originating action.
     expires: never
     kind: uint
@@ -846,7 +846,7 @@ browser.engagement.navigation:
     bug_numbers:
       - 1271313
     description: >
-      The count URI loads triggered in a subsession from about:home,
+      The count of URI loads triggered in a subsession from about:home,
       broken down by the originating action.
     expires: never
     kind: uint
@@ -865,7 +865,7 @@ browser.engagement.navigation:
     bug_numbers:
       - 1271313
     description: >
-      The count URI loads triggered in a subsession from about:newtab,
+      The count of URI loads triggered in a subsession from about:newtab,
       broken down by the originating action.
     expires: never
     kind: uint
@@ -884,7 +884,7 @@ browser.engagement.navigation:
     bug_numbers:
       - 1271313
     description: >
-      The count URI loads triggered in a subsession from the contextmenu,
+      The count of URI loads triggered in a subsession from the contextmenu,
       broken down by the originating action.
     expires: never
     kind: uint
@@ -903,7 +903,7 @@ browser.engagement.navigation:
     bug_numbers:
       - 1492233
     description: >
-      The count URI loads triggered in a subsession from a webextension.
+      The count of URI loads triggered in a subsession from a webextension.
     expires: never
     kind: uint
     keyed: true
@@ -2715,7 +2715,7 @@ browser.search.content:
     bug_numbers:
       - 1732429
     description: >
-      The count URI loads triggered in a subsession from the urlbar via handoff,
+      The count of URI loads triggered in a subsession from the urlbar via handoff,
       broken down by the originating action.
     expires: never
     kind: uint
@@ -2982,7 +2982,7 @@ browser.search.withads:
     bug_numbers:
       - 1732429
     description: >
-      The count URI loads triggered in a subsession from the urlbar via handoff,
+      The count of URI loads triggered in a subsession from the urlbar via handoff,
       broken down by the originating action.
     expires: never
     kind: uint
@@ -3217,7 +3217,7 @@ browser.search.adclicks:
     bug_numbers:
       - 1732429
     description: >
-      The count URI loads triggered in a subsession from the urlbar via handoff,
+      The count of URI loads triggered in a subsession from the urlbar via handoff,
       broken down by the originating action.
     expires: never
     kind: uint
