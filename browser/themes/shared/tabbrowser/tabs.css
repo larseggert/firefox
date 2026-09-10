@@ -2696,6 +2696,8 @@ tab-group {
 }
 
 #pinned-tabs-container[orient="vertical"] {
+  --tab-pinned-min-width: var(--tab-collapsed-width);
+
   /* Don't allow resizing below the height of 1 row of pinned tabs */
   min-height: var(--tab-height-with-margin-padding);
 
@@ -2732,7 +2734,7 @@ tab-group {
       has not been added to root. There are certain scenarios when that attribute is temporarily
       removed from root such as when toggling the sidebar to expand with the toolbar button. */
       &::part(items-wrapper) {
-        grid-template-columns: repeat(auto-fit, minmax(var(--tab-pinned-min-width-expanded), auto));
+        grid-template-columns: repeat(auto-fit, minmax(var(--tab-pinned-min-width), auto));
         display: grid;
         grid-auto-rows: var(--tab-height-with-margin-padding);
       }
@@ -2751,6 +2753,8 @@ tab-group {
     }
 
     #tabbrowser-tabs[expanded] > & {
+      --tab-pinned-min-width: var(--tab-pinned-min-width-expanded);
+
       .tab-background {
         margin-inline: var(--tab-pinned-margin-inline-expanded);
       }
