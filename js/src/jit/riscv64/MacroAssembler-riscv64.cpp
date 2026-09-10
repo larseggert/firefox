@@ -5803,7 +5803,9 @@ void MacroAssemblerRiscv64::ma_and(Register rd, Register rs, Imm64 rt) {
 }
 
 void MacroAssemblerRiscv64::ma_or(Register rd, Register rs, Imm64 rt) {
-  if (is_int12(rt.value)) {
+  if (rt.value == 0) {
+    ma_mv(rd, rs);
+  } else if (is_int12(rt.value)) {
     ori(rd, rs, rt.value);
   } else {
     // Loading an immediate and then performing an `or` requires at least two
