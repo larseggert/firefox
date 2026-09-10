@@ -448,8 +448,8 @@ tab-split-view-wrapper[dragtarget] {
 .tab-icon-image,
 .tab-sharing-icon-overlay,
 .tab-icon-overlay {
-  height: 16px;
-  width: 16px;
+  height: var(--icon-size);
+  width: var(--icon-size);
 
   /* apply end margin to tabs which are:
      - oriented horizontally and not pinned
@@ -707,7 +707,8 @@ tab-split-view-wrapper[dragtarget] {
       fill: var(--tab-text-color-selected);
       color-scheme: var(--tab-selected-color-scheme);
       border-radius: var(--border-radius-circle);
-      border: var(--border-width) solid var(--button-border-color);
+      outline: var(--border-width) solid var(--button-border-color);
+      outline-offset: calc(-1 * var(--border-width));
 
       background-image: image(var(--audio-overlay-extra-background)), image(var(--toolbox-background-color));
       &:-moz-window-inactive {
@@ -787,7 +788,8 @@ tab-split-view-wrapper[dragtarget] {
         fill: var(--tab-text-color-selected);
         color-scheme: var(--tab-selected-color-scheme);
         border-radius: var(--border-radius-circle);
-        border: var(--border-width) solid var(--button-background-color-ghost);
+        outline: var(--border-width) solid var(--button-border-color);
+        outline-offset: calc(-1 * var(--border-width));
 
         &:-moz-window-inactive {
           background-image: image(var(--audio-overlay-extra-background)), image(var(--toolbox-background-color-inactive));
