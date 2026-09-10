@@ -5219,6 +5219,13 @@ CodeOffset MacroAssembler::wasmMarkedSlowCall(const wasm::CallSiteDesc& desc,
 }
 //}}} check_macroassembler_style
 
+void MacroAssemblerRiscv64::ma_mv(Register dest, Register src) {
+  if (dest == src) {
+    return;
+  }
+  mv(dest, src);
+}
+
 // This method generates lui + addi instruction block that can be modified by
 // patchLi32.
 BufferOffset MacroAssemblerRiscv64::ma_liPatchable(Register dest, Imm32 imm) {
