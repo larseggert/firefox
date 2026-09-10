@@ -8,16 +8,13 @@
 #include "mozilla/WeakPtr.h"
 #include "mozilla/dom/PMessagePortParent.h"
 #include "mozilla/dom/SharedMessageBody.h"
-#include "mozilla/dom/quota/CheckedUnsafePtr.h"
 
 namespace mozilla::dom {
 
 class MessagePortService;
 
-class MessagePortParent final
-    : public PMessagePortParent,
-      public SupportsWeakPtr,
-      public SupportsCheckedUnsafePtr<CheckIf<DiagnosticAssertEnabled>> {
+class MessagePortParent final : public PMessagePortParent,
+                                public SupportsWeakPtr {
   friend class PMessagePortParent;
 
   NS_INLINE_DECL_REFCOUNTING(MessagePortParent, override)
