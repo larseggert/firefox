@@ -105,7 +105,7 @@ sixgill:
     fetch:
         type: git
         repo: https://github.com/mozilla-spidermonkey/sixgill
-        revision: f8ace7cffffe9fd2b35a53a8260199c85f685336
+        revision: 71e44e994765d680ab51574871eac36f4b45097d
 
 gmp-6.1.0:
     description: GMP 6.1.0 source code
