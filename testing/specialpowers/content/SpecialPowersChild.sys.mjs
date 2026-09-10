@@ -1762,7 +1762,30 @@ export class SpecialPowersChild extends JSWindowActorChild {
     );
   }
 
-  swapFactoryRegistration(cid, contractID, newFactory) {
+  registerFactory(cid, contractID, newFactory) {
+    newFactory = Cu.waiveXrays(newFactory);
+
+    var componentRegistrar = Components.manager.QueryInterface(
+      Ci.nsIComponentRegistrar
+    );
+
+    var currentCID = componentRegistrar.contractIDToCID(contractID);
+    var currentFactory = Components.manager.getClassObject(
+      Cc[contractID],
+      Ci.nsIFactory
+    );
+    if (cid) {
+      componentRegistrar.unregisterFactory(currentCID, currentFactory);
+    } else {
+      cid = Services.uuid.generateUUID();
+    }
+
+    // Restore the original factory.
+    componentRegistrar.registerFactory(cid, "", contractID, newFactory);
+    return currentCID;
+  }
+
+  unregisterFactory(cid, contractID, newFactory) {
     newFactory = Cu.waiveXrays(newFactory);
 
     var componentRegistrar = Components.manager.QueryInterface(

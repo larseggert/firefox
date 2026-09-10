@@ -53,7 +53,7 @@ MockObjectRegisterer.prototype = {
       this._mockFactory = SpecialPowers.wrapCallbackObject(this._mockFactory);
     }
 
-    this._originalCID = SpecialPowers.swapFactoryRegistration(
+    this._originalCID = SpecialPowers.registerFactory(
       null,
       this._contractID,
       this._mockFactory
@@ -69,7 +69,7 @@ MockObjectRegisterer.prototype = {
     }
 
     // Free references to the mock factory.
-    SpecialPowers.swapFactoryRegistration(this._originalCID, this._contractID);
+    SpecialPowers.unregisterFactory(this._originalCID, this._contractID);
 
     // Allow registering a mock factory again later.
     this._originalCID = null;
