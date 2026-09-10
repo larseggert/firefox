@@ -350,7 +350,7 @@
           },
           "required": ["type"],
           "additionalProperties": false,
-          "description": "Minimize the CFR doorhanger back into the URLbar"
+          "description": "Minimize the notification"
         },
         {
           "type": "object",

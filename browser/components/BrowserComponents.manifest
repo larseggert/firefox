@@ -126,7 +126,6 @@ category browser-window-location-change chrome://browser/content/browser-sitePro
 category browser-window-location-change chrome://browser/content/browser-pageActions.js BrowserPageActions.onLocationChange
 category browser-window-location-change moz-src:///browser/components/urlbar/UrlbarProviderSearchTips.sys.mjs UrlbarProviderSearchTips.onLocationChange
 category browser-window-location-change moz-src:///browser/components/urlbar/ActionsProviderContextualSearch.sys.mjs ActionsProviderContextualSearch.onLocationChange
-category browser-window-location-change resource:///modules/asrouter/CFRPageActions.sys.mjs CFRPageActions.onLocationChange
 category browser-window-location-change resource:///actors/AboutReaderParent.sys.mjs AboutReaderParent.onLocationChange
 category browser-window-location-change resource://gre/actors/TranslationsParent.sys.mjs TranslationsParent.onLocationChange
 category browser-window-location-change moz-src:///toolkit/components/pictureinpicture/PictureInPicture.sys.mjs PictureInPicture.onLocationChange

@@ -89,7 +89,6 @@
   "BrowserUIUtils",
   "BrowserUsageTelemetry",
   "BrowserWindowTracker",
-  "CFRPageActions",
   "Color",
   "ContentAnalysis",
   "ContextualIdentityService",

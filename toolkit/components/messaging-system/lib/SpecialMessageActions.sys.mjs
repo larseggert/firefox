@@ -1092,8 +1092,8 @@ export const SpecialMessageActions = {
         Services.prefs.setStringPref(DOH_DOORHANGER_DECISION_PREF, "UIOk");
         break;
       case "CANCEL":
-        // A no-op used by CFRs that minimizes the notification but does not
-        // trigger a dismiss or block (it keeps the notification around)
+        // A no-op used by some surfaces that minimizes the notification but
+        // does not trigger a dismiss or block (it keeps the notification around)
         break;
       case "CONFIGURE_HOMEPAGE":
         this.configureHomepage(action.data);
