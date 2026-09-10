@@ -8909,7 +8909,7 @@ export class Tabbrowser {
       this.#multiSelectChangeSelected = false;
       this.#multiSelectChangeAdditions.clear();
       this.#multiSelectChangeRemovals.clear();
-      this.dispatchEvent(
+      this.tabContainer.dispatchEvent(
         new this.documentGlobal.CustomEvent("TabMultiSelect", {
           bubbles: true,
         })

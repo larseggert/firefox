@@ -27,9 +27,9 @@ Three things a registration gets wrong:
   forwards `addEventListener`, `removeEventListener` and `dispatchEvent` to
   `gBrowser.tabpanels`, which is in the content area and not on the path from a
   tab to the window.
-- **`TabSwitched`, `TabSwitchDone` and `TabMultiSelect` are dispatched on
-  `gBrowser.tabpanels`**, so they reach the window but never `tabContainer`.
-  They are the three `gBrowser.addEventListener()` does hear, which is how
+- **`TabSwitched` and `TabSwitchDone` are dispatched on `gBrowser.tabpanels`**,
+  so they reach the window but never `tabContainer`. They are the two
+  `gBrowser.addEventListener()` does hear, which is how
   `BrowserTestUtils.switchTab` waits for a switch.
 
 ```{mermaid}
@@ -44,8 +44,8 @@ config:
 flowchart TD
     tab["tab<br/>most Tab* events"]
     group["tab-group<br/>the tab group events"]
-    container["gBrowser.tabContainer"]
-    panels["gBrowser.tabpanels<br/>TabMultiSelect"]
+    container["gBrowser.tabContainer<br/>TabMultiSelect"]
+    panels["gBrowser.tabpanels<br/>TabSwitched, TabSwitchDone"]
     win["window"]
 
     tab --> container
@@ -60,7 +60,7 @@ flowchart TD
 `window.addEventListener()` therefore catches every event below except
 `TabSwapPictureInPicture`, which does not bubble and is internal anyway, so it is
 the safe default; `tabContainer` is the narrower target and what most in-tree
-consumers use, at the cost of the three above. Read `event.target`
+consumers use, at the cost of the two above. Read `event.target`
 for the tab or group the event is about rather than assuming
 `gBrowser.selectedTab`.
 
@@ -182,7 +182,7 @@ rather than the browser's. It covers neither `pinned`, which has `TabPinned` and
 | `TabPinned` / `TabUnpinned` | tab | `metricsContext` | The tab was pinned or unpinned. |
 | `TabShow` / `TabHide` | tab | — | The tab's `hidden` attribute changed, through `showTab` and `hideTab` or a session restore. A collapsed group's tabs are not hidden in this sense: they count as invisible through `tab.visible` without either event firing. |
 | `TabMove` | tab | `previousTabState`, `currentTabState`, `metricsContext` | The tab's index, group or split view changed. Each state carries `tabIndex`, `elementIndex` for a visible tab, and `tabGroupId` and `splitViewId` where they apply. |
-| `TabMultiSelect` | `tabpanels` | — | A batch of multi-select changes finished with something worth reporting. |
+| `TabMultiSelect` | `tabContainer` | — | A batch of multi-select changes finished with something worth reporting. It is dispatched on the strip itself rather than on any one tab, since it reports the selection as a whole. |
 | `TabFindInitialized` | tab | — | A findbar was created for the tab. |
 
 ## Tab groups
