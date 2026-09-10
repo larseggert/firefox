@@ -156,6 +156,7 @@
 .sw-prompt-dismiss {
   align-items: center;
   background-color: var(--button-background-color);
+  color: var(--button-text-color);
   border: none;
   border-radius: var(--border-radius-circle);
   cursor: pointer;
@@ -277,6 +278,7 @@
 .sw-prompt-skeleton {
   align-items: center;
   background-color: var(--button-background-color);
+  color: var(--button-text-color);
   border-radius: var(--button-border-radius);
   display: inline-flex;
   font-size: var(--button-font-size);

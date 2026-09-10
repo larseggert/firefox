@@ -355,6 +355,7 @@ html {
 
   @mixin secondary-cta-styles {
     background-color: var(--button-background-color);
+    color: var(--button-text-color);
     border: var(--button-border);
     line-height: 12px;
     font-size: 0.72em;
@@ -1359,6 +1360,7 @@ html {
 
               .indicator {
                 background-color: var(--button-background-color-primary);
+                color: var(--button-text-color-primary);
               }
             }
           }
@@ -2453,6 +2455,7 @@ html {
             /* stylelint-disable-next-line */
             border-radius: 8px 8px 0 0;
             background-color: var(--button-background-color-primary);
+            color: var(--button-text-color-primary);
             position: relative;
             right: unset;
             top: unset;
@@ -3534,6 +3537,7 @@ html {
         height: 100%;
         margin-inline: -1px;
         background-color: var(--button-background-color-primary);
+        color: var(--button-text-color-primary);
         border: 0;
         border-radius: 0;
         opacity: 1;

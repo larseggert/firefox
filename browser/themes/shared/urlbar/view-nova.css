@@ -357,6 +357,7 @@
       display: flex;
       position: absolute;
       background-color: var(--button-background-color);
+      color: var(--button-text-color);
       justify-content: center;
       align-items: center;
       border-radius: var(--border-radius-circle);
@@ -558,6 +559,7 @@
 
   &:not(:hover, [aria-expanded="true"]) {
     background-color: var(--button-background-color);
+    color: var(--button-text-color);
   }
 
   &:is([selected], [primary]) {
@@ -1262,6 +1264,7 @@
 
   @media not (prefers-contrast) {
     background-color: color-mix(in srgb, var(--button-background-color) 30%, transparent);
+    color: var(--button-text-color);
   }
 
   > .urlbarView-row-inner {

@@ -444,6 +444,7 @@ button.arrow-button {
   // light-dark() pair with no forced-colors value.
   .wallpaper-list.category fieldset.your-images .your-images-remove::part(button) {
     background-color: var(--button-background-color-ghost);
+    color: var(--button-text-color-ghost);
   }
 
   .wallpaper-list.category fieldset.your-images .your-images-remove:hover::part(button) {

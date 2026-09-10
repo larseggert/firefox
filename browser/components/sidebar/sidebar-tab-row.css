@@ -141,6 +141,7 @@
       background:
         var(--tab-border-color-accent) border-box border-area,
         var(--tab-background-color-selected) padding-box;
+      color: var(--tab-text-color-selected);
     }
   }
 }

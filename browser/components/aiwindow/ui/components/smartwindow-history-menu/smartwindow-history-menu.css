@@ -111,6 +111,7 @@ moz-button.history-menu-button {
       background:
         image(var(--button-background-color-ghost)) padding-box,
         var(--nova-border-gradient) border-box;
+      color: var(--button-text-color-ghost);
     }
 
     &:is(:hover, :active)::part(button) {
