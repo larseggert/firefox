@@ -1529,57 +1529,41 @@ void MacroAssembler::laneSelectSimd128(FloatRegister mask, FloatRegister lhs,
 
 void MacroAssembler::interleaveHighInt16x8(FloatRegister lhs, FloatRegister rhs,
                                            FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpunpckhwd(rhs, lhs, dest);
 }
 
 void MacroAssembler::interleaveHighInt32x4(FloatRegister lhs, FloatRegister rhs,
                                            FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpunpckhdq(rhs, lhs, dest);
 }
 
 void MacroAssembler::interleaveHighInt64x2(FloatRegister lhs, FloatRegister rhs,
                                            FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpunpckhqdq(rhs, lhs, dest);
 }
 
 void MacroAssembler::interleaveHighInt8x16(FloatRegister lhs, FloatRegister rhs,
                                            FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpunpckhbw(rhs, lhs, dest);
 }
 
 void MacroAssembler::interleaveLowInt16x8(FloatRegister lhs, FloatRegister rhs,
                                           FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpunpcklwd(rhs, lhs, dest);
 }
 
 void MacroAssembler::interleaveLowInt32x4(FloatRegister lhs, FloatRegister rhs,
                                           FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpunpckldq(rhs, lhs, dest);
 }
 
 void MacroAssembler::interleaveLowInt64x2(FloatRegister lhs, FloatRegister rhs,
                                           FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpunpcklqdq(rhs, lhs, dest);
 }
 
 void MacroAssembler::interleaveLowInt8x16(FloatRegister lhs, FloatRegister rhs,
                                           FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpunpcklbw(rhs, lhs, dest);
 }
 
@@ -1796,8 +1780,6 @@ void MacroAssembler::swizzleInt8x16(FloatRegister lhs, FloatRegister rhs,
 
 void MacroAssembler::swizzleInt8x16Relaxed(FloatRegister lhs, FloatRegister rhs,
                                            FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpshufb(rhs, lhs, dest);
 }
 
@@ -1805,7 +1787,6 @@ void MacroAssembler::swizzleInt8x16Relaxed(FloatRegister lhs, FloatRegister rhs,
 
 void MacroAssembler::addInt8x16(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpaddb(Operand(rhs), lhs, dest);
 }
 
@@ -1817,7 +1798,6 @@ void MacroAssembler::addInt8x16(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::addInt16x8(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpaddw(Operand(rhs), lhs, dest);
 }
 
@@ -1829,7 +1809,6 @@ void MacroAssembler::addInt16x8(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::addInt32x4(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpaddd(Operand(rhs), lhs, dest);
 }
 
@@ -1841,7 +1820,6 @@ void MacroAssembler::addInt32x4(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::addInt64x2(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpaddq(Operand(rhs), lhs, dest);
 }
 
@@ -1855,8 +1833,6 @@ void MacroAssembler::addInt64x2(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::subInt8x16(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpsubb(Operand(rhs), lhs, dest);
 }
 
@@ -1868,8 +1844,6 @@ void MacroAssembler::subInt8x16(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::subInt16x8(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpsubw(Operand(rhs), lhs, dest);
 }
 
@@ -1881,8 +1855,6 @@ void MacroAssembler::subInt16x8(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::subInt32x4(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpsubd(Operand(rhs), lhs, dest);
 }
 
@@ -1894,8 +1866,6 @@ void MacroAssembler::subInt32x4(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::subInt64x2(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpsubq(Operand(rhs), lhs, dest);
 }
 
@@ -1909,7 +1879,6 @@ void MacroAssembler::subInt64x2(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::mulInt16x8(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpmullw(Operand(rhs), lhs, dest);
 }
 
@@ -1921,7 +1890,6 @@ void MacroAssembler::mulInt16x8(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::mulInt32x4(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpmulld(Operand(rhs), lhs, dest);
 }
 
@@ -2155,7 +2123,6 @@ void MacroAssembler::q15MulrSatInt16x8(FloatRegister lhs, FloatRegister rhs,
 
 void MacroAssembler::q15MulrInt16x8Relaxed(FloatRegister lhs, FloatRegister rhs,
                                            FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpmulhrsw(Operand(rhs), lhs, dest);
 }
 
@@ -2205,7 +2172,6 @@ void MacroAssembler::negInt64x2(FloatRegister src, FloatRegister dest) {
 
 void MacroAssembler::addSatInt8x16(FloatRegister lhs, FloatRegister rhs,
                                    FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpaddsb(Operand(rhs), lhs, dest);
 }
 
@@ -2217,7 +2183,6 @@ void MacroAssembler::addSatInt8x16(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::unsignedAddSatInt8x16(FloatRegister lhs, FloatRegister rhs,
                                            FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpaddusb(Operand(rhs), lhs, dest);
 }
 
@@ -2230,7 +2195,6 @@ void MacroAssembler::unsignedAddSatInt8x16(FloatRegister lhs,
 
 void MacroAssembler::addSatInt16x8(FloatRegister lhs, FloatRegister rhs,
                                    FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpaddsw(Operand(rhs), lhs, dest);
 }
 
@@ -2242,7 +2206,6 @@ void MacroAssembler::addSatInt16x8(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::unsignedAddSatInt16x8(FloatRegister lhs, FloatRegister rhs,
                                            FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpaddusw(Operand(rhs), lhs, dest);
 }
 
@@ -2257,8 +2220,6 @@ void MacroAssembler::unsignedAddSatInt16x8(FloatRegister lhs,
 
 void MacroAssembler::subSatInt8x16(FloatRegister lhs, FloatRegister rhs,
                                    FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpsubsb(Operand(rhs), lhs, dest);
 }
 
@@ -2270,8 +2231,6 @@ void MacroAssembler::subSatInt8x16(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::unsignedSubSatInt8x16(FloatRegister lhs, FloatRegister rhs,
                                            FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpsubusb(Operand(rhs), lhs, dest);
 }
 
@@ -2284,8 +2243,6 @@ void MacroAssembler::unsignedSubSatInt8x16(FloatRegister lhs,
 
 void MacroAssembler::subSatInt16x8(FloatRegister lhs, FloatRegister rhs,
                                    FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpsubsw(Operand(rhs), lhs, dest);
 }
 
@@ -2297,8 +2254,6 @@ void MacroAssembler::subSatInt16x8(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::unsignedSubSatInt16x8(FloatRegister lhs, FloatRegister rhs,
                                            FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpsubusw(Operand(rhs), lhs, dest);
 }
 
@@ -2313,7 +2268,6 @@ void MacroAssembler::unsignedSubSatInt16x8(FloatRegister lhs,
 
 void MacroAssembler::minInt8x16(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpminsb(Operand(rhs), lhs, dest);
 }
 
@@ -2325,7 +2279,6 @@ void MacroAssembler::minInt8x16(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::unsignedMinInt8x16(FloatRegister lhs, FloatRegister rhs,
                                         FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpminub(Operand(rhs), lhs, dest);
 }
 
@@ -2338,7 +2291,6 @@ void MacroAssembler::unsignedMinInt8x16(FloatRegister lhs,
 
 void MacroAssembler::minInt16x8(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpminsw(Operand(rhs), lhs, dest);
 }
 
@@ -2350,7 +2302,6 @@ void MacroAssembler::minInt16x8(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::unsignedMinInt16x8(FloatRegister lhs, FloatRegister rhs,
                                         FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpminuw(Operand(rhs), lhs, dest);
 }
 
@@ -2363,7 +2314,6 @@ void MacroAssembler::unsignedMinInt16x8(FloatRegister lhs,
 
 void MacroAssembler::minInt32x4(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpminsd(Operand(rhs), lhs, dest);
 }
 
@@ -2375,7 +2325,6 @@ void MacroAssembler::minInt32x4(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::unsignedMinInt32x4(FloatRegister lhs, FloatRegister rhs,
                                         FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpminud(Operand(rhs), lhs, dest);
 }
 
@@ -2390,7 +2339,6 @@ void MacroAssembler::unsignedMinInt32x4(FloatRegister lhs,
 
 void MacroAssembler::maxInt8x16(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpmaxsb(Operand(rhs), lhs, dest);
 }
 
@@ -2402,7 +2350,6 @@ void MacroAssembler::maxInt8x16(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::unsignedMaxInt8x16(FloatRegister lhs, FloatRegister rhs,
                                         FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpmaxub(Operand(rhs), lhs, dest);
 }
 
@@ -2415,7 +2362,6 @@ void MacroAssembler::unsignedMaxInt8x16(FloatRegister lhs,
 
 void MacroAssembler::maxInt16x8(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpmaxsw(Operand(rhs), lhs, dest);
 }
 
@@ -2427,7 +2373,6 @@ void MacroAssembler::maxInt16x8(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::unsignedMaxInt16x8(FloatRegister lhs, FloatRegister rhs,
                                         FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpmaxuw(Operand(rhs), lhs, dest);
 }
 
@@ -2440,7 +2385,6 @@ void MacroAssembler::unsignedMaxInt16x8(FloatRegister lhs,
 
 void MacroAssembler::maxInt32x4(FloatRegister lhs, FloatRegister rhs,
                                 FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpmaxsd(Operand(rhs), lhs, dest);
 }
 
@@ -2452,7 +2396,6 @@ void MacroAssembler::maxInt32x4(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::unsignedMaxInt32x4(FloatRegister lhs, FloatRegister rhs,
                                         FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpmaxud(Operand(rhs), lhs, dest);
 }
 
@@ -2468,14 +2411,12 @@ void MacroAssembler::unsignedMaxInt32x4(FloatRegister lhs,
 void MacroAssembler::unsignedAverageInt8x16(FloatRegister lhs,
                                             FloatRegister rhs,
                                             FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpavgb(Operand(rhs), lhs, dest);
 }
 
 void MacroAssembler::unsignedAverageInt16x8(FloatRegister lhs,
                                             FloatRegister rhs,
                                             FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpavgw(Operand(rhs), lhs, dest);
 }
 
@@ -2678,7 +2619,6 @@ void MacroAssembler::bitwiseAndSimd128(FloatRegister rhs,
 
 void MacroAssembler::bitwiseAndSimd128(FloatRegister lhs, FloatRegister rhs,
                                        FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpand(Operand(rhs), lhs, dest);
 }
 
@@ -2696,7 +2636,6 @@ void MacroAssembler::bitwiseOrSimd128(FloatRegister rhs,
 
 void MacroAssembler::bitwiseOrSimd128(FloatRegister lhs, FloatRegister rhs,
                                       FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpor(Operand(rhs), lhs, dest);
 }
 
@@ -2714,7 +2653,6 @@ void MacroAssembler::bitwiseXorSimd128(FloatRegister rhs,
 
 void MacroAssembler::bitwiseXorSimd128(FloatRegister lhs, FloatRegister rhs,
                                        FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpxor(Operand(rhs), lhs, dest);
 }
 
@@ -2739,8 +2677,6 @@ void MacroAssembler::bitwiseNotAndSimd128(FloatRegister rhs,
 
 void MacroAssembler::bitwiseNotAndSimd128(FloatRegister lhs, FloatRegister rhs,
                                           FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpandn(Operand(rhs), lhs, dest);
 }
 
@@ -2999,8 +2935,6 @@ void MacroAssembler::pseudoMinFloat32x4(FloatRegister rhsOrRhsDest,
 
 void MacroAssembler::pseudoMinFloat32x4(FloatRegister lhs, FloatRegister rhs,
                                         FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128FloatIfNotAVX(lhs, &rhs, dest, scratch);
   vminps(Operand(rhs), lhs, dest);
 }
 
@@ -3013,8 +2947,6 @@ void MacroAssembler::pseudoMinFloat64x2(FloatRegister rhsOrRhsDest,
 
 void MacroAssembler::pseudoMinFloat64x2(FloatRegister lhs, FloatRegister rhs,
                                         FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128FloatIfNotAVX(lhs, &rhs, dest, scratch);
   vminpd(Operand(rhs), lhs, dest);
 }
 
@@ -3029,8 +2961,6 @@ void MacroAssembler::pseudoMaxFloat32x4(FloatRegister rhsOrRhsDest,
 
 void MacroAssembler::pseudoMaxFloat32x4(FloatRegister lhs, FloatRegister rhs,
                                         FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128FloatIfNotAVX(lhs, &rhs, dest, scratch);
   vmaxps(Operand(rhs), lhs, dest);
 }
 
@@ -3043,8 +2973,6 @@ void MacroAssembler::pseudoMaxFloat64x2(FloatRegister rhsOrRhsDest,
 
 void MacroAssembler::pseudoMaxFloat64x2(FloatRegister lhs, FloatRegister rhs,
                                         FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128FloatIfNotAVX(lhs, &rhs, dest, scratch);
   vmaxpd(Operand(rhs), lhs, dest);
 }
 
@@ -3052,7 +2980,6 @@ void MacroAssembler::pseudoMaxFloat64x2(FloatRegister lhs, FloatRegister rhs,
 
 void MacroAssembler::widenDotInt16x8(FloatRegister lhs, FloatRegister rhs,
                                      FloatRegister dest) {
-  lhs = moveSimd128IntIfNotAVXCommutative(lhs, &rhs, dest);
   vpmaddwd(Operand(rhs), lhs, dest);
 }
 
@@ -3121,7 +3048,6 @@ void MacroAssembler::nearestFloat64x2(FloatRegister src, FloatRegister dest) {
 
 void MacroAssembler::addFloat32x4(FloatRegister lhs, FloatRegister rhs,
                                   FloatRegister dest) {
-  lhs = moveSimd128FloatIfNotAVXCommutative(lhs, &rhs, dest);
   vaddps(Operand(rhs), lhs, dest);
 }
 
@@ -3133,7 +3059,6 @@ void MacroAssembler::addFloat32x4(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::addFloat64x2(FloatRegister lhs, FloatRegister rhs,
                                   FloatRegister dest) {
-  lhs = moveSimd128FloatIfNotAVXCommutative(lhs, &rhs, dest);
   vaddpd(Operand(rhs), lhs, dest);
 }
 
@@ -3147,8 +3072,6 @@ void MacroAssembler::addFloat64x2(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::subFloat32x4(FloatRegister lhs, FloatRegister rhs,
                                   FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128FloatIfNotAVX(lhs, &rhs, dest, scratch);
   vsubps(Operand(rhs), lhs, dest);
 }
 
@@ -3160,8 +3083,6 @@ void MacroAssembler::subFloat32x4(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::subFloat64x2(FloatRegister lhs, FloatRegister rhs,
                                   FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128FloatIfNotAVX(lhs, &rhs, dest, scratch);
   AssemblerX86Shared::vsubpd(Operand(rhs), lhs, dest);
 }
 
@@ -3175,8 +3096,6 @@ void MacroAssembler::subFloat64x2(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::divFloat32x4(FloatRegister lhs, FloatRegister rhs,
                                   FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128FloatIfNotAVX(lhs, &rhs, dest, scratch);
   vdivps(Operand(rhs), lhs, dest);
 }
 
@@ -3188,8 +3107,6 @@ void MacroAssembler::divFloat32x4(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::divFloat64x2(FloatRegister lhs, FloatRegister rhs,
                                   FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128FloatIfNotAVX(lhs, &rhs, dest, scratch);
   vdivpd(Operand(rhs), lhs, dest);
 }
 
@@ -3203,7 +3120,6 @@ void MacroAssembler::divFloat64x2(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::mulFloat32x4(FloatRegister lhs, FloatRegister rhs,
                                   FloatRegister dest) {
-  lhs = moveSimd128FloatIfNotAVXCommutative(lhs, &rhs, dest);
   vmulps(Operand(rhs), lhs, dest);
 }
 
@@ -3215,7 +3131,6 @@ void MacroAssembler::mulFloat32x4(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::mulFloat64x2(FloatRegister lhs, FloatRegister rhs,
                                   FloatRegister dest) {
-  lhs = moveSimd128FloatIfNotAVXCommutative(lhs, &rhs, dest);
   vmulpd(Operand(rhs), lhs, dest);
 }
 
@@ -3351,8 +3266,6 @@ void MacroAssembler::convertFloat32x4ToFloat64x2(FloatRegister src,
 
 void MacroAssembler::narrowInt16x8(FloatRegister lhs, FloatRegister rhs,
                                    FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpacksswb(Operand(rhs), lhs, dest);
 }
 
@@ -3364,8 +3277,6 @@ void MacroAssembler::narrowInt16x8(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::unsignedNarrowInt16x8(FloatRegister lhs, FloatRegister rhs,
                                            FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpackuswb(Operand(rhs), lhs, dest);
 }
 
@@ -3378,8 +3289,6 @@ void MacroAssembler::unsignedNarrowInt16x8(FloatRegister lhs,
 
 void MacroAssembler::narrowInt32x4(FloatRegister lhs, FloatRegister rhs,
                                    FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpackssdw(Operand(rhs), lhs, dest);
 }
 
@@ -3391,8 +3300,6 @@ void MacroAssembler::narrowInt32x4(FloatRegister lhs, const SimdConstant& rhs,
 
 void MacroAssembler::unsignedNarrowInt32x4(FloatRegister lhs, FloatRegister rhs,
                                            FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128IntIfNotAVX(lhs, &rhs, dest, scratch);
   vpackusdw(Operand(rhs), lhs, dest);
 }
 
@@ -3482,8 +3389,8 @@ void MacroAssembler::fmaFloat32x4(FloatRegister src1, FloatRegister src2,
   }
   ScratchSimd128Scope scratch(*this);
   src1 = moveSimd128FloatIfNotAVX(src1, scratch);
-  vmulps(Operand(src2), src1, scratch);
-  vaddps(Operand(scratch), srcDest, srcDest);
+  mulFloat32x4(src1, src2, scratch);
+  addFloat32x4(srcDest, scratch, srcDest);
 }
 
 void MacroAssembler::fnmaFloat32x4(FloatRegister src1, FloatRegister src2,
@@ -3494,8 +3401,8 @@ void MacroAssembler::fnmaFloat32x4(FloatRegister src1, FloatRegister src2,
   }
   ScratchSimd128Scope scratch(*this);
   src1 = moveSimd128FloatIfNotAVX(src1, scratch);
-  vmulps(Operand(src2), src1, scratch);
-  vsubps(Operand(scratch), srcDest, srcDest);
+  mulFloat32x4(src1, src2, scratch);
+  subFloat32x4(srcDest, scratch, srcDest);
 }
 
 void MacroAssembler::fmaFloat64x2(FloatRegister src1, FloatRegister src2,
@@ -3506,8 +3413,8 @@ void MacroAssembler::fmaFloat64x2(FloatRegister src1, FloatRegister src2,
   }
   ScratchSimd128Scope scratch(*this);
   src1 = moveSimd128FloatIfNotAVX(src1, scratch);
-  vmulpd(Operand(src2), src1, scratch);
-  vaddpd(Operand(scratch), srcDest, srcDest);
+  mulFloat64x2(src1, src2, scratch);
+  addFloat64x2(srcDest, scratch, srcDest);
 }
 
 void MacroAssembler::fnmaFloat64x2(FloatRegister src1, FloatRegister src2,
@@ -3518,8 +3425,8 @@ void MacroAssembler::fnmaFloat64x2(FloatRegister src1, FloatRegister src2,
   }
   ScratchSimd128Scope scratch(*this);
   src1 = moveSimd128FloatIfNotAVX(src1, scratch);
-  vmulpd(Operand(src2), src1, scratch);
-  vsubpd(Operand(scratch), srcDest, srcDest);
+  mulFloat64x2(src1, src2, scratch);
+  subFloat64x2(srcDest, scratch, srcDest);
 }
 
 void MacroAssembler::minFloat32x4Relaxed(FloatRegister src,
@@ -3529,8 +3436,6 @@ void MacroAssembler::minFloat32x4Relaxed(FloatRegister src,
 
 void MacroAssembler::minFloat32x4Relaxed(FloatRegister lhs, FloatRegister rhs,
                                          FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128FloatIfNotAVX(lhs, &rhs, dest, scratch);
   vminps(Operand(rhs), lhs, dest);
 }
 
@@ -3541,8 +3446,6 @@ void MacroAssembler::maxFloat32x4Relaxed(FloatRegister src,
 
 void MacroAssembler::maxFloat32x4Relaxed(FloatRegister lhs, FloatRegister rhs,
                                          FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128FloatIfNotAVX(lhs, &rhs, dest, scratch);
   vmaxps(Operand(rhs), lhs, dest);
 }
 
@@ -3553,8 +3456,6 @@ void MacroAssembler::minFloat64x2Relaxed(FloatRegister src,
 
 void MacroAssembler::minFloat64x2Relaxed(FloatRegister lhs, FloatRegister rhs,
                                          FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128FloatIfNotAVX(lhs, &rhs, dest, scratch);
   vminpd(Operand(rhs), lhs, dest);
 }
 
@@ -3565,8 +3466,6 @@ void MacroAssembler::maxFloat64x2Relaxed(FloatRegister src,
 
 void MacroAssembler::maxFloat64x2Relaxed(FloatRegister lhs, FloatRegister rhs,
                                          FloatRegister dest) {
-  ScratchSimd128Scope scratch(*this);
-  lhs = moveSimd128FloatIfNotAVX(lhs, &rhs, dest, scratch);
   vmaxpd(Operand(rhs), lhs, dest);
 }
 

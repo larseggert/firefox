@@ -11019,7 +11019,7 @@ void CodeGenerator::visitWasmLoadSlot(LWasmLoadSlot* ins) {
   Address addr(container, ins->offset());
   AnyRegister dst = ToAnyRegister(ins->output());
 
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
   if (type == MIRType::Simd128) {
     MOZ_ASSERT(wideningOp == MWideningOp::None);
     FaultingCodeRange fcr = masm.loadUnalignedSimd128(addr, dst.fpu());
@@ -11038,7 +11038,7 @@ void CodeGenerator::visitWasmLoadElement(LWasmLoadElement* ins) {
   Register index = ToRegister(ins->index());
   AnyRegister dst = ToAnyRegister(ins->output());
 
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
   if (type == MIRType::Simd128) {
     MOZ_ASSERT(wideningOp == MWideningOp::None);
     FaultingCodeRange fcr;
@@ -11063,7 +11063,7 @@ void CodeGenerator::visitWasmStoreSlot(LWasmStoreSlot* ins) {
     MOZ_RELEASE_ASSERT(narrowingOp == MNarrowingOp::None);
   }
 
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
   if (type == MIRType::Simd128) {
     FaultingCodeRange fcr = masm.storeUnalignedSimd128(src.fpu(), addr);
     EmitSignalNullCheckTrapSite(masm, ins, fcr,
@@ -11088,7 +11088,7 @@ void CodeGenerator::visitWasmStoreStackResult(LWasmStoreStackResult* ins) {
     case MIRType::Double:
       masm.storeDouble(ToFloatRegister(value), addr);
       break;
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
     case MIRType::Simd128:
       masm.storeUnalignedSimd128(ToFloatRegister(value), addr);
       break;
@@ -11118,7 +11118,7 @@ void CodeGenerator::visitWasmStoreElement(LWasmStoreElement* ins) {
     MOZ_RELEASE_ASSERT(narrowingOp == MNarrowingOp::None);
   }
 
-#ifdef ENABLE_JIT_SIMD
+#ifdef ENABLE_WASM_SIMD
   if (type == MIRType::Simd128) {
     Register temp = ToRegister(ins->temp0());
     masm.lshiftPtr(Imm32(4), index, temp);
@@ -13972,7 +13972,7 @@ static void ConcatInlineString(MacroAssembler& masm, Register lhs, Register rhs,
   // Load chars pointer in temp2.
   masm.loadInlineStringCharsForStore(output, temp2);
 
-#if defined(JS_64BIT) && defined(ENABLE_JIT_SIMD)
+#if defined(JS_64BIT) && defined(ENABLE_WASM_SIMD)
   Label fastPath, done;
   masm.branchTest32(Assembler::NonZero, andedFlags,
                     Imm32(StringFlags::INLINE_CHARS_BIT), &fastPath);
@@ -14001,7 +14001,7 @@ static void ConcatInlineString(MacroAssembler& masm, Register lhs, Register rhs,
   // 16 bytes, so while it's possible to write a faster version for 32-bit,
   // we elect to just leave 32-bit platforms behind with a little bit slower
   // string copying.
-#if defined(JS_64BIT) && defined(ENABLE_JIT_SIMD)
+#if defined(JS_64BIT) && defined(ENABLE_WASM_SIMD)
   masm.jump(&done);
   masm.bind(&fastPath);
 
