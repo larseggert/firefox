@@ -24,6 +24,18 @@ ChromeUtils.defineLazyGetter(this, "NewtabSearchbarTestUtils", () => {
 registerCleanupFunction(() => NewtabSearchbarTestUtils.formHistory.clear());
 
 /**
+ * Replaces the default engine with one that serves no suggestions, for a test
+ * that has no use for them. The bar's SAP ignores the suggestion prefs the test
+ * profile turns off, so a test left on the app-provided engine can reach that
+ * engine's suggestion server for real.
+ */
+function useEngineWithoutSuggestions() {
+  return SearchTestUtils.updateRemoteSettingsConfig([
+    { identifier: "engine1" },
+  ]);
+}
+
+/**
  * Adds a task that runs against about:newtab, with the telemetry, history and
  * form history recorded so far cleared and the tab closed afterwards. The task
  * takes the browser the page is in, and seeds the profile itself, after the

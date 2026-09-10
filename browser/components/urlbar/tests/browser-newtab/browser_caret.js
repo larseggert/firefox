@@ -13,11 +13,7 @@ const SLOW_URL =
   "https://example.com/browser/browser/components/urlbar/tests/browser/slow-page.sjs";
 const TEST_URL = "https://example.com/";
 
-add_setup(async function () {
-  await SpecialPowers.pushPrefEnv({
-    set: [["browser.urlbar.suggest.searches", false]],
-  });
-});
+add_setup(useEngineWithoutSuggestions);
 
 add_task(async function sameTab() {
   let tab = await NewtabSearchbarTestUtils.openNewTabPage();
