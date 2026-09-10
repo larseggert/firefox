@@ -6,7 +6,8 @@ import stylelint from "stylelint";
 import valueParser from "postcss-value-parser";
 import {
   backgroundToText,
-  isCustomPropertyDefinition,
+  customPropertiesRead,
+  findColorDeclarations,
   isDesignToken,
   isFunction,
   namespace,
@@ -30,28 +31,6 @@ let messages = ruleMessages(ruleName, {
 let meta = {
   url: "https://firefox-source-docs.mozilla.org/code-quality/lint/linters/stylelint-plugin-mozilla/rules/use-paired-color-tokens.html",
   fixable: true,
-};
-
-const BACKGROUND_PROPERTIES = new Set(["background", "background-color"]);
-
-/**
- * Collects the names of the custom properties a declaration value reads,
- * including the ones a var() fallback reads.
- *
- * @param {string} value - A CSS declaration value.
- * @returns {string[]}
- */
-let customPropertiesRead = value => {
-  let names = [];
-  valueParser(value).walk(node => {
-    if (isFunction(node) && node.value === "var") {
-      let [first] = node.nodes;
-      if (first?.value?.startsWith("--")) {
-        names.push(first.value);
-      }
-    }
-  });
-  return names;
 };
 
 /**
@@ -83,20 +62,8 @@ let replaceCustomProperty = (declaration, from, to) => {
  * @param {object} result - The PostCSS result to report to.
  */
 let checkBlock = (block, result) => {
-  let backgroundDeclaration = null;
-  let textDeclaration = null;
-
-  for (let node of block.nodes) {
-    if (node.type != "decl" || isCustomPropertyDefinition(node)) {
-      continue;
-    }
-    let property = node.prop.toLowerCase();
-    if (BACKGROUND_PROPERTIES.has(property)) {
-      backgroundDeclaration = node;
-    } else if (property == "color") {
-      textDeclaration = node;
-    }
-  }
+  let { background: backgroundDeclaration, text: textDeclaration } =
+    findColorDeclarations(block);
 
   // A block that sets only one of the two claims no pairing: the other half
   // legitimately comes from an ancestor, a sibling rule, or another
