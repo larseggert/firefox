@@ -1,7 +1,7 @@
 # mypy: allow-untyped-defs
 
 import sys
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from unittest import mock
 
 from mozlog.structuredlog import StructuredLogger
@@ -79,10 +79,10 @@ def test_get_steps():
 
 def test_log_handler():
     handler = stability.LogHandler()
-    data = {}
+    data = OrderedDict()
     data["test"] = "test_name"
     test = handler.find_or_create_test(data)
-    assert test["subtests"] == {}
+    assert test["subtests"] == OrderedDict()
     assert test["status"] == defaultdict(int)
     assert test["longest_duration"] == defaultdict(float)
     assert test == handler.find_or_create_test(data)

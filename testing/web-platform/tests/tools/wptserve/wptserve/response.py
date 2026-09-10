@@ -3,6 +3,7 @@
 import json
 import uuid
 import traceback
+from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
 
@@ -349,7 +350,7 @@ def _maybe_encode(s):
 class ResponseHeaders:
     """Dictionary-like object holding the headers for the response"""
     def __init__(self):
-        self.data = {}
+        self.data = OrderedDict()
 
     def set(self, key, value):
         """Set a header to a specific value, overwriting any previous header

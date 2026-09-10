@@ -4,7 +4,7 @@ import copy
 import functools
 import io
 import os
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from datetime import datetime
 
 from mozlog import reader
@@ -54,7 +54,7 @@ class LogHandler(reader.LogHandler):  # type: ignore
     Subclasses reader.LogHandler.
     """
     def __init__(self):
-        self.results = {}
+        self.results = OrderedDict()
 
     def find_or_create_test(self, data):
         test_name = data["test"]
@@ -62,7 +62,7 @@ class LogHandler(reader.LogHandler):  # type: ignore
             return self.results[test_name]
 
         test = {
-            "subtests": {},
+            "subtests": OrderedDict(),
             "status": defaultdict(int),
             "longest_duration": defaultdict(float),
         }

@@ -15,6 +15,7 @@ import threading
 import time
 import traceback
 import uuid
+from collections import OrderedDict
 from queue import Empty, Queue
 from typing import Dict
 
@@ -787,7 +788,7 @@ class H2ConnectionGuard:
 
 class H2Headers(Dict[bytes, bytes]):
     def __init__(self, headers):
-        self.raw_headers = {}
+        self.raw_headers = OrderedDict()
         for key, val in headers:
             key = isomorphic_decode(key)
             val = isomorphic_decode(val)

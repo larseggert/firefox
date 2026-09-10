@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import collections
 import copy
 import json
 import os
@@ -443,7 +444,7 @@ def main():
     # Load the default spec JSON file, ...
     default_spec_filename = os.path.join(util.script_directory,
                                          'spec.src.json')
-    spec_json = {}
+    spec_json = collections.OrderedDict()
     if os.path.exists(default_spec_filename):
         spec_json = util.load_spec_json(default_spec_filename)
 

@@ -1,5 +1,6 @@
 # mypy: allow-untyped-defs
 
+from collections import OrderedDict
 from typing import Dict
 
 from wptserve.utils import isomorphic_decode
@@ -14,7 +15,7 @@ class H3Headers(Dict[str, str]):
 
     def __init__(self, headers):
         super().__init__()
-        self.raw_headers = {}
+        self.raw_headers = OrderedDict()
         for key, value in headers:
             key = isomorphic_decode(key)
             value = isomorphic_decode(value)

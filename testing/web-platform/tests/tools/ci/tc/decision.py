@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import subprocess
+from collections import OrderedDict
 from typing import Any, List, Mapping, MutableMapping, Optional, Tuple, Set
 
 import taskcluster
@@ -54,7 +55,7 @@ def fetch_event_data(queue: taskcluster.Queue) -> Optional[str]:
 
 def filter_triggers(event: Event, all_tasks: Mapping[str, Task]) -> MutableMapping[str, Task]:
     is_pr, branch = get_triggers(event)
-    triggered = {}
+    triggered = OrderedDict()
     for name, task in all_tasks.items():
         if "trigger" in task:
             if is_pr and "pull-request" in task["trigger"]:
@@ -144,7 +145,7 @@ def filter_excluded_users(tasks: MutableMapping[str, Task], event: Event) -> Non
 
 
 def filter_schedule_if(event: Event, tasks: Mapping[str, Task]) -> MutableMapping[str, Task]:
-    scheduled = {}
+    scheduled = OrderedDict()
     run_jobs = None
     for name, task in tasks.items():
         if "schedule-if" in task:
@@ -329,7 +330,7 @@ def get_artifact_data(artifact: Mapping[str, Any],
 
 def build_task_graph(event: Event,
                      all_tasks: Mapping[str, Task], tasks: Mapping[str, Task]) -> Mapping[str, Tuple[str, TcTask]]:
-    task_id_map: MutableMapping[str, Tuple[str, TcTask]] = {}
+    task_id_map: MutableMapping[str, Tuple[str, TcTask]] = OrderedDict()
     taskgroup_id = os.environ.get("TASK_ID", taskcluster.slugId())
     sink_task_depends_on = []
 

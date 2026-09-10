@@ -16,6 +16,7 @@ import json
 import os
 import shutil
 import tempfile
+from collections import OrderedDict
 
 
 pytest = None
@@ -107,7 +108,7 @@ class HarnessResultRecorder:
 
 class SubtestResultRecorder:
     def __init__(self):
-        self.results = {}
+        self.results = OrderedDict()
 
     def pytest_runtest_logreport(self, report):
         if report.passed and report.when == "call":

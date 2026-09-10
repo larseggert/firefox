@@ -1,3 +1,4 @@
+import collections
 import json
 import os
 
@@ -13,7 +14,7 @@ def main():
         filename = os.path.join(script_directory, '..', '..', '..', dir,
                                 'spec.src.json')
         spec = json.load(
-            open(filename, 'r'))
+            open(filename, 'r'), object_pairs_hook=collections.OrderedDict)
         with open(filename, 'w') as f:
             f.write(json.dumps(spec, indent=2, separators=(',', ': ')))
             f.write('\n')

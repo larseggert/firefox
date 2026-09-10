@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from typing import Dict, List, Optional, Text, Union
 from os.path import dirname, join
 from xml.parsers import expat
@@ -61,7 +62,7 @@ class XMLParser:
         assert isinstance(tag, str)
         self._fed_data = None
         tag = _fixname(tag)
-        attrib: Dict[Union[bytes, Text], Union[bytes, Text]] = {}
+        attrib: Dict[Union[bytes, Text], Union[bytes, Text]] = OrderedDict()
         if attrib_in:
             for i in range(0, len(attrib_in), 2):
                 attrib[_fixname(attrib_in[i])] = attrib_in[i+1]
