@@ -4073,7 +4073,14 @@ ${
     // The autofilled value may be a URL that includes a scheme at the
     // beginning.  Do not allow it to be trimmed.
     this.setValue(value, { untrimmedValue });
-    this.inputField.setSelectionRange(selectionStart, selectionEnd);
+    // Keep the origin in view rather than the tail of the value. A long
+    // autofilled path would otherwise scroll the host out of the view.
+    // TODO (Bug 1566151): scrollLeftMin is the start-of-text edge in both
+    // directions, but an RTL host can never autofill today because the queries
+    // match the typed string against the punycode stored in Places. Revisit
+    // this once IDN hosts autofill, when the RTL case becomes reachable.
+    this.inputField.scrollLeft = this.inputField.scrollLeftMin;
+    this.inputField.setSelectionRange(selectionStart, selectionEnd, "backward");
     this._autofillPlaceholder = {
       value,
       type,
