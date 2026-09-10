@@ -100,10 +100,11 @@ already_AddRefed<DOMMatrix> CSSTransformComponent::ToMatrix(ErrorResult& aRv) {
         return GetAsCSSPerspective().ToMatrix(aRv);
       }
 
-      default:
-        aRv.Throw(NS_ERROR_NOT_IMPLEMENTED);
-        return nullptr;
+      case TransformComponentType::MatrixComponent: {
+        return GetAsCSSMatrixComponent().ToMatrix(aRv);
+      }
     }
+    MOZ_MAKE_COMPILER_ASSUME_IS_UNREACHABLE("Bad type value!");
   }(aRv);
 
   if (aRv.Failed()) {
