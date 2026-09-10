@@ -5676,7 +5676,9 @@ void MacroAssemblerRiscv64::ma_add32(Register rd, Register rs, Imm32 rt) {
 }
 
 void MacroAssemblerRiscv64::ma_add64(Register rd, Register rs, Imm64 rt) {
-  if (is_int12(rt.value)) {
+  if (rt.value == 0) {
+    ma_mv(rd, rs);
+  } else if (is_int12(rt.value)) {
     addi(rd, rs, static_cast<int32_t>(rt.value));
   } else if (is_two_int12(rt.value)) {
     auto [first, second] = ToTwoInt12(rt.value);
@@ -6359,7 +6361,7 @@ void MacroAssemblerRiscv64::ma_addPtrTestCarry(Condition cond, Register rd,
 
   // Check for signed range because of addi
   if (is_int12(imm.value)) {
-    addi(rd, rj, imm.value);
+    ma_add64(rd, rj, imm);
     sltiu(scratch2, rd, imm.value);
     ma_b(scratch2, scratch2, overflow,
          cond == Assembler::CarrySet ? Assembler::NonZero : Assembler::Zero,
@@ -6378,9 +6380,8 @@ void MacroAssemblerRiscv64::ma_addPtrTestCarry(Condition cond, Register rd,
 
   // Check for signed range because of addi_d
   if (is_int12(imm.value)) {
-    uint32_t value = imm.value;
-    addi(rd, rj, value);
-    sltiu(scratch2, rd, value);
+    ma_add64(rd, rj, imm);
+    sltiu(scratch2, rd, imm.value);
     ma_b(scratch2, scratch2, overflow,
          cond == Assembler::CarrySet ? Assembler::NonZero : Assembler::Zero,
          ShortJump);
