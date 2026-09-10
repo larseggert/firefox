@@ -13,6 +13,8 @@ const TEST_URL_PORT_9999 = `https://${TEST_ORIGIN}:9999/`;
 const TEST_FOLDER_URL = `${TEST_URL}folder/`;
 const TEST_FOLDER_PAGE_URL = `${TEST_FOLDER_URL}test.html`;
 const TEST_404_URL = `${TEST_URL}404`;
+// It's important that the URL ends up with two `/`:
+const TEST_URL_INVALID_PATH = `https://${TEST_ORIGIN}//`;
 
 const TEST_UNICODE_ORIGIN = "ʂ.com";
 const TEST_UNICODE_URL = `https://${TEST_UNICODE_ORIGIN}/`;
@@ -148,6 +150,30 @@ add_task(async function testLocalMode() {
       is(
         content.document.querySelector("p").textContent,
         "No local file for: /404",
+        "The content of the HTML is the 404 error page"
+      );
+      is(
+        content.location.href,
+        pageUrl,
+        "The location of the page is the 404 url"
+      );
+    }
+  );
+
+  info("Assert that URL whose path is invalid are generating a 404");
+  await loadURL(gBrowser.selectedBrowser, TEST_URL_INVALID_PATH);
+  await SpecialPowers.spawn(
+    gBrowser.selectedBrowser,
+    [TEST_URL_INVALID_PATH],
+    async pageUrl => {
+      is(
+        content.browsingContext.docShell.currentDocumentChannel.responseStatus,
+        404,
+        "The page has a 404 HTTP Response code"
+      );
+      is(
+        content.document.querySelector("p").textContent,
+        "No local file for: //",
         "The content of the HTML is the 404 error page"
       );
       is(
