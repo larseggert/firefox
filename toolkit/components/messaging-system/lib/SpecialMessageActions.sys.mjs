@@ -63,6 +63,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
   Referrals: "resource:///modules/referrals/Referrals.sys.mjs",
+  ResetProfile: "resource://gre/modules/ResetProfile.sys.mjs",
   // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
   SelectableProfileService:
     "resource:///modules/profiles/SelectableProfileService.sys.mjs",
@@ -1218,6 +1219,13 @@ export const SpecialMessageActions = {
           aboutPageURL.toString(),
           action.data.where || "tab"
         );
+        break;
+      }
+      case "RESET_PROFILE": {
+        if (!lazy.ResetProfile.resetSupported()) {
+          throw new Error("Profile reset is not supported for this profile.");
+        }
+        await lazy.ResetProfile.openConfirmationDialog(window);
         break;
       }
       default:

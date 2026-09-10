@@ -472,6 +472,25 @@ declare const profileAgeReset: undefined | UnixEpochNumber;
 type UnixEpochNumber = number;
 ```
 
+### `profileLastUse`
+
+The date the profile was last used before the current session, as a UNIX Epoch
+timestamp. This is the more recent of the previous session's lock file time and
+the `prefs.js` modification time, and is `0` when neither is available.
+
+#### Examples
+* Has the profile been unused for at least 60 days?
+```java
+profileLastUse && currentDate|date - profileLastUse >= 5184000000
+```
+
+#### Definition
+```ts
+declare const profileLastUse: UnixEpochNumber;
+// UnixEpochNumber is UNIX Epoch timestamp, e.g. 1522843725924
+type UnixEpochNumber = number;
+```
+
 ### `providerCohorts`
 
 Information about cohort settings (from prefs, including shield studies) for each provider.
@@ -1333,6 +1352,16 @@ restore the previous session on startup; `false` otherwise.
 ### `canCreateSelectableProfiles`
 
 A boolean. `true` when both the current install and current profile support creating additional profiles using the `SelectableProfileService`; `false` otherwise.
+
+### `canResetProfile`
+
+A boolean. `true` when the current profile can be refreshed.
+
+Any message using the `RESET_PROFILE` action should include this in its targeting.
+
+### `isFirefoxReinstalled`
+
+Windows-only. A boolean. `true` when Firefox was uninstalled and then reinstalled over an existing profile since the previous run; `false` otherwise.
 
 ### `hasSelectableProfiles`
 

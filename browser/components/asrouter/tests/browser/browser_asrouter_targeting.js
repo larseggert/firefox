@@ -27,6 +27,8 @@ ChromeUtils.defineESModuleGetters(this, {
   ProfileAge: "resource://gre/modules/ProfileAge.sys.mjs",
   QueryCache: "resource:///modules/asrouter/ASRouterTargeting.sys.mjs",
   Region: "resource://gre/modules/Region.sys.mjs",
+  ReinstallCheck: "moz-src:///browser/components/ReinstallCheck.sys.mjs",
+  ResetProfile: "resource://gre/modules/ResetProfile.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   SelectableProfileService:
     "resource:///modules/profiles/SelectableProfileService.sys.mjs",
@@ -355,6 +357,83 @@ add_task(async function check_canCreateSelectableProfiles() {
   await ProfilesDatastoreService.resetProfileService(null);
   await SpecialPowers.popPrefEnv();
   await SpecialPowers.popPrefEnv();
+});
+
+add_task(async function check_canResetProfile() {
+  const sandbox = sinon.createSandbox();
+  const resetSupported = sandbox.stub(ResetProfile, "resetSupported");
+
+  resetSupported.returns(true);
+  is(
+    await ASRouterTargeting.Environment.canResetProfile,
+    true,
+    "should be true when the profile supports being reset"
+  );
+
+  const message = { id: "foo", targeting: "canResetProfile" };
+  is(
+    await ASRouterTargeting.findMatchingMessage({ messages: [message] }),
+    message,
+    "should select the right item by canResetProfile"
+  );
+
+  resetSupported.returns(false);
+  is(
+    await ASRouterTargeting.Environment.canResetProfile,
+    false,
+    "should be false when the profile doesn't support being reset"
+  );
+
+  sandbox.restore();
+});
+
+add_task(async function check_profileLastUse() {
+  is(
+    await ASRouterTargeting.Environment.profileLastUse,
+    Math.max(
+      Services.appinfo.replacedLockTime,
+      Services.prefs.userPrefsFileLastModifiedAtStartup
+    ),
+    "should be the most recent lock file and prefs.js timestamps"
+  );
+
+  const message = {
+    id: "foo",
+    targeting: "profileLastUse <= currentDate|date",
+  };
+  is(
+    await ASRouterTargeting.findMatchingMessage({ messages: [message] }),
+    message,
+    "should select correct item by profileLastUse"
+  );
+});
+
+add_task(async function check_isFirefoxReinstalled() {
+  const sandbox = sinon.createSandbox();
+  const wasReinstalled = sandbox.stub(ReinstallCheck, "wasReinstalled");
+
+  wasReinstalled.get(() => true);
+  is(
+    await ASRouterTargeting.Environment.isFirefoxReinstalled,
+    true,
+    "should be true when a reinstall was detected"
+  );
+
+  const message = { id: "foo", targeting: "isFirefoxReinstalled" };
+  is(
+    await ASRouterTargeting.findMatchingMessage({ messages: [message] }),
+    message,
+    "should select correct item by isFirefoxReinstalled"
+  );
+
+  wasReinstalled.get(() => false);
+  is(
+    await ASRouterTargeting.Environment.isFirefoxReinstalled,
+    false,
+    "should be false when no reinstall was detected"
+  );
+
+  sandbox.restore();
 });
 
 add_task(async function check_hasSelectableProfiles() {

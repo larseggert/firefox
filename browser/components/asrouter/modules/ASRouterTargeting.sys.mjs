@@ -76,6 +76,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   ProfileAge: "resource://gre/modules/ProfileAge.sys.mjs",
   Region: "resource://gre/modules/Region.sys.mjs",
+  ReinstallCheck: "moz-src:///browser/components/ReinstallCheck.sys.mjs",
+  ResetProfile: "resource://gre/modules/ResetProfile.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
   SelectableProfileService:
@@ -784,6 +786,22 @@ const TargetingGetters = {
   },
   get profileAgeReset() {
     return lazy.ProfileAge().then(times => times.reset);
+  },
+  get profileLastUse() {
+    // The lock file records when the profile was last used, but it can be
+    // unreliable, e.g. on NFS or when the previous session ran for a very long
+    // time. Use the prefs.js modification time as a backstop. See bug 1054947
+    // and related bugs.
+    return Math.max(
+      Services.appinfo.replacedLockTime,
+      Services.prefs.userPrefsFileLastModifiedAtStartup
+    );
+  },
+  get canResetProfile() {
+    return lazy.ResetProfile.resetSupported();
+  },
+  get isFirefoxReinstalled() {
+    return lazy.ReinstallCheck.wasReinstalled;
   },
   get usesFirefoxSync() {
     return Services.prefs.prefHasUserValue(FXA_USERNAME_PREF);
