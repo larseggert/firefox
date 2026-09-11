@@ -123,9 +123,9 @@ const renderListSwitcherOrTitle = ({
           {Object.entries(lists).map(([key, list]) => (
             <panel-item
               key={key}
-              type="checkbox"
-              checked={key === selected || undefined}
+              checked={key === selected}
               onClick={() => onSelect(key)}
+              type="checkbox"
               {...(list.label
                 ? {}
                 : {
