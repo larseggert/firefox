@@ -31,7 +31,7 @@ class RegExpFlags;
 namespace v8::internal::regexp {
 class Stack;
 struct FrameData;
-}
+}  // namespace v8::internal::regexp
 
 namespace js {
 

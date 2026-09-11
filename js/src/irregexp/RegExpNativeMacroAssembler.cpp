@@ -99,9 +99,7 @@ void SMRegExpMacroAssembler::AdvanceRegister(int reg, int by) {
   }
 }
 
-void SMRegExpMacroAssembler::Backtrack() {
-  masm_.jump(&backtrack_label_);
-}
+void SMRegExpMacroAssembler::Backtrack() { masm_.jump(&backtrack_label_); }
 
 void SMRegExpMacroAssembler::Bind(Label* label) {
   masm_.bind(label->inner());
@@ -1184,6 +1182,10 @@ void SMRegExpMacroAssembler::createStackFrame() {
   AbsoluteAddress limit_addr(cx_->addressOfJitStackLimitNoInterrupt());
   masm_.branchStackPtrRhs(Assembler::Below, limit_addr, &stack_ok);
 
+  masm_.loadJSContext(temp0_);
+  masm_.store8(Imm32(1),
+               Address(temp0_, JSContext::offsetOfHasDelayedOverRecursed()));
+
   // There is not enough space on the stack. Exit with an exception.
   // We haven't initialized our stack frame yet, so we must jump to
   // a special label that won't try to update the RegExp::Stack.
@@ -1298,8 +1300,9 @@ void SMRegExpMacroAssembler::initFrameAndRegs() {
   // Load the current top of the stack. This will usually be the same as the
   // base, but may be different if we are executing one regexp while another is
   // interrupted.
-  masm_.loadPtr(AbsoluteAddress(ExternalReference::RegexpStackPointer(isolate())),
-                backtrack_stack_pointer_);
+  masm_.loadPtr(
+      AbsoluteAddress(ExternalReference::RegexpStackPointer(isolate())),
+      backtrack_stack_pointer_);
   // Compute the difference between the two, and store it in the stack frame.
   // This is usually 0.
   masm_.subPtr(backtrack_stack_pointer_, temp1_);
@@ -1632,7 +1635,11 @@ uint32_t SMRegExpMacroAssembler::CaseInsensitiveCompareUnicode(
 bool SMRegExpMacroAssembler::GrowBacktrackStack(Stack* regexp_stack) {
   js::AutoUnsafeCallWithABI unsafe;
   size_t size = regexp_stack->memory_size();
-  return !!regexp_stack->EnsureCapacity(size * 2);
+  bool result = !!regexp_stack->EnsureCapacity(size * 2);
+  if (!result) {
+    js::TlsContext.get()->noteDelayedOverRecursed();
+  }
+  return result;
 }
 
 bool SMRegExpMacroAssembler::CanReadUnaligned() const {
