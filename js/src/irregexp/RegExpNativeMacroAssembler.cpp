@@ -97,33 +97,7 @@ void SMRegExpMacroAssembler::AdvanceRegister(int reg, int by) {
 }
 
 void SMRegExpMacroAssembler::Backtrack() {
-#ifdef DEBUG
-  js::jit::Label bailOut;
-  // Check for simulating interrupt
-  masm_.branch32(Assembler::NotEqual,
-                 AbsoluteAddress(&cx_->isolate->shouldSimulateInterrupt_),
-                 Imm32(0), &bailOut);
-#endif
-  // Check for an interrupt. We have to restart from the beginning if we
-  // are interrupted, so we only check for urgent interrupts.
-  js::jit::Label noInterrupt;
-  masm_.branchTest32(
-      Assembler::Zero, AbsoluteAddress(cx_->addressOfInterruptBits()),
-      Imm32(uint32_t(js::InterruptReason::CallbackUrgent)), &noInterrupt);
-#ifdef DEBUG
-  // bailing out if we have simulating interrupt flag set
-  masm_.bind(&bailOut);
-#endif
-  masm_.movePtr(ImmWord(int32_t(js::RegExpRunStatus::Error)), temp0_);
-  masm_.jump(&exit_label_);
-  masm_.bind(&noInterrupt);
-
-  // Pop code offset from backtrack stack, add to code base address, and jump to
-  // location.
-  Pop(temp0_);
-  PushBacktrackCodeOffsetPatch(masm_.movWithPatch(ImmPtr(nullptr), temp1_));
-  masm_.addPtr(temp1_, temp0_);
-  masm_.jump(temp0_);
+  masm_.jump(&backtrack_label_);
 }
 
 void SMRegExpMacroAssembler::Bind(Label* label) {
@@ -1070,11 +1044,7 @@ void SMRegExpMacroAssembler::Pop(Register target) {
 }
 
 void SMRegExpMacroAssembler::JumpOrBacktrack(Label* to) {
-  if (to) {
-    masm_.jump(to->inner());
-  } else {
-    Backtrack();
-  }
+  masm_.jump(to ? to->inner() : &backtrack_label_);
 }
 
 // Generate a quick inline test for backtrack stack overflow.
@@ -1115,10 +1085,10 @@ Handle<HeapObject> SMRegExpMacroAssembler::GetCode(Handle<RegExpData> data,
 
   masm_.jump(&start_label_);
 
-  successHandler();
-  exitHandler();
   backtrackHandler();
   stackOverflowHandler();
+  successHandler();
+  exitHandler();
 
   Linker linker(masm_);
   JitCode* code = linker.newCode(cx_, js::jit::CodeKind::RegExp);
@@ -1449,7 +1419,33 @@ void SMRegExpMacroAssembler::backtrackHandler() {
     return;
   }
   masm_.bind(&backtrack_label_);
-  Backtrack();
+#ifdef DEBUG
+  js::jit::Label bailOut;
+  // Check for simulating interrupt
+  masm_.branch32(Assembler::NotEqual,
+                 AbsoluteAddress(&cx_->isolate->shouldSimulateInterrupt_),
+                 Imm32(0), &bailOut);
+#endif
+  // Check for an interrupt. We have to restart from the beginning if we
+  // are interrupted, so we only check for urgent interrupts.
+  js::jit::Label noInterrupt;
+  masm_.branchTest32(
+      Assembler::Zero, AbsoluteAddress(cx_->addressOfInterruptBits()),
+      Imm32(uint32_t(js::InterruptReason::CallbackUrgent)), &noInterrupt);
+#ifdef DEBUG
+  // bailing out if we have simulating interrupt flag set
+  masm_.bind(&bailOut);
+#endif
+  masm_.movePtr(ImmWord(int32_t(js::RegExpRunStatus::Error)), temp0_);
+  masm_.jump(&exit_label_);
+  masm_.bind(&noInterrupt);
+
+  // Pop code offset from backtrack stack, add to code base address, and jump to
+  // location.
+  Pop(temp0_);
+  PushBacktrackCodeOffsetPatch(masm_.movWithPatch(ImmPtr(nullptr), temp1_));
+  masm_.addPtr(temp1_, temp0_);
+  masm_.jump(temp0_);
 }
 
 void SMRegExpMacroAssembler::stackOverflowHandler() {
