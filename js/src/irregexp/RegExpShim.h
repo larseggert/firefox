@@ -1621,6 +1621,7 @@ class StackLimitCheck {
 class ExternalReference {
  public:
   static const void* TopOfRegexpStack(Isolate* isolate);
+  static const void* RegexpStackPointer(Isolate* isolate);
   static size_t SizeOfExcludingThis(mozilla::MallocSizeOf mallocSizeOf,
                                     regexp::Stack* regexpStack);
 };

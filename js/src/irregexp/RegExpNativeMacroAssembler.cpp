@@ -1314,10 +1314,20 @@ void SMRegExpMacroAssembler::initFrameAndRegs() {
     }
   }
 
-  // Initialize backtrack stack pointer
+  // Initialize backtrack stack data.
+  // Load the base of the stack and store it in the stack frame.
   masm_.loadPtr(AbsoluteAddress(ExternalReference::TopOfRegexpStack(isolate())),
+                temp1_);
+  masm_.storePtr(temp1_, backtrackStackBase());
+  // Load the current top of the stack. This will usually be the same as the
+  // base, but may be different if we are executing one regexp while another is
+  // interrupted.
+  masm_.loadPtr(AbsoluteAddress(ExternalReference::RegexpStackPointer(isolate())),
                 backtrack_stack_pointer_);
-  masm_.storePtr(backtrack_stack_pointer_, backtrackStackBase());
+  // Compute the difference between the two, and store it in the stack frame.
+  // This is usually 0.
+  masm_.subPtr(backtrack_stack_pointer_, temp1_);
+  masm_.storePtr(temp1_, initialBacktrackStackPointer());
 }
 
 // Called when we find a match. May not be generated if we can
@@ -1389,6 +1399,14 @@ void SMRegExpMacroAssembler::exitHandler() {
     masm_.movePtr(temp0_, js::jit::ReturnReg);
   }
 
+  // Restore the RegExpStack's stack pointer in case we were interrupted
+  // and modified it.
+  masm_.loadPtr(backtrackStackBase(), backtrack_stack_pointer_);
+  masm_.subPtr(initialBacktrackStackPointer(), backtrack_stack_pointer_);
+  masm_.storePtr(
+      backtrack_stack_pointer_,
+      AbsoluteAddress(ExternalReference::RegexpStackPointer(isolate())));
+
   masm_.freeStack(frameSize_);
 
   // Restore registers which were saved on entry
@@ -1455,8 +1473,7 @@ void SMRegExpMacroAssembler::stackOverflowHandler() {
   masm_.pushReturnAddress();
 #endif
 
-  // Adjust for the return address on the stack.
-  size_t frameOffset = sizeof(void*);
+  StoreBacktrackStackToMemory();
 
   volatileRegs.takeUnchecked(temp0_);
   volatileRegs.takeUnchecked(temp1_);
@@ -1476,20 +1493,31 @@ void SMRegExpMacroAssembler::stackOverflowHandler() {
   js::jit::Label overflow_return;
   masm_.branchTest32(Assembler::Zero, temp0_, temp0_, &overflow_return);
 
-  // Otherwise, store the new backtrack stack base and recompute the new
-  // top of the stack.
+  // Adjust for the return address on the stack.
+  size_t frameOffset = sizeof(void*);
   Address bsbAddress(masm_.getStackPointer(),
                      offsetof(FrameData, backtrackStackBase) + frameOffset);
-  masm_.subPtr(bsbAddress, backtrack_stack_pointer_);
-
-  masm_.loadPtr(AbsoluteAddress(ExternalReference::TopOfRegexpStack(isolate())),
-                temp1_);
-  masm_.storePtr(temp1_, bsbAddress);
-  masm_.addPtr(temp1_, backtrack_stack_pointer_);
+  LoadBacktrackStackFromMemory(bsbAddress);
 
   // Resume execution in calling code.
   masm_.bind(&overflow_return);
   masm_.ret();
+}
+
+void SMRegExpMacroAssembler::StoreBacktrackStackToMemory() {
+  masm_.storePtr(
+      backtrack_stack_pointer_,
+      AbsoluteAddress(ExternalReference::RegexpStackPointer(isolate())));
+}
+
+void SMRegExpMacroAssembler::LoadBacktrackStackFromMemory(
+    Address backtrackStackBaseAddr) {
+  masm_.loadPtr(AbsoluteAddress(ExternalReference::TopOfRegexpStack(isolate())),
+                backtrack_stack_pointer_);
+  masm_.storePtr(backtrack_stack_pointer_, backtrackStackBaseAddr);
+  masm_.loadPtr(
+      AbsoluteAddress(ExternalReference::RegexpStackPointer(isolate())),
+      backtrack_stack_pointer_);
 }
 
 // This is only used by tracing code.
