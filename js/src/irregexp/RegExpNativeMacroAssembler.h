@@ -336,6 +336,7 @@ class SMRegExpMacroAssembler final : public NativeRegExpMacroAssembler {
   js::jit::NonAssertingLabel exit_label_;
   js::jit::NonAssertingLabel stack_overflow_label_;
   js::jit::NonAssertingLabel exit_with_exception_label_;
+  js::jit::NonAssertingLabel exit_overrecursed_label_;
 
   // When we generate the code to push a backtrack label's address
   // onto the backtrack stack, we don't know its final address. We
