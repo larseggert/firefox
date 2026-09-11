@@ -80,6 +80,7 @@ h6 {
   }
 }
 
-::slotted([slot="support-link"]:not([hidden])) {
-  display: inline-block;
+a[is="moz-support-link"],
+::slotted([slot="support-link"]) {
+  white-space: nowrap;
 }

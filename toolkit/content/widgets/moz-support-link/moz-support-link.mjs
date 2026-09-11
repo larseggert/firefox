@@ -2,10 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { StylesMixin } from "chrome://global/content/elements/styles-mixin.mjs";
-
-import styles from "chrome://global/content/elements/moz-support-link.css" with { type: "css" };
-
 window.MozXULElement?.insertFTLIfNeeded("toolkit/global/mozSupportLink.ftl");
 
 /**
@@ -18,10 +14,7 @@ window.MozXULElement?.insertFTLIfNeeded("toolkit/global/mozSupportLink.ftl");
  * @attribute {string} utm-content - UTM parameter for a URL, if it is an AMO URL.
  * @attribute {string} data-l10n-id - Fluent ID used to generate the text content.
  */
-export default class MozSupportLink extends StylesMixin(
-  HTMLAnchorElement,
-  styles
-) {
+export default class MozSupportLink extends HTMLAnchorElement {
   static SUPPORT_URL = "https://www.mozilla.org/";
   static get observedAttributes() {
     return ["support-page", "utm-content"];
@@ -62,7 +55,6 @@ export default class MozSupportLink extends StylesMixin(
   }
 
   connectedCallback() {
-    super.connectedCallback();
     this.#register();
     this.#setHref();
     this.setAttribute("target", "_blank");

@@ -1106,7 +1106,8 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
   background-color: var(--button-background-color);
   color: var(--button-text-color);
-  font-size: var(--font-size-small);
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+  font-size: 0.9em;
   font-weight: var(--font-weight-semibold);
   max-width: fit-content;
   border-radius: var(--button-border-radius);
@@ -1335,6 +1336,10 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   color: var(--text-color-deemphasized);
   font-weight: var(--font-weight-heading);
   text-wrap: wrap;
+}
+
+#cta-menu-header-description {
+  color: var(--text-color-deemphasized);
 }
 
 #PanelUI-fxa-menu-send-button {
@@ -1610,7 +1615,8 @@ panelview .toolbarbutton-1,
 }
 
 .subview-subheader {
-  font-size: var(--font-size-small);
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+  font-size: 0.9em;
   font-weight: inherit;
   color: var(--text-color-deemphasized);
   padding-block: var(--space-xsmall);
@@ -2019,7 +2025,8 @@ toolbarbutton[itemtype="showinactivebutton"] {
 }
 
 .remote-tabs-undo-button {
-  font-size: var(--font-size-small);
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+  font-size: 0.9em;
   font-weight: var(--font-weight-semibold);
 }
 
@@ -2164,7 +2171,8 @@ radiogroup:focus-visible > .subviewradio[focused="true"] {
 
 #PanelUI-panic-actionlist-main-label {
   color: var(--text-color-deemphasized);
-  font-size: var(--font-size-small);
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+  font-size: 0.9em;
 }
 
 .PanelUI-panic-actionlist {

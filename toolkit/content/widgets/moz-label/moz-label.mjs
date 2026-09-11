@@ -2,10 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { StylesMixin } from "chrome://global/content/elements/styles-mixin.mjs";
-
-import styles from "chrome://global/content/elements/moz-label.css" with { type: "css" };
-
 /**
  * An extension of the label element that provides accesskey styling and
  * formatting as well as click handling logic.
@@ -16,7 +12,7 @@ import styles from "chrome://global/content/elements/moz-label.css" with { type:
  *   accesskey, this is useful to work around an issue where multiple accesskeys
  *   on the same element cause it to be focused isntead of activated.
  */
-class MozTextLabel extends StylesMixin(HTMLLabelElement, styles) {
+class MozTextLabel extends HTMLLabelElement {
   #insertSeparator = false;
   #alwaysAppendAccessKey = false;
   #lastFormattedAccessKey = null;
@@ -29,6 +25,8 @@ class MozTextLabel extends StylesMixin(HTMLLabelElement, styles) {
   static get observedAttributes() {
     return ["accesskey", "shownaccesskey", "enable-center-crop"];
   }
+
+  static stylesheetUrl = "chrome://global/content/elements/moz-label.css";
 
   constructor() {
     super();
@@ -75,7 +73,7 @@ class MozTextLabel extends StylesMixin(HTMLLabelElement, styles) {
   }
 
   connectedCallback() {
-    super.connectedCallback();
+    this.#setStyles();
     this.formatAccessKey();
     if (!this.#observer) {
       this.#observer = new MutationObserver(() => {
@@ -91,6 +89,29 @@ class MozTextLabel extends StylesMixin(HTMLLabelElement, styles) {
       this.#stopMutationObserver();
       this.#observer = null;
     }
+  }
+
+  // Bug 1820588 - we may want to generalize this into
+  // MozHTMLElement.insertCssIfNeeded(style)
+  #setStyles() {
+    let root = this.getRootNode();
+    if (root.__mozLabelCssAdded) {
+      return;
+    }
+
+    let container = root.head ?? root;
+
+    for (let link of container.querySelectorAll("link")) {
+      if (link.getAttribute("href") == this.constructor.stylesheetUrl) {
+        return;
+      }
+    }
+
+    let style = document.createElement("link");
+    style.rel = "stylesheet";
+    style.href = this.constructor.stylesheetUrl;
+    container.appendChild(style);
+    root.__mozLabelCssAdded = true;
   }
 
   set textContent(val) {
