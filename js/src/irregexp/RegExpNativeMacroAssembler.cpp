@@ -1224,7 +1224,7 @@ void SMRegExpMacroAssembler::initFrameAndRegs() {
   Register ioDataReg = temp0_;
 
   Register matchesReg = temp1_;
-  masm_.loadPtr(Address(ioDataReg, offsetof(InputOutputData, matches)),
+  masm_.loadPtr(Address(ioDataReg, InputOutputData::offsetOfMatches()),
                 matchesReg);
 
   // Initialize output registers
@@ -1248,13 +1248,18 @@ void SMRegExpMacroAssembler::initFrameAndRegs() {
   masm_.bind(&enoughRegisters);
 #endif
 
-  // Load input start pointer.
-  masm_.loadPtr(Address(ioDataReg, offsetof(InputOutputData, inputStart)),
-                current_position_);
+  // Load input and store a copy in the FrameData.
+  Register inputReg = temp1_;
+  masm_.loadPtr(Address(ioDataReg, InputOutputData::offsetOfInput()), inputReg);
+  masm_.storePtr(inputReg, inputString());
 
-  // Load input end pointer
-  masm_.loadPtr(Address(ioDataReg, offsetof(InputOutputData, inputEnd)),
-                input_end_pointer_);
+  // Load length and chars
+  masm_.loadStringLength(inputReg, input_end_pointer_);
+  masm_.loadStringChars(inputReg, current_position_, encoding());
+
+  // Compute the input end pointer.
+  BaseIndex endAddr(current_position_, input_end_pointer_, factor());
+  masm_.computeEffectiveAddress(endAddr, input_end_pointer_);
 
   // Set up input position to be negative offset from string end.
   masm_.subPtr(input_end_pointer_, current_position_);
@@ -1264,10 +1269,15 @@ void SMRegExpMacroAssembler::initFrameAndRegs() {
 
   // Load start index
   Register startIndexReg = temp1_;
-  masm_.loadPtr(Address(ioDataReg, offsetof(InputOutputData, startIndex)),
+  masm_.loadPtr(Address(ioDataReg, InputOutputData::offsetOfStartIndex()),
                 startIndexReg);
   masm_.computeEffectiveAddress(
       BaseIndex(current_position_, startIndexReg, factor()), current_position_);
+
+  // Store canResume in the FrameData
+  masm_.load32(Address(ioDataReg, InputOutputData::offsetOfCanResume()),
+               temp0_);
+  masm_.store32(temp0_, canResume());
 
   // Initialize current_character_.
   // Load newline if index is at start, or previous character otherwise.

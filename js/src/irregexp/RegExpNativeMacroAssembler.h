@@ -32,6 +32,14 @@ struct FrameData {
   // Copy of the input MatchPairs.
   int32_t* matches;    // pointer to capture array
   int32_t numMatches;  // size of capture array
+
+  // Whether this regexp can resume after being interrupted. True
+  // iff we were invoked from C++.
+  uint32_t canResume;
+
+  // The input string itself. We store it here so that we can root it when
+  // interrupted.
+  JSString* inputString;
 };
 
 class SMRegExpMacroAssembler final : public NativeRegExpMacroAssembler {
@@ -176,6 +184,9 @@ class SMRegExpMacroAssembler final : public NativeRegExpMacroAssembler {
   inline js::jit::Scale factor() {
     return mode_ == UC16 ? js::jit::TimesTwo : js::jit::TimesOne;
   }
+  inline js::CharEncoding encoding() {
+    return mode_ == UC16 ? js::CharEncoding::TwoByte : js::CharEncoding::Latin1;
+  }
 
   js::jit::Address inputStart() {
     return js::jit::Address(masm_.getStackPointer(),
@@ -192,6 +203,14 @@ class SMRegExpMacroAssembler final : public NativeRegExpMacroAssembler {
   js::jit::Address numMatches() {
     return js::jit::Address(masm_.getStackPointer(),
                             offsetof(FrameData, numMatches));
+  }
+  js::jit::Address canResume() {
+    return js::jit::Address(masm_.getStackPointer(),
+                            offsetof(FrameData, canResume));
+  }
+  js::jit::Address inputString() {
+    return js::jit::Address(masm_.getStackPointer(),
+                            offsetof(FrameData, inputString));
   }
 
   // The stack-pointer-relative location of a regexp register.
