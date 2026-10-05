@@ -744,6 +744,7 @@ export class UrlbarView {
     let ns = "http://www.w3.org/1999/xhtml";
     let overlay = doc.createElementNS(ns, "div");
     overlay.className = "urlbarView-tail150-overlay";
+    overlay.setAttribute("popover", "manual");
 
     let closeBtn = doc.createElementNS(ns, "div");
     closeBtn.className = "close-button";
@@ -759,6 +760,7 @@ export class UrlbarView {
     overlay.append(closeBtn, canvas);
 
     this.input.appendChild(overlay);
+    overlay.showPopover();
     this.#tail150 = { overlay, keyHandler: null };
     this.#runTail150(canvas);
   }
