@@ -503,7 +503,7 @@ static const FeatureInfo sFeatureInfoArr[] = {
       GLContext::Extensions_End}},
     {"texture_norm16",
      GLVersion::GL3_1,
-     GLESVersion::NONE,  // not part of any GLES core
+     GLESVersion::ES3_1,
      GLContext::EXT_texture_norm16,
      {GLContext::Extensions_End}},
     {"texture_rg",
