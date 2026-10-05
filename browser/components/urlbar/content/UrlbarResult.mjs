@@ -33,7 +33,7 @@ if (lazy) {
  *   Where to start the selection for the autofill.
  * @property {number} selectionEnd
  *   Where to end the selection for the autofill.
- * @property {string} [type]
+ * @property {"origin" | "url" | "adaptive_url" | "adaptive_origin" | "about"} [type]
  *   The type of the autofill.
  * @property {string} [adaptiveHistoryInput]
  *   The input string associated with this autofill item.
