@@ -85,7 +85,7 @@ _NS_InvokeByIndex:
   .cfi_restore 1
   addi.d    $sp, $sp, 32
   .cfi_adjust_cfa_offset -32
-  jirl      $zero, $ra, 0
+  ret
   .cfi_endproc
   .size   _NS_InvokeByIndex, .-_NS_InvokeByIndex
   .section .note.GNU-stack, "", @progbits

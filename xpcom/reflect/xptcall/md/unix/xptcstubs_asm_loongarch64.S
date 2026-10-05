@@ -46,7 +46,7 @@ SharedStub:
     .cfi_restore 1
     addi.d    $sp, $sp, 8*(NGPRGES+NFPREGS)+16
     .cfi_adjust_cfa_offset -8*(NGPRGES+NFPREGS)-16
-    jirl      $zero, $ra, 0
+    ret
     .cfi_endproc
 
     .size SharedStub, .-SharedStub
