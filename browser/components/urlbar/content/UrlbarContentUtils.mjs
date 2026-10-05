@@ -184,7 +184,7 @@ export class UrlbarContentUtils {
   /**
    * Where an event says a link should be opened.
    *
-   * @param {Event} event
+   * @param {KeyboardEvent | MouseEvent} event
    *   The event that triggered the opening.
    * @returns {"current" | "tabshifted" | "tab" | "save" | "window"}
    */
