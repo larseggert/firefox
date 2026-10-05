@@ -384,16 +384,18 @@ class Components(
             }
     }
 
+    val lensImageUploader by lazyMonitored {
+        LensImageUploader(
+            context = context,
+            client = core.client,
+            userAgent = core.engine.settings.userAgentString ?: "",
+        )
+    }
+
     val lensImageSearch by lazyMonitored {
         LensImageSearch(
             appStore = appStore,
-            uploader = {
-                LensImageUploader(
-                    context = context,
-                    client = core.client,
-                    userAgent = core.engine.settings.userAgentString ?: "",
-                )
-            },
+            uploader = { lensImageUploader },
             browserUseCases = { useCases.fenixBrowserUseCases },
         )
     }

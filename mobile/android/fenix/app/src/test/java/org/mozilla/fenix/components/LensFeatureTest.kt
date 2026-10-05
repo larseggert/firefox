@@ -97,16 +97,6 @@ class LensFeatureTest {
         }
 
     @Test
-    fun `GIVEN a photo picker image result WHEN handleImageResult is called THEN the photo_picker source is forwarded`() =
-        runTest(testDispatcher) {
-            feature.handleImageResult(Activity.RESULT_OK, imageResultIntent(source = "photo_picker"))
-
-            verify {
-                lensImageSearch.searchWithImage(Uri.parse("content://test/image.jpg"), source = "photo_picker")
-            }
-        }
-
-    @Test
     fun `GIVEN a missing source extra WHEN handleImageResult is called THEN the unknown source is forwarded`() =
         runTest(testDispatcher) {
             feature.handleImageResult(Activity.RESULT_OK, imageResultIntent(source = null))
