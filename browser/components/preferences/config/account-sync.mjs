@@ -1064,6 +1064,7 @@ SettingGroupManager.registerGroups({
     l10nId: "preferences-data-migration-group",
     headingLevel: 2,
     iconSrc: "chrome://browser/skin/import.svg",
+    subcategory: "importBrowserData",
     items: [
       {
         id: "data-migration",
