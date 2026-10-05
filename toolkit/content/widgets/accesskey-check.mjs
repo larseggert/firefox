@@ -37,6 +37,9 @@ const ENABLED =
  * can't show an accesskey or be reached by its first letter, so it may lack an
  * accesskey; one it has is still compared with the others.
  *
+ * A menu that macOS shows natively ignores accesskeys, so it is skipped along
+ * with its submenus.
+ *
  * While the document has translations pending, the check waits for them, so
  * that it compares the labels and accesskeys the user will see.
  *
@@ -46,7 +49,11 @@ const ENABLED =
  *   Resolves once the check has run.
  */
 export async function checkAccessKeys(popup) {
-  if (!ENABLED || popup.hasAttribute("accesskey-conflicts-bug")) {
+  if (
+    !ENABLED ||
+    popup.hasAttribute("accesskey-conflicts-bug") ||
+    (popup.localName == "menupopup" && isShownNatively(popup))
+  ) {
     return;
   }
   let doc = popup.ownerDocument;
@@ -138,6 +145,22 @@ export async function checkAccessKeys(popup) {
     "chrome javascript"
   );
   Services.console.logMessage(scriptError);
+}
+
+/**
+ * Whether macOS shows a menupopup natively. Only the outermost menupopup of a
+ * native menu reports isNativeMenu; its submenus don't.
+ *
+ * @param {Element} menupopup
+ * @returns {boolean}
+ */
+function isShownNatively(menupopup) {
+  let outermost = menupopup;
+  let parentPopup;
+  while ((parentPopup = outermost.parentElement?.closest("menupopup"))) {
+    outermost = parentPopup;
+  }
+  return outermost.isNativeMenu;
 }
 
 function menupopupItems(popup) {

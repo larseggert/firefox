@@ -104,6 +104,9 @@
   <script class="testbody" type="application/javascript">
   <![CDATA[
 
+const { AppConstants } = ChromeUtils.importESModule(
+  "resource://gre/modules/AppConstants.sys.mjs"
+);
 const { Assert } = ChromeUtils.importESModule(
   "resource://testing-common/Assert.sys.mjs"
 );
@@ -154,7 +157,12 @@ async function openAndCollectErrors(id, onShown) {
   return errors;
 }
 
-add_setup(function setup() {
+add_setup(async function setup() {
+  // The check skips native menus, so open the test menus as XUL popups on
+  // macOS. testNativeMenuSkipped opens a native one.
+  await SpecialPowers.pushPrefEnv({
+    set: [["widget.macos.native-anchored-menus", false]],
+  });
   L10nRegistry.getInstance().registerSources([
     L10nFileSource.createMock(
       "accesskey-test",
@@ -344,6 +352,31 @@ add_task(async function testAutoAccessKeyDigits() {
     ["3", "2", "4"],
     "Each item without a typeable letter or digit gets the lowest unused digit"
   );
+});
+
+add_task(async function testNativeMenuSkipped() {
+  if (AppConstants.platform != "macosx") {
+    ok(true, "Only macOS shows menus natively");
+    return;
+  }
+  if (Services.env.get("MOZ_HEADLESS")) {
+    ok(true, "Menus aren't native in headless mode");
+    return;
+  }
+  await SpecialPowers.pushPrefEnv({
+    set: [["widget.macos.native-anchored-menus", true]],
+  });
+  let popup = document.getElementById("duplicate");
+  // Opening the popup with native menus off marked it nonnative, which would
+  // keep it non-native.
+  popup.removeAttribute("nonnative");
+  let isNative;
+  let errors = await openAndCollectErrors("duplicate", () => {
+    isNative = popup.isNativeMenu;
+  });
+  await SpecialPowers.popPrefEnv();
+  ok(isNative, "The menu opens natively");
+  is(errors.length, 0, "A native menu is skipped");
 });
 
 add_task(async function testDisabledItems() {
