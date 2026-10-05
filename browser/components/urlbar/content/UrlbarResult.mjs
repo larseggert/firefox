@@ -68,7 +68,7 @@ export class UrlbarResult {
    * @param {number} [params.resultSpan]
    * @param {number} [params.richSuggestionIconSize]
    * @param {string} [params.richSuggestionIconVariation]
-   * @param {string} [params.rowLabel]
+   * @param {{id: string, args?: L10nArgs}} [params.rowLabel]
    * @param {boolean} [params.showFeedbackMenu]
    * @param {number} [params.suggestedIndex]
    * @param {Payload} [params.payload]

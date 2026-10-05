@@ -42,6 +42,27 @@ function getUniqueId(prefix) {
 }
 
 /**
+ * @typedef {HTMLDivElement & {
+ *   result: UrlbarResult,
+ *   _content: HTMLSpanElement,
+ *   _elements: Map<string, HTMLElement>,
+ *   _buttons: Map<string, HTMLElement>,
+ *   _sharedAttributes: Set<string>,
+ *   _sharedClassList: Set<string>,
+ *   _originalActionSetter?: () => void,
+ * }} ResultRow
+ *   A `.urlbarView-row` element with the properties #createRow and
+ *   #updateRow attach to it.
+ */
+
+/**
+ * @typedef {HTMLElement & {
+ *   children: HTMLCollectionOf<ResultRow>,
+ * }} RowsContainer
+ *   The `.urlbarView-results` element. Every child is a row.
+ */
+
+/**
  * Receives and displays address bar autocomplete results.
  */
 export class UrlbarView {
@@ -633,7 +654,7 @@ export class UrlbarView {
         buttons: [{ l10n: { id: "urlbar-search-tips-confirm-short" } }],
         icon: "chrome://branding/content/icon32.png",
       },
-      rowLabel: !result.hideRowLabel && this.#rowLabel(row),
+      rowLabel: result.hideRowLabel ? null : this.#rowLabel(row),
       hideRowLabel: result.hideRowLabel,
       richSuggestionIconSize: 32,
     });
@@ -1235,6 +1256,7 @@ export class UrlbarView {
   #removeStaleRowsTimer;
   #resultMenuResult;
   #resultMenuCommands;
+  /** @type {RowsContainer} */
   #rows;
   #rawSelectedElement;
   #tail150 = null;
@@ -1554,7 +1576,7 @@ export class UrlbarView {
   }
 
   #createRow() {
-    let item = this.#createElement("div");
+    let item = /** @type {ResultRow} */ (this.#createElement("div"));
     item.className = "urlbarView-row";
     item._elements = new Map();
     item._buttons = new Map();
@@ -1583,6 +1605,9 @@ export class UrlbarView {
     return item;
   }
 
+  /**
+   * @param {ResultRow} item
+   */
   #createRowContent(item) {
     // The url is the only element that can wrap, thus all the other elements
     // are child of noWrap.
@@ -1645,6 +1670,10 @@ export class UrlbarView {
     this.#createExplanation(item._content, item);
   }
 
+  /**
+   * @param {HTMLSpanElement} parentNode
+   * @param {ResultRow} item
+   */
   #createExplanation(parentNode, item) {
     if (!UrlbarPrefs.get("resultExplanationsFeatureGate")) {
       return;
@@ -1669,7 +1698,7 @@ export class UrlbarView {
   /**
    * Updates the "last visited" and "bookmarked" explanation of a row.
    *
-   * @param {Element} item
+   * @param {ResultRow} item
    *   The row.
    * @param {UrlbarResult} result
    *   The row's result.
@@ -1756,7 +1785,7 @@ export class UrlbarView {
    *     An array of CSS classes to set on the element. If this is defined, the
    *     element's previous classes will be cleared first!
    *
-   * @param {Element} item
+   * @param {ResultRow} item
    *   The row element.
    * @param {UrlbarResult} result
    *   The UrlbarResult displayed to the node. This is optional.
@@ -1833,6 +1862,10 @@ export class UrlbarView {
     }
   }
 
+  /**
+   * @param {ResultRow} item
+   * @param {UrlbarResult} result
+   */
   #createRowContentForDynamicType(item, result) {
     let { dynamicType, viewTemplate } = result.payload;
     if (!viewTemplate) {
@@ -1867,7 +1900,7 @@ export class UrlbarView {
    * @param {object} template
    *   The template object being recursed into. Pass the top-level template
    *   object to start with.
-   * @param {Element} item
+   * @param {ResultRow} item
    *   The row element.
    * @param {Set} classes
    *   The CSS class names of all elements in the row's subtree are recursively
@@ -1919,6 +1952,10 @@ export class UrlbarView {
     return classes;
   }
 
+  /**
+   * @param {ResultRow} item
+   * @param {UrlbarResult} result
+   */
   #createRowContentForRichSuggestion(item, result) {
     item._content.toggleAttribute("selectable", true);
 
@@ -2034,6 +2071,10 @@ export class UrlbarView {
     item._elements.set("bottom", bottom);
   }
 
+  /**
+   * @param {ResultRow} item
+   * @param {UrlbarResult} _result
+   */
   #createRowContentForBottomUrl(item, _result) {
     item._content.toggleAttribute("selectable", true);
 
@@ -2095,6 +2136,12 @@ export class UrlbarView {
     item._elements.set("url", url);
   }
 
+  /**
+   * @param {ResultRow} item
+   * @param {UrlbarResult} oldResult
+   * @param {UrlbarResult} newResult
+   * @returns {boolean}
+   */
   #needsNewButtons(item, oldResult, newResult) {
     if (!oldResult) {
       return true;
@@ -2121,6 +2168,11 @@ export class UrlbarView {
     return newResult.testForceNewContent;
   }
 
+  /**
+   * @param {ResultRow} item
+   * @param {UrlbarResult} oldResult
+   * @param {UrlbarResult} result
+   */
   #updateRowButtons(item, oldResult, result) {
     for (let i = 0; i < result.payload.buttons?.length; i++) {
       // We hold the name to each button data in payload to enable to get the
@@ -2180,6 +2232,10 @@ export class UrlbarView {
     }
   }
 
+  /**
+   * @param {ResultRow} item
+   * @param {any} opts
+   */
   #addRowButton(
     item,
     {
@@ -2836,6 +2892,10 @@ export class UrlbarView {
     return null;
   }
 
+  /**
+   * @param {ResultRow} item
+   * @param {UrlbarResult} result
+   */
   #updateRowForDynamicType(item, result) {
     item.setAttribute("dynamicType", result.payload.dynamicType);
 
@@ -2868,6 +2928,10 @@ export class UrlbarView {
     }
   }
 
+  /**
+   * @param {ResultRow} item
+   * @param {UrlbarResult} result
+   */
   #updateRowForRichSuggestion(item, result) {
     // The "rich-suggestion" attribute isn't used in Nova.
     item.toggleAttribute(
@@ -2929,6 +2993,10 @@ export class UrlbarView {
     }
   }
 
+  /**
+   * @param {ResultRow} item
+   * @param {UrlbarResult} result
+   */
   #updateRowContentForBottomUrl(item, result) {
     item.classList.add("with-bottom-url");
     item.toggleAttribute("has-url", true);
@@ -3050,7 +3118,7 @@ export class UrlbarView {
    * Sets or removes the group label from a row. Designed to be called
    * iteratively over each row.
    *
-   * @param {Element} item
+   * @param {ResultRow} item
    *   A row in the view.
    * @param {boolean} isItemVisible
    *   Whether the row is visible. This can be computed by the method itself,
@@ -3134,9 +3202,9 @@ export class UrlbarView {
    * Returns the group label to use for a row. Designed to be called iteratively
    * over each row.
    *
-   * @param {Element} row
+   * @param {ResultRow} row
    *   A row in the view.
-   * @returns {object}
+   * @returns {null | {id: string, args?: L10nArgs}}
    *   If the current row should not have a label, returns null. Otherwise
    *   returns an l10n object for the label's l10n string: `{ id, args }`
    */
@@ -3206,6 +3274,10 @@ export class UrlbarView {
     return null;
   }
 
+  /**
+   * @param {ResultRow} row
+   * @param {boolean} visible
+   */
   #setRowVisibility(row, visible) {
     row.toggleAttribute("hidden", !visible);
   }
@@ -3368,7 +3440,7 @@ export class UrlbarView {
       element.classList.contains("urlbarView-row") &&
       element.hasAttribute("row-selectable")
     ) {
-      return element._content;
+      return /** @type {ResultRow} */ (element)._content;
     }
     return null;
   }
@@ -3519,7 +3591,7 @@ export class UrlbarView {
    * Returns the currently selected row. Useful when this.#selectedElement may
    * be a non-row element, such as a descendant element of RESULT_TYPE.TIP.
    *
-   * @returns {Element}
+   * @returns {ResultRow}
    *   The currently selected row, or ancestor row of the currently selected
    *   item.
    */
@@ -3530,17 +3602,17 @@ export class UrlbarView {
   /**
    * @param {Element} element
    *   An element that is potentially a row or descendant of a row.
-   * @returns {Element}
+   * @returns {ResultRow}
    *   The row containing `element`, or `element` itself if it is a row.
    */
   #getRowFromElement(element) {
-    return element?.closest(".urlbarView-row");
+    return /** @type {ResultRow} */ (element?.closest(".urlbarView-row"));
   }
 
   /**
    * @param {number} id
    *   A UrlbarResult id.
-   * @returns {Element|null}
+   * @returns {ResultRow|null}
    *   The row currently displaying the result with that id, or null. A result
    *   appears in the view at most once, so this matches at most one row.
    */
@@ -3660,7 +3732,7 @@ export class UrlbarView {
    * Sets the content of the 'Switch To Tab' action chiclet and the related
    * user-context and tab-group actions.
    *
-   * @param {Element} item
+   * @param {ResultRow} item
    *   The result's row element.
    * @param {UrlbarResult} result
    *   The result for which the content is being set.
@@ -3951,7 +4023,7 @@ export class UrlbarView {
   /**
    * Adds markup for a tail suggestion prefix to a row.
    *
-   * @param {Element} item
+   * @param {ResultRow} item
    *   The node for the result row.
    * @param {UrlbarResult} result
    *   A UrlbarResult representing a tail suggestion.
@@ -4041,7 +4113,8 @@ export class UrlbarView {
     if (result.type != UrlbarShared.RESULT_TYPE.TIP) {
       return false;
     }
-    let buttons = this.#rows.firstElementChild._buttons;
+    let buttons = /** @type {ResultRow} */ (this.#rows.firstElementChild)
+      ._buttons;
     let tipButton = buttons.get("tip") || buttons.get("0");
     if (!tipButton) {
       throw new Error("Expected a tip button");
