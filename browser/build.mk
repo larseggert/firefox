@@ -17,9 +17,6 @@ install::
 upload::
 	@$(MAKE) -C browser/installer upload
 
-wget-en-US:
-	@$(MAKE) -C browser/locales $@
-
 ifdef MAKENSISU
 INSTALLER_REPACK_DEPS = browser/installer/windows/nsis-stage.stamp
 endif
