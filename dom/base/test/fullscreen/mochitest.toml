@@ -66,6 +66,8 @@ skip-if = [
 
 ["test_fullscreen_iframe.html"]
 
+["test_fullscreen_iframe_multiple.html"]
+
 ["test_fullscreen_meta_viewport.html"]
 
 ["test_fullscreen_modal.html"]
