@@ -441,7 +441,8 @@ void ClearExitFP(jit::MacroAssembler& masm, jit::Register activation);
 //   8. Debug breakpoints - Handled by GenerateExitPrologue/Epilogue in
 //      GenerateDebugStub.
 //   9. Throwing - GenerateThrowStub is always jumped to in the system FP state.
-//   10. Catching - GenerateJumpToCatchHandler handles the switch back to wasm FP
+//   10. Catching - GenerateJumpToCatchHandler handles the switch back to wasm
+//   FP
 //       state.
 //
 // Entering must happen from the system FP state, and that is asserted.

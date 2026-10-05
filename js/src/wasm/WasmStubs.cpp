@@ -1367,14 +1367,16 @@ static bool GenerateJitEntry(MacroAssembler& masm, size_t funcExportIndex,
                         SymbolicAddress::CoerceInPlace_JitEntry);
     masm.assertStackAlignment(ABIStackAlignment);
 
-  // CoerceInPlace_JitEntry goes through a builtin thunk, which upon return enters the
-  // wasm FP environment (it assumes it's always called by a wasm function). We
-  // should be in the system FP environment and so we need to reset it.
-  //
-  // The InstanceReg is live for the call above, and it is preserved by the
-  // builtin thunk.
-  MOZ_ASSERT(wasm::NeedsBuiltinThunk(SymbolicAddress::CoerceInPlace_JitEntry));
-  GenerateLeaveWasmFPEnvironment(masm, InstanceReg);
+    // CoerceInPlace_JitEntry goes through a builtin thunk, which upon return
+    // enters the wasm FP environment (it assumes it's always called by a wasm
+    // function). We should be in the system FP environment and so we need to
+    // reset it.
+    //
+    // The InstanceReg is live for the call above, and it is preserved by the
+    // builtin thunk.
+    MOZ_ASSERT(
+        wasm::NeedsBuiltinThunk(SymbolicAddress::CoerceInPlace_JitEntry));
+    GenerateLeaveWasmFPEnvironment(masm, InstanceReg);
 
     // No widening is required, as the return value is used as a bool.
     masm.branchTest32(Assembler::NonZero, ReturnReg, ReturnReg,

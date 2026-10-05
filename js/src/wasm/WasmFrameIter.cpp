@@ -714,8 +714,7 @@ void wasm::AssertDenormalsEnabled(MacroAssembler& masm) {
   masm.stmxcsr(mxcsr);
 
   Label ok;
-  masm.branchTest32(Assembler::Zero, mxcsr, Imm32(MxcsrDenormalsDisabled),
-                    &ok);
+  masm.branchTest32(Assembler::Zero, mxcsr, Imm32(MxcsrDenormalsDisabled), &ok);
   masm.breakpoint();
   masm.bind(&ok);
 
