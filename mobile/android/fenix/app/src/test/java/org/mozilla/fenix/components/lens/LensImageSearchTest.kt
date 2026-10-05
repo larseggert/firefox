@@ -250,6 +250,39 @@ class LensImageSearchTest {
         }
 
     @Test
+    fun `GIVEN an already uploaded private result WHEN openResult is called THEN it is opened in a new private tab and LensResultAvailable is dispatched`() {
+        lensImageSearch.openResult(resultUrl, isPrivate = true)
+
+        verifyResultOpened(private = true)
+        verify { appStore.dispatch(LensAction.LensResultAvailable(resultUrl)) }
+        assertNull(GoogleLens.searchCompleted.testGetValue())
+    }
+
+    @Test
+    fun `GIVEN an upload is in flight WHEN openResult is called THEN only the opened result is shown`() =
+        runTest(testDispatcher) {
+            val inFlightResultUrl = "https://lens.google.com/results?in_flight"
+            val pendingUpload = CompletableDeferred<LensImageUploader.UploadResult>()
+            coEvery { uploader.upload(any(), any()) } coAnswers { pendingUpload.await() }
+
+            lensImageSearch.searchWithImage(imageUri, source = "camera")
+            testDispatcher.scheduler.advanceUntilIdle()
+            lensImageSearch.openResult(resultUrl, isPrivate = false)
+            pendingUpload.complete(LensImageUploader.UploadResult(resultUrl = inFlightResultUrl, httpStatusCode = 200))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            verifyResultOpened(private = false)
+            verify(exactly = 0) {
+                browserUseCases.loadUrlOrSearch(
+                    searchTermOrURL = inFlightResultUrl,
+                    newTab = any(),
+                    private = any(),
+                    flags = any(),
+                )
+            }
+        }
+
+    @Test
     fun `GIVEN private browsing mode WHEN searching from the image context menu THEN the tab is opened as private`() =
         runTest(testDispatcher) {
             setPrivateMode()

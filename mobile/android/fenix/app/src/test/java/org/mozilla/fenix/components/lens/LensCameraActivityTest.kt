@@ -65,7 +65,7 @@ class LensCameraActivityTest {
 
     @Test
     fun `GIVEN a context WHEN newIntent is called THEN the returned intent targets LensCameraActivity`() {
-        val intent = LensCameraActivity.newIntent(testContext)
+        val intent = LensCameraActivity.newIntent(testContext, isPrivate = false)
         assertEquals(
             LensCameraActivity::class.java.name,
             intent.component?.className,

@@ -70,7 +70,7 @@ class LensSearchActivity : AppCompatActivity() {
         // still delivered to the re-registered launcher above.
         if (savedInstanceState == null) {
             SearchWidget.lensButton.record(NoExtras())
-            cameraLauncher.launch(LensCameraActivity.newIntent(this))
+            cameraLauncher.launch(LensCameraActivity.newIntent(this, isPrivate = false))
         }
     }
 
@@ -85,6 +85,13 @@ class LensSearchActivity : AppCompatActivity() {
         val qrString = data?.getStringExtra(LensCameraActivity.EXTRA_SCAN_RESULT_DATA)
         if (!qrString.isNullOrEmpty()) {
             handleQrScanResult(qrString)
+            return
+        }
+
+        val resultUrl = data?.getStringExtra(LensCameraActivity.EXTRA_LENS_RESULT_URL)
+        if (resultUrl != null) {
+            forwardToBrowser(resultUrl)
+            finish()
             return
         }
 

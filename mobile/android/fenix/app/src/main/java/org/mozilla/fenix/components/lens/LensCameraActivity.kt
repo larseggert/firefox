@@ -437,9 +437,26 @@ class LensCameraActivity : AppCompatActivity() {
 
         @VisibleForTesting internal const val IMAGE_SOURCE_PHOTO_PICKER = "photo_picker"
 
-        /** Creates an intent to launch [LensCameraActivity]. */
-        fun newIntent(context: Context): Intent {
-            return Intent(context, LensCameraActivity::class.java)
+        /**
+         * Result intent extra carrying the Lens results URL of an image this activity already uploaded. When present,
+         * the result carries no image URI and the search telemetry has already been recorded.
+         */
+        internal const val EXTRA_LENS_RESULT_URL = "lens_result_url"
+
+        /**
+         * Launch and result intent extra naming the browsing mode an image is uploaded in. The result echoes the launch
+         * value so the result tab always matches the cookie context of the upload.
+         */
+        internal const val EXTRA_IS_PRIVATE = "lens_is_private"
+
+        /**
+         * Creates an intent to launch [LensCameraActivity].
+         *
+         * @param context The context to launch the activity from.
+         * @param isPrivate Whether an image uploaded by this activity should use the private cookie context.
+         */
+        fun newIntent(context: Context, isPrivate: Boolean): Intent {
+            return Intent(context, LensCameraActivity::class.java).putExtra(EXTRA_IS_PRIVATE, isPrivate)
         }
     }
 }

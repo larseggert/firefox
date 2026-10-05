@@ -51,6 +51,20 @@ class LensImageSearch(
         search(source, isObserved = true) { isPrivate -> uploader().upload(imageUri, isPrivate) }
     }
 
+    /**
+     * Opens a Lens result that [LensCameraActivity] already uploaded, which it does for photo picker selections so it
+     * can show the image while the upload runs.
+     *
+     * @param resultUrl The Lens results URL.
+     * @param isPrivate The browsing mode the image was uploaded in, which the tab has to match for the Lens session to
+     *   carry over.
+     */
+    fun openResult(resultUrl: String, isPrivate: Boolean) {
+        searchJob?.cancel()
+        searchJob = null
+        openResultTab(resultUrl, isPrivate, isObserved = true)
+    }
+
     /** Fetches the image at [imageUrl], uploads it, and opens the Lens result. */
     fun searchWithImageUrl(imageUrl: String) {
         search(SOURCE_CONTEXT_MENU, isObserved = false) { isPrivate -> uploader().uploadFromUrl(imageUrl, isPrivate) }
@@ -98,22 +112,24 @@ class LensImageSearch(
                 return@launch
             }
 
-            // Always a new tab. The tab the search started from may be gone by now, and a Lens
-            // result shouldn't replace the page the user was reading.
-            browserUseCases()
-                .loadUrlOrSearch(
-                    searchTermOrURL = resultUrl,
-                    newTab = true,
-                    private = isPrivate,
-                    flags = EngineSession.LoadUrlFlags.external(),
-                )
-            // The observed flow leaves the result in the store for BrowserToolbarSearchMiddleware, which navigates
-            // to the browser and then dispatches LensResultConsumed. Nothing observes the other flows, so they clear
-            // the state themselves rather than leaving a stale result behind.
-            appStore.dispatch(
-                if (isObserved) LensAction.LensResultAvailable(resultUrl) else LensAction.LensResultConsumed
-            )
+            openResultTab(resultUrl, isPrivate, isObserved)
         }
+    }
+
+    private fun openResultTab(resultUrl: String, isPrivate: Boolean, isObserved: Boolean) {
+        // Always a new tab. The tab the search started from may be gone by now, and a Lens
+        // result shouldn't replace the page the user was reading.
+        browserUseCases()
+            .loadUrlOrSearch(
+                searchTermOrURL = resultUrl,
+                newTab = true,
+                private = isPrivate,
+                flags = EngineSession.LoadUrlFlags.external(),
+            )
+        // The observed flow leaves the result in the store for BrowserToolbarSearchMiddleware, which navigates
+        // to the browser and then dispatches LensResultConsumed. Nothing observes the other flows, so they clear
+        // the state themselves rather than leaving a stale result behind.
+        appStore.dispatch(if (isObserved) LensAction.LensResultAvailable(resultUrl) else LensAction.LensResultConsumed)
     }
 
     private fun recordSearchCompleted(succeeded: Boolean, source: String, httpStatusCode: Int? = null) {
