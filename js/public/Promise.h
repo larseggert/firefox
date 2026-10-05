@@ -501,14 +501,10 @@ extern JS_PUBLIC_API bool RejectPromise(JSContext* cx,
  * PerformPromiseResolution steps, including `Get(resolutionValue, "then")`,
  * are deferred to a freshly-enqueued microtask. The promise remains pending
  * until that microtask runs.
- *
- * If provided, `deferred` is set to true only when this call successfully
- * enqueues deferred resolution, and to false otherwise.
  */
 extern JS_PUBLIC_API bool SafeResolve(JSContext* cx,
                                       JS::HandleObject promiseObj,
-                                      JS::HandleValue resolutionValue,
-                                      bool* deferred = nullptr);
+                                      JS::HandleValue resolutionValue);
 
 /**
  * Create a Promise with the given fulfill/reject handlers, that will be
