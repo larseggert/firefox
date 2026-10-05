@@ -834,6 +834,10 @@ Preferences.addSetting({
 });
 
 let accountsEnabled = Services.prefs.getBoolPref("identity.fxaccounts.enabled");
+let perDeviceSyncEnabled = Services.prefs.getBoolPref(
+  "services.sync.perDeviceEngineChoices",
+  false
+);
 
 SettingGroupManager.registerGroups({
   defaultBrowserSync: window.createDefaultBrowserConfig({
@@ -1012,7 +1016,9 @@ SettingGroupManager.registerGroups({
       },
       {
         id: "syncNotConfigured",
-        l10nId: "prefs-syncing-off-2",
+        l10nId: perDeviceSyncEnabled
+          ? "prefs-syncing-off-3"
+          : "prefs-syncing-off-2",
         control: "moz-box-item",
         iconSrc: "chrome://global/skin/icons/warning.svg",
         items: [
