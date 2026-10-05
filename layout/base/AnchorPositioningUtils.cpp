@@ -1171,11 +1171,7 @@ static void UpdateScrollShift(
   // but we don't want to trigger a full reflow as a response to scrolling, and
   // it seems to match other browsers and test expectations, see bug 1950251.
   aPositioned->SetPosition(aPositioned->GetPosition() - delta);
-  aPositioned->UpdateOverflow();
-  // Ensure that we propagate the overflow change up
-  // the ancestor chain.
-  // TODO: I think we can just use aPositioned, TRANSFORM_CHANGED and remove the
-  // explicit UpdateOverflow() call above.
+  // Moving aPositioned changes only its parent's overflow areas, not its own.
   aOct.AddFrame(aPositioned->GetParent(),
                 OverflowChangedTracker::CHILDREN_CHANGED);
 }
