@@ -934,6 +934,10 @@ void DocAccessible::AttributeChanged(dom::Element* aElement,
                                      int32_t aNameSpaceID, nsAtom* aAttribute,
                                      AttrModType aModType,
                                      const nsAttrValue* aOldValue) {
+  if (!HasLoadState(eTreeConstructed)) {
+    // We haven't built the initial tree yet, so there's nothing to mutate.
+    return;
+  }
   if (sIsAttrElementChanging) {
     // See the comment above the definition of sIsAttrElementChanging.
     return;
@@ -2295,6 +2299,10 @@ void DocAccessible::UpdateDocRoleMapEntry() {
 
   const uint8_t oldRoleMapEntryIndex = mRoleMapEntryIndex;
   SetRoleMapEntry(entry);
+  // Some code (e.g. LocalAccessible::ContainerWidget) assumes that mContent
+  // must be set if there is an ARIA role. mContent should already be set by the
+  // time this is called.
+  MOZ_ASSERT(mContent);
   if (mIPCDoc && mRoleMapEntryIndex != oldRoleMapEntryIndex) {
     mIPCDoc->SendRoleChangedEvent(mRoleMapEntryIndex);
   }
