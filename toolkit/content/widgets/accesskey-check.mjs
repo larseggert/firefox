@@ -33,7 +33,9 @@ const ENABLED =
  * and is left out of the shared-key check, as is an item with the
  * `auto-accesskey` attribute (see auto-accesskey.mjs). A disabled menuitem
  * with a role attribute (a note, a heading) only displays information and is
- * not one.
+ * not one. A menuitem without a label, such as an icon button in a menugroup,
+ * can't show an accesskey or be reached by its first letter, so it may lack an
+ * accesskey; one it has is still compared with the others.
  *
  * While the document has translations pending, the check waits for them, so
  * that it compares the labels and accesskeys the user will see.
@@ -93,7 +95,7 @@ export async function checkAccessKeys(popup) {
     );
   }
 
-  let withoutKey = items.filter(item => !item.accesskey);
+  let withoutKey = items.filter(item => !item.accesskey && item.hasText);
   if (withoutKey.length) {
     problems.push(
       `${quoteLabels(withoutKey.map(item => item.label))} ${
@@ -148,6 +150,7 @@ function menupopupItems(popup) {
       intendedDuplicate: item.matches(
         "[intended-duplicate-accesskey], [auto-accesskey]"
       ),
+      hasText: item.matches("[label], [value]"),
       label:
         item.getAttribute("label") ||
         item.getAttribute("aria-label") ||
@@ -164,6 +167,7 @@ function panelListItems(popup) {
       intendedDuplicate: item.matches(
         "[intended-duplicate-accesskey], [auto-accesskey]"
       ),
+      hasText: true,
       label: (item.label?.textContent ?? item.textContent).trim(),
     })
   );

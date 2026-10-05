@@ -44,6 +44,13 @@
     <menuitem label="Three" accesskey="o" disabled="true"/>
     <menuitem label="Note" disabled="true" role="note"/>
   </menupopup>
+  <menupopup id="unlabeled">
+    <menugroup>
+      <menuitem aria-label="Back"/>
+      <menuitem aria-label="Forward" accesskey="f"/>
+    </menugroup>
+    <menuitem label="Full Screen" accesskey="f"/>
+  </menupopup>
   <menupopup id="tracked" accesskey-conflicts-bug="2073885">
     <menuitem label="One" accesskey="o"/>
     <menuitem label="Two" accesskey="o"/>
@@ -353,6 +360,20 @@ add_task(async function testDisabledItems() {
     "A disabled item counts for a missing accesskey"
   );
   ok(!errors[0].includes("Note"), "A disabled note counts for neither");
+});
+
+add_task(async function testUnlabeledItems() {
+  let errors = await openAndCollectErrors("unlabeled");
+  is(errors.length, 1, "Items without a label are checked for shared accesskeys");
+  assert.stringContains(
+    errors[0],
+    `accesskey "f" is shared by "Forward", "Full Screen"`,
+    "An item without a label counts for a shared accesskey"
+  );
+  ok(
+    !errors[0].includes("Back"),
+    "An item without a label doesn't count for a missing accesskey"
+  );
 });
 
 add_task(async function testPendingTranslation() {
