@@ -398,9 +398,9 @@ JSObject* PushManager::WrapObject(JSContext* aCx,
 }
 
 // static
-already_AddRefed<PushManager> PushManager::Constructor(GlobalObject& aGlobal,
-                                                       const nsAString& aScope,
-                                                       ErrorResult& aRv) {
+already_AddRefed<PushManager> PushManager::Create(GlobalObject& aGlobal,
+                                                  const nsAString& aScope,
+                                                  ErrorResult& aRv) {
   if (!NS_IsMainThread()) {
     RefPtr<PushManager> ret = new PushManager(aScope);
     return ret.forget();
@@ -416,6 +416,38 @@ already_AddRefed<PushManager> PushManager::Constructor(GlobalObject& aGlobal,
   RefPtr<PushManager> ret = new PushManager(global, impl);
 
   return ret.forget();
+}
+
+// static
+already_AddRefed<PushManager> PushManager::Create(JSContext* aCx,
+                                                  nsGlobalWindowInner* aWindow,
+                                                  ErrorResult& aRv) {
+  // https://w3c.github.io/push-api/#subscribe-method
+  // Step 5: If this's service worker registration is null:
+  //         1. Set scope to the result of running the basic URL parser given
+  //            "/" and global's associated Document's URL.
+  // (See also similar step in getSubscription())
+  // However, we keep store the scope URL in the push manager
+  // instead of the service worker registration, so we get the scope URL here.
+  nsIURI* documentURI = aWindow->GetDocumentURI();
+  if (NS_WARN_IF(!documentURI)) {
+    aRv.Throw(NS_ERROR_FAILURE);
+    return nullptr;
+  }
+  nsCOMPtr<nsIURI> scopeURI;
+  nsresult rv = NS_NewURI(getter_AddRefs(scopeURI), "/", documentURI);
+  if (NS_FAILED(rv)) {
+    aRv.Throw(rv);
+    return nullptr;
+  }
+  nsAutoCString scopeURL;
+  rv = scopeURI->GetSpec(scopeURL);
+  if (NS_FAILED(rv)) {
+    aRv.Throw(rv);
+    return nullptr;
+  }
+  GlobalObject global(aCx, aWindow->GetGlobalJSObject());
+  return Create(global, NS_ConvertUTF8toUTF16(scopeURL), aRv);
 }
 
 bool PushManager::IsEnabled(JSContext* aCx, JSObject* aGlobal) {
