@@ -2007,14 +2007,14 @@ var BookmarkingUI = {
         if (shortcutElem) {
           let shortcut = ShortcutUtils.prettifyShortcut(shortcutElem);
           let contextItemL10nId = isStarred
-            ? "main-context-menu-edit-bookmark-with-shortcut"
-            : "main-context-menu-bookmark-page-with-shortcut";
+            ? "main-context-menu-edit-bookmark-with-shortcut-2"
+            : "main-context-menu-bookmark-page-with-shortcut-2";
           let l10nArgs = { shortcut };
           document.l10n.setAttributes(contextItem, contextItemL10nId, l10nArgs);
         } else {
           let contextItemL10nId = isStarred
-            ? "main-context-menu-edit-bookmark"
-            : "main-context-menu-bookmark-page";
+            ? "main-context-menu-edit-bookmark-2"
+            : "main-context-menu-bookmark-page-2";
           document.l10n.setAttributes(contextItem, contextItemL10nId);
         }
       }
