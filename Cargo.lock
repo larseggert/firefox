@@ -1965,6 +1965,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thin-vec",
+ "url",
 ]
 
 [[package]]
