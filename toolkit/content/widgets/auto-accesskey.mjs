@@ -22,7 +22,9 @@ const TYPEABLE_CHARACTER =
  * punctuation, an emoji or a character typed through an IME, such as Chinese,
  * Japanese or Korean. Such an item may share its accesskey with other items.
  * In a menupopup the key then cycles through them; a panel-list activates the
- * first (bug 2053735).
+ * first (bug 2053735). An item with a non-empty label that has no typeable
+ * letter or digit gets the lowest digit from 1 to 9 that no other item in the
+ * popup uses.
  *
  * When the popup's other items have no accesskeys, the items get none either,
  * so that they don't take the first letter of another item's label.
@@ -75,8 +77,13 @@ function assign(popup) {
     !otherItems.some(item =>
       isPanelList ? item.label?.accessKey : item.getAttribute("accesskey")
     );
+  let usedKeys = new Set();
+  let itemsWithoutKey = [];
   for (let item of items) {
     if (!item.hasAttribute("auto-accesskey")) {
+      usedKeys.add(
+        isPanelList ? item.label?.accessKey : item.getAttribute("accesskey")
+      );
       continue;
     }
     let label = isPanelList ? item.textContent : item.getAttribute("label");
@@ -85,10 +92,24 @@ function assign(popup) {
       : (label?.match(TYPEABLE_CHARACTER)?.[0] ?? "");
     if (key) {
       item.setAttribute("accesskey", key);
+      usedKeys.add(key);
     } else {
       // An empty accesskey keeps a panel-list from matching the label's first
       // letter.
       item.removeAttribute("accesskey");
+      if (!othersHaveNoKeys && label?.trim()) {
+        itemsWithoutKey.push(item);
+      }
     }
+  }
+  let digit = 1;
+  for (let item of itemsWithoutKey) {
+    while (usedKeys.has(String(digit))) {
+      digit++;
+    }
+    if (digit <= 9) {
+      item.setAttribute("accesskey", String(digit));
+    }
+    digit++;
   }
 }

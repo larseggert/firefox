@@ -270,46 +270,67 @@ add_task(async function accesskeys_selection() {
   BrowserTestUtils.removeTab(tab);
 });
 
-// A letter typed through an IME can't be an access key, so these items get
-// none.
-// TODO(bug 2075142): This is a known problem: in a menu where other items
-// have access keys, such an item is reachable only by arrow keys and the
-// access key check reports the menu. This test keeps them in a menu without
-// any other items.
-add_task(async function accesskeys_ime_scripts() {
+async function checkAccessKeysInExtensionMenu(testCases) {
   let tab = await BrowserTestUtils.openNewForegroundTab(gBrowser, PAGE);
 
-  async function background() {
-    const TITLES = ["翻译", "ひらがなカタカナ", "번역", "ＰＤＦで保存"];
-    let lastMenuId;
-    for (let title of TITLES) {
-      lastMenuId = browser.menus.create({ title });
-    }
-    // Round-trip to ensure that the menus have been registered.
-    await browser.menus.update(lastMenuId, {});
-    browser.test.sendMessage("titles", TITLES);
-  }
   let extension = ExtensionTestUtils.loadExtension({
     manifest: {
       permissions: ["menus"],
     },
-    background,
+    async background() {
+      browser.test.onMessage.addListener(async titles => {
+        let lastMenuId;
+        for (let title of titles) {
+          lastMenuId = browser.menus.create({ title });
+        }
+        // Round-trip to ensure that the menus have been registered.
+        await browser.menus.update(lastMenuId, {});
+        browser.test.sendMessage("created");
+      });
+    },
   });
 
   await extension.startup();
+  extension.sendMessage(testCases.map(({ title }) => title));
+  await extension.awaitMessage("created");
 
-  const TITLES = await extension.awaitMessage("titles");
   let menu = await openExtensionContextMenu();
   let items = menu.getElementsByTagName("menuitem");
-  is(items.length, TITLES.length, "Expected menu items for page");
-  TITLES.forEach((title, i) => {
-    is(items[i].label, title, `Label for item ${i}`);
-    ok(!items[i].hasAttribute("accesskey"), `No accesskey for "${title}"`);
+  is(items.length, testCases.length, "Expected menu items for page");
+  testCases.forEach(({ title, key, autoKey }, i) => {
+    is(items[i].accessKey, key ?? autoKey, `Accesskey for "${title}"`);
+    is(
+      items[i].hasAttribute("auto-accesskey"),
+      autoKey !== undefined,
+      `Accesskey source for "${title}"`
+    );
   });
 
   await closeExtensionContextMenu();
   await extension.unload();
   BrowserTestUtils.removeTab(tab);
+}
+
+// A letter typed through an IME can't be an access key, so these items get
+// digits instead.
+add_task(async function accesskeys_ime_scripts() {
+  await checkAccessKeysInExtensionMenu([
+    { title: "翻译", autoKey: "1" },
+    { title: "ひらがなカタカナ", autoKey: "2" },
+    { title: "번역", autoKey: "3" },
+    { title: "ＰＤＦで保存", autoKey: "4" },
+    { title: "ページを２倍", autoKey: "5" },
+  ]);
+});
+
+add_task(async function accesskeys_ime_scripts_mixed() {
+  await checkAccessKeysInExtensionMenu([
+    { title: "&Copy", key: "C" },
+    { title: "翻译", autoKey: "1" },
+    { title: "2 columns", autoKey: "2" },
+    { title: "🦊", autoKey: "3" },
+    { title: "Paste", autoKey: "P" },
+  ]);
 });
 
 add_task(async function accesskeys_top_level_menu() {
