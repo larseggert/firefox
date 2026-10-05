@@ -140,6 +140,8 @@ support-files = [
 
 ["test_panel_list_anchoring.html"]
 
+["test_panel_list_shadow_node_anchor.html"]
+
 ["test_panel_list_contextmenu.html"]
 
 ["test_panel_list_in_xul_panel.html"]

@@ -30,8 +30,10 @@ const ENABLED =
  * `accesskey-conflicts-bug` attribute and is skipped until the attribute goes.
  * An item that shares its accesskey on purpose, so that the key cycles
  * through the items, must have the `intended-duplicate-accesskey` attribute
- * and is left out of the shared-key check. A disabled menuitem with a role
- * attribute (a note, a heading) only displays information and is not one.
+ * and is left out of the shared-key check, as is an item with the
+ * `auto-accesskey` attribute (see auto-accesskey.mjs). A disabled menuitem
+ * with a role attribute (a note, a heading) only displays information and is
+ * not one.
  *
  * While the document has translations pending, the check waits for them, so
  * that it compares the labels and accesskeys the user will see.
@@ -137,21 +139,15 @@ export async function checkAccessKeys(popup) {
 }
 
 function menupopupItems(popup) {
-  // TODO(bug 2074182): WebExtension items are skipped as we don't control them.
-  // Note that this will most likely lead to duplicate keys or extension items
-  // that are harder to reach. Duplicate keys fail gracefully (the key cycles
-  // between items that share it), whereas missing access keys in a mixed menu
-  // are a real problem. The only consistent ways to handle this correctly would
-  // be to 1) drop access keys from all menu items in those menus, or 2) move
-  // extension items to a sub menu so they don't mix with ours. Neither seems
-  // ideal.
   return Array.from(
     popup.querySelectorAll(
-      ":is(:scope, :scope > menugroup) > :is(menuitem, menu):not([hidden], [role][disabled], .webextension-menuitem)"
+      ":is(:scope, :scope > menugroup) > :is(menuitem, menu):not([hidden], [role][disabled])"
     ),
     item => ({
       accesskey: item.getAttribute("accesskey"),
-      intendedDuplicate: item.hasAttribute("intended-duplicate-accesskey"),
+      intendedDuplicate: item.matches(
+        "[intended-duplicate-accesskey], [auto-accesskey]"
+      ),
       label:
         item.getAttribute("label") ||
         item.getAttribute("aria-label") ||
@@ -165,7 +161,9 @@ function panelListItems(popup) {
     popup.querySelectorAll("panel-item:not([hidden])"),
     item => ({
       accesskey: item.label?.accessKey,
-      intendedDuplicate: item.hasAttribute("intended-duplicate-accesskey"),
+      intendedDuplicate: item.matches(
+        "[intended-duplicate-accesskey], [auto-accesskey]"
+      ),
       label: (item.label?.textContent ?? item.textContent).trim(),
     })
   );

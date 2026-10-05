@@ -2,7 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { checkAccessKeys } from "./accesskey-check.mjs";
+import { checkAccessKeys } from "chrome://global/content/elements/accesskey-check.mjs";
+import { assignAutoAccessKeys } from "chrome://global/content/elements/auto-accesskey.mjs";
 
 export class PanelList extends HTMLElement {
   static get observedAttributes() {
@@ -666,6 +667,8 @@ export class PanelList extends HTMLElement {
       }
     }
     let letter = key.toLowerCase();
+    // TODO(bug 2076174): Match the first character in the label that a key
+    // press can type.
     let startsWithLetter = item =>
       !item.hasAttribute("accesskey") &&
       (item.label?.textContent ?? item.textContent)
@@ -804,6 +807,7 @@ export class PanelList extends HTMLElement {
 
   async onShow() {
     this.sendEvent("showing");
+    assignAutoAccessKeys(this);
 
     if (this.lastAnchorNode?.hasSubmenu) {
       await this.setSubmenuAlign();
