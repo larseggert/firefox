@@ -2477,6 +2477,10 @@ class Settings(
             default = -1L,
         )
 
+    /** Indicates if continuous onboarding has been completed, meaning its final day-7 stage has finished. */
+    val continuousOnboardingCompleted: Boolean
+        get() = seventhDayOnboardingCompletedTimestamp != -1L
+
     /** Indicates if the marketing onboarding card should be shown to the user. */
     var shouldShowMarketingOnboarding by
         booleanPreference(

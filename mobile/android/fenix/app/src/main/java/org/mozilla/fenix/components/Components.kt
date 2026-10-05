@@ -362,9 +362,8 @@ class Components(
                         SetupChecklistTelemetryMiddleware(),
                         ReviewPromptMiddleware(
                                 continuousOnboardingInProgress = {
-                                    val continuousOnboardingCompleted =
-                                        settings.seventhDayOnboardingCompletedTimestamp != -1L
-                                    settings.continuousOnboardingFeatureEnabled && !continuousOnboardingCompleted
+                                    settings.continuousOnboardingFeatureEnabled &&
+                                        !settings.continuousOnboardingCompleted
                                 },
                                 shouldShowCustomPrompt = {
                                     settings.customReviewPromptUiEnabled && settings.isTelemetryEnabled

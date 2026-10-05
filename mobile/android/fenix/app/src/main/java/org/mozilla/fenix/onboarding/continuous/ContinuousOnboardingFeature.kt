@@ -121,9 +121,15 @@ class ContinuousOnboardingFeature(
     }
 
     override fun start() {
-        if (!shouldShowContinuousOnboarding()) return
+        val enabled = settings.continuousOnboardingFeatureEnabled
+        logger.info("continuousOnboardingFeatureEnabled: $enabled")
+        if (!enabled) return
 
-        if (isContinuousOnboardingInProgress()) return
+        val completed = settings.continuousOnboardingCompleted
+        logger.info("continuousOnboardingCompleted: $completed")
+        if (completed) return
+
+        if (isStageUIShowing()) return
 
         when (val stage = stageProvider.getContinuousOnboardingStage()) {
             ContinuousOnboardingStage.DAY_2,
@@ -156,15 +162,15 @@ class ContinuousOnboardingFeature(
     }
 
     /**
-     * Returns whether the continuous onboarding flow is already active.
+     * Returns whether a continuous onboarding stage's UI is currently displayed.
      *
      * `pendingStage` tracks the period while the Android system role-request Activity is in progress, and
      * `isContinuousOnboardingDialogShowing()` tracks the follow-up onboarding dialog shown afterward. Together they
      * prevent the DAY_2/DAY_3 onboarding flow from being started again if `start()` is invoked multiple times.
      */
-    private fun isContinuousOnboardingInProgress(): Boolean {
+    private fun isStageUIShowing(): Boolean {
         if (pendingStage != ContinuousOnboardingStage.NONE || isContinuousOnboardingDialogShowing()) {
-            logger.info("Continuous onboarding already in progress.")
+            logger.info("Continuous onboarding stage UI is already showing.")
             return true
         }
         return false
@@ -173,14 +179,6 @@ class ContinuousOnboardingFeature(
     private fun isContinuousOnboardingDialogShowing(): Boolean {
         val decorView = activity.window.decorView as? ViewGroup ?: return false
         return decorView.findViewWithTag<ComposeView>(CONTINUOUS_ONBOARDING_DIALOG_TAG) != null
-    }
-
-    @VisibleForTesting
-    internal fun shouldShowContinuousOnboarding(): Boolean {
-        val continuousOnboardingCompleted = settings.seventhDayOnboardingCompletedTimestamp != -1L
-        logger.info("continuousOnboardingCompleted: $continuousOnboardingCompleted")
-        logger.info("continuousOnboardingFeatureEnabled: ${settings.continuousOnboardingFeatureEnabled}")
-        return settings.continuousOnboardingFeatureEnabled && !continuousOnboardingCompleted
     }
 
     private fun maybeRequestDefaultBrowserRole(stage: ContinuousOnboardingStage) {

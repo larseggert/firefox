@@ -1275,6 +1275,20 @@ class SettingsTest {
     }
 
     @Test
+    fun `GIVEN day 7 onboarding is not completed THEN continuousOnboardingCompleted is false`() {
+        settings.seventhDayOnboardingCompletedTimestamp = -1L
+
+        assertFalse(settings.continuousOnboardingCompleted)
+    }
+
+    @Test
+    fun `GIVEN day 7 onboarding is completed THEN continuousOnboardingCompleted is true`() {
+        settings.seventhDayOnboardingCompletedTimestamp = 1L
+
+        assertTrue(settings.continuousOnboardingCompleted)
+    }
+
+    @Test
     fun `GIVEN previously stored pref_key_last_review_prompt_shown_time value WHEN calling migrateLastReviewPromptTimePrefIfNeeded THEN migrate the value`() {
         val oldKey = "pref_key_last_review_prompt_shown_time"
         val lastReviewPromptTimeInMillis = 300_000L
