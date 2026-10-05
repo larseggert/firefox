@@ -55,7 +55,7 @@ class IPProtectionOnboardingConfig(
  * Based on the user's current onboarding stage and device capabilities, this feature may:
  * - on day 2 or day 3, request the default browser role, followed by a notification-permission onboarding card if
  *   available, skipping either step if already satisfied,
- * - on day 5, show a Firefox Sync sign-in card, or skip it if already signed in, or
+ * - on day 5, show a Firefox Sync sign-in card, or skip it if already signed in,
  * - on day 7, show the IP Protection onboarding prompt, or skip it if already satisfied or the user is not eligible for
  *   IP Protection.
  */
@@ -70,7 +70,7 @@ class ContinuousOnboardingFeature(
     private val dateTimeProvider: DateTimeProvider = DefaultDateTimeProvider(),
     ipProtectionMainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : LifecycleAwareFeature {
-    private val logger = Logger("ContinuousOnboardingFeatureDefault")
+    private val logger = Logger("ContinuousOnboardingFeature")
 
     @VisibleForTesting internal var pendingStage: ContinuousOnboardingStage = ContinuousOnboardingStage.NONE
 
