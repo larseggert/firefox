@@ -1093,7 +1093,6 @@ static ScrollShifts FindScrollCompensatedAnchorShift(
   if (!defaultAnchor) {
     return {};
   }
-  const auto compensatingForScroll = aReferenceData.CompensatingForScrollAxes();
   // HACK(dshin, Bug 1999954): This is a workaround. While we try to lay out
   // against the scroll-ignored position of an anchor, chain anchored frames
   // end up containing scroll offset in their position. For now, walk the chain
@@ -1120,6 +1119,8 @@ static ScrollShifts FindScrollCompensatedAnchorShift(
   }();
 
   const nsPoint scrollCompensatedDelta = [&]() -> nsPoint {
+    const auto compensatingForScroll =
+        aReferenceData.CompensatingForScrollAxes();
     if (compensatingForScroll.isEmpty()) {
       return {};
     }
