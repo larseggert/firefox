@@ -43,7 +43,7 @@ _NS_InvokeByIndex:
   move      $a0, $sp
   addi.d    $a1, $sp, 8*NGPREGS
 
-  bl        invoke_copy_to_stack
+  call36    invoke_copy_to_stack
 
   /* 1st argument is this */
   move      $a0, $s2

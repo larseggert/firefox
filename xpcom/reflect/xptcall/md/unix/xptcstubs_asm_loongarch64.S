@@ -40,7 +40,7 @@ SharedStub:
     move      $a3, $sp
     addi.d    $a4, $sp, 8*NGPRGES
 
-    bl        PrepareAndDispatch
+    call36    PrepareAndDispatch
 
     ld.d      $ra, $sp, 136
     .cfi_restore 1
