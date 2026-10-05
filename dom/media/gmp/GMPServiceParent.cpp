@@ -1277,17 +1277,18 @@ void GeckoMediaPluginServiceParent::ReAddOnGMPThread(
   AssertOnGMPThread();
   GMP_LOG_DEBUG("{}::{}: {}", __CLASS__, __FUNCTION__, fmt::ptr((void*)aOld));
 
-  RefPtr<GMPParent> gmp;
   if (!mShuttingDownOnGMPThread) {
     // We're not shutting down, so replace the old plugin in the list with a
     // clone which is in a pristine state. Note: We place the plugin in
     // the same slot in the array as a hack to ensure if we re-request with
-    // the same capabilities we get an instance of the same plugin.
-    gmp = ClonePlugin(aOld);
+    // the same capabilities we get an instance of the same plugin. The old
+    // plugin may already have been replaced or removed, e.g. if it crashed
+    // during the shutdown handshake after GMPParent::Shutdown re-added it.
+    RefPtr<GMPParent> gmp = ClonePlugin(aOld);
     MutexAutoLock lock(mMutex);
-    MOZ_ASSERT(mPlugins.Contains(aOld));
-    if (mPlugins.Contains(aOld)) {
-      mPlugins[mPlugins.IndexOf(aOld)] = gmp;
+    size_t index = mPlugins.IndexOf(aOld);
+    if (index != mPlugins.NoIndex) {
+      mPlugins[index] = std::move(gmp);
     }
   } else {
     // We're shutting down; don't re-add plugin, let the old plugin die.
