@@ -4,6 +4,7 @@
 
 import { AITabStore } from "moz-src:///browser/components/aiwindow/ui/modules/AITabStore.sys.mjs";
 import { ConversationStore } from "moz-src:///browser/components/aiwindow/ui/modules/ConversationStore.sys.mjs";
+import { getSmartPageName } from "chrome://browser/content/aiwindow/modules/TrustedInternalURLs.mjs";
 
 const lazy = {};
 
@@ -16,8 +17,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
 ChromeUtils.defineLazyGetter(lazy, "fluentStrings", () => {
   return new Localization(["preview/aiWindow.ftl"], true);
 });
-
-const PAGE_NAME_REGEX = /^[\w-]+(\.html)?$/;
 
 /**
  * Renders the eyebrow shown above a generated page's title.
@@ -87,8 +86,7 @@ export class AITabParent extends JSWindowActorParent {
       return null;
     }
 
-    const pageName = URL.parse(spec)?.searchParams.get("page");
-    return pageName && PAGE_NAME_REGEX.test(pageName) ? pageName : null;
+    return getSmartPageName(URL.parse(spec));
   }
 
   async #handleGetPage() {
