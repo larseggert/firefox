@@ -4,17 +4,11 @@
 
 include  $(topsrcdir)/toolkit/mozapps/installer/package-name.mk
 
-installer:
-	@$(MAKE) -C mobile/android/installer installer
-
 package:
 	@$(MAKE) -C mobile/android/installer
 
 stage-package:
 	$(MAKE) -C mobile/android/installer stage-package
-
-deb: package
-	@$(MAKE) -C mobile/android/installer deb
 
 upload::
 	@$(MAKE) -C mobile/android/installer upload
@@ -37,8 +31,4 @@ mochitest-browser-chrome:
 mochitest:: mochitest-browser-chrome
 
 .PHONY: mochitest-browser-chrome
-endif
-
-ifeq ($(OS_TARGET),Linux)
-deb: installer
 endif
