@@ -636,7 +636,7 @@ class _SessionStore {
   /**
    * The session store's logger, or null before initialization.
    *
-   * @type {Log.Logger|null}
+   * @type {SessionStoreLogger|null}
    */
   get logger() {
     return this.#log;
@@ -752,9 +752,9 @@ class _SessionStore {
     Glean.sessionRestore.startupTimeline.sessionRestoreInitialized.set(
       Services.telemetry.msSinceProcessStart()
     );
-    OBSERVING.forEach(function (aTopic) {
-      Services.obs.addObserver(this, aTopic, true);
-    }, this);
+    for (let topic of OBSERVING) {
+      Services.obs.addObserver(this, topic, true);
+    }
 
     this.#initPrefs();
     this.#initialized = true;
@@ -1761,9 +1761,9 @@ class _SessionStore {
       this.#onTabBrowserInserted(aWindow, tabbrowser.tabs[i]);
     }
     // notification of tab add/remove/selection/show/hide
-    TAB_EVENTS.forEach(function (aEvent) {
-      tabbrowser.tabContainer.addEventListener(aEvent, this, true);
-    }, this);
+    for (let event of TAB_EVENTS) {
+      tabbrowser.tabContainer.addEventListener(event, this, true);
+    }
 
     // Keep track of a browser's latest frameLoader.
     aWindow.gBrowser.addEventListener("XULFrameLoaderCreated", this);
@@ -2137,9 +2137,9 @@ class _SessionStore {
 
     let browsers = Array.from(tabbrowser.browsers);
 
-    TAB_EVENTS.forEach(function (aEvent) {
-      tabbrowser.tabContainer.removeEventListener(aEvent, this, true);
-    }, this);
+    for (let event of TAB_EVENTS) {
+      tabbrowser.tabContainer.removeEventListener(event, this, true);
+    }
 
     aWindow.gBrowser.removeEventListener("XULFrameLoaderCreated", this);
 
@@ -2866,7 +2866,7 @@ class _SessionStore {
       if (host && Services.eTLD.hasRootDomain(host, aDomain)) {
         return true;
       }
-      return aEntry.children && aEntry.children.some(containsDomain, this);
+      return aEntry.children && aEntry.children.some(containsDomain);
     }
     // remove all closed tabs containing a reference to the given domain
     for (let ix in this.#windows) {
@@ -3030,7 +3030,7 @@ class _SessionStore {
    *        Window reference
    * @param {MozTabbrowserTab} aTab
    *        Tab reference
-   * @param {boolean} aNoNotification
+   * @param {boolean} [aNoNotification]
    *        Do not save state if we're updating an existing tab
    */
   #onTabRemove(aWindow, aTab, aNoNotification) {
@@ -5732,9 +5732,9 @@ class _SessionStore {
   #updateWindowFeatures(aWindow) {
     var winData = this.#windows[aWindow.__SSi];
 
-    WINDOW_ATTRIBUTES.forEach(function (aAttr) {
-      winData[aAttr] = this.#getWindowDimension(aWindow, aAttr);
-    }, this);
+    for (let attr of WINDOW_ATTRIBUTES) {
+      winData[attr] = this.#getWindowDimension(aWindow, attr);
+    }
 
     if (winData.sizemode != "minimized") {
       winData.sizemodeBeforeMinimized = winData.sizemode;
@@ -5756,7 +5756,7 @@ class _SessionStore {
   /**
    * gather session data as object
    *
-   * @param {boolean} aUpdateAll
+   * @param {boolean} [aUpdateAll]
    *        Update all windows
    * @returns {object}
    *          The current session state
@@ -7498,7 +7498,7 @@ class _SessionStore {
    * for debugging purposes.
    *
    * @param {nsIPropertyBag} bag
-   * @returns {{[string]: any}}
+   * @returns {Record<string, any>}
    */
   #serializePropertyBag(bag) {
     const obj = {};
@@ -7765,7 +7765,7 @@ class _SessionStore {
     // If the tab has one of the following transient about: history entry, no
     // userTypedValue, and no customizemode attribute, then we don't actually
     // want to write this tab's data to disk.
-    return (
+    return !!(
       aTabState.userTypedValue ||
       (aTabState.attributes && aTabState.attributes.customizemode == "true") ||
       (aTabState.entries.length &&
@@ -8445,7 +8445,7 @@ class _SessionStore {
    *
    * @param {object} permanentKey
    *        The permanent key of the browser.
-   * @param {nsIFrameLoader} [frameLoader]
+   * @param {FrameLoader} [frameLoader]
    *        The browser's frame loader, whose epoch is reset as well.
    */
   #resetEpoch(permanentKey, frameLoader = null) {
