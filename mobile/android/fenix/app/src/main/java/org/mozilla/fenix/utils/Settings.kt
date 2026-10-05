@@ -3011,6 +3011,8 @@ class Settings(
     ): Boolean {
         if (!nimbusFeature.enabled) return false
 
+        if (continuousOnboardingFeatureEnabled && !continuousOnboardingCompleted) return false
+
         val now = currentTimeMillis()
 
         val daysOk =
