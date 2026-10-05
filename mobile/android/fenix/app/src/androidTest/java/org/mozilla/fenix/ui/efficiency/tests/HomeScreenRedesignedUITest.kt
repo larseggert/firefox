@@ -9,6 +9,7 @@ import org.mozilla.fenix.customannotations.SmokeTest
 import org.mozilla.fenix.ui.efficiency.helpers.BaseTest
 import org.mozilla.fenix.ui.efficiency.navigation.LaunchConfig
 import org.mozilla.fenix.ui.efficiency.selectors.HomeSelectors
+import org.mozilla.fenix.ui.efficiency.selectors.StoriesSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.ToolbarSelectors
 
 /**
@@ -50,5 +51,17 @@ class HomeScreenRedesignedUITest :
 
         // Page content: default shortcuts and the blocked-trackers widget
         on.home.mozVerify(HomeSelectors.TOP_SITES_LIST_COMPOSE).mozVerify(HomeSelectors.TRACKERS_BLOCKED_CARD)
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3938214
+    @SmokeTest
+    @Test
+    fun verifyStoriesViewUITest() {
+        on.home.navigateToPage().mozVerify(HomeSelectors.STORIES_BUTTON)
+
+        // Tap the stories button to open the Stories view. Only the static chrome is asserted (home button
+        // top-left, "News" header): the story items (thumbnail, title, source) are dynamic and network-backed
+        // and expose no stable handles, so asserting them would be flaky.
+        on.stories.navigateToPage().mozVerify(StoriesSelectors.NEWS_HEADER).mozVerify(StoriesSelectors.HOME_BUTTON)
     }
 }
