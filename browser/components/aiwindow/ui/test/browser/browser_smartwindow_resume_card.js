@@ -286,6 +286,12 @@ add_task(async function test_resume_card_click_closing_menu_does_not_resume() {
       new MouseEvent("mousedown", { bubbles: true, composed: true })
     );
     title.dispatchEvent(
+      new PointerEvent("pointerup", { bubbles: true, composed: true })
+    );
+    title.dispatchEvent(
+      new MouseEvent("mouseup", { bubbles: true, composed: true })
+    );
+    title.dispatchEvent(
       new PointerEvent("click", { bubbles: true, composed: true, detail: 1 })
     );
     await hidden;
