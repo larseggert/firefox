@@ -11116,8 +11116,7 @@
   value: @IS_NIGHTLY_BUILD@
   mirror: always
 
-# Enable the new css-grid-3 specification of grid-lanes. Always disabled for
-# Thunderbird, because it is using an older syntax.
+# Enable the new css-grid-3 specification of grid-lanes.
 # https://drafts.csswg.org/css-grid-3/
 - name: layout.css.display-grid-lanes.enabled
   type: RelaxedAtomicBool
