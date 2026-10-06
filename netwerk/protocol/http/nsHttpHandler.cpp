@@ -425,7 +425,8 @@ nsresult nsHttpHandler::Init() {
             port = tmp;
           }
         }
-        mAltSvcMappingTemptativeMap.InsertOrUpdate(
+        auto map = mAltSvcMappingTemptativeMap.Lock();
+        map->InsertOrUpdate(
             host, MakeUnique<nsCString>(nsPrintfCString("h3=:%d", port)));
       }
     }
@@ -2013,15 +2014,16 @@ void nsHttpHandler::PrefsChanged(const char* pref) {
     rv = Preferences::GetCString(HTTP_PREF("http3.alt-svc-mapping-for-testing"),
                                  altSvcMappings);
     if (NS_SUCCEEDED(rv)) {
+      auto map = mAltSvcMappingTemptativeMap.Lock();
       if (altSvcMappings.IsEmpty()) {
-        mAltSvcMappingTemptativeMap.Clear();
+        map->Clear();
       } else {
         for (const nsACString& tokenSubstring :
              nsCCharSeparatedTokenizer(altSvcMappings, ',').ToRange()) {
           nsAutoCString token{tokenSubstring};
           int32_t index = token.Find(";");
           if (index != kNotFound) {
-            mAltSvcMappingTemptativeMap.InsertOrUpdate(
+            map->InsertOrUpdate(
                 Substring(token, 0, index),
                 MakeUnique<nsCString>(Substring(token, index + 1)));
           }
@@ -2356,7 +2358,6 @@ nsHttpHandler::Observe(nsISupports* subject, const char* topic,
     // initialize connection manager
     rv = InitConnectionMgr();
     MOZ_ASSERT(NS_SUCCEEDED(rv));
-    mAltSvcCache = MakeUnique<AltSvcCache>();
   } else if (!strcmp(topic, "net:clear-active-logins")) {
     mAuthCache->ClearAll();
     mPrivateAuthCache->ClearAll();
@@ -3041,7 +3042,7 @@ void nsHttpHandler::MaybeAddAltSvcForTesting(
     nsIURI* aUri, const nsACString& aUsername, bool aPrivateBrowsing,
     nsIInterfaceRequestor* aCallbacks,
     const OriginAttributes& aOriginAttributes) {
-  if (!IsHttp3Enabled() || mAltSvcMappingTemptativeMap.IsEmpty()) {
+  if (!IsHttp3Enabled()) {
     return;
   }
 
@@ -3055,17 +3056,23 @@ void nsHttpHandler::MaybeAddAltSvcForTesting(
     return;
   }
 
-  nsCString* map = mAltSvcMappingTemptativeMap.Get(originHost);
-  if (map) {
-    int32_t originPort = 80;
-    aUri->GetPort(&originPort);
-    LOG(("nsHttpHandler::MaybeAddAltSvcForTesting for %s map: %s",
-         originHost.get(), PromiseFlatCString(*map).get()));
-    AltSvcMapping::ProcessHeader(*map, nsCString("https"), originHost,
-                                 originPort, aUsername, aPrivateBrowsing,
-                                 aCallbacks, nullptr, 0, aOriginAttributes,
-                                 nullptr, true);
+  nsCString map;
+  {
+    auto mappings = mAltSvcMappingTemptativeMap.Lock();
+    nsCString* found = mappings->Get(originHost);
+    if (!found) {
+      return;
+    }
+    map = *found;
   }
+
+  int32_t originPort = 80;
+  aUri->GetPort(&originPort);
+  LOG(("nsHttpHandler::MaybeAddAltSvcForTesting for %s map: %s",
+       originHost.get(), map.get()));
+  AltSvcMapping::ProcessHeader(map, "https"_ns, originHost, originPort,
+                               aUsername, aPrivateBrowsing, aCallbacks, nullptr,
+                               0, aOriginAttributes, nullptr, true);
 }
 
 bool nsHttpHandler::EchConfigEnabled(bool aIsHttp3) {
