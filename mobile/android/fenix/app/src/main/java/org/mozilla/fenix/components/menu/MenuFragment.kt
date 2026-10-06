@@ -66,7 +66,6 @@ import org.mozilla.fenix.components.menu.compose.MenuHandleState
 import org.mozilla.fenix.components.menu.middleware.MenuMiddleware
 import org.mozilla.fenix.components.menu.middleware.MenuTelemetryMiddleware
 import org.mozilla.fenix.downloads.DownloadsMenuItemProvider
-import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.isToolbarAtBottom
 import org.mozilla.fenix.ext.requireComponents
 import org.mozilla.fenix.home.topsites.ShortcutMenuItemProvider
@@ -393,13 +392,7 @@ class MenuFragment : BottomSheetDialogFragment() {
                         browserStore = requireComponents.core.store,
                         ipProtectionStore = requireComponents.ipProtection.store,
                         useCases = requireComponents.useCases,
-                        browserMenuBuilder =
-                            BrowserMenuBuilder(
-                                providerResolver = buildMenuItemsProvidersResolver(),
-                                isToolbarAtBottom = requireContext().isToolbarAtBottom(),
-                                isExpandedToolbarEnabled =
-                                    requireContext().components.settings.shouldUseExpandedToolbar,
-                            ),
+                        browserMenuBuilder = BrowserMenuBuilder(buildMenuItemProviders()),
                         navController = findNavController(),
                         summarizationSettings = requireComponents.core.summarizeFeatureSettings,
                         summarizationEligibilityChecker = requireComponents.core.summarizationEligibilityChecker,
@@ -414,6 +407,16 @@ class MenuFragment : BottomSheetDialogFragment() {
                     ),
                     MenuTelemetryMiddleware(accessPoint = MenuAccessPoint.Browser),
                 ),
+        )
+
+    private fun buildMenuItemProviders() =
+        MenuItemsRegistry(
+            configuration =
+                BrowserMenuBuilder.buildDefaultConfiguration(
+                    isToolbarAtBottom = requireContext().isToolbarAtBottom(),
+                    isExpandedToolbarEnabled = requireComponents.settings.shouldUseExpandedToolbar,
+                ),
+            resolver = buildMenuItemsProvidersResolver(),
         )
 
     // Only ever needed by users who asked for their data to be deleted when they quit, and only once they do.

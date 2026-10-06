@@ -91,6 +91,7 @@ import org.mozilla.fenix.components.menu.FenixMenuItem.CustomizeReaderView
 import org.mozilla.fenix.components.menu.MenuAccessPoint
 import org.mozilla.fenix.components.menu.MenuFragmentDirections
 import org.mozilla.fenix.components.menu.MenuItemProvider
+import org.mozilla.fenix.components.menu.MenuItemsRegistry
 import org.mozilla.fenix.components.menu.MenuPresentationMode.Row
 import org.mozilla.fenix.components.menu.MenuSectionConfiguration
 import org.mozilla.fenix.components.menu.store.MenuAction
@@ -1315,15 +1316,17 @@ class MenuMiddlewareTest {
                         useCases = useCases,
                         browserMenuBuilder =
                             BrowserMenuBuilder(
-                                providerResolver = { FakeMenuItemProvider(provided) },
-                                configuration =
-                                    listOf(
-                                        MenuSectionConfiguration(
-                                            id = MENU_GROUP_ID,
-                                            presentationMode = Row,
-                                            items = listOf(CustomizeReaderView),
-                                        )
-                                    ),
+                                MenuItemsRegistry(
+                                    configuration =
+                                        listOf(
+                                            MenuSectionConfiguration(
+                                                id = MENU_GROUP_ID,
+                                                presentationMode = Row,
+                                                items = listOf(CustomizeReaderView),
+                                            )
+                                        ),
+                                    resolver = { FakeMenuItemProvider(provided) },
+                                )
                             ),
                         navController = navController,
                         summarizationSettings = summarizationSettings,
