@@ -1311,7 +1311,7 @@ class PageStyleActor extends Actor {
     // Traverse through all the available keyframes rule and add
     // the keyframes rule that matches the computed animation name
     for (const keyframesRule of this.cssLogic.keyframesRules) {
-      if (!animationNames.includes(keyframesRule.name)) {
+      if (!animationNames.includes(CSS.escape(keyframesRule.name))) {
         continue;
       }
 
