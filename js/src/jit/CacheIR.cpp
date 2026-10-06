@@ -3302,10 +3302,17 @@ void IRGenerator::emitIdGuard(ValOperandId valId, const Value& idVal, jsid id) {
       writer.guardSpecificValue(valId, idVal);
       break;
     case ValueType::Int32:
-    case ValueType::Double:
+    case ValueType::Double: {
       MOZ_ASSERT(!IsNumberIndex(idVal));
-      writer.guardSpecificValue(valId, idVal);
+      int32_t int32Value;
+      if (mozilla::NumberEqualsInt32(idVal.toNumber(), &int32Value)) {
+        Int32OperandId intId = writer.guardToInt32Index(valId);
+        writer.guardSpecificInt32(intId, int32Value);
+      } else {
+        writer.guardSpecificValue(valId, idVal);
+      }
       break;
+    }
     default:
       MOZ_CRASH("Unexpected type in emitIdGuard");
   }
