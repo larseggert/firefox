@@ -82,7 +82,8 @@
 #include "js/experimental/TypedData.h"         // JS_GetObjectAsUint8Array
 #include "js/friend/DumpFunctions.h"  // js::Dump{Backtrace,Heap,Object}, JS::FormatStackDump, js::IgnoreNurseryObjects
 #include "js/friend/ErrorMessages.h"  // js::GetErrorMessage, JSMSG_*
-#include "js/friend/WindowProxy.h"    // js::ToWindowProxyIfWindow
+#include "js/friend/PerformanceHint.h"  // js::SetRealmIsDyingHint
+#include "js/friend/WindowProxy.h"      // js::ToWindowProxyIfWindow
 #include "js/GlobalObject.h"
 #include "js/HashTable.h"
 #include "js/Interrupt.h"
@@ -2776,6 +2777,15 @@ static bool InternalConst(JSContext* cx, unsigned argc, Value* vp) {
     JS_ReportErrorASCII(cx, "unknown const name");
     return false;
   }
+  return true;
+}
+
+static bool SetRealmIsDyingHint(JSContext* cx, unsigned argc, Value* vp) {
+  CallArgs args = CallArgsFromVp(argc, vp);
+
+  js::SetRealmIsDyingHint(cx->global());
+
+  args.rval().setUndefined();
   return true;
 }
 
@@ -10760,6 +10770,11 @@ JS_FN_HELP("rejectPromise", RejectPromise, 2, 0,
     JS_FN_HELP("gcPreserveCode", GCPreserveCode, 0, 0,
 "gcPreserveCode()",
 "  Preserve JIT code during garbage collections."),
+
+    JS_FN_HELP("setRealmIsDyingHint", SetRealmIsDyingHint, 0, 0,
+"setRealmIsDyingHint()",
+"  Hint that the current realm is dying, like the browser does when a window\n"
+"  goes away. The GC then no longer preserves JIT code for it."),
 
 #ifdef JS_GC_ZEAL
     JS_FN_HELP("gczeal", GCZeal, 2, 0,

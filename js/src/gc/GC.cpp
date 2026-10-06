@@ -2725,6 +2725,12 @@ void GCRuntime::purgeRuntime() {
 
 bool GCRuntime::shouldRealmPreserveJitCode(Realm* realm,
                                            const TimeStamp& currentTime) {
+  // If the embedder hinted that this realm is dying, don't preserve its JIT
+  // code.
+  if (realm->isDyingHint()) {
+    return false;
+  }
+
   // The gcPreserveJitCode testing function was used.
   if (alwaysPreserveCode) {
     return true;
@@ -2977,7 +2983,7 @@ void GCRuntime::setRealmPreserveJitCodeFlags(Zone* zone,
     }
     for (OnlyJSJitFrameIter frames(iter); !frames.done(); ++frames) {
       const jit::JSJitFrameIter& frame = frames.frame();
-      if (frame.isScripted()) {
+      if (frame.isScripted() && !frame.script()->realm()->isDyingHint()) {
         frame.script()->realm()->jitRealm().setPreservingCode(true);
       }
     }
