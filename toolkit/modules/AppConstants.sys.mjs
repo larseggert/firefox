@@ -273,4 +273,6 @@ export var AppConstants = Object.freeze({
 #endif
 
   USE_LIBZ_RS: @USE_LIBZ_RS_BOOL@,
+
+  MOZ_DIAGNOSTIC_ASSERT_ENABLED: @MOZ_DIAGNOSTIC_ASSERT_ENABLED_BOOL@,
 });
