@@ -118,21 +118,43 @@ class TextEventDispatcher final {
    *                NS_ERROR_NOT_AVAILABLE: The widget isn't available for
    *                                        composition.
    */
-  nsresult GetState() const;
+  [[nodiscard]] nsresult GetState() const;
 
   /**
    * IsComposing() returns true after calling StartComposition() and before
    * calling CommitComposition().  In other words, native IME has composition
    * when this returns true.
    */
-  bool IsComposing() const { return mIsComposing; }
+  [[nodiscard]] bool IsComposing() const {
+    return !mCompositionString.IsVoid();
+  }
 
   /**
    * IsHandlingComposition() returns true after calling StartComposition() and
    * content has not handled eCompositionCommit(AsIs) event.  In other words,
    * our content has composition when this returns true.
    */
-  bool IsHandlingComposition() const { return mIsHandlingComposition; }
+  [[nodiscard]] bool IsHandlingComposition() const {
+    return !mHandlingCompositionString.IsVoid();
+  }
+
+  /**
+   * Return the reference to the composition string which is updated when
+   * FlushPendingComposition() is called and cleared when CommitComposition() is
+   * called.
+   */
+  [[nodiscard]] const nsString& GetCompositionString() const {
+    return mCompositionString;
+  }
+
+  /**
+   * Return the reference to the composition string which is updated when
+   * eCompositionChange event is dispatched and cleared when eCommitComposition
+   * or eCommitCompositionAsIs is dispatched.
+   */
+  [[nodiscard]] const nsString& GetHandlingCompositionString() const {
+    return mHandlingCompositionString;
+  }
 
   /**
    * IsInNativeInputTransaction() returns true if native IME handler began a
@@ -447,6 +469,10 @@ class TextEventDispatcher final {
   // selection is changed, this is updated by every selection change
   // notification.
   Maybe<WritingMode> mWritingMode;
+  // See GetCompositionString() and IsComposing().
+  nsString mCompositionString = VoidString();
+  // See GetHandlingCompositionString() and IsHandlingComposition().
+  nsString mHandlingCompositionString = VoidString();
 
   // mPendingComposition stores new composition string temporarily.
   // These values will be used for dispatching eCompositionChange event
@@ -573,12 +599,6 @@ class TextEventDispatcher final {
         MOZ_CRASH("Define the behavior of new InputTransactionType");
     }
   }
-
-  // See IsComposing().
-  bool mIsComposing;
-
-  // See IsHandlingComposition().
-  bool mIsHandlingComposition;
 
   // true while NOTIFY_IME_OF_FOCUS is received but NOTIFY_IME_OF_BLUR has not
   // received yet.  Otherwise, false.

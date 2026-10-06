@@ -23,8 +23,6 @@ namespace widget {
 TextEventDispatcher::TextEventDispatcher(nsIWidget* aWidget)
     : mWidget(aWidget),
       mInputTransactionType(eNoInputTransaction),
-      mIsComposing(false),
-      mIsHandlingComposition(false),
       mHasFocus(false) {
   MOZ_RELEASE_ASSERT(mWidget, "aWidget must not be nullptr");
 
@@ -158,20 +156,39 @@ nsresult TextEventDispatcher::BeginInputTransactionFor(
     case eKeyUp:
       return rv;
     case eCompositionStart:
-      MOZ_ASSERT(!mIsComposing);
-      mIsComposing = mIsHandlingComposition = true;
+      MOZ_ASSERT(!IsComposing());
+      mCompositionString = EmptyString();
+      // The event will be dispatched immediately, so, let's treat as that the
+      // content has the composition.
+      mHandlingCompositionString = EmptyString();
+      MOZ_ASSERT(IsComposing());
+      MOZ_ASSERT(IsHandlingComposition());
       return rv;
     case eCompositionChange:
-      MOZ_ASSERT(mIsComposing);
-      MOZ_ASSERT(mIsHandlingComposition);
-      mIsComposing = mIsHandlingComposition = true;
+      MOZ_ASSERT(IsComposing());
+      MOZ_ASSERT(IsHandlingComposition());
+      MOZ_DIAGNOSTIC_ASSERT(aEvent->AsCompositionEvent());
+      mCompositionString =
+          static_cast<const WidgetCompositionEvent*>(aEvent)->mData;
+      mCompositionString.SetIsVoid(false);
+      mHandlingCompositionString =
+          static_cast<const WidgetCompositionEvent*>(aEvent)->mData;
+      mHandlingCompositionString.SetIsVoid(false);
+      MOZ_ASSERT(IsComposing());
+      MOZ_ASSERT(IsHandlingComposition());
       return rv;
     case eCompositionCommit:
     case eCompositionCommitAsIs:
-      MOZ_ASSERT(mIsComposing);
-      MOZ_ASSERT(mIsHandlingComposition);
-      mIsComposing = false;
-      mIsHandlingComposition = true;
+      MOZ_ASSERT(IsComposing());
+      MOZ_ASSERT(IsHandlingComposition());
+      mCompositionString.SetIsVoid(true);
+      // XXX It might be better to wait NOTIFY_IME_OF_COMPOSITION_EVENT_HANDLED.
+      // But perhaps, this won't cause any issues actually because the
+      // composition is in this process, i.e., anybody can check
+      // `TextComposition` directly.
+      mHandlingCompositionString.SetIsVoid(true);
+      MOZ_ASSERT(!IsComposing());
+      MOZ_ASSERT(!IsHandlingComposition());
       return rv;
     default:
       MOZ_ASSERT_UNREACHABLE("You forgot to handle the event");
@@ -403,13 +420,16 @@ nsresult TextEventDispatcher::StartComposition(
     return rv;
   }
 
-  if (NS_WARN_IF(mIsComposing)) {
+  if (NS_WARN_IF(IsComposing())) {
     return NS_ERROR_FAILURE;
   }
 
   // When you change some members from here, you may need same change in
   // BeginInputTransactionFor().
-  mIsComposing = mIsHandlingComposition = true;
+  mCompositionString = EmptyString();
+  mHandlingCompositionString = EmptyString();
+  MOZ_ASSERT(IsComposing());
+  MOZ_ASSERT(IsHandlingComposition());
   WidgetCompositionEvent compositionStartEvent(true, eCompositionStart,
                                                mWidget);
   InitEvent(compositionStartEvent);
@@ -484,9 +504,10 @@ nsresult TextEventDispatcher::CommitComposition(
   // BeginInputTransactionFor().
 
   // End current composition and make this free for other IMEs.
-  mIsComposing = false;
+  mCompositionString.SetIsVoid(true);
+  MOZ_ASSERT(!IsComposing());
 
-  EventMessage message =
+  const EventMessage message =
       aCommitString ? eCompositionCommit : eCompositionCommitAsIs;
   WidgetCompositionEvent compositionCommitEvent(true, message, widget);
   InitEvent(compositionCommitEvent);
@@ -501,7 +522,12 @@ nsresult TextEventDispatcher::CommitComposition(
     // Don't send CRLF nor CR, replace it with LF here.
     compositionCommitEvent.mData.ReplaceSubstring(u"\r\n"_ns, u"\n"_ns);
     compositionCommitEvent.mData.ReplaceSubstring(u"\r"_ns, u"\n"_ns);
+
+    mHandlingCompositionString = compositionCommitEvent.mData;
   }
+  // We should have the handling composition state until we receive
+  // NOTIFY_IME_OF_COMPOSITION_EVENT_HANDLED.
+  MOZ_ASSERT(IsHandlingComposition());
   aStatus = DispatchEvent(widget, compositionCommitEvent);
   return NS_OK;
 }
@@ -527,7 +553,8 @@ nsresult TextEventDispatcher::NotifyIME(
       // process, this is sent when all dispatched composition events
       // have been handled in the remote process.
       if (!IsComposing()) {
-        mIsHandlingComposition = false;
+        mHandlingCompositionString.SetIsVoid(true);
+        MOZ_ASSERT(!IsHandlingComposition());
       }
       break;
     case NOTIFY_IME_OF_SELECTION_CHANGE:
@@ -1121,6 +1148,8 @@ nsresult TextEventDispatcher::PendingComposition::Flush(
   if (aStatus == nsEventStatus_eConsumeNoDefault) {
     return NS_OK;
   }
+  aDispatcher->mHandlingCompositionString = compChangeEvent.mData;
+  MOZ_ASSERT(aDispatcher->IsHandlingComposition());
   aStatus = aDispatcher->DispatchEvent(widget, compChangeEvent);
   return NS_OK;
 }
