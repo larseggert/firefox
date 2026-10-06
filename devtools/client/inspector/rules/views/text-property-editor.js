@@ -963,10 +963,6 @@ class TextPropertyEditor {
   }
 
   get #shouldShowWarning() {
-    if (this.prop.name.startsWith("--")) {
-      return false;
-    }
-
     return !this.editing && !this.isValid();
   }
 
