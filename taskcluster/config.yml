@@ -258,6 +258,7 @@ treeherder:
         'fenix-nightly': 'Fenix nightly-related tasks'
         'fenix-nightly-nobp': 'Fenix nightly builds without baseline profiles'
         'fenix-nightlySim': 'Nightly-related tasks that run on each github push'
+        'fenix-nightlyAsReleaseSim': 'Fenix nightly-as-release performance tasks (nightly built against release-milestone GeckoView)'
         'fenix-release': 'Fenix production-related tasks'
 
         # This list is based on mobile/android/android-components/.buildconfig.yml except the exceptions down below
