@@ -2538,7 +2538,6 @@ add_task(
           position: ACTION_POSITION,
           corpus_item_id: "decaf-beef",
           scheduled_corpus_item_id: "dead-beef",
-          tile_id: 314623757745896,
           variant_id: 5050,
           source_section_id: "sourced-section",
         })
@@ -2688,9 +2687,9 @@ add_task(
 add_task(
   async function test_handleDiscoveryStreamUserEvent_sponsored_top_stories_click_tile_id_redacted() {
     info(
-      "TelemetryFeed.handleDiscoveryStreamUserEvent always redacts the " +
-        "tile_id from the newtab ping for a sponsored top stories click, " +
-        "while the newtab-content ping retains it"
+      "TelemetryFeed.handleDiscoveryStreamUserEvent never sends a tile_id to " +
+        "either the newtab ping or the newtab-content ping for a sponsored " +
+        "top stories click"
     );
 
     Services.prefs.setBoolPref(PREF_PRIVATE_PING_ENABLED, true);
@@ -2725,20 +2724,24 @@ add_task(
         position: String(ACTION_POSITION),
         content_redacted: String(true),
       },
-      "The tile_id should have been redacted from the newtab ping."
+      "A tile_id should not have been included with the newtab ping."
     );
 
     Assert.ok(
-      instance.newtabContentPing.recordEvent.calledWith(
-        "click",
-        sinon.match({
-          is_sponsored: true,
-          position: ACTION_POSITION,
-          tile_id: TILE_ID,
-        })
-      ),
-      "Redacting the newtab ping should not have mutated the event data handed " +
-        "to the newtab-content ping, which does its own sanitization."
+      instance.newtabContentPing.recordEvent.calledOnce,
+      "recordEvent was called"
+    );
+    const newtabContentClickArgs =
+      instance.newtabContentPing.recordEvent.getCall(0).args;
+    Assert.equal(
+      newtabContentClickArgs[0],
+      "click",
+      "Called with the click event type"
+    );
+    Assert.equal(
+      newtabContentClickArgs[1].tile_id,
+      undefined,
+      "tile_id was not included."
     );
 
     sandbox.restore();

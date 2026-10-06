@@ -1017,7 +1017,6 @@ export class TelemetryFeed {
       position,
       source,
       advertiser_name,
-      tile_id,
       visible_topsites,
       frecency_boosted = false,
       is_ad_eligible_position,
@@ -1035,7 +1034,6 @@ export class TelemetryFeed {
         if (this.sovEnabled()) {
           const eventData = {
             advertiser_name,
-            tile_id,
             is_sponsored: true,
             position,
             visible_topsites,
@@ -1072,7 +1070,6 @@ export class TelemetryFeed {
         if (this.sovEnabled()) {
           const eventData = {
             advertiser_name,
-            tile_id,
             is_sponsored: true,
             position,
             visible_topsites,
@@ -1381,7 +1378,6 @@ export class TelemetryFeed {
           selected_topics,
           shim,
           source_section_id,
-          tile_id,
           topic,
           variant_id,
         } = action.data.value ?? {};
@@ -1422,7 +1418,6 @@ export class TelemetryFeed {
             variant_id,
             source_section_id: source_section_id ?? section,
             position: action.data.action_position,
-            tile_id,
             event_source,
             // We conditionally add in a few props.
             ...(corpus_item_id ? { corpus_item_id } : {}),
@@ -2647,7 +2642,6 @@ export class TelemetryFeed {
           is_sponsored: datum.card_type === "spoc",
           ...(datum.format ? { format: datum.format } : {}),
           position: datum.position,
-          tile_id: datum.id || datum.tile_id,
           ...(datum.section
             ? {
                 section: datum.section,
@@ -2686,14 +2680,12 @@ export class TelemetryFeed {
       }
       // Only log a topsites.dismiss telemetry event if the action came from TopSites section
       if (action.source === "TOP_SITES") {
-        const { position, advertiser_name, tile_id, isSponsoredTopSite } =
-          datum;
+        const { position, advertiser_name, isSponsoredTopSite } = datum;
         if (this.sovEnabled() && isSponsoredTopSite) {
           this.recordOrQueueEvent(
             "topSitesDismiss",
             {
               advertiser_name,
-              tile_id,
               is_sponsored: !!isSponsoredTopSite,
               position,
             },
@@ -2715,14 +2707,13 @@ export class TelemetryFeed {
   handleAboutSponsoredTopSites(action) {
     const session = this.sessions.get(au.getPortIdOfSender(action));
     const { data } = action;
-    const { position, advertiser_name, tile_id } = data;
+    const { position, advertiser_name } = data;
 
     if (session) {
       if (this.sovEnabled()) {
         if (this.privatePingEnabled) {
           this.newtabContentPing.recordEvent("topSitesShowPrivacyClick", {
             advertiser_name,
-            tile_id,
             position,
           });
         }
@@ -2775,7 +2766,6 @@ export class TelemetryFeed {
             }
           : {}),
         position: tile.pos,
-        tile_id: tile.id,
         topic: tile.topic,
         variant_id: tile.variant_id,
         source_section_id: tile.source_section_id ?? tile.section,

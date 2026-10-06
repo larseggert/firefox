@@ -2391,14 +2391,13 @@ pocket:
           For organic Newtab recommendations it is an opaque id produced by
           Newtab's recommendation systems that corresponds uniquely to
           a piece of content scheduled for a specific day on a specific surface.
-          This is the replacement for tile_id.
         type: string
       corpus_item_id: &corpus_item_id
         description: >
           A content identifier.
           For organic Newtab recommendations it is an opaque id produced by
           Newtab's recommendation systems that corresponds uniquely to the URL.
-          This is the replacement for tile_id and scheduled_corpus_item_id.
+          This is the replacement for scheduled_corpus_item_id.
         type: string
       received_rank: &received_rank
         description: The rank or order of the recommendation at the time it was sent to the client.
@@ -2852,13 +2851,6 @@ newtab_content:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      tile_id: &pocket_tile_id
-        description: >
-          A content identifier.
-          For organic Pocket recommendations it is an opaque id produced by
-          Pocket's recommendation systems.
-          For sponsored Pocket content it is Kevel's "ad ID".
-        type: quantity
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
       received_rank: *received_rank
@@ -2915,7 +2907,6 @@ newtab_content:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
       received_rank: *received_rank
@@ -2969,7 +2960,6 @@ newtab_content:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
       received_rank: *received_rank
@@ -3210,10 +3200,6 @@ newtab_content:
     expires: never
     extra_keys:
       advertiser_name: *advertiser_name
-      tile_id: &tile_id
-        description: >
-          The tile id of the advertiser provided by Contile. Like `74357`.
-        type: quantity
       is_sponsored: *is_sponsored
       position: *topsite_position
       visible_topsites: *visible_topsites
@@ -3244,7 +3230,6 @@ newtab_content:
     expires: never
     extra_keys:
       advertiser_name: *advertiser_name
-      tile_id: *tile_id
       is_sponsored: *is_sponsored
       position: *topsite_position
       visible_topsites: *visible_topsites
@@ -3270,7 +3255,6 @@ newtab_content:
     expires: never
     extra_keys:
       advertiser_name: *advertiser_name
-      tile_id: *tile_id
       is_sponsored: *is_sponsored
       position: *topsite_position
     send_in_pings:
@@ -3293,7 +3277,6 @@ newtab_content:
     expires: never
     extra_keys:
       advertiser_name: *advertiser_name
-      tile_id: *tile_id
       position: *topsite_position
     send_in_pings:
       - newtab-content
