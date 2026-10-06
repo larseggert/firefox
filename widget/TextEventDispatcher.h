@@ -34,7 +34,7 @@ class PuppetWidget;
  */
 
 class TextEventDispatcher final {
-  ~TextEventDispatcher() = default;
+  ~TextEventDispatcher() { MOZ_ASSERT(!mBatching); }
 
   NS_INLINE_DECL_REFCOUNTING(TextEventDispatcher)
 
@@ -236,11 +236,19 @@ class TextEventDispatcher final {
 
   /**
    * Dispatch the WidgetContentCommandEvent.
+   *
+   * NOTE: If this is called during a batch and there is a pending event which
+   * changes whether the selection is collapsed, this may return unexpected
+   * result with aEvent.mOnlyEnabledCheck.
    */
   void DispatchContentCommandEvent(WidgetContentCommandEvent& aEvent);
 
   /**
    * Dispatch a content command event of aMessage.
+   *
+   * NOTE: If this is called during a batch and there is a pending event which
+   * changes whether the selection is collapsed, this may return unexpected
+   * result with aEvent.mOnlyEnabledCheck.
    *
    * @return Return error if it's not succeeded. Otherwise, return true if the
    *         command is enabled.
@@ -253,6 +261,10 @@ class TextEventDispatcher final {
    * Dispatch a content command event whose message is
    * eContentCommandInsertText.
    *
+   * NOTE: If this is called during a batch and there is a pending event which
+   * changes whether the selection is collapsed, this may return unexpected
+   * result with aEvent.mOnlyEnabledCheck.
+   *
    * @return Return error if it's not succeeded. Otherwise, return true if the
    *         command is enabled.
    */
@@ -263,6 +275,10 @@ class TextEventDispatcher final {
   /**
    * Dispatch a content command event whose message is
    * eContentCommandReplaceText.
+   *
+   * NOTE: If this is called during a batch and there is a pending event which
+   * changes whether the selection is collapsed, this may return unexpected
+   * result with aEvent.mOnlyEnabledCheck.
    *
    * @return Return error if it's not succeeded. Otherwise, return true if the
    *         command is enabled.
@@ -449,6 +465,25 @@ class TextEventDispatcher final {
                                    void* aData = nullptr,
                                    bool aNeedsCallback = false);
 
+  /**
+   * Return true if this is under some batching requests.
+   */
+  [[nodiscard]] bool IsBatching() const { return !!mBatching; }
+
+  /**
+   * Start a batch. Until EndBatch() is called, this enqueues any
+   * eCompositionStart, eCompositionChange, eCompositionCommit,
+   * eCompositionCommitAsIs and eSetSelection event dispatching.
+   */
+  void BeginBatch() { mBatching++; }
+
+  /**
+   * End a batch. This flushes the pending eCompositionStart,
+   * eCompositionChange, eCompositionCommit, eCompositionCommitAsIs and
+   * eSetSelection event dispatching.
+   */
+  nsresult EndBatch();
+
  private:
   // mWidget is owner of the instance.  When this is created, this is set.
   // And when mWidget is released, this is cleared by OnDestroyWidget().
@@ -473,6 +508,11 @@ class TextEventDispatcher final {
   nsString mCompositionString = VoidString();
   // See GetHandlingCompositionString() and IsHandlingComposition().
   nsString mHandlingCompositionString = VoidString();
+
+  // Store the pending events during a batch. The instances must be
+  // WidgetKeyboardEvent, WidgetCompositionEvent, WidgetSelectionEvent or
+  // WidgetContentCommandEvent.
+  nsTArray<UniquePtr<WidgetGUIEvent>> mPendingEvents;
 
   // mPendingComposition stores new composition string temporarily.
   // These values will be used for dispatching eCompositionChange event
@@ -570,6 +610,8 @@ class TextEventDispatcher final {
     eSameProcessSyncInputTransaction
   };
 
+  uint32_t mBatching = 0;
+
   InputTransactionType mInputTransactionType;
 
   bool IsForTests() const {
@@ -613,16 +655,22 @@ class TextEventDispatcher final {
    */
   void InitEvent(WidgetGUIEvent& aEvent) const;
 
+  enum class DispatchingPendingEvent : bool { No, Yes };
+
   /**
    * DispatchEvent() dispatches aEvent on aWidget.
    */
-  nsEventStatus DispatchEvent(nsIWidget* aWidget, WidgetGUIEvent& aEvent);
+  nsEventStatus DispatchEvent(nsIWidget* aWidget, WidgetGUIEvent& aEvent,
+                              DispatchingPendingEvent aDispatchingPendingEvent =
+                                  DispatchingPendingEvent::No);
 
   /**
    * DispatchInputEvent() dispatches aEvent on aWidget.
    */
-  nsEventStatus DispatchInputEvent(nsIWidget* aWidget,
-                                   WidgetInputEvent& aEvent);
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY nsEventStatus
+  DispatchInputEvent(nsIWidget* aWidget, WidgetInputEvent& aEvent,
+                     DispatchingPendingEvent aDispatchingPendingEvent =
+                         DispatchingPendingEvent::No);
 
   /**
    * StartCompositionAutomaticallyIfNecessary() starts composition if it hasn't
@@ -689,6 +737,92 @@ class TextEventDispatcher final {
    * current listener and native listener.
    */
   void UpdateNotificationRequests();
+
+  /**
+   * Return true if the pending event at aIndex is canceling the commit.
+   *
+   * @param aIndex The index of aPendingEvents. The element at aIndex should be
+   *               eCompositionCommit or eCompositionCommitAsIs. Otherwise,
+   *               always return false.
+   * @param aCompositionString The last composition string before the commit
+   *                           event.
+   */
+  [[nodiscard]] static bool EventCancelsComposition(
+      uint32_t aIndex,
+      const nsTArray<UniquePtr<WidgetGUIEvent>>& aPendingEvents,
+      const nsAString& aCompositionString);
+
+  /**
+   * Return an index in aPendingEvents if the commit event at aIndex is followed
+   * by another commit without composing state.
+   *
+   * @param aIndex The index of aPendingEvents. The event at aIndex should be
+   *               eCompositionCommit or eCompositionCommitAsIs.
+   * @param aAlternativeCommitEvent [out] When this returns something and this
+   *                                method can suggest a commit event which can
+   *                                be dispatched instead of the pending events,
+   *                                this will be emplaced.
+   * @return The index of commit event if there is. The event message must be
+   *         one of eCompositionCommit, eCompositionCommitAsIs or
+   *         eContentCommandInsertText.
+   */
+  [[nodiscard]] Maybe<uint32_t>
+  GetFollowingCommitEventIndexWithoutComposingState(
+      uint32_t aIndex,
+      const nsTArray<UniquePtr<WidgetGUIEvent>>& aPendingEvents,
+      Maybe<WidgetCompositionEvent>& aAlternativeCommitEvent);
+
+  /**
+   * Return an index in aPendingEvents if the event at aIndex is
+   * eCompositionChange and it's a redundant event, i.e., the composition string
+   * will be overwritten by the event at the result.
+   *
+   * @param aIndex The index of aPendingEvents. The event at aIndex should be
+   *               eCompositionChange.
+   * @param aAlternativeCommitEvent [out] When this returns something, the
+   *                                latest event is eCompositionCommitAsIs and
+   *                                this event should be dispatched instead of
+   *                                the pending events.
+   * @return The index of a composition event which updates the composition data
+   *         at last. The event message must be one of eCompositionChange,
+   *         eCompositionCommit, eCompositionCommitAsIs or
+   *         eContentCommandInsertText.
+   */
+  [[nodiscard]] Maybe<uint32_t> GetFollowingConclusionCompositionEvent(
+      uint32_t aIndex,
+      const nsTArray<UniquePtr<WidgetGUIEvent>>& aPendingEvents,
+      Maybe<WidgetCompositionEvent>& aAlternativeCommitEvent);
+};
+
+/**
+ * Helper class to ensure a pair of begin/end the batch of TextEventDispatcher.
+ */
+class MOZ_STACK_CLASS AutoTextEventDispatcherBatch {
+ public:
+  explicit AutoTextEventDispatcherBatch(TextEventDispatcher& aDispatcher)
+      : mDispatcher(aDispatcher) {
+    MOZ_ASSERT(mDispatcher->GetWidget());
+    MOZ_ASSERT(!mDispatcher->GetWidget()->Destroyed());
+    mDispatcher->BeginBatch();
+  }
+
+  ~AutoTextEventDispatcherBatch() {
+    if (mBatching) {
+      mDispatcher->EndBatch();
+    }
+  }
+
+  nsresult FlushPendingEvents() {
+    if (!mBatching) {
+      return NS_OK;
+    }
+    mBatching = false;
+    return mDispatcher->EndBatch();
+  }
+
+ private:
+  MOZ_KNOWN_LIVE OwningNonNull<TextEventDispatcher> mDispatcher;
+  bool mBatching = true;
 };
 
 }  // namespace widget

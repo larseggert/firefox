@@ -9527,7 +9527,6 @@
   mirror: always
 
 
-#if defined(XP_MACOSX) || defined(MOZ_WIDGET_GTK) || defined(ANDROID)
 # Whether text input without keyboard press nor IME composition should cause a
 # set of composition events or not.  E.g., when you use Emoji picker on macOS,
 # it inserts an Emoji character directly.  If set to true, `compositionstart`,
@@ -9535,11 +9534,12 @@
 # correspnding `beforeinput` events are not cancelable.  Otherwise, if set to
 # false, any user input events are not exposed to web apps but only
 # `beforeinput` event is fired as "insert text" as a cancelable event.
+# NOTE: This affects to `TextEventDispatcher` in some tests. However, this
+# does not change the behavior of user input handling on Windows.
 - name: intl.ime.use_composition_events_for_insert_text
   type: bool
   value: false
   mirror: always
-#endif
 
 #---------------------------------------------------------------------------
 # Prefs starting with "javascript."
