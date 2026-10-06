@@ -9,8 +9,6 @@ prefs = [
   "browser.urlbar.trending.featureGate=false",
 ]
 
-["browser_addonsShortcutMoved.js"]
-
 ["browser_alias_replacement.js"]
 support-files = [
   "../browser/searchSuggestionEngine.xml",

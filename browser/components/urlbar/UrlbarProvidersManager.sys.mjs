@@ -57,12 +57,6 @@ var localProviderModules = [
     supportedSAPs: ["searchbar", "urlbar", "smartbar"],
   },
   {
-    name: "UrlbarProviderAddonsShortcutMoved",
-    module:
-      "moz-src:///browser/components/urlbar/UrlbarProviderAddonsShortcutMoved.sys.mjs",
-    supportedSAPs: ["urlbar"],
-  },
-  {
     name: "UrlbarProviderAliasEngines",
     module:
       "moz-src:///browser/components/urlbar/UrlbarProviderAliasEngines.sys.mjs",
