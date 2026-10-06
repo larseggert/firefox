@@ -41,7 +41,7 @@ using namespace mozilla::layers;
 // duration of a 60-fps frame.
 static const int64_t MIN_UPDATE_INTERVAL_US = 1000000 / (60 * 2);
 
-static void SetImageToGreenPixel(PlanarYCbCrImage* aImage) {
+static bool SetImageToGreenPixel(PlanarYCbCrImage* aImage) {
   static uint8_t greenPixel[] = {0x00, 0x00, 0x00};
   PlanarYCbCrData data;
   data.mYChannel = greenPixel;
@@ -50,7 +50,7 @@ static void SetImageToGreenPixel(PlanarYCbCrImage* aImage) {
   data.mYStride = data.mCbCrStride = 1;
   data.mPictureRect = gfx::IntRect(0, 0, 1, 1);
   data.mYUVColorSpace = gfx::YUVColorSpace::BT601;
-  aImage->CopyData(data);
+  return NS_SUCCEEDED(aImage->CopyData(data));
 }
 
 VideoSink::VideoSink(AbstractThread* aThread, MediaSink* aAudioSink,
@@ -751,7 +751,10 @@ bool VideoSink::InitializeBlankImage() {
   if (mBlankImage == nullptr) {
     return false;
   }
-  SetImageToGreenPixel(mBlankImage->AsPlanarYCbCrImage());
+  if (!SetImageToGreenPixel(mBlankImage->AsPlanarYCbCrImage())) {
+    mBlankImage = nullptr;
+    return false;
+  }
   return true;
 }
 
