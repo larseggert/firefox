@@ -302,15 +302,19 @@ tasks:
                     default: []
         variants:
             - eme-wmf
+            - geckoview-isolated-process
         run-on-projects:
             by-variant:
                 eme-wmf:
                     by-test-platform:
                         windows1.*-64.*: ['autoland', 'mozilla-central']
                         default: []
+                geckoview-isolated-process:
+                    by-test-platform:
+                        android-em.*/debug: built-projects
+                        default: []
                 default:
                     by-test-platform:
-                        android-em.*/debug-isolated-process: []
                         .*-wayland.*: []
                         windows1.*: []
                         default: built-projects
@@ -352,9 +356,14 @@ tasks:
         variants:
             - privatebrowsing
             - openh264
+            - geckoview-isolated-process
         run-on-projects:
             by-variant:
                 openh264: []
+                geckoview-isolated-process:
+                    by-test-platform:
+                        android-em.*/debug: built-projects
+                        default: []
                 default: built-projects
         mozharness:
             chunked: true
