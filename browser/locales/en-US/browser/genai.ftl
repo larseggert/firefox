@@ -239,6 +239,15 @@ link-preview-settings-key-points =
 link-preview-settings-long-press =
     .label = Shortcut: Click and hold the link for 1 second (long press)
 
+highlight-to-search-settings-enable =
+    .label = Show actions menu when selecting text
+    .description = Get quick access to helpful actions when you select content.
+# $provider (string) - name of the AI chatbot provider
+highlight-to-search-settings-ask-provider =
+    .label = Ask { $provider }
+highlight-to-search-settings-ask-generic =
+    .label = Ask AI
+
 # Title that appears when user is shown the opt-in flow for link previews
 link-preview-optin-title = See more with AI?
 
