@@ -36,18 +36,16 @@ const lazy = XPCOMUtils.declareLazy({
     pref: PREF_REMOTE_RENDERER_VERSION,
     default: "",
   },
-});
-
-ChromeUtils.defineLazyGetter(lazy, "logConsole", function () {
-  return console.createInstance({
-    prefix: "RemoteRenderer",
-    maxLogLevel: Services.prefs.getBoolPref(
-      "browser.newtabpage.activity-stream.remote-renderer.log",
-      false
-    )
-      ? "Debug"
-      : "Warn",
-  });
+  logConsole: () =>
+    console.createInstance({
+      prefix: "RemoteRenderer",
+      maxLogLevel: Services.prefs.getBoolPref(
+        "browser.newtabpage.activity-stream.remote-renderer.log",
+        false
+      )
+        ? "Debug"
+        : "Warn",
+    }),
 });
 
 /**

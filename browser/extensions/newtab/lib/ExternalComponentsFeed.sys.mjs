@@ -13,18 +13,16 @@ import {
 const lazy = XPCOMUtils.declareLazy({
   AboutNewTabComponentRegistry:
     "moz-src:///browser/components/newtab/AboutNewTabComponents.sys.mjs",
-});
-
-ChromeUtils.defineLazyGetter(lazy, "logConsole", function () {
-  return console.createInstance({
-    prefix: "ExternalComponentsFeed",
-    maxLogLevel: Services.prefs.getBoolPref(
-      "browser.newtabpage.activity-stream.externalComponents.log",
-      false
-    )
-      ? "Debug"
-      : "Warn",
-  });
+  logConsole: () =>
+    console.createInstance({
+      prefix: "ExternalComponentsFeed",
+      maxLogLevel: Services.prefs.getBoolPref(
+        "browser.newtabpage.activity-stream.externalComponents.log",
+        false
+      )
+        ? "Debug"
+        : "Warn",
+    }),
 });
 
 const TRAIN_HOPPING_COMPONENT_CONFIGURATIONS = [
