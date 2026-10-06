@@ -193,36 +193,6 @@ static nsPIDOMWindowInner* ConvertWeakReferenceToWindow(
   return raw;
 }
 
-static void RecordUserActivationOnRequest(nsPIDOMWindowInner* aWindow) {
-  if (!aWindow) {
-    return;
-  }
-  WindowContext* context = aWindow->GetWindowContext();
-  if (!context) {
-    return;
-  }
-  UserActivation::State state = context->GetUserActivationState();
-  auto label = glean::geolocation::RequestActivationLabel::eNone;
-  switch (state) {
-    case UserActivation::State::FullActivated:
-      label = glean::geolocation::RequestActivationLabel::eFullActivated;
-      break;
-    case UserActivation::State::HasBeenActivated:
-      label = glean::geolocation::RequestActivationLabel::eHasBeenActivated;
-      break;
-    case UserActivation::State::None:
-      label = glean::geolocation::RequestActivationLabel::eNone;
-      break;
-    default:
-      MOZ_CRASH("Unknown user activation label");
-      break;
-  }
-  MOZ_LOG(
-      gGeolocationLog, LogLevel::Debug,
-      ("nsGeolocationRequest triggered with user activation state %d", state));
-  glean::geolocation::request_activation.EnumGet(label).Add();
-}
-
 nsGeolocationRequest::nsGeolocationRequest(
     Geolocation* aLocator, GeoPositionCallback aCallback,
     GeoPositionErrorCallback aErrorCallback,
@@ -241,9 +211,7 @@ nsGeolocationRequest::nsGeolocationRequest(
       mWatchId(aWatchId),
       mShutdown(false),
       mMainThreadSerialEventTarget(aMainThreadSerialEventTarget),
-      mBehavior(SystemGeolocationPermissionBehavior::NoPrompt) {
-  RecordUserActivationOnRequest(mWindow);
-}
+      mBehavior(SystemGeolocationPermissionBehavior::NoPrompt) {}
 
 nsGeolocationRequest::~nsGeolocationRequest() { StopTimeoutTimer(); }
 
