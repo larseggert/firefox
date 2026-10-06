@@ -8,7 +8,9 @@ import hashlib
 import os
 import pathlib
 import sys
+import threading
 import time
+from concurrent.futures import Future
 
 import requests
 from taskgraph import create
@@ -121,8 +123,7 @@ def _write_perfherder_data(lower_is_better):
             json.dump(perfherder_data, f)
 
 
-@functools.cache
-def push_schedules(branch, rev):
+def _fetch_push_schedules(branch, rev):
     # Noop if we're in test-action-callback
     if create.testing:
         return
@@ -171,6 +172,25 @@ def push_schedules(branch, rev):
         }
 
     return data
+
+
+@functools.cache
+def push_schedules(branch, rev):
+    """Start querying bugbug for the push schedules in a daemon thread.
+
+    Returns a `Future` that callers can either wait on or ignore; since the
+    thread is a daemon, it won't keep the process alive if bugbug is slow.
+    """
+    future = Future()
+
+    def run():
+        try:
+            future.set_result(_fetch_push_schedules(branch, rev))
+        except Exception as e:
+            future.set_exception(e)
+
+    threading.Thread(target=run, daemon=True).start()
+    return future
 
 
 @functools.cache

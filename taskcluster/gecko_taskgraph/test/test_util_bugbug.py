@@ -4,8 +4,12 @@
 
 
 import mozunit
+import pytest
 
-from gecko_taskgraph.util.bugbug import BUGBUG_BASE_URL, push_schedules
+from gecko_taskgraph.util.bugbug import (
+    BUGBUG_BASE_URL,
+    push_schedules,
+)
 
 
 def test_group_translation(responses):
@@ -34,7 +38,7 @@ def test_group_translation(responses):
     )
 
     assert push_schedules.cache_info().currsize == 0
-    data = push_schedules(branch, rev)
+    data = push_schedules(branch, rev).result()
     print(data)
     assert sorted(data["groups"]) == [
         "/IndexedDB",
@@ -50,8 +54,39 @@ def test_group_translation(responses):
 
     # Value is cached.
     responses.reset()
-    push_schedules(branch, rev)
+    push_schedules(branch, rev).result()
     assert push_schedules.cache_info().currsize == 1
+
+
+def test_push_schedules_success(responses):
+    push_schedules.cache_clear()
+    branch = "autoland"
+    rev = "abcdef"
+    url = BUGBUG_BASE_URL + f"/push/{branch}/{rev}/schedules"
+
+    responses.add(responses.GET, url, json={"groups": {"dom/indexedDB": 1}})
+
+    future = push_schedules(branch, rev)
+    assert future.result(timeout=10) == {"groups": {"dom/indexedDB": 1}}
+    assert push_schedules.cache_info().currsize == 1
+
+
+def test_push_schedules_failure(responses):
+    push_schedules.cache_clear()
+    branch = "autoland"
+    rev = "abcdef"
+    url = BUGBUG_BASE_URL + f"/push/{branch}/{rev}/schedules"
+
+    responses.add(responses.GET, url, status=404)
+
+    future = push_schedules(branch, rev)
+    with pytest.raises(Exception):
+        future.result(timeout=10)
+
+    # The failure is cached too.
+    responses.reset()
+    with pytest.raises(Exception):
+        push_schedules(branch, rev).result()
 
 
 if __name__ == "__main__":

@@ -31,7 +31,7 @@ def test_generate_graph(optimized_task_graph):
 
 
 def test_only_important_manifests(params, full_task_graph, filter_tasks):
-    data = push_schedules(params["project"], params["head_rev"])
+    data = push_schedules(params["project"], params["head_rev"]).result()
     important_manifests = {
         m
         for m, c in data.get("groups", {}).items()

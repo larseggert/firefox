@@ -153,7 +153,7 @@ class BugBugPushSchedules(OptimizationStrategy):
                 rev = push_data[push_id]["changesets"][-1]
 
             try:
-                new_data = push_schedules(params["project"], rev)
+                new_data = push_schedules(params["project"], rev).result()
                 merge_bugbug_replies(data, new_data)
             except (BugbugTimeoutException, RetryError):
                 if not self.fallback:
