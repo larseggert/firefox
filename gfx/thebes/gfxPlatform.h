@@ -6,6 +6,7 @@
 #define GFX_PLATFORM_H
 
 #include "GfxInfoCollector.h"
+#include "X11UndefineNone.h"
 #include "gfxSkipChars.h"
 #include "gfxTelemetry.h"
 #include "gfxTypes.h"
