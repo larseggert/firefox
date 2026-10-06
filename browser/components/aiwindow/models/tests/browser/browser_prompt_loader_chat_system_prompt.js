@@ -7,7 +7,12 @@ const { buildChatSystemPrompt, loadPrompt } = ChromeUtils.importESModule(
   "moz-src:///browser/components/aiwindow/models/PromptLoader.sys.mjs"
 );
 
-const { getRemoteClient, MODEL_FEATURES } = ChromeUtils.importESModule(
+const {
+  checkMajorVersion,
+  FEATURE_MAJOR_VERSIONS,
+  getRemoteClient,
+  MODEL_FEATURES,
+} = ChromeUtils.importESModule(
   "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs"
 );
 
@@ -30,7 +35,11 @@ add_setup(async function read_real_chat_records() {
     record =>
       record.kind === "params" &&
       record.feature === MODEL_FEATURES.CHAT &&
-      record.model === CHAT_MODEL
+      record.model === CHAT_MODEL &&
+      checkMajorVersion(
+        record.version,
+        FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]
+      )
   );
   gChatModuleRecords = records.filter(
     record => record.kind === "module" && record.feature === MODEL_FEATURES.CHAT
@@ -119,3 +128,66 @@ add_task(
     }
   }
 );
+
+/**
+ * A chat module named in GATED_CHAT_MODULES is only assembled while its pref
+ * is on: the model must not be taught about a tool it is not given. The
+ * module is injected into the live manifest so the test does not depend on
+ * which chat major the dump carries it in.
+ */
+add_task(async function test_buildChatSystemPrompt_skips_gated_module() {
+  const AITAB_PREF = "browser.smartwindow.aitab.enabled";
+  const MARKER = "PAGES_MODULE_MARKER_" + Date.now();
+  const client = getRemoteClient();
+  const gatedParams = {
+    ...gChatParams,
+    modules: [...gChatParams.modules, { name: "pages", version: "1.0" }],
+  };
+  const pagesModule = {
+    id: "chat--pages--generic--v1-test",
+    kind: "module",
+    feature: MODEL_FEATURES.CHAT,
+    module: "pages",
+    model: "generic",
+    version: "1.0",
+    prompts: `# Pages\n${MARKER}`,
+  };
+  await client.db.importChanges({}, Date.now(), [gatedParams, pagesModule]);
+  await client.emit("sync", {
+    data: {
+      current: await client.db.list(),
+      created: [],
+      updated: [],
+      deleted: [],
+    },
+  });
+
+  try {
+    await SpecialPowers.pushPrefEnv({ set: [[AITAB_PREF, false]] });
+    let { prompt } = await buildChatSystemPrompt(CHAT_MODEL);
+    Assert.ok(
+      !prompt.includes(MARKER),
+      "pages module is left out while the aitab pref is off"
+    );
+    await SpecialPowers.popPrefEnv();
+
+    await SpecialPowers.pushPrefEnv({ set: [[AITAB_PREF, true]] });
+    ({ prompt } = await buildChatSystemPrompt(CHAT_MODEL));
+    Assert.ok(
+      prompt.includes(MARKER),
+      "pages module is assembled while the aitab pref is on"
+    );
+    await SpecialPowers.popPrefEnv();
+  } finally {
+    await client.db.importChanges({}, Date.now(), [gChatParams]);
+    await client.db.delete(pagesModule.id);
+    await client.emit("sync", {
+      data: {
+        current: await client.db.list(),
+        created: [],
+        updated: [],
+        deleted: [],
+      },
+    });
+  }
+});
