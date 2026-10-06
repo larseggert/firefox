@@ -1843,6 +1843,8 @@ skip-if = [
 
 ["test_stale-while-revalidate_positive.js"]
 
+["test_stale-while-revalidate_redirect.js"]
+
 ["test_standardurl.js"]
 
 ["test_standardurl_default_port.js"]
