@@ -759,6 +759,8 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
   // is provided in the response.
   const Encoding* GetClassicScriptFallbackEncoding(
       const ScriptLoadRequest* aRequest);
+  const Encoding* GetClassicScriptFallbackEncoding(
+      const Encoding* aClassicScriptHintEncoding);
 
   // Queue the script load request for caching if we decided to cache it, or
   // cleanup the script load request fields otherwise.
