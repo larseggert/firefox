@@ -552,9 +552,7 @@ class BugbugLoader(DefaultLoader):
             return manifests
 
         try:
-            data = push_schedules(
-                self.params["project"], self.params["head_rev"]
-            ).result()
+            data = push_schedules(self.params["project"], self.params["head_rev"])
         except (BugbugTimeoutException, RetryError):
             traceback.print_exc()
             logger.warning("Timed out waiting for bugbug, loading all test manifests.")
