@@ -202,7 +202,13 @@ void VideoSink::SetPlaying(bool aPlaying, StopReason aReason) {
     // Since playback is paused, tell compositor to render only current frame.
     TimeStamp nowTime;
     const auto clockTime = mAudioSink->GetPosition(&nowTime);
-    RefPtr<VideoData> currentFrame = VideoQueue().PeekFront();
+    // Skip frames that the clock has already passed, as
+    // UpdateRenderedVideoFrames() would, so that pausing doesn't go back to an
+    // earlier frame than the one being shown.
+    AutoTArray<RefPtr<VideoData>, 10> frames;
+    VideoQueue().GetElementsAfter(clockTime, &frames);
+    RefPtr<VideoData> currentFrame =
+        frames.IsEmpty() ? VideoQueue().PeekBack() : frames[0];
     if (currentFrame) {
       RenderVideoFrames(Span(&currentFrame, 1), clockTime.ToMicroseconds(),
                         nowTime);
