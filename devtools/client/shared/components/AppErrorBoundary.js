@@ -50,6 +50,7 @@ class AppErrorBoundary extends Component {
       panel: PropTypes.any.isRequired,
       componentName: PropTypes.string.isRequired,
       openLink: PropTypes.func,
+      disableVerticalOverflow: PropTypes.bool,
     };
   }
 
@@ -319,7 +320,7 @@ class AppErrorBoundary extends Component {
 
       return div(
         {
-          className: `app-error-panel`,
+          className: `app-error-panel${this.props.disableVerticalOverflow ? " disable-vertical-overflow" : ""}`,
         },
         h1({ className: "error-panel-header" }, errorDescription),
         a(
