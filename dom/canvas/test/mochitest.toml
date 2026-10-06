@@ -228,6 +228,8 @@ skip-if = [
 
 ["test_canvas_path.html"]
 
+["test_canvas_png_roundtrip.html"]
+
 ["test_canvas_strokeStyle_getter.html"]
 
 ["test_capture.html"]
