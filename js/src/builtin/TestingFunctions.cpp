@@ -3723,6 +3723,57 @@ static bool SetTestFilenameValidationCallback(JSContext* cx, unsigned argc,
   return true;
 }
 
+// A forwarding proxy whose [[OwnPropertyKeys]] reports every key of its target
+// twice. Scripted proxies can't do this because the spec rejects duplicate
+// keys.
+class DuplicateOwnKeysProxyHandler final : public ForwardingProxyHandler {
+ public:
+  static const DuplicateOwnKeysProxyHandler singleton;
+  static const char family;
+
+  constexpr DuplicateOwnKeysProxyHandler() : ForwardingProxyHandler(&family) {}
+
+  bool ownPropertyKeys(JSContext* cx, HandleObject proxy,
+                       MutableHandleIdVector props) const override {
+    if (!ForwardingProxyHandler::ownPropertyKeys(cx, proxy, props)) {
+      return false;
+    }
+    size_t length = props.length();
+    for (size_t i = 0; i < length; i++) {
+      RootedId id(cx, props[i]);
+      if (!props.append(id)) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
+const DuplicateOwnKeysProxyHandler DuplicateOwnKeysProxyHandler::singleton;
+const char DuplicateOwnKeysProxyHandler::family = 0;
+
+static bool NewProxyWithDuplicateOwnKeys(JSContext* cx, unsigned argc,
+                                         Value* vp) {
+  CallArgs args = CallArgsFromVp(argc, vp);
+  if (!args.requireAtLeast(cx, "newProxyWithDuplicateOwnKeys", 1)) {
+    return false;
+  }
+  if (!args[0].isObject()) {
+    JS_ReportErrorASCII(cx, "target must be an object");
+    return false;
+  }
+
+  RootedValue target(cx, args[0]);
+  JSObject* proxy = NewProxyObject(cx, &DuplicateOwnKeysProxyHandler::singleton,
+                                   target, nullptr);
+  if (!proxy) {
+    return false;
+  }
+
+  args.rval().setObject(*proxy);
+  return true;
+}
+
 static JSAtom* GetPropertiesAddedName(JSContext* cx) {
   const char* propName = "_propertiesAdded";
   return Atomize(cx, propName, strlen(propName));
@@ -10506,6 +10557,11 @@ static const JSFunctionSpecWithHelp TestingFunctions[] = {
 "setTestFilenameValidationCallback()",
 "  Set the filename validation callback to a callback that accepts only\n"
 "  filenames starting with 'safe' or (only in system realms) 'system'."),
+
+    JS_FN_HELP("newProxyWithDuplicateOwnKeys", NewProxyWithDuplicateOwnKeys, 1, 0,
+"newProxyWithDuplicateOwnKeys(target)",
+"  Returns a proxy that forwards to |target| but reports each of its own keys\n"
+"  twice from [[OwnPropertyKeys]]."),
 
     JS_FN_HELP("newObjectWithAddPropertyHook", NewObjectWithAddPropertyHook, 0, 0,
 "newObjectWithAddPropertyHook()",
