@@ -288,6 +288,7 @@ class PageStyleActor extends Actor {
           if (
             !InspectorUtils.valueMatchesSyntax(
               targetDocument,
+              name,
               ret[name].value,
               registeredProperty.syntax
             )
@@ -552,6 +553,7 @@ class PageStyleActor extends Actor {
         registeredProperty &&
         !InspectorUtils.valueMatchesSyntax(
           targetDocument,
+          property,
           match.value,
           registeredProperty.syntax
         )
