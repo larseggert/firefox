@@ -401,8 +401,9 @@ class NativeLayerWaylandExternal final : public NativeLayerWayland {
 
   NativeLayerWaylandExternal(NativeLayerRootWayland* aRootLayer,
                              bool aIsOpaque);
+
  protected:
-   RefPtr<BufferSurface> GetSurface() override;
+  RefPtr<BufferSurface> GetSurface() override;
 
  private:
   ~NativeLayerWaylandExternal() override;

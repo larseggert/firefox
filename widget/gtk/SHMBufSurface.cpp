@@ -325,8 +325,7 @@ bool SHMBufSurfaceYUV::CreateImpl(uint8_t* aBuffer,
   mBufferPlaneCount = 3;
 
   const IntSize ySize = mDescriptor.display().Size();
-  const IntSize cbCrSize =
-      ImageDataSerializer::GetCroppedCbCrSize(mDescriptor);
+  const IntSize cbCrSize = ImageDataSerializer::GetCroppedCbCrSize(mDescriptor);
   mWidth[0] = ySize.width;
   mHeight[0] = ySize.height;
   mWidth[1] = mWidth[2] = cbCrSize.width;

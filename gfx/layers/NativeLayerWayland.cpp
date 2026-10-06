@@ -1086,7 +1086,6 @@ bool NativeLayerWayland::Map(WaylandSurfaceLock& aParentWaylandSurfaceLock) {
 
 void NativeLayerWayland::SetColorProperties(
     const WaylandSurfaceLock& aSurfaceLock, WaylandSurface* aParentSurface) {
-
   // It's implemented for external layers for now.
   RefPtr surface = GetSurface();
   if (!surface) {
@@ -1242,7 +1241,8 @@ gl::GLContext* NativeLayerWaylandRender::gl() {
   return mSurfacePoolHandle->gl();
 }
 
-void NativeLayerWaylandRender::AttachExternalImage(RenderTextureHost* aExternalImage) {
+void NativeLayerWaylandRender::AttachExternalImage(
+    RenderTextureHost* aExternalImage) {
   MOZ_CRASH("NativeLayerWaylandRender::AttachExternalImage() not implemented.");
 }
 
@@ -1502,7 +1502,8 @@ NativeLayerWaylandRender::~NativeLayerWaylandRender() {
   DiscardBackbuffersLocked(lock, /* aForce */ true);
 }
 
-static RefPtr<BufferSurface> GetBufferSurface(RenderTextureHost* aExternalImage) {
+static RefPtr<BufferSurface> GetBufferSurface(
+    RenderTextureHost* aExternalImage) {
   if (!aExternalImage) {
     return nullptr;
   }
@@ -1535,7 +1536,9 @@ void NativeLayerWaylandExternal::AttachExternalImage(
     mState.mMutatedPlacement = true;
   }
 
-  mState.mMutatedFrontBuffer = (!mLastSurface || mLastSurface != reinterpret_cast<uintptr_t>(surface.get()));
+  mState.mMutatedFrontBuffer =
+      (!mLastSurface ||
+       mLastSurface != reinterpret_cast<uintptr_t>(surface.get()));
   if (!mState.mMutatedFrontBuffer) {
     return;
   }
@@ -1552,7 +1555,8 @@ void NativeLayerWaylandExternal::AttachExternalImage(
 
   bool needDMABufUpload = surface->GetAsSHMBufSurface();
   if (needDMABufUpload) {
-    surface = surface->GetAsSHMBufSurface()->UploadToDMABufSurface(mRootLayer->gl());
+    surface =
+        surface->GetAsSHMBufSurface()->UploadToDMABufSurface(mRootLayer->gl());
     if (!surface) {
       LOG("  SHM->DMABuf conversion failed, quit.");
       mFrontBuffer = nullptr;
@@ -1562,8 +1566,9 @@ void NativeLayerWaylandExternal::AttachExternalImage(
   }
 
   bool needsHGLConversion =
-    (mIsHDR && surface->GetTransferFunction() == gfx::TransferFunction::HLG &&
-    !WaylandDisplayGet()->IsTFSupported(WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_HLG));
+      (mIsHDR && surface->GetTransferFunction() == gfx::TransferFunction::HLG &&
+       !WaylandDisplayGet()->IsTFSupported(
+           WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_HLG));
   if (needsHGLConversion) {
     MOZ_DIAGNOSTIC_ASSERT(surface->GetAsDMABufSurfaceYUV(),
                           "Unsupported surface type!");
