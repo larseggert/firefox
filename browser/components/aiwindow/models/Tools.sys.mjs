@@ -134,7 +134,7 @@ const MAX_HISTORY_RESULTS = 15;
 export const GET_OPEN_TABS = "get_open_tabs";
 export const SEARCH_BROWSING_HISTORY = "search_browsing_history";
 export const GET_PAGE_CONTENT = "get_page_content";
-export const GENERATE_AITAB = "generate_page";
+export const GENERATE_AITAB = "generate_aitab";
 export const RUN_SEARCH = "run_search";
 export const SEARCH_THE_WEB = "search_the_web";
 export const GET_USER_MEMORIES = "get_user_memories";
@@ -451,7 +451,7 @@ export const toolsConfig = [
           focus: {
             type: "string",
             description:
-              "The focus on what information the user wants in the generated page.",
+              "The focus on what information the user wants in the generated AITab.",
           },
           url_list: {
             type: "array",
