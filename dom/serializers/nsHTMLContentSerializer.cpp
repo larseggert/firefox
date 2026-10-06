@@ -45,10 +45,10 @@ nsHTMLContentSerializer::AppendDocumentStart(Document* aDocument) {
   return NS_OK;
 }
 
-bool nsHTMLContentSerializer::SerializeHTMLAttributes(
-    Element* aElement, Element* aOriginalElement, nsAString& aTagPrefix,
-    const nsAString& aTagNamespaceURI, nsAtom* aTagName, int32_t aNamespace,
-    nsAString& aStr) {
+bool nsHTMLContentSerializer::SerializeHTMLAttributes(Element* aElement,
+                                                      nsAtom* aTagName,
+                                                      int32_t aNamespace,
+                                                      nsAString& aStr) {
   MaybeSerializeIsValue(aElement, aStr);
 
   int32_t count = aElement->GetAttrCount();
@@ -224,11 +224,8 @@ nsHTMLContentSerializer::AppendElementStart(Element* aElement,
 
   // Even LI passed above have to go through this
   // for serializing attributes other than "value".
-  nsAutoString dummyPrefix;
-  NS_ENSURE_TRUE(
-      SerializeHTMLAttributes(aElement, aOriginalElement, dummyPrefix, u""_ns,
-                              name, ns, *mOutput),
-      NS_ERROR_OUT_OF_MEMORY);
+  NS_ENSURE_TRUE(SerializeHTMLAttributes(aElement, name, ns, *mOutput),
+                 NS_ERROR_OUT_OF_MEMORY);
 
   NS_ENSURE_TRUE(AppendToString(kGreaterThan, *mOutput),
                  NS_ERROR_OUT_OF_MEMORY);
