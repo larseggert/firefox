@@ -4,16 +4,24 @@
 
 package org.mozilla.fenix.components.menu
 
+import io.mockk.mockk
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.runTest
+import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.compose.menu.data.MenuItem
 import org.junit.Test
+import org.mozilla.fenix.browser.BackMenuItemProvider
+import org.mozilla.fenix.browser.ForwardMenuItemProvider
+import org.mozilla.fenix.browser.RefreshMenuItemProvider
+import org.mozilla.fenix.browser.ShareMenuItemProvider
 import org.mozilla.fenix.components.menu.FenixMenuItem.CustomizeReaderView
 import org.mozilla.fenix.components.menu.FenixMenuItem.FindInPage
 import org.mozilla.fenix.components.menu.FenixMenuItem.More
 import org.mozilla.fenix.components.menu.FenixMenuItem.Settings
 import org.mozilla.fenix.components.menu.MenuPresentationMode.Row
+import org.mozilla.fenix.components.menu.store.MenuAction
 
 class MenuItemsRegistryTest {
     @Test
@@ -43,6 +51,40 @@ class MenuItemsRegistryTest {
 
         assertSame(registry.providers.getValue(FindInPage), registry[FindInPage])
         assertSame(registry[FindInPage], registry.get(FindInPage))
+    }
+
+    @Test
+    fun `WHEN building the default menu THEN each navigation event is handled by exactly one provider`() = runTest {
+        val browserStore = BrowserStore()
+        val registry =
+            MenuItemsRegistry(
+                configuration = BrowserMenuBuilder.buildDefaultConfiguration(false, false),
+                resolver = { item ->
+                    when (item) {
+                        FenixMenuItem.Back -> BackMenuItemProvider(browserStore, mockk(), backgroundScope)
+                        FenixMenuItem.Forward -> ForwardMenuItemProvider(browserStore, mockk(), backgroundScope)
+                        FenixMenuItem.Share -> ShareMenuItemProvider(browserStore, mockk())
+                        FenixMenuItem.Refresh ->
+                            RefreshMenuItemProvider(browserStore, mockk(), mockk(), backgroundScope)
+                        else -> FakeMenuItemProvider()
+                    }
+                },
+            )
+        val navigationEvents =
+            listOf(
+                MenuAction.Navigate.Back(viewHistory = false),
+                MenuAction.Navigate.Back(viewHistory = true),
+                MenuAction.Navigate.Forward(viewHistory = false),
+                MenuAction.Navigate.Forward(viewHistory = true),
+                MenuAction.Navigate.Share,
+                MenuAction.Navigate.Reload(bypassCache = false),
+                MenuAction.Navigate.Reload(bypassCache = true),
+                MenuAction.Navigate.Stop,
+            )
+
+        navigationEvents.forEach { event ->
+            assertEquals(1, registry.providers.values.count { it.handles(event) }, "Handlers of $event")
+        }
     }
 
     private fun sectionOf(vararg items: FenixMenuItem) =
