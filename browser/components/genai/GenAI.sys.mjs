@@ -693,6 +693,11 @@ export const GenAI = {
         provider: this.getProviderId(),
         warning: showWarning,
       });
+      Glean.selectionMenu.actionClick.record({
+        action: "ai",
+        selection: panel.selectionData.selection.length,
+        smart_window: currentIsSmartWindow,
+      });
     };
 
     // ask popup shows on mouseover only in the first two times
@@ -796,6 +801,11 @@ export const GenAI = {
           delay: data.delay,
           inputType: data.inputType,
           selection: data.selection.length,
+        });
+        Glean.selectionMenu.displayed.record({
+          delay: data.delay,
+          selection: data.selection.length,
+          smart_window: isSmartWindow,
         });
 
         // Position the shortcuts relative to the browser's top-left corner
