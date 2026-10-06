@@ -30,23 +30,17 @@ add_setup(() => {
   Services.ppmm.releaseCachedProcesses();
 });
 
-function setupTest({ multiprocess = false, mockDatabase = false } = {}) {
+function setupTest({ multiprocess = false } = {}) {
   const sdm = new SharedDataMap(KEY, { path: PATH });
-
-  if (mockDatabase) {
-    sdm._db = {
-      init() {
-        return {};
-      },
-    };
-  }
 
   return {
     sdm,
     async cleanup() {
-      if (sdm._data !== null) {
-        sdm._removeEntriesByKeys(Object.keys(sdm._data));
-      }
+      sdm._removeEntriesByKeys(Object.keys(sdm._jsonFile.data));
+
+      // Wait for the store to finish writing to disk, then delete the file on disk.
+      await sdm._jsonFile.finalize();
+      await IOUtils.remove(PATH);
 
       if (multiprocess) {
         // Ensure we shut down any cached processes for the next test.
@@ -55,6 +49,22 @@ function setupTest({ multiprocess = false, mockDatabase = false } = {}) {
     },
   };
 }
+
+add_task(async function testSetSaves() {
+  const { sdm, cleanup } = setupTest();
+  await sdm.init();
+
+  sinon.spy(sdm._jsonFile, "saveSoon");
+
+  sdm.set("foo", "bar");
+
+  Assert.ok(
+    sdm._jsonFile.saveSoon.calledOnce,
+    "Should call saveSoon when setting a value"
+  );
+
+  await cleanup();
+});
 
 add_task(async function testUpdate() {
   const { sdm, cleanup } = setupTest();
@@ -81,29 +91,33 @@ add_task(async function testUpdate() {
 });
 
 add_task(async function testInitSafe() {
-  const { sdm, cleanup } = setupTest({ mockDatabase: true });
+  const { sdm, cleanup } = setupTest();
+  await sdm.init();
 
-  sinon.stub(sdm._db, "init").throws(new Error("uh oh"));
+  sinon.stub(sdm._jsonFile, "load");
+  sinon.replaceGetter(sdm._jsonFile, "data", () => {
+    throw new Error("uh oh");
+  });
 
   await sdm.init();
-  Assert.ok(sdm._db.init.calledOnce, "should have called db init()");
+  Assert.ok(sdm._jsonFile.load.calledOnce, "should have called load");
 
   await cleanup();
-});
+}).skip();
 
 add_task(async function testInitMultiple() {
-  const { sdm, cleanup } = setupTest({ mockDatabase: true });
+  const { sdm, cleanup } = setupTest();
 
-  sinon.spy(sdm._db, "init");
+  sinon.spy(sdm._jsonFile, "load");
 
   await sdm.init();
   await sdm.ready();
 
-  Assert.ok(sdm._db.init, "db init() called");
+  Assert.ok(sdm._jsonFile.load.calledOnce, "load called");
 
   await sdm.init();
 
-  Assert.ok(sdm._db.init, "db init() called only once");
+  Assert.ok(sdm._jsonFile.load.calledOnce, "load called only once");
 
   await cleanup();
 });

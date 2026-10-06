@@ -2,27 +2,27 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/** @import { NimbusEnrollments } from "./Enrollments.sys.mjs" */
-
 import { EventEmitter } from "resource://gre/modules/EventEmitter.sys.mjs";
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
 const lazy = XPCOMUtils.declareLazy({
   AsyncShutdown: "resource://gre/modules/AsyncShutdown.sys.mjs",
   NimbusEnrollments: "resource://nimbus/lib/Enrollments.sys.mjs",
+  JSONFile: "resource://gre/modules/JSONFile.sys.mjs",
 });
 
 const IS_MAIN_PROCESS =
   Services.appinfo.processType === Services.appinfo.PROCESS_TYPE_DEFAULT;
 
 export class SharedDataMap extends EventEmitter {
-  constructor(sharedDataKey) {
+  constructor(sharedDataKey, { path } = {}) {
     super();
 
     this._sharedDataKey = sharedDataKey;
     this._isReady = false;
     this._readyDeferred = Promise.withResolvers();
     this._data = null;
+    this._db = null;
 
     if (IS_MAIN_PROCESS) {
       this._shutdownBlocker = () => {
@@ -36,15 +36,28 @@ export class SharedDataMap extends EventEmitter {
         );
       } // else we directly rejected our _readyDeferred promise.
 
-      /**
-       * The NimbusEnrollments instance.
-       * Only nullable in tests.
-       *
-       * @type {NimbusEnrollments | null}
-       */
-      this._db = lazy.NimbusEnrollments.persistenceEnabled
-        ? new lazy.NimbusEnrollments(this)
-        : null;
+      // Lazy-load JSON file that backs Storage instances.
+      ChromeUtils.defineLazyGetter(this, "_jsonFile", () => {
+        try {
+          return new lazy.JSONFile({
+            path:
+              path ??
+              PathUtils.join(PathUtils.profileDir, `${sharedDataKey}.json`),
+          });
+        } catch (e) {
+          console.error(e);
+        }
+        return null;
+      });
+
+      if (lazy.NimbusEnrollments.databaseEnabled) {
+        // We may be in an xpcshell test that has not initialized the
+        // ProfilesDatastoreService.
+        //
+        // TODO(bug 1967779): require the ProfilesDatastoreService to be initialized
+        // and remove this check.
+        this._db = new lazy.NimbusEnrollments(this);
+      }
     } else {
       this._syncFromParent();
       Services.cpmm.sharedData.addEventListener("change", this);
@@ -54,7 +67,27 @@ export class SharedDataMap extends EventEmitter {
   async init() {
     if (!this._isReady && IS_MAIN_PROCESS) {
       try {
-        this._data = this._db ? await this._db.init() : {};
+        // TODO(bug 1972602): When we consider the NimbusEnrollments table to be
+        // the source of truth, we don't need to keep reading and writing to the
+        // JSON file.
+        await this._jsonFile.load();
+
+        if (lazy.NimbusEnrollments.readFromDatabaseEnabled) {
+          this._data = await this._db.init();
+        } else {
+          this._data = this._jsonFile.data;
+
+          // We still need to optionally load the database so that we have sync
+          // timestamp information.
+          if (lazy.NimbusEnrollments.databaseEnabled) {
+            // We may be in an xpcshell test that has not initialized the
+            // ProfilesDatastoreService.
+            //
+            // TODO(bug 1967779): require the ProfilesDatastoreService to be initialized
+            // and remove this check.
+            await this._db.init();
+          }
+        }
 
         this._syncToChildren({ flush: true });
         this._checkIfReady();
@@ -96,6 +129,15 @@ export class SharedDataMap extends EventEmitter {
 
     this._data[key] = value;
 
+    // TODO(bug 1972602): When we consider the NimbusEnrollments table to be
+    // the source of truth, we don't ened to keep reading and writing to the
+    // JSON file.
+    if (lazy.NimbusEnrollments.readFromDatabaseEnabled) {
+      this._jsonFile.data[key] = value;
+    }
+
+    this._jsonFile.saveSoon();
+
     this._syncToChildren();
     this._notifyUpdate();
   }
@@ -118,7 +160,20 @@ export class SharedDataMap extends EventEmitter {
       } catch (e) {
         // It's ok if this fails
       }
+
+      // TODO(bug 1972602): When we consider the NimbusEnrollments table to be
+      // the source of truth, we don't need to keep reading and writing to the
+      // JSON file.
+      if (lazy.NimbusEnrollments.readFromDatabaseEnabled) {
+        try {
+          delete this._jsonFile.data[key];
+        } catch (e) {
+          // It's ok if this fails
+        }
+      }
     }
+
+    this._jsonFile.saveSoon();
   }
 
   // Only used in tests
@@ -128,9 +183,17 @@ export class SharedDataMap extends EventEmitter {
         "Setting values from within a content process is not allowed"
       );
     }
-
     if (this.has(key)) {
       delete this._data[key];
+
+      // TODO(bug 1972602): When we consider the NimbusEnrollments table to be
+      // the source of truth, we don't need to keep reading and writing to the
+      // JSON file.
+      if (lazy.NimbusEnrollments.readFromDatabaseEnabled) {
+        delete this._jsonFile.data[key];
+      }
+
+      this._jsonFile.saveSoon();
 
       this._syncToChildren();
       this._notifyUpdate();

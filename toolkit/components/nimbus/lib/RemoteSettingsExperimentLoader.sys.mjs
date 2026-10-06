@@ -529,12 +529,18 @@ export class RemoteSettingsExperimentLoader {
       }
 
       if (allRecipes !== null) {
+        let unenrolledExperimentSlugs = undefined;
+
         // We are about to attempt to do disk IO. We have not yet made any
         // irreversible changes, so we can attempt to abort the update if shutdown
         // has begun.
-        const unenrolledExperimentSlugs = await this.#raceShutdown(() =>
-          lazy.NimbusEnrollments.loadUnenrolledExperimentSlugsFromOtherProfiles()
-        );
+        if (lazy.NimbusEnrollments.syncEnrollmentsEnabled) {
+          unenrolledExperimentSlugs = await this.#raceShutdown(() =>
+            lazy.NimbusEnrollments.loadUnenrolledExperimentSlugsFromOtherProfiles()
+          );
+        } else {
+          this.#throwDuringShutdown();
+        }
 
         const enrollmentsCtx = new EnrollmentsContext(
           this.manager,
@@ -622,7 +628,12 @@ export class RemoteSettingsExperimentLoader {
     try {
       const recipes = [];
 
-      const timestamps = lazy.NimbusEnrollments.persistenceEnabled
+      // We may be in an xpcshell test that has not initialized the
+      // ProfilesDatastoreService.
+      //
+      // TODO(bug 1967779): require the ProfilesDatastoreService to be initialized
+      // and remove this check.
+      const timestamps = lazy.NimbusEnrollments.databaseEnabled
         ? new Map()
         : null;
 

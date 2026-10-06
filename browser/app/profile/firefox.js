@@ -2276,6 +2276,19 @@ pref("nimbus.debug", false);
 pref("nimbus.validation.enabled", true);
 pref("nimbus.firstUpdateComplete", false);
 
+// Should Nimbus write to the shared ProfilesDatastoreService? Only used by tests.
+// TODO(bug 1967779): Require the ProfileDatastoreService by default and remove
+// this pref.
+pref("nimbus.profilesdatastoreservice.enabled", true);
+
+// Should Nimbus read from the shared ProfilesDatastoreService?
+// TODO(bug 2032586): Remove this pref.
+pref("nimbus.profilesdatastoreservice.read.enabled", true);
+
+// Should Nimbus sync experiment unenrollments from other profiles?
+// TODO(bug 2032586): Remove this pref.
+pref("nimbus.profilesdatastoreservice.sync.enabled", true);
+
 // Enable the targeting context telemetry by default, but allow it to be
 // disabled, e.g., for artifact builds.
 // See-also: https://bugzilla.mozilla.org/show_bug.cgi?id=1936317

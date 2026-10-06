@@ -32,6 +32,11 @@ add_setup(async function () {
   do_get_profile();
 
   await initSelectableProfileService();
+
+  // TODO(bug 1967779): require the ProfilesDatastoreService to be initialized
+  registerCleanupFunction(
+    NimbusTestUtils.enableNimbusEnrollments({ read: true })
+  );
 });
 
 /**

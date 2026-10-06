@@ -2311,16 +2311,32 @@ add_task(async function test_prefFlips_cacheOriginalValues() {
     },
   });
 
-  await NimbusTestUtils.saveStore(manager.store);
-  const dbEnrollment = await NimbusTestUtils.queryEnrollment(recipe.slug);
+  const storePath = await NimbusTestUtils.saveStore(manager.store);
+  const storeContents = await IOUtils.readJSON(storePath);
+
+  Assert.ok(
+    Object.hasOwn(storeContents, "prefFlips-test"),
+    "enrollment present in serialized store"
+  );
+  Assert.ok(
+    Object.hasOwn(storeContents["prefFlips-test"], "prefFlips"),
+    "prefFlips cache preset in serialized enrollment"
+  );
+
   Assert.deepEqual(
+    storeContents["prefFlips-test"].prefFlips,
     {
       originalValues: {
         "test.pref.please.ignore": null,
       },
     },
-    dbEnrollment.prefFlips,
-    "prefFlips cache preset in serialized enrollment"
+    "originalValues cached on serialized enrollment"
+  );
+
+  const dbEnrollment = await NimbusTestUtils.queryEnrollment(recipe.slug);
+  Assert.deepEqual(
+    storeContents["prefFlips-test"].prefFlips,
+    dbEnrollment.prefFlips
   );
 
   manager.unenroll(recipe.slug);
@@ -2349,7 +2365,7 @@ add_task(async function test_prefFlips_restore_unenroll() {
   );
 
   const { manager, cleanup } = await setupTest({
-    populateStore: store => {
+    storePath: await NimbusTestUtils.createStoreWith(store => {
       NimbusTestUtils.addEnrollmentForRecipe(recipe, {
         store,
         extra: {
@@ -2364,7 +2380,7 @@ add_task(async function test_prefFlips_restore_unenroll() {
 
       // Set the pref controlled by the experiment.
       Services.prefs.setStringPref("test.pref.please.ignore", "test-value");
-    },
+    }),
     secureExperiments: [recipe],
     migrationState: NimbusTestUtils.migrationState.LATEST,
   });
@@ -2827,7 +2843,7 @@ add_task(async function test_prefFlips_restore() {
   const PREF_3 = "pref.three";
   const PREF_4 = "pref.FOUR";
 
-  const populateStore = store => {
+  const storePath = await NimbusTestUtils.createStoreWith(store => {
     NimbusTestUtils.addEnrollmentForRecipe(
       NimbusTestUtils.factories.recipe.withFeatureConfig(
         "rollout-1",
@@ -2919,10 +2935,10 @@ add_task(async function test_prefFlips_restore() {
         },
       }
     );
-  };
+  });
 
   const { manager, cleanup } = await setupTest({
-    populateStore,
+    storePath,
     migrationState: NimbusTestUtils.migrationState.LATEST,
   });
 
@@ -2984,7 +3000,7 @@ add_task(async function test_prefFlips_restore() {
 add_task(async function test_prefFlips_restore_failure_conflict() {
   const PREF = "pref.foo.bar";
 
-  const populateStore = store => {
+  const storePath = await NimbusTestUtils.createStoreWith(store => {
     NimbusTestUtils.addEnrollmentForRecipe(
       NimbusTestUtils.factories.recipe.withFeatureConfig("rollout-1", {
         featureId: FEATURE_ID,
@@ -3058,10 +3074,10 @@ add_task(async function test_prefFlips_restore_failure_conflict() {
         },
       }
     );
-  };
+  });
 
   const { manager, cleanup } = await setupTest({
-    populateStore,
+    storePath,
     migrationState: NimbusTestUtils.migrationState.LATEST,
   });
 
@@ -3122,23 +3138,31 @@ add_task(async function test_prefFlips_restore_failure_wrong_type() {
     }
   );
 
+  let storePath;
+  {
+    const store = NimbusTestUtils.stubs.store();
+    await store.init();
+
+    await NimbusTestUtils.addEnrollmentForRecipe(recipe, {
+      store,
+      extra: {
+        source: "test",
+        prefFlips: {
+          originalValues: {
+            [PREF_1]: "original-value",
+            [PREF_2]: "original-value",
+          },
+        },
+      },
+    });
+
+    storePath = await NimbusTestUtils.saveStore(store);
+  }
+
   Services.prefs.setIntPref(PREF_1, 123);
 
   const { manager, cleanup } = await setupTest({
-    populateStore: store => {
-      NimbusTestUtils.addEnrollmentForRecipe(recipe, {
-        store,
-        extra: {
-          source: "test",
-          prefFlips: {
-            originalValues: {
-              [PREF_1]: "original-value",
-              [PREF_2]: "original-value",
-            },
-          },
-        },
-      });
-    },
+    storePath,
     secureExperiments: [recipe],
     migrationState: NimbusTestUtils.migrationState.LATEST,
   });

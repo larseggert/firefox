@@ -4,6 +4,8 @@
 "use strict";
 
 add_setup(async function setup() {
+  const cleanup = await setupTest();
+
   SpecialPowers.addTaskImport(
     "ExperimentAPI",
     "resource://nimbus/ExperimentAPI.sys.mjs"
@@ -16,6 +18,8 @@ add_setup(async function setup() {
     "TestUtils",
     "resource://testing-common/TestUtils.sys.mjs"
   );
+
+  registerCleanupFunction(cleanup);
 });
 
 add_task(async function testGetFromChildNewEnrollment() {

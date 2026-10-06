@@ -30,7 +30,7 @@ const { RemoteSettingsExperimentLoader } = ChromeUtils.importESModule(
 add_task(async function test_onStartup_setExperimentActive_called() {
   const { sandbox, manager, cleanup } = await NimbusTestUtils.setupTest({
     init: false,
-    populateStore: store => {
+    storePath: await NimbusTestUtils.createStoreWith(store => {
       NimbusTestUtils.addEnrollmentForRecipe(
         NimbusTestUtils.factories.recipe("foo"),
         { store, branchSlug: "control", extra: { source: "test" } }
@@ -51,7 +51,7 @@ add_task(async function test_onStartup_setExperimentActive_called() {
         NimbusTestUtils.factories.recipe("qux", { isRollout: true }),
         { store, extra: { active: false, source: "test" } }
       );
-    },
+    }),
     migrationState: NimbusTestUtils.migrationState.LATEST,
   });
 
@@ -87,12 +87,12 @@ add_task(async function test_startup_unenroll() {
 
   const { sandbox, manager, cleanup } = await NimbusTestUtils.setupTest({
     init: false,
-    populateStore: store => {
+    storePath: await NimbusTestUtils.createStoreWith(store => {
       NimbusTestUtils.addEnrollmentForRecipe(
         NimbusTestUtils.factories.recipe("startup_unenroll"),
         { store, branchSlug: "control" }
       );
-    },
+    }),
     migrationState: NimbusTestUtils.migrationState.LATEST,
   });
 
@@ -541,7 +541,7 @@ add_task(async function testUpdateEnrollmentSourceMismatchActive() {
       ),
     ],
     migrationState: NimbusTestUtils.migrationState.LATEST,
-    populateStore: store => {
+    storePath: await NimbusTestUtils.createStoreWith(store => {
       NimbusTestUtils.addEnrollmentForRecipe(
         NimbusTestUtils.factories.recipe.withFeatureConfig(
           SLUG,
@@ -552,7 +552,7 @@ add_task(async function testUpdateEnrollmentSourceMismatchActive() {
         ),
         { store, extra: { source: "nimbus-devtools" } }
       );
-    },
+    }),
   });
 
   const enrollment = manager.store.get(SLUG);
@@ -579,7 +579,7 @@ add_task(async function testUpdateEnrollmentSourceMismatchInactive() {
       ),
     ],
     migrationState: NimbusTestUtils.migrationState.LATEST,
-    populateStore: store => {
+    storePath: await NimbusTestUtils.createStoreWith(store => {
       NimbusTestUtils.addEnrollmentForRecipe(
         NimbusTestUtils.factories.recipe.withFeatureConfig(
           SLUG,
@@ -597,7 +597,7 @@ add_task(async function testUpdateEnrollmentSourceMismatchInactive() {
           },
         }
       );
-    },
+    }),
   });
 
   const enrollment = manager.store.get(SLUG);
@@ -641,29 +641,15 @@ add_task(async function testRestoreFirefoxLabsOptIns() {
         recipes["live-inactivePaused"],
       ],
       migrationState: NimbusTestUtils.migrationState.LATEST,
-      populateStore: store => {
+      storePath: await NimbusTestUtils.createStoreWith(async store => {
         // recipes.live-* are all provided by Remote Settings.
-        NimbusTestUtils.addEnrollmentForRecipe(recipes["live-active"], {
+        await NimbusTestUtils.addEnrollmentForRecipe(recipes["live-active"], {
           store,
           extra: {
             source: "rs-loader",
           },
         });
-        NimbusTestUtils.addEnrollmentForRecipe(recipes["live-inactive"], {
-          store,
-          extra: {
-            source: "rs-loader",
-            active: false,
-            unenrollReason: "labs-opt-out",
-          },
-        });
-        NimbusTestUtils.addEnrollmentForRecipe(recipes["live-activePaused"], {
-          store,
-          extra: {
-            source: "rs-loader",
-          },
-        });
-        NimbusTestUtils.addEnrollmentForRecipe(recipes["live-inactivePaused"], {
+        await NimbusTestUtils.addEnrollmentForRecipe(recipes["live-inactive"], {
           store,
           extra: {
             source: "rs-loader",
@@ -671,29 +657,55 @@ add_task(async function testRestoreFirefoxLabsOptIns() {
             unenrollReason: "labs-opt-out",
           },
         });
+        await NimbusTestUtils.addEnrollmentForRecipe(
+          recipes["live-activePaused"],
+          {
+            store,
+            extra: {
+              source: "rs-loader",
+            },
+          }
+        );
+        await NimbusTestUtils.addEnrollmentForRecipe(
+          recipes["live-inactivePaused"],
+          {
+            store,
+            extra: {
+              source: "rs-loader",
+              active: false,
+              unenrollReason: "labs-opt-out",
+            },
+          }
+        );
 
         // The remainder are opted-in (e.g., via force enrollment or nimbus devtools).
-        NimbusTestUtils.addEnrollmentForRecipe(recipes["optin-active"], {
+        await NimbusTestUtils.addEnrollmentForRecipe(recipes["optin-active"], {
           store,
           extra: {
             source: "force-enrollment",
           },
         });
-        NimbusTestUtils.addEnrollmentForRecipe(recipes["optin-inactive"], {
-          store,
-          extra: {
-            source: "force-enrollment",
-            active: false,
-            unenrollReason: "labs-opt-out",
-          },
-        });
-        NimbusTestUtils.addEnrollmentForRecipe(recipes["optin-activePaused"], {
-          store,
-          extra: {
-            source: "nimbus-devtools",
-          },
-        });
-        NimbusTestUtils.addEnrollmentForRecipe(
+        await NimbusTestUtils.addEnrollmentForRecipe(
+          recipes["optin-inactive"],
+          {
+            store,
+            extra: {
+              source: "force-enrollment",
+              active: false,
+              unenrollReason: "labs-opt-out",
+            },
+          }
+        );
+        await NimbusTestUtils.addEnrollmentForRecipe(
+          recipes["optin-activePaused"],
+          {
+            store,
+            extra: {
+              source: "nimbus-devtools",
+            },
+          }
+        );
+        await NimbusTestUtils.addEnrollmentForRecipe(
           recipes["optin-inactivePaused"],
           {
             store,
@@ -704,7 +716,7 @@ add_task(async function testRestoreFirefoxLabsOptIns() {
             },
           }
         );
-      },
+      }),
       init: false,
     }
   );
@@ -877,7 +889,7 @@ add_task(async function testRegisterOptInConflicts() {
       recipes["inactive-rollout-rs"],
     ],
     migrationState: NimbusTestUtils.migrationState.LATEST,
-    populateStore: store => {
+    storePath: await NimbusTestUtils.createStoreWith(store => {
       NimbusTestUtils.addEnrollmentForRecipe(
         recipes["active-experiment-devtools"],
         { store, extra: { active: true, source: "nimbus-devtools" } }
@@ -958,7 +970,7 @@ add_task(async function testRegisterOptInConflicts() {
           unenrollReason: "recipe-not-seen",
         },
       });
-    },
+    }),
   });
 
   const expectedOptIns = [

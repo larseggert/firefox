@@ -475,7 +475,7 @@ add_task(async function test_updateRecipes_invalidFeatureAfterUpdate() {
   const featureConfig = { featureId: "bogus", value: {} };
 
   const { manager, cleanup } = await setupTest({
-    populateStore: store => {
+    storePath: await NimbusTestUtils.createStoreWith(store => {
       NimbusTestUtils.addEnrollmentForRecipe(
         NimbusTestUtils.factories.recipe.withFeatureConfig(
           "recipe",
@@ -483,7 +483,7 @@ add_task(async function test_updateRecipes_invalidFeatureAfterUpdate() {
         ),
         { store }
       );
-    },
+    }),
     experiments: [
       NimbusTestUtils.factories.recipe.withFeatureConfig(
         "recipe",
@@ -2303,7 +2303,7 @@ async function doEnrollmentStatusOptOutTest(
   ];
 
   const { cleanup } = await setupTest({
-    populateStore: store => {
+    storePath: await NimbusTestUtils.createStoreWith(store => {
       NimbusTestUtils.addEnrollmentForRecipe(recipes[0], {
         store,
         extra: {
@@ -2319,7 +2319,7 @@ async function doEnrollmentStatusOptOutTest(
           unenrollReason: NimbusTelemetry.UnenrollReason.ROLLOUTS_OPT_OUT,
         },
       });
-    },
+    }),
     migrationState: NimbusTestUtils.migrationState.LATEST,
     experiments: recipes,
     init: false,
@@ -2683,6 +2683,11 @@ add_task(async function testUnenrolledInAnotherProfileBeforeUpdate() {
     profileId: otherProfileId2,
   });
 
+  const resetEnrollmentPrefs = await NimbusTestUtils.enableNimbusEnrollments({
+    read: true,
+    sync: true,
+  });
+
   let cleanup, store;
   await GleanPings.nimbusTargetingContext.testSubmission(
     () => {
@@ -2765,6 +2770,7 @@ add_task(async function testUnenrolledInAnotherProfileBeforeUpdate() {
   ]);
 
   await cleanup();
+  resetEnrollmentPrefs();
 });
 
 add_task(async function testUnenrolledInAnotherProfileBetweenUpdates() {
@@ -2793,6 +2799,10 @@ add_task(async function testUnenrolledInAnotherProfileBetweenUpdates() {
     { isRollout: true }
   );
 
+  const resetEnrollmentPrefs = await NimbusTestUtils.enableNimbusEnrollments({
+    read: true,
+    sync: true,
+  });
   const { cleanup, loader, store } = await setupTest({
     experiments: [e1, e2, e3, r1, r2],
   });
@@ -2927,6 +2937,7 @@ add_task(async function testUnenrolledInAnotherProfileBetweenUpdates() {
   ]);
 
   await cleanup();
+  resetEnrollmentPrefs();
 });
 
 add_task(async function test_remoteSettingsSyncError_backwardsSync() {
