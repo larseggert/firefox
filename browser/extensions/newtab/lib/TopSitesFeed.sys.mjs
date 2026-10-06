@@ -2096,8 +2096,9 @@ export class TopSitesFeed {
   /**
    * Refresh the top sites data for content.
    *
-   * @param {boolean} options.broadcast Should the update be broadcasted.
-   * @param {boolean} options.isStartup Being called while TopSitesFeed is initting.
+   * @param {object} [options]
+   * @param {boolean} [options.broadcast] Should the update be broadcasted.
+   * @param {boolean} [options.isStartup] Being called while TopSitesFeed is initting.
    */
   async refresh(options = {}) {
     if (this._uninitialized) {

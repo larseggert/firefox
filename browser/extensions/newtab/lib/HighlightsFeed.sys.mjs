@@ -137,7 +137,9 @@ export class HighlightsFeed {
   /**
    * Refresh the highlights data for content.
    *
-   * @param {boolean} options.broadcast Should the update be broadcasted.
+   * @param {object} [options]
+   * @param {boolean} [options.broadcast] Should the update be broadcasted.
+   * @param {boolean} [options.isStartup] Being called while HighlightsFeed is initting.
    */
   async fetchHighlights(options = {}) {
     // If TopSites are enabled we need them for deduping, so wait for

@@ -1161,6 +1161,8 @@ export class TelemetryFeed {
    * This tracks how long placeholder content is shown before being replaced
    * with actual sponsored content when using onDemand mode.
    *
+   * @param {object} action
+   * @param {object} action.data
    * @param {number} action.data.duration - Duration in milliseconds
    */
   handleSpocPlaceholderDuration(action) {

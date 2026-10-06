@@ -122,6 +122,7 @@ export class ListsFeed {
 
   /**
    * @param {object} action - The action object containing pref change data
+   * @param {object} action.data
    * @param {string} action.data.name - The name of the pref that changed
    */
   async onPrefChangedAction(action) {
