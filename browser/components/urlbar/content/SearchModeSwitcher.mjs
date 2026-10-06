@@ -986,10 +986,6 @@ export class SearchModeSwitcher {
     menuitem.dataset.restrict = mode.restrict;
     this.#addCommandListeners(menuitem);
     this.#input.document.l10n.setAttributes(menuitem, mode.uiLabel);
-    if (mode.keyId) {
-      menuitem.setAttribute("key", mode.keyId);
-      lazy.CustomizableUI.addShortcut(menuitem);
-    }
     return menuitem;
   }
 
