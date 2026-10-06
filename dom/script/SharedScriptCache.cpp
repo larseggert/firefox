@@ -40,9 +40,7 @@ ScriptHashKey::ScriptHashKey(
       mCORSMode(aFetchOptions->mCORSMode),
       mReferrerPolicy(aReferrerPolicy) {
   if (mKind == JS::loader::ScriptKind::eClassic) {
-    if (aRequest->GetScriptLoadContext()->HasScriptElement()) {
-      aRequest->GetScriptLoadContext()->GetHintCharset(mHintCharset);
-    }
+    mClassicScriptHintEncoding = aRequest->mClassicScriptHintEncoding;
   }
 
   MOZ_COUNT_CTOR(ScriptHashKey);
@@ -80,7 +78,7 @@ bool ScriptHashKey::KeyEquals(const ScriptHashKey& aKey) const {
 
   // NOTE: module always use UTF-8.
   if (mKind == JS::loader::ScriptKind::eClassic) {
-    if (mHintCharset != aKey.mHintCharset) {
+    if (mClassicScriptHintEncoding != aKey.mClassicScriptHintEncoding) {
       return false;
     }
   }
@@ -160,7 +158,7 @@ void ScriptHashKey::ToStringForLookup(nsACString& aResult) {
 /* static */
 Maybe<ScriptHashKey> ScriptHashKey::FromStringsForLookup(
     const nsACString& aKey, const nsACString& aURI,
-    const nsACString& aHintCharset) {
+    const mozilla::Encoding* aClassicScriptHintEncoding) {
   if (aKey.Length() < 22) {
     return Nothing();
   }
@@ -234,8 +232,7 @@ Maybe<ScriptHashKey> ScriptHashKey::FromStringsForLookup(
   }
 
   return Some(ScriptHashKey(uri, partitionPrincipal, kind, corsMode,
-                            referrerPolicy,
-                            NS_ConvertUTF8toUTF16(aHintCharset)));
+                            referrerPolicy, aClassicScriptHintEncoding));
 }
 
 NS_IMPL_ISUPPORTS(ScriptLoadData, nsISupports)
@@ -345,14 +342,20 @@ void SharedScriptCache::Invalidate() {
 /* static */
 bool SharedScriptCache::GetCachedScriptSource(
     JSContext* aCx, const nsACString& aKey, const nsACString& aURI,
-    const nsACString& aHintCharset, JS::MutableHandle<JS::Value> aRetval) {
+    const nsACString& aClassicScriptHintCharset,
+    JS::MutableHandle<JS::Value> aRetval) {
   if (!sSingleton) {
     aRetval.setUndefined();
     return true;
   }
 
-  Maybe<ScriptHashKey> maybeKey =
-      ScriptHashKey::FromStringsForLookup(aKey, aURI, aHintCharset);
+  const Encoding* classicScriptHintEncoding = nullptr;
+  if (!aClassicScriptHintCharset.IsEmpty()) {
+    classicScriptHintEncoding = Encoding::ForLabel(aClassicScriptHintCharset);
+  }
+
+  Maybe<ScriptHashKey> maybeKey = ScriptHashKey::FromStringsForLookup(
+      aKey, aURI, classicScriptHintEncoding);
   if (!maybeKey) {
     aRetval.setUndefined();
     return true;

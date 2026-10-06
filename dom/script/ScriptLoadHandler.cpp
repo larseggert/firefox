@@ -256,6 +256,8 @@ bool ScriptLoadHandler::TrySetDecoder(nsIChannel* aChannel,
     return true;
   }
 
+  MOZ_ASSERT(mRequest->IsClassicScript());
+
   // Determine if BOM check should be done.  This occurs either
   // if end-of-stream has been reached, or at least 3 bytes have
   // been read from input.
@@ -281,24 +283,9 @@ bool ScriptLoadHandler::TrySetDecoder(nsIChannel* aChannel,
     return true;
   }
 
-  // Check the hint charset from the script element or preload
-  // request.
-  nsAutoString hintCharset;
-  if (!mRequest->GetScriptLoadContext()->IsPreload()) {
-    mRequest->GetScriptLoadContext()->GetHintCharset(hintCharset);
-  } else {
-    nsTArray<ScriptLoader::PreloadInfo>::index_type i =
-        mScriptLoader->mPreloads.IndexOf(
-            mRequest, 0, ScriptLoader::PreloadRequestComparator());
-
-    NS_ASSERTION(i != mScriptLoader->mPreloads.NoIndex,
-                 "Incorrect preload bookkeeping");
-    hintCharset = mScriptLoader->mPreloads[i].mCharset;
-  }
-
-  if ((encoding = Encoding::ForLabel(hintCharset))) {
-    mDecoder =
-        MakeUnique<ScriptDecoder>(encoding, ScriptDecoder::BOMHandling::Ignore);
+  if (mRequest->mClassicScriptHintEncoding) {
+    mDecoder = MakeUnique<ScriptDecoder>(mRequest->mClassicScriptHintEncoding,
+                                         ScriptDecoder::BOMHandling::Ignore);
     return true;
   }
 
