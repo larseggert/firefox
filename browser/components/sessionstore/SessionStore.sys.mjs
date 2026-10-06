@@ -1492,7 +1492,7 @@ class _SessionStore {
    *        which case a non-web-controlled page that is still loading is
    *        collected as well.
    */
-  updateSessionStoreFromTablistener(
+  updateSessionStoreFromChild(
     browser,
     browsingContext,
     permanentKey,
