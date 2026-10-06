@@ -206,8 +206,6 @@ int16_t gBadPortList[] = {
 
 static const char kProfileChangeNetTeardownTopic[] =
     "profile-change-net-teardown";
-static const char kProfileChangeNetRestoreTopic[] =
-    "profile-change-net-restore";
 static const char kProfileDoChange[] = "profile-do-change";
 
 // Necko buffer defaults
@@ -316,7 +314,6 @@ nsresult nsIOService::Init() {
   // Register for profile change notifications
   mObserverService = services::GetObserverService();
   MOZ_ALWAYS_SUCCEEDS(AddObserver(this, kProfileChangeNetTeardownTopic, true));
-  MOZ_ALWAYS_SUCCEEDS(AddObserver(this, kProfileChangeNetRestoreTopic, true));
   MOZ_ALWAYS_SUCCEEDS(AddObserver(this, kProfileDoChange, true));
   MOZ_ALWAYS_SUCCEEDS(AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, true));
   MOZ_ALWAYS_SUCCEEDS(AddObserver(this, NS_NETWORK_LINK_TOPIC, true));
@@ -1899,11 +1896,6 @@ nsIOService::Observe(nsISupports* subject, const char* topic,
     if (!mOffline) {
       mOfflineForProfileChange = true;
       SetOfflineInternal(true, false);
-    }
-  } else if (!strcmp(topic, kProfileChangeNetRestoreTopic)) {
-    if (mOfflineForProfileChange) {
-      mOfflineForProfileChange = false;
-      SetOfflineInternal(false, false);
     }
   } else if (!strcmp(topic, kProfileDoChange)) {
     if (data && u"startup"_ns.Equals(data)) {

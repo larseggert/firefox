@@ -504,7 +504,6 @@ nsresult nsHttpHandler::Init() {
     // register the handler object as a weak callback as we don't need to worry
     // about shutdown ordering.
     obsService->AddObserver(this, "profile-change-net-teardown", true);
-    obsService->AddObserver(this, "profile-change-net-restore", true);
     obsService->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, true);
     obsService->AddObserver(this, "net:clear-active-logins", true);
     obsService->AddObserver(this, "net:prune-dead-connections", true);
@@ -2354,10 +2353,6 @@ nsHttpHandler::Observe(nsISupports* subject, const char* topic,
     }
 
     mActivityDistributor = nullptr;
-  } else if (!strcmp(topic, "profile-change-net-restore")) {
-    // initialize connection manager
-    rv = InitConnectionMgr();
-    MOZ_ASSERT(NS_SUCCEEDED(rv));
   } else if (!strcmp(topic, "net:clear-active-logins")) {
     mAuthCache->ClearAll();
     mPrivateAuthCache->ClearAll();
