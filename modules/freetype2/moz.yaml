@@ -16,10 +16,19 @@ origin:
   license: FTL
   license-file: LICENSE.TXT
 
+updatebot:
+  maintainer-phab: jfkthame
+  maintainer-bz: jfkthame@gmail.com
+  try-preset: freetype
+  tasks:
+    - type: vendoring
+      enabled: true
+      frequency: 1 week
+
 vendoring:
   url: https://gitlab.freedesktop.org/freetype/freetype
   source-hosting: gitlab
-  tracking: tag
+  tracking: commit
 
   exclude:
     - ".**"
