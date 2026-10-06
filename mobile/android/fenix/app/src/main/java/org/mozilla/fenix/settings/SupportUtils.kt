@@ -49,6 +49,10 @@ object SupportUtils {
         SEARCH_SUGGESTION("how-search-firefox-preview"),
         CUSTOM_SEARCH_ENGINES("custom-search-engines"),
         SYNC_SETUP("how-set-firefox-sync-firefox-android"),
+        CONNECT_ADDITIONAL_DEVICES_TO_SYNC(
+            topicStr = "how-do-i-set-sync-my-computer",
+            fragmentStr = "w_connect-additional-devices-to-sync",
+        ),
         SMARTBLOCK("smartblock-enhanced-tracking-protection"),
         SPONSOR_PRIVACY("sponsor-privacy"),
         HTTPS_ONLY_MODE("https-only-mode-firefox-android"),
