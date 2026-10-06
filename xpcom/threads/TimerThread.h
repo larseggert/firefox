@@ -104,9 +104,10 @@ class TimerThread final : public mozilla::Runnable, public nsIObserver {
   };
 
   struct Entry final : EntryKey {
-    explicit Entry(nsTimerImpl& aTimerImpl)
+    explicit Entry(nsTimerImpl& aTimerImpl) MOZ_REQUIRES(aTimerImpl.mMutex)
         : EntryKey(aTimerImpl),
           mDelay(aTimerImpl.mDelay),
+          mFiringDelay(aTimerImpl.AcceptableFiringDelay()),
           mTimerImpl(&aTimerImpl) {}
 
     // No copies to not fiddle with mTimerImpl's ref-count.
@@ -126,6 +127,7 @@ class TimerThread final : public mozilla::Runnable, public nsIObserver {
 #endif
 
     TimeDuration mDelay;
+    TimeDuration mFiringDelay;
     RefPtr<nsTimerImpl> mTimerImpl;
   };
 
@@ -145,18 +147,6 @@ class TimerThread final : public mozilla::Runnable, public nsIObserver {
   // timer in mTimers along with a tolerance indicating the most that we can be
   // delayed and not violate the tolerances of any of the timers in the bundle.
   WakeupTime ComputeWakeupTimeFromTimers() const MOZ_REQUIRES(mMonitor);
-
-  // Computes how late a timer can acceptably fire.
-  // timerDuration is the duration of the timer whose delay we are calculating.
-  // Longer timers can tolerate longer firing delays.
-  // minDelay is an amount by which any timer can be delayed.
-  // This function will never return a value smaller than minDelay (unless this
-  // conflicts with maxDelay). maxDelay is the upper limit on the amount by
-  // which we will ever delay any timer. Takes precedence over minDelay if there
-  // is a conflict. (Zero will effectively disable timer coalescing.)
-  TimeDuration ComputeAcceptableFiringDelay(TimeDuration timerDuration,
-                                            TimeDuration minDelay,
-                                            TimeDuration maxDelay) const;
 
   // Fires and removes all timers in mTimers that are "due" to be fired,
   // according to the current time and the passed-in early firing tolerance.
