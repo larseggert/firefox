@@ -326,6 +326,13 @@ def test_ensure_spi_disabled_on_all_but_spi(
     callback(task)
 
 
+@pytest.fixture(autouse=True)
+def clear_included_runtimes():
+    chunking._included_runtimes.cache_clear()
+    yield
+    chunking._included_runtimes.cache_clear()
+
+
 def test_resolve_dynamic_chunks_uses_variant_suffix(
     monkeypatch, run_transform, make_test_task
 ):
@@ -344,8 +351,10 @@ def test_resolve_dynamic_chunks_uses_variant_suffix(
     )
     monkeypatch.setattr(
         "gecko_taskgraph.transforms.test.chunk.resolve_manifest_runtimes",
-        lambda runtimes, manifests: {
-            m: runtimes[m] for m in manifests if m in runtimes
+        lambda platform, suite_name, manifests: {
+            m: r
+            for m, r in fake_get_runtimes(platform, suite_name).items()
+            if m in manifests
         },
     )
 
@@ -369,6 +378,7 @@ def test_resolve_dynamic_chunks_falls_back_without_runtimes(
     monkeypatch.setattr(
         "gecko_taskgraph.transforms.test.chunk.get_runtimes", lambda p, s: {}
     )
+    monkeypatch.setattr(chunking, "get_runtimes", lambda p, s: {})
 
     task = make_test_task(**{
         "chunks": "dynamic",
@@ -743,6 +753,7 @@ def task_with_zero_runtimes(monkeypatch, make_test_task):
         runtimes = dict.fromkeys(manifests, 0)
         runtimes["manifest0.toml"] = DYNAMIC_CHUNK_DURATION
         monkeypatch.setattr(chunk, "get_runtimes", lambda platform, suite: runtimes)
+        monkeypatch.setattr(chunking, "get_runtimes", lambda platform, suite: runtimes)
 
         return make_test_task(**{
             "attributes": {
@@ -790,6 +801,7 @@ def task_with_partial_chunk_runtimes(monkeypatch, make_test_task):
         manifests = [f"manifest{i}.toml" for i in range(4)]
         runtimes = dict.fromkeys(manifests, DYNAMIC_CHUNK_DURATION * 0.35)
         monkeypatch.setattr(chunk, "get_runtimes", lambda platform, suite: runtimes)
+        monkeypatch.setattr(chunking, "get_runtimes", lambda platform, suite: runtimes)
 
         return make_test_task(**{
             "attributes": {
