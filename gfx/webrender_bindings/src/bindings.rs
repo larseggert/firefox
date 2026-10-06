@@ -3333,7 +3333,7 @@ pub extern "C" fn wr_dp_push_stacking_context(
 
         result.id = wr_spatial_id.0;
         assert_ne!(wr_spatial_id.0, 0);
-    } else if bounds.min != LayoutPoint::zero() {
+    } else if bounds.min != LayoutPoint::zero() || params.should_snap {
         // Inherit the stacking context's transform style so this translate-only
         // reference frame doesn't introduce a 3D flattening boundary for
         // preserve-3d contexts.
@@ -3344,7 +3344,7 @@ pub extern "C" fn wr_dp_push_stacking_context(
             PropertyBinding::Value(LayoutTransform::identity()),
             ReferenceFrameKind::Transform {
                 is_2d_scale_translation: true,
-                should_snap: false,
+                should_snap: params.should_snap,
                 paired_with_perspective: false,
             },
         );
