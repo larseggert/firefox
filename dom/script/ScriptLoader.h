@@ -972,7 +972,7 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
 
   struct PreloadRequestComparator {
     bool Equals(const PreloadInfo& aPi,
-                ScriptLoadRequest* const& aRequest) const {
+                const ScriptLoadRequest* const& aRequest) const {
       return aRequest == aPi.mRequest;
     }
   };
