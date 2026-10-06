@@ -22,12 +22,7 @@ from taskgraph.util.taskcluster import get_artifact_from_index
 from taskgraph.util.yaml import load_yaml
 
 from gecko_taskgraph import TEST_CONFIGS
-from gecko_taskgraph.util.bugbug import (
-    CT_LOW,
-    BugbugTimeoutException,
-    get_confidence_threshold,
-    push_schedules,
-)
+from gecko_taskgraph.util.bugbug import CT_LOW, BugbugTimeoutException, push_schedules
 
 logger = logging.getLogger(__name__)
 here = os.path.abspath(os.path.dirname(__file__))
@@ -559,9 +554,10 @@ class BugbugLoader(DefaultLoader):
             self.timedout = True
             return self.get_manifests(suite, mozinfo)
 
-        threshold = get_confidence_threshold(data, "groups", self.CONFIDENCE_THRESHOLD)
         bugbug_manifests = {
-            m for m, c in data.get("groups", {}).items() if c >= threshold
+            m
+            for m, c in data.get("groups", {}).items()
+            if c >= self.CONFIDENCE_THRESHOLD
         }
 
         manifests["active"] = list(set(manifests["active"]) & bugbug_manifests)
