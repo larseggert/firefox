@@ -421,11 +421,16 @@ const AVAILABLE_SHIMS = [
       "aucklandfc.co.nz",
     ],
     matches: [
-      "*://www.googletagservices.com/tag/js/gpt.js*",
-      "*://pagead2.googlesyndication.com/tag/js/gpt.js*",
-      "*://pagead2.googlesyndication.com/gpt/pubads_impl_*.js*",
-      "*://securepubads.g.doubleclick.net/tag/js/gpt.js*",
-      "*://securepubads.g.doubleclick.net/gpt/pubads_impl_*.js*",
+      {
+        patterns: [
+          "*://www.googletagservices.com/tag/js/gpt.js*",
+          "*://pagead2.googlesyndication.com/tag/js/gpt.js*",
+          "*://pagead2.googlesyndication.com/gpt/pubads_impl_*.js*",
+          "*://securepubads.g.doubleclick.net/tag/js/gpt.js*",
+          "*://securepubads.g.doubleclick.net/gpt/pubads_impl_*.js*",
+        ],
+        types: ["script", "xmlhttprequest"],
+      },
     ],
     onlyIfBlockedByETP: true,
   },
