@@ -920,6 +920,14 @@ export class WallpaperFeed {
         PREF_WALLPAPERS_CUSTOM_WALLPAPER_UUID,
         filename
       );
+      // Before the prefs below, which reach the page as they change. Turning
+      // wallpapers back on would otherwise paint the URL it still holds.
+      this.store.dispatch(
+        ac.BroadcastToContent({
+          type: at.WALLPAPERS_CUSTOM_SET,
+          data: getWallpaperURL(filename, this.libraryEnabled),
+        })
+      );
       this.store.dispatch(
         ac.SetPref("newtabWallpapers.customWallpaper.theme", parsed.theme)
       );
@@ -939,9 +947,6 @@ export class WallpaperFeed {
     } finally {
       this.applyingWallpaper--;
     }
-
-    // Every pref agrees now, so this is the one picture content is told about.
-    this.broadcastAppliedWallpaper();
 
     await this.#sweepWallpaperDirectory();
 
