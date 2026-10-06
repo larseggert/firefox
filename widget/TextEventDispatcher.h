@@ -471,6 +471,13 @@ class TextEventDispatcher final {
   [[nodiscard]] bool IsBatching() const { return !!mBatching; }
 
   /**
+   * Return the number of pending events.
+   */
+  [[nodiscard]] uint32_t GetPendingEventCount() const {
+    return mPendingEvents.Length();
+  }
+
+  /**
    * Start a batch. Until EndBatch() is called, this enqueues any
    * eCompositionStart, eCompositionChange, eCompositionCommit,
    * eCompositionCommitAsIs and eSetSelection event dispatching.
