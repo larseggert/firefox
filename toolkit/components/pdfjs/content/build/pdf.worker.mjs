@@ -20,8 +20,8 @@
  */
 
 /**
- * pdfjsVersion = 6.4.313
- * pdfjsBuild = 35f87e343
+ * pdfjsVersion = 6.5.10
+ * pdfjsBuild = 17bb2442f
  */
 
 ;// ./src/shared/util.js
@@ -64382,7 +64382,7 @@ class WorkerMessageHandler {
       docId,
       apiVersion
     } = docParams;
-    const workerVersion = "6.4.313";
+    const workerVersion = "6.5.10";
     if (apiVersion !== workerVersion) {
       throw new Error(`The API version "${apiVersion}" does not match ` + `the Worker version "${workerVersion}".`);
     }

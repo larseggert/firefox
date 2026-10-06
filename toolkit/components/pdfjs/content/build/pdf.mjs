@@ -20,8 +20,8 @@
  */
 
 /**
- * pdfjsVersion = 6.4.313
- * pdfjsBuild = 35f87e343
+ * pdfjsVersion = 6.5.10
+ * pdfjsBuild = 17bb2442f
  */
 
 ;// ./src/shared/util.js
@@ -2061,7 +2061,7 @@ class FloatingToolbar {
 }
 
 ;// ./src/shared/internal_evt.js
-const INTERNAL_EVT = "4a430a97-4e48-4caf-a158-59352aec4172";
+const INTERNAL_EVT = "69c561af-2641-4e9f-a96c-d349a5f13a03";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -14037,7 +14037,6 @@ class TextLayer {
   #textContentItemsStr = [];
   #textContentSource = null;
   #textDivs = [];
-  #textDivProperties = new WeakMap();
   #transform = null;
   static #ascentCache = new Map();
   static #canvasContexts = new Map();
@@ -14114,32 +14113,19 @@ class TextLayer {
     return this.#capability.promise;
   }
   update({
-    viewport,
-    onBefore = null
+    viewport
   }) {
     const scale = viewport.scale * OutputScale.pixelRatio;
     const rotation = viewport.rotation;
     if (rotation !== this.#rotation) {
-      onBefore?.();
       this.#rotation = rotation;
       setLayerDimensions(this.#rootContainer, {
         rotation
       });
     }
     if (scale !== this.#scale) {
-      onBefore?.();
       this.#scale = scale;
       this.#pixelRatio = OutputScale.pixelRatio;
-      const params = {
-        div: null,
-        properties: null,
-        ctx: TextLayer.#getCtx(this.#lang)
-      };
-      for (const div of this.#textDivs) {
-        params.properties = this.#textDivProperties.get(div);
-        params.div = div;
-        this.#layout(params);
-      }
     }
   }
   cancel() {
@@ -14245,7 +14231,6 @@ class TextLayer {
     if (shouldScaleText) {
       textDivProperties.canvasWidth = style.vertical ? geom.height : geom.width;
     }
-    this.#textDivProperties.set(textDiv, textDivProperties);
     this.#layoutTextParams.div = textDiv;
     this.#layoutTextParams.properties = textDivProperties;
     this.#layout(this.#layoutTextParams);
@@ -14466,7 +14451,7 @@ function getDocument(src = {}) {
   }
   const docParams = {
     docId,
-    apiVersion: "6.4.313",
+    apiVersion: "6.5.10",
     data,
     password,
     disableAutoFetch,
@@ -16105,8 +16090,8 @@ class InternalRenderTask {
     }
   }
 }
-const version = "6.4.313";
-const build = "35f87e343";
+const version = "6.5.10";
+const build = "17bb2442f";
 
 ;// ./src/display/editor/color_picker.js
 
@@ -27137,8 +27122,9 @@ globalThis.pdfjsLib = {
   updateUrlHash: updateUrlHash,
   Util: Util,
   VerbosityLevel: VerbosityLevel,
-  version: version,
+  version: (/* inlined export .version */"6.5.10"),
   XfaLayer: XfaLayer
 };
 
-export { AbortException, AnnotationEditorLayer, AnnotationEditorParamsType, AnnotationEditorType, AnnotationEditorUIManager, AnnotationLayer, AnnotationMode, AnnotationType, CSSConstants, ColorPicker, DOMSVGFactory, DrawLayer, FeatureTest, GlobalWorkerOptions, ImageKind, InvalidPDFException, MathClamp, OPS, OutputScale, PDFDataRangeTransport, PDFDateString, PDFWorker, PasswordException, PasswordResponses, PermissionFlag, PixelsPerInch, RenderingCancelledException, ResponseException, SignatureExtractor, SupportedImageMimeTypes, TextLayer, TextLayerImages, TouchManager, Util, VerbosityLevel, XfaLayer, applyOpacity, build, createValidAbsoluteUrl, fetchData, findContrastColor, getDocument, getFilenameFromUrl, getPdfFilenameFromUrl, getRGB, getRGBA, getUuid, isDataScheme, isPdfFile, isValidExplicitDest, makeArr, makeMap, makeObj, makeSet, noContextMenu, normalizeUnicode, renderRichText, setLayerDimensions, shadow, stopEvent, updateUrlHash, version };
+const __webpack_exports__version = (/* inlined export .version */"6.5.10");
+export { AbortException, AnnotationEditorLayer, AnnotationEditorParamsType, AnnotationEditorType, AnnotationEditorUIManager, AnnotationLayer, AnnotationMode, AnnotationType, CSSConstants, ColorPicker, DOMSVGFactory, DrawLayer, FeatureTest, GlobalWorkerOptions, ImageKind, InvalidPDFException, MathClamp, OPS, OutputScale, PDFDataRangeTransport, PDFDateString, PDFWorker, PasswordException, PasswordResponses, PermissionFlag, PixelsPerInch, RenderingCancelledException, ResponseException, SignatureExtractor, SupportedImageMimeTypes, TextLayer, TextLayerImages, TouchManager, Util, VerbosityLevel, XfaLayer, applyOpacity, build, createValidAbsoluteUrl, fetchData, findContrastColor, getDocument, getFilenameFromUrl, getPdfFilenameFromUrl, getRGB, getRGBA, getUuid, isDataScheme, isPdfFile, isValidExplicitDest, makeArr, makeMap, makeObj, makeSet, noContextMenu, normalizeUnicode, renderRichText, setLayerDimensions, shadow, stopEvent, updateUrlHash, __webpack_exports__version as version };
