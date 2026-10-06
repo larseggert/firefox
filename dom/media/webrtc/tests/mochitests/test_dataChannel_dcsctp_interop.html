@@ -248,6 +248,75 @@
     });
   }
 
+  // Replaces the BUNDLE groups of an offer with one group of the given mids.
+  function rebundle(desc, mids) {
+    let sdp = desc.sdp.replaceAll("a=group:BUNDLE", "a=moop:BUNGLE");
+    sdp = sdp.replace("\r\nm=", `\r\na=group:BUNDLE ${mids.join(" ")}\r\nm=`);
+    return {type: "offer", sdp};
+  }
+
+  async function checkExpiresDuringPacketLoss(impl1, impl2) {
+    const offerer = new RTCPeerConnection({bundlePolicy: "balanced"});
+    const answerer = new RTCPeerConnection();
+    offerer.onicecandidate = e => answerer.addIceCandidate(e.candidate);
+    answerer.onicecandidate = e => offerer.addIceCandidate(e.candidate);
+    offerer.addTransceiver("audio");
+    offerer.addTransceiver("video");
+    const options =
+      {negotiated: true, id: 1, ordered: false, maxPacketLifeTime: 50};
+    const dc1 = await createChannel(offerer, impl1, "test", options);
+    const dc2 = await createChannel(answerer, impl2, "test", options);
+
+    await offerer.setLocalDescription();
+    const [audio, video, data] = offerer.localDescription.sdp.split("\r\n")
+      .filter(l => l.startsWith("a=mid:")).map(l => l.substr(6));
+    await answerer.setRemoteDescription(
+      rebundle(offerer.localDescription, [audio, data]));
+    await answerer.setLocalDescription();
+    await offerer.setRemoteDescription(answerer.localDescription);
+    await channelOpen(dc1);
+    await channelOpen(dc2);
+    await sendRecvMessages(dc1, dc2, ["ping"]);
+    await sendRecvMessages(dc2, dc1, ["pong"]);
+
+    // Make the answerer expect the data channel on the video transport while
+    // the offerer keeps using the audio transport. Both transports stay up,
+    // so the data channel packets are silently dropped in both directions.
+    await answerer.setRemoteDescription(
+      rebundle(await offerer.createOffer(), [video, data]));
+    await answerer.setLocalDescription();
+    // Mainly to keep the offerer's message from racing the answerer's
+    // transport switch.
+    await new Promise(r => setTimeout(r, 200));
+
+    const received1 = [];
+    const received2 = [];
+    dc1.onmessage = e => received1.push(e.data);
+    dc2.onmessage = e => received2.push(e.data);
+    dc1.send("expired");
+    dc2.send("expired");
+    await new Promise(r => setTimeout(r, 100));
+
+    // Put the data channel back on the audio transport, so packets flow again.
+    await offerer.setLocalDescription();
+    await answerer.setRemoteDescription(
+      rebundle(offerer.localDescription, [audio, data]));
+    await answerer.setLocalDescription();
+    await offerer.setRemoteDescription(answerer.localDescription);
+    // Without expiry, the first retransmission would deliver the messages
+    // well within this time.
+    await new Promise(r => setTimeout(r, 2000));
+    isDeeply(received2, [],
+      `Message from the ${impl1} sender should have expired`);
+    isDeeply(received1, [],
+      `Message from the ${impl2} sender should have expired`);
+
+    await sendRecvMessages(dc1, dc2, ["ping"]);
+    await sendRecvMessages(dc2, dc1, ["pong"]);
+    offerer.close();
+    answerer.close();
+  }
+
   async function runTestVariants(func, ...args) {
     for (const [impl1, impl2] of
       [["usrsctp", "usrsctp"], ["dcsctp", "dcsctp"],
@@ -307,6 +376,9 @@
       }
       await runTestVariants(checkSingleChannel, messageArray,
         {maxPacketLifeTime: 1});
+    },
+    async function testTTLExpiresDuringPacketLoss() {
+      await runTestVariants(checkExpiresDuringPacketLoss);
     },
     async function testLargeStreamId() {
       await runTestVariants(checkSingleChannel, "test_message",
