@@ -198,27 +198,7 @@ UrlbarInput {
 ### {searchfox}`UrlbarView.mjs <browser/components/urlbar/content/UrlbarView.mjs>`
 
 Represents the base *View* implementation, communicates with the *Controller*.
-
-```JavaScript
-UrlbarView {
-  // Manage View visibility.
-  open();
-  close();
-  // Invoked when the query starts.
-  onQueryStarted(queryContext);
-  // Invoked when new results are available.
-  onQueryResults(queryContext);
-  // Invoked when the query has been canceled.
-  onQueryCancelled(queryContext);
-  // Invoked when the query is done. This is invoked in any case, even if the
-  // query was canceled earlier.
-  onQueryFinished(queryContext);
-  // Invoked when the view opens.
-  onViewOpen();
-  // Invoked when the view closes.
-  onViewClose();
-}
-```
+{doc}`UrlbarView` documents its API.
 
 ## UrlbarResult
 
