@@ -54,7 +54,7 @@ const { XPCOMUtils } = ChromeUtils.importESModule(
  * @import { WebsiteChipContainer } from "chrome://browser/content/aiwindow/components/website-chip-container.mjs"
  * @import { AIWindow } from "moz-src:///browser/components/aiwindow/ui/components/ai-window/ai-window.mjs"
  * @import { SmartwindowSmartbarGlow } from "moz-src:///browser/components/aiwindow/ui/components/smartwindow-smartbar-glow/smartwindow-smartbar-glow.mjs"
- * @import { WindowMode } from "moz-src:///browser/components/urlbar/content/UrlbarInputBase.mjs"
+ * @import { WindowMode, SearchMode, SearchModeInput } from "moz-src:///browser/components/urlbar/content/UrlbarInputBase.mjs"
  * @import { UrlbarLoadRequest } from "chrome://browser/content/urlbar/UrlbarShared.mjs"
  */
 
@@ -3329,7 +3329,7 @@ ${
    *   Object options
    * @param {PartialSearchEngine} [options.searchEngine]
    *   Search engine to use when the search is using a known alias.
-   * @param {UrlbarShared.SEARCH_MODE_ENTRY} [options.searchModeEntry]
+   * @param {string} [options.searchModeEntry]
    *   If provided, we will record this parameter as the search mode entry point
    *   in Telemetry. Consumers should provide this if they expect their call
    *   to enter search mode.
@@ -3422,11 +3422,10 @@ ${
    * Returns a search mode object if a token should enter search mode when
    * typed. This does not handle engine aliases.
    *
-   * @param {Values<typeof UrlbarShared.RESTRICT_TOKENS>} token
+   * @param {string} token
    *   A restriction token to convert to search mode.
-   * @returns {?object}
-   *   A search mode object. Null if search mode should not be entered. See
-   *   setSearchMode documentation for details.
+   * @returns {?SearchModeInput}
+   *   Null if search mode should not be entered.
    */
   searchModeForToken(token) {
     if (token == UrlbarShared.RESTRICT_TOKENS.SEARCH) {
@@ -3554,9 +3553,8 @@ ${
    *   mode will be returned since it takes precedence.  If this argument is
    *   true, then only confirmed search mode will be returned, or null if
    *   search mode hasn't been confirmed.
-   * @returns {?object}
-   *   A search mode object or null if the browser/window is not in search mode.
-   *   See setSearchMode documentation.
+   * @returns {?SearchMode}
+   *   Null if the browser/window is not in search mode.
    */
   getSearchMode(browser, confirmedOnly = false) {
     let modes = this.#getSearchModesObject(browser);
@@ -3576,21 +3574,8 @@ ${
    * Searchbar: Sets the window-global search mode.
    * If the given browser is selected, then this will also enter search mode.
    *
-   * @param {object} searchMode
-   *   A search mode object.
-   * @param {string} searchMode.engineName
-   *   The name of the search engine to restrict to.
-   * @param {Values<typeof UrlbarShared.RESULT_SOURCE>} searchMode.source
-   *   A result source to restrict to.
-   * @param {string} searchMode.entry
-   *   How search mode was entered. This is recorded in event telemetry. One of
-   *   the values in UrlbarShared.SEARCH_MODE_ENTRY.
-   * @param {boolean} [searchMode.isPreview]
-   *   If true, we will preview search mode. Search mode preview does not record
-   *   telemetry and has slighly different UI behavior. The preview is exited in
-   *   favor of full search mode when a query is executed. False should be
-   *   passed if the caller needs to enter search mode but expects it will not
-   *   be interacted with right away. Defaults to true.
+   * @param {?SearchModeInput} searchMode
+   *   The search mode to enter, or null to exit search mode.
    * @param {MozBrowser} browser
    *   The browser for which to set search mode.
    *   Pass the selected browser for the searchbar.
@@ -3626,25 +3611,34 @@ ${
       isPreview = true,
     } = searchMode || {};
 
-    searchMode = null;
+    if (!UrlbarShared.SEARCH_MODE_ENTRY.has(entry)) {
+      // If we see this value showing up in telemetry, we should review
+      // search mode's entry points.
+      entry = "other";
+    }
+
+    /** @type {?SearchMode} */
+    let newSearchMode = null;
 
     if (engineName) {
-      searchMode = {
+      newSearchMode = {
         engineName,
         isGeneralPurposeEngine: engine.isGeneralPurposeEngine,
+        entry,
+        isPreview,
       };
       if (source) {
-        searchMode.source = source;
-      } else if (searchMode.isGeneralPurposeEngine) {
+        newSearchMode.source = source;
+      } else if (newSearchMode.isGeneralPurposeEngine) {
         // History results for general-purpose search engines are often not
         // useful, so we hide them in search mode. See bug 1658646 for
         // discussion.
-        searchMode.source = UrlbarShared.RESULT_SOURCE.SEARCH;
+        newSearchMode.source = UrlbarShared.RESULT_SOURCE.SEARCH;
       }
     } else if (source) {
       let sourceName = UrlbarShared.getResultSourceName(source);
       if (sourceName) {
-        searchMode = { source };
+        newSearchMode = { source, entry, isPreview };
       } else {
         console.error(`Unrecognized source: ${source}`);
       }
@@ -3652,41 +3646,31 @@ ${
 
     let modes = this.#getSearchModesObject(browser);
 
-    if (searchMode) {
-      searchMode.isPreview = isPreview;
-      if (UrlbarShared.SEARCH_MODE_ENTRY.has(entry)) {
-        searchMode.entry = entry;
-      } else {
-        // If we see this value showing up in telemetry, we should review
-        // search mode's entry points.
-        searchMode.entry = "other";
-      }
-
-      if (!searchMode.isPreview) {
-        modes.confirmed = searchMode;
+    if (newSearchMode) {
+      if (!newSearchMode.isPreview) {
+        modes.confirmed = newSearchMode;
         delete modes.preview;
       } else {
-        modes.preview = searchMode;
+        modes.preview = newSearchMode;
+      }
+      if (restrictType) {
+        newSearchMode.restrictType = restrictType;
       }
     } else {
       delete modes.preview;
       delete modes.confirmed;
     }
 
-    if (restrictType) {
-      searchMode.restrictType = restrictType;
-    }
-
     // Enter search mode if the browser is selected.
     if (browser == this.window.gBrowser.selectedBrowser) {
-      this._updateSearchModeUI(searchMode);
-      if (searchMode) {
+      this._updateSearchModeUI(newSearchMode);
+      if (newSearchMode) {
         // Set userTypedValue to the query string so that it's properly restored
         // when switching back to the current tab and across sessions.
         this.userTypedValue = this.untrimmedValue;
         this.valueIsTyped = true;
-        if (!searchMode.isPreview && !areSearchModesSame) {
-          this.parentController.recordSearchMode(searchMode);
+        if (!newSearchMode.isPreview && !areSearchModesSame) {
+          this.parentController.recordSearchMode(newSearchMode);
         }
       }
     }
@@ -3697,8 +3681,8 @@ ${
   /**
    * @typedef {object} SearchModesObject
    *
-   * @property {object} [preview] preview search mode
-   * @property {object} [confirmed] confirmed search mode
+   * @property {SearchMode} [preview] preview search mode
+   * @property {SearchMode} [confirmed] confirmed search mode
    */
 
   /**
@@ -3984,6 +3968,7 @@ ${
    */
   #searchModeApplied = Promise.resolve();
 
+  /** @returns {?SearchMode} */
   get searchMode() {
     if (this.#isSmartbarMode) {
       return null;
@@ -3995,7 +3980,7 @@ ${
     return this.getSearchMode(this.window.gBrowser.selectedBrowser);
   }
 
-  set searchMode(searchMode) {
+  set searchMode(/** @type {?SearchModeInput} */ searchMode) {
     if (this.#isSmartbarMode) {
       this.#searchModeApplied = Promise.resolve();
       return;
@@ -5689,8 +5674,8 @@ ${
    * @param {string} [entry]
    *   If provided, this will be recorded as the entry point into search mode.
    *   See setSearchMode() documentation for details.
-   * @returns {object} A search mode object. Null if search mode should not be
-   *   entered. See setSearchMode documentation for details.
+   * @returns {?SearchModeInput}
+   *   The search mode to enter, or null if search mode should not be entered.
    */
   _searchModeForResult(result, entry = null) {
     // Search mode is determined by the result's keyword or engine.
@@ -5785,8 +5770,8 @@ ${
   /**
    * Updates the UI so that search mode is either entered or exited.
    *
-   * @param {object} searchMode
-   *   See setSearchMode documentation.  If null, then search mode is exited.
+   * @param {?SearchMode} searchMode
+   *   The search mode to display, or null to exit search mode.
    */
   _updateSearchModeUI(searchMode) {
     let { engineName, source, isGeneralPurposeEngine } = searchMode || {};
