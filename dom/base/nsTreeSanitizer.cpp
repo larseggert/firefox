@@ -1009,9 +1009,8 @@ bool nsTreeSanitizer::MustFlatten(int32_t aNamespace, nsAtom* aLocal) {
       return true;
     }
     if (mDropForms &&
-        (nsGkAtoms::form == aLocal || nsGkAtoms::label == aLocal ||
-         nsGkAtoms::option == aLocal || nsGkAtoms::optgroup == aLocal ||
-         nsGkAtoms::output == aLocal)) {
+        (nsGkAtoms::form == aLocal || nsGkAtoms::input == aLocal ||
+         nsGkAtoms::option == aLocal || nsGkAtoms::optgroup == aLocal)) {
       return true;
     }
     if (mFullDocument &&
@@ -1065,7 +1064,6 @@ bool nsTreeSanitizer::MustPrune(int32_t aNamespace, nsAtom* aLocal,
     }
     if (mDropForms &&
         (nsGkAtoms::select == aLocal || nsGkAtoms::button == aLocal ||
-         nsGkAtoms::input == aLocal || nsGkAtoms::textarea == aLocal ||
          nsGkAtoms::datalist == aLocal)) {
       return true;
     }
