@@ -537,7 +537,6 @@ media-gpu:
                         "android" in task["test-platform"]
                         && "hw" in task["test-platform"]
                     )
-                    || "linux1804" in task["test-platform"]
                 '
     merge:
         worker:

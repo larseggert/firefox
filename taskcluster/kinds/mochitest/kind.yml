@@ -1221,10 +1221,7 @@ tasks:
                         default: default
         worker-type:
             by-variant:
-                media-gpu:
-                    by-test-platform:
-                        linux.*: t-linux-talos-1804
-                        default: default
+                media-gpu: default
                 default:
                     by-test-platform:
                         windows11.*-asan/.*: win11-64-25h2-large

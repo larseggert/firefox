@@ -809,7 +809,7 @@ workers:
             implementation: docker-worker
             os: linux
             worker-type: 't-linux-docker-kvm'
-        t-linux-(talos|netperf)(-1804|-2404)?:
+        t-linux-(talos|netperf)-2404:
             provisioner: releng-hardware
             implementation: generic-worker
             os: linux
