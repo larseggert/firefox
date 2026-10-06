@@ -404,13 +404,15 @@ class LoadedScript final : public nsISupports {
 
   // ---- Methods shared between both consumers ----
 
-  size_t GetSRILength() const {
+  size_t GetSerializedStencilOffset() const {
     MOZ_ASSERT(CanHaveSRIOnly() || CanHaveSRIAndSerializedStencil());
     return mSerializedStencilOffset;
   }
-  void SetSRILength(size_t sriLength) {
+
+  void SetAlignedSRILength(size_t aAlignedSRILength) {
     MOZ_ASSERT(CanHaveSRIOnly() || CanHaveSRIAndSerializedStencil());
-    mSerializedStencilOffset = AlignTranscodingBytecodeOffset(sriLength);
+    MOZ_ASSERT(JS::IsTranscodingBytecodeOffsetAligned(aAlignedSRILength));
+    mSerializedStencilOffset = aAlignedSRILength;
   }
 
   bool HasNoSRIOrSRIAndSerializedStencil() const {
@@ -698,9 +700,12 @@ class LoadedScriptDelegate {
     GetLoadedScript()->RestoreSRIAndSerializedStencil(std::move(aBuffer));
   }
 
-  size_t GetSRILength() const { return GetLoadedScript()->GetSRILength(); }
-  void SetSRILength(size_t sriLength) {
-    GetLoadedScript()->SetSRILength(sriLength);
+  size_t GetSerializedStencilOffset() const {
+    return GetLoadedScript()->GetSerializedStencilOffset();
+  }
+
+  void SetAlignedSRILength(size_t aAlignedSRILength) {
+    GetLoadedScript()->SetAlignedSRILength(aAlignedSRILength);
   }
 
   void SetTookLongInPreviousRuns() {
