@@ -1916,10 +1916,6 @@ topsites:
         description: >
           The name of the advertiser of the tile
         type: string
-      tile_id: &tile_id
-        description: >
-          The tile id of the advertiser provided by Contile. Like `74357`.
-        type: quantity
       newtab_visit_id: *newtab_visit_id
       is_sponsored: &is_sponsored
         description: Whether the topsite tile was sponsored.
@@ -1980,7 +1976,6 @@ topsites:
     expires: never
     extra_keys:
       advertiser_name: *advertiser_name
-      tile_id: *tile_id
       newtab_visit_id: *newtab_visit_id
       is_sponsored: *is_sponsored
       position: *topsite_position
@@ -2097,7 +2092,6 @@ topsites:
     expires: never
     extra_keys:
       advertiser_name: *advertiser_name
-      tile_id: *tile_id
       newtab_visit_id: *newtab_visit_id
       position: *topsite_position
     send_in_pings:
@@ -2127,7 +2121,6 @@ topsites:
     expires: never
     extra_keys:
       advertiser_name: *advertiser_name
-      tile_id: *tile_id
       newtab_visit_id: *newtab_visit_id
       is_sponsored: *is_sponsored
       position: *topsite_position
@@ -2392,13 +2385,6 @@ pocket:
       position: &pocket_position
         description: The position (0-index) of the pocket tile.
         type: quantity
-      tile_id: &pocket_tile_id
-        description: >
-          A content identifier.
-          For organic Pocket recommendations it is an opaque id produced by
-          Pocket's recommendation systems.
-          For sponsored Pocket content it is Kevel's "ad ID".
-        type: quantity
       scheduled_corpus_item_id: &scheduled_corpus_item_id
         description: >
           A content identifier.
@@ -2480,7 +2466,6 @@ pocket:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
       received_rank: *received_rank
@@ -2525,7 +2510,6 @@ pocket:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
       received_rank: *received_rank
@@ -2574,7 +2558,6 @@ pocket:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
       received_rank: *received_rank
@@ -2869,7 +2852,13 @@ newtab_content:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      tile_id: *pocket_tile_id
+      tile_id: &pocket_tile_id
+        description: >
+          A content identifier.
+          For organic Pocket recommendations it is an opaque id produced by
+          Pocket's recommendation systems.
+          For sponsored Pocket content it is Kevel's "ad ID".
+        type: quantity
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
       received_rank: *received_rank
@@ -3221,7 +3210,10 @@ newtab_content:
     expires: never
     extra_keys:
       advertiser_name: *advertiser_name
-      tile_id: *tile_id
+      tile_id: &tile_id
+        description: >
+          The tile id of the advertiser provided by Contile. Like `74357`.
+        type: quantity
       is_sponsored: *is_sponsored
       position: *topsite_position
       visible_topsites: *visible_topsites
