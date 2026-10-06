@@ -124,6 +124,10 @@ browser {
   }
 }
 
+#message-container {
+  padding: var(--space-xsmall);
+}
+
 #multi-stage-message-root {
   background-color: var(--background-color-overlay);
   display: flex;

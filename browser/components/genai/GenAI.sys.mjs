@@ -20,7 +20,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   NimbusFeatures: "resource://nimbus/ExperimentAPI.sys.mjs",
   PrefUtils: "moz-src:///toolkit/modules/PrefUtils.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
-  ReaderMode: "moz-src:///toolkit/components/reader/ReaderMode.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   SidebarManager:
     "moz-src:///browser/components/sidebar/SidebarManager.sys.mjs",
@@ -935,7 +934,7 @@ export const GenAI = {
 
   /**
    * Build the prompt context, using the current selection when present and
-   * otherwise the page URL.
+   * otherwise the page content.
    *
    * @param {MozBrowser} browser browser for the context's page
    * @param {object | null} selectionInfo selection details, if any
@@ -947,8 +946,8 @@ export const GenAI = {
       selection: selectionInfo?.fullText ?? "",
     };
     if (lazy.chatPage && !context.selection) {
-      // Get page URL for prompts when no selection
-      this.addPageContext(browser, context);
+      // Get page content for prompts when no selection
+      await this.addPageContext(browser, context);
     }
     return context;
   },
@@ -1010,12 +1009,12 @@ export const GenAI = {
         if (isSmartWindow && promptObj.id === "quiz") {
           return null;
         }
-        const { contentType, pageUrl } = context;
+        const { contentType, selection } = context;
         const item = addItem();
         item.setAttribute("label", promptObj.label);
 
         // Disabled menu if page is invalid
-        if (contentType === "page" && !pageUrl) {
+        if (contentType === "page" && !selection) {
           item.disabled = true;
         }
         if (promptObj.badge && lazy.chatPageMenuBadge) {
@@ -1161,8 +1160,8 @@ export const GenAI = {
     } else {
       item.removeAttribute("badge");
     }
-    // Disabled when the page has no URL the provider can summarize.
-    item.disabled = context.contentType === "page" && !context.pageUrl;
+    // Disabled when the page has no usable content to summarize.
+    item.disabled = context.contentType === "page" && !context.selection;
     this.showItem(item, true);
 
     // The item is reused across shows, so refresh the prompt/context it acts on
@@ -1236,14 +1235,12 @@ export const GenAI = {
     if (context.contentType == "page") {
       for (const promptObj of toFormat) {
         if (promptObj.id == "summarize") {
-          const [badge, label, value] = await lazy.l10n.formatValues([
+          const [badge, label] = await lazy.l10n.formatValues([
             "genai-menu-new-badge",
             "genai-menu-summarize-page",
-            { id: "genai-prompts-summarize-page", args: { url: "%pageUrl%" } },
           ]);
           promptObj.badge = badge;
           promptObj.label = label;
-          promptObj.value = value;
         }
       }
     }
@@ -1315,11 +1312,8 @@ export const GenAI = {
    */
   buildChatPrompt(item, context = {}, document = null) {
     // Combine prompt prefix with the item then replace placeholders from the
-    // original prompt (and not from context). Page prompts skip the selection
-    // prefix as they only reference the page URL.
-    const prefix = context.contentType == "page" ? "" : this.chatPromptPrefix;
-    const template = prefix + (item.value || item.label);
-    const prompt = template.replace(
+    // original prompt (and not from context)
+    return (this.chatPromptPrefix + (item.value || item.label)).replace(
       // Handle %placeholder% as key|options
       /\%(\w+)(?:\|([^%]+))?\%/g,
       (placeholder, key, options) => {
@@ -1328,13 +1322,9 @@ export const GenAI = {
         const value = context[key];
         let sanitized;
 
-        // pageUrl is an http(s) URI spec that is already percent-encoded, and
-        // sanitizing it as HTML would break the "&" in the query.
-        if (key == "pageUrl" && value !== undefined) {
-          sanitized = value;
-        } else if (value !== undefined) {
-          // Sanitize and truncate context values before sending prompt
-          // otherwise return placeholder
+        // Sanitize and truncate context values before sending prompt
+        // otherwise return placeholder
+        if (value !== undefined) {
           const contextElement = document.createElement("div");
           sanitized = lazy.parserUtils.parseFragment(
             value,
@@ -1362,50 +1352,27 @@ export const GenAI = {
         return `<${key}>${sanitized}</${key}>`;
       }
     );
-    if (
-      context.contentType == "page" &&
-      context.pageUrl &&
-      !/%pageUrl(?:\|[^%]+)?%/.test(template)
-    ) {
-      return `${prompt}\n\n<pageUrl>${context.pageUrl}</pageUrl>`;
-    }
-    return prompt;
   },
 
   /**
-   * Get the page URL to send with page prompts. Only http(s) pages get a URL
-   * as providers can't access other schemes.
+   * Update context with page content.
    *
-   * @param {MozBrowser} browser for the tab to get the URL
-   * @returns {string | undefined} URL without credentials or ref
-   */
-  getPageUrl(browser) {
-    let uri = browser?.currentURI;
-    const readerOriginalUrl = uri && lazy.ReaderMode.getOriginalUrl(uri.spec);
-    if (readerOriginalUrl) {
-      try {
-        uri = Services.io.newURI(readerOriginalUrl);
-      } catch {
-        return undefined;
-      }
-    }
-    if (uri?.schemeIs("http") || uri?.schemeIs("https")) {
-      return Services.io.createExposableURI(uri).specIgnoringRef;
-    }
-    return undefined;
-  },
-
-  /**
-   * Update context with the page URL instead of the page content, so that no
-   * page-controlled text is placed in the prompt.
-   *
-   * @param {MozBrowser} browser for the tab to get the URL
+   * @param {MozBrowser} browser for the tab to get content
    * @param {object} context optional existing context to update
    * @returns {object} updated context
    */
-  addPageContext(browser, context = {}) {
+  async addPageContext(browser, context = {}) {
     context.contentType = "page";
-    context.pageUrl = this.getPageUrl(browser);
+    try {
+      Object.assign(
+        context,
+        await browser?.browsingContext?.currentWindowContext
+          .getActor("GenAI")
+          .sendQuery("GetReadableText")
+      );
+    } catch (ex) {
+      console.warn("Failed to get page content", ex);
+    }
     return context;
   },
 
@@ -1417,16 +1384,12 @@ export const GenAI = {
    */
   async summarizeCurrentPage(window, entry) {
     const browser = window.gBrowser.selectedBrowser;
-    const context = this.addPageContext(browser);
-    if (!context.pageUrl) {
-      return;
-    }
     await this.addAskChatItems(
       browser,
-      context,
-      (promptObj, context2) => {
+      await this.addPageContext(browser),
+      (promptObj, context) => {
         if (promptObj.id === "summarize") {
-          this.handleAskChat(promptObj, context2);
+          this.handleAskChat(promptObj, context);
         }
       },
       entry
@@ -1531,6 +1494,8 @@ export const GenAI = {
     if (isPageSummarizeRequest) {
       Glean.genaiChatbot.summarizePage.record({
         provider: this.getProviderId(),
+        reader_mode: context.readerMode,
+        selection: context.selection?.length ?? 0,
         source: context.entry,
       });
     }
@@ -1551,13 +1516,13 @@ export const GenAI = {
       content_type: context.contentType,
       prompt: promptObj.id ?? "custom",
       provider: this.getProviderId(),
+      reader_mode: context.readerMode,
       selection: context.selection?.length ?? 0,
       smart_window: lazy.AIWindow.isAIWindowActive(win),
       source: context.entry,
     });
 
-    // In Smart Window, send selected text or page URL with prompt label to the
-    // assistant
+    // In Smart Window, send selected text with prompt label to the assistant
     if (lazy.AIWindow.isAIWindowActive(win)) {
       if (!lazy.AIWindowUI.isSidebarOpen(win)) {
         const activeConversation = lazy.AIWindow.getActiveConversation(win);
@@ -1567,11 +1532,9 @@ export const GenAI = {
       if (aiWindowEl) {
         // TODO (Bug 2048401): Revisit prompt construction once Smart Window prompt definitions
         // are finalized via Remote Settings.
-        const content =
-          context.contentType == "page" ? context.pageUrl : context.selection;
         const text = promptObj.label
-          ? `${promptObj.label}: ${content}`
-          : `${promptObj.value}\n\n${content}`;
+          ? `${promptObj.label}: ${context.selection}`
+          : `${promptObj.value}\n\n${context.selection}`;
         aiWindowEl.submitChatMessage({ text, submitType: "shortcuts" });
       }
       return;
@@ -1638,6 +1601,15 @@ export const GenAI = {
         console.error("Failed to get chat sidebar browser");
         return;
       }
+      const showWarning =
+        isPageSummarizeRequest && this.isContextTooLong(context.selection);
+
+      await SidebarController.browser.contentWindow.onNewPrompt({
+        show: showWarning,
+        ...(showWarning
+          ? { contextLength: context.selection?.length ?? 0 }
+          : {}),
+      });
     } else {
       browser = context.window.gBrowser.addTab("", options).linkedBrowser;
     }
