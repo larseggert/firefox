@@ -66,6 +66,9 @@ enum class MediaCodecsSupport : int {
 // Enumset containing per-codec SW/HW support
 using MediaCodecsSupported = EnumSet<MediaCodecsSupport, uint64_t>;
 
+// Whether the platform supports a DRM scheme. Unknown until it is queried.
+enum class DrmSchemeSupport : uint8_t { Unknown, Unsupported, Supported };
+
 // All decode related entries, including the lack of HW extension entries.
 inline constexpr MediaCodecsSupported kMediaCodecsDecodeMask = {
 #define X(name)                                                             \
