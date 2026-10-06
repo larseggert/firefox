@@ -136,7 +136,7 @@
 
     if (options &&
          (options.maxRetransmits !== undefined ||
-          options.maxPacketLifetime !== undefined)) {
+          options.maxPacketLifeTime !== undefined)) {
       // Realistically, what can we check here? Packet loss should be rare, but
       // with lots of messages it can happen. Maybe just sanity check that at
       // least one got through, and that everything we observed could be found
@@ -162,7 +162,7 @@
 
     if (options &&
       (options.maxRetransmits !== undefined ||
-        options.maxPacketLifetime !== undefined)) {
+        options.maxPacketLifeTime !== undefined)) {
       observedMsgs = await sendRecvMessagesUnreliable(sender, receiver, msgs);
     } else {
       observedMsgs = await sendRecvMessages(sender, receiver, msgs);
@@ -290,7 +290,7 @@
     },
     async function testNoTTL() {
       await runTestVariants(checkSingleChannel, "test_message",
-        {maxPacketLifetime: 0});
+        {maxPacketLifeTime: 0});
     },
     async function test1Retransmit() {
       const messageArray = [];
@@ -306,7 +306,7 @@
         messageArray.push(`test_${i}`);
       }
       await runTestVariants(checkSingleChannel, messageArray,
-        {maxPacketLifetime: 1});
+        {maxPacketLifeTime: 1});
     },
     async function testLargeStreamId() {
       await runTestVariants(checkSingleChannel, "test_message",
@@ -329,8 +329,8 @@
     async function testMixedReliability() {
       await runTestVariants(checkMultiChannel,
         ["test_message1", "test_message2"],
-        [{maxRetransmits: 0}, {maxRetransmits: 1}, {maxPacketLifetime: 0},
-         {maxPacketLifetime: 1}, {}]);
+        [{maxRetransmits: 0}, {maxRetransmits: 1}, {maxPacketLifeTime: 0},
+         {maxPacketLifeTime: 1}, {}]);
     },
     async function testMixedOrdered() {
       await runTestVariants(checkMultiChannel,
