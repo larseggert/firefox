@@ -422,72 +422,68 @@ class DefaultLoader(BaseManifestLoader):
         )
 
     @functools.cache
+    def _get_all_manifests(self, suite):
+        return frozenset(
+            chunk_by_runtime.get_manifest(t) for t in self.get_tests(suite)
+        )
+
+    @functools.cache
+    def _get_wpt_manifests(self, suite, subsuite, mozinfo_tags):
+        manifests = set()
+
+        # Subsuites only partition the (very large) testharness suite. The
+        # reftest/crashtest/wdspec/print-reftest suites are not split, so
+        # they keep every manifest; excluding subsuite paths here would drop
+        # e.g. canvas reftests and webgpu crashtests from every job, since
+        # the subsuite jobs only run testharness (see bug 2017833). Subsuites
+        # whose tests can't run in these jobs (e.g. webgpu CTS reftests, which
+        # need the webgpu job's --timeout-multiplier) are excluded at runtime
+        # via --exclude-tag in kind.yml instead.
+        if suite != "web-platform-tests":
+            for t in self.get_tests(suite):
+                if mozinfo_tags and not any(
+                    x in t.get("tags", []) for x in mozinfo_tags
+                ):
+                    continue
+                manifests.add(t["manifest"])
+            return manifests
+
+        if subsuite:
+            prefixes = tuple(
+                prefix
+                for path in WPT_SUBSUITES[subsuite]
+                for prefix in ("/" + path, "/_mozilla/" + path)
+            )
+        else:
+            prefixes = tuple(
+                prefix
+                for paths in WPT_SUBSUITES.values()
+                for path in paths
+                for prefix in ("/" + path, "/_mozilla/" + path)
+            )
+
+        for t in self.get_tests(suite):
+            if mozinfo_tags and not any(x in t.get("tags", []) for x in mozinfo_tags):
+                continue
+
+            manifest = t["manifest"]
+            if manifest.startswith(prefixes) == bool(subsuite):
+                manifests.add(manifest)
+        return manifests
+
+    @functools.cache
     def get_manifests(self, suite, frozen_mozinfo):
         mozinfo = dict(frozen_mozinfo)
-
-        tests = self.get_tests(suite)
 
         mozinfo_tags = json.loads(mozinfo.get("tag", "[]"))
 
         if "web-platform-tests" in suite:
-            manifests = set()
-
-            # Subsuites only partition the (very large) testharness suite. The
-            # reftest/crashtest/wdspec/print-reftest suites are not split, so
-            # they keep every manifest; excluding subsuite paths here would drop
-            # e.g. canvas reftests and webgpu crashtests from every job, since
-            # the subsuite jobs only run testharness (see bug 2017833). Subsuites
-            # whose tests can't run in these jobs (e.g. webgpu CTS reftests, which
-            # need the webgpu job's --timeout-multiplier) are excluded at runtime
-            # via --exclude-tag in kind.yml instead.
-            if suite != "web-platform-tests":
-                for t in tests:
-                    if mozinfo_tags and not any(
-                        x in t.get("tags", []) for x in mozinfo_tags
-                    ):
-                        continue
-                    manifests.add(t["manifest"])
-                return {
-                    "active": list(manifests),
-                    "skipped": [],
-                    "other_dirs": {},
-                }
-
-            subsuite = next((x for x in WPT_SUBSUITES.keys() if mozinfo.get(x)), None)
-
-            if subsuite:
-                subsuite_paths = WPT_SUBSUITES[subsuite]
-                for t in tests:
-                    if mozinfo_tags and not any(
-                        x in t.get("tags", []) for x in mozinfo_tags
-                    ):
-                        continue
-
-                    manifest = t["manifest"]
-                    if any(
-                        manifest.startswith("/" + x)
-                        or manifest.startswith("/_mozilla/" + x)
-                        for x in subsuite_paths
-                    ):
-                        manifests.add(manifest)
-            else:
-                all_subsuite_paths = [
-                    path for paths in WPT_SUBSUITES.values() for path in paths
-                ]
-                for t in tests:
-                    if mozinfo_tags and not any(
-                        x in t.get("tags", []) for x in mozinfo_tags
-                    ):
-                        continue
-
-                    manifest = t["manifest"]
-                    if not any(
-                        manifest.startswith("/" + path)
-                        or manifest.startswith("/_mozilla/" + path)
-                        for path in all_subsuite_paths
-                    ):
-                        manifests.add(manifest)
-
+            subsuite = None
+            if suite == "web-platform-tests":
+                subsuite = next(
+                    (x for x in WPT_SUBSUITES.keys() if mozinfo.get(x)), None
+                )
+            manifests = self._get_wpt_manifests(suite, subsuite, tuple(mozinfo_tags))
             return {
                 "active": list(manifests),
                 "skipped": [],
@@ -517,15 +513,14 @@ class DefaultLoader(BaseManifestLoader):
             filters.extend([tags([x]) for x in mozinfo_tags])
 
         m = TestManifest()
-        m.tests = tests
+        m.tests = self.get_tests(suite)
         active_tests = m.active_tests(
             disabled=False, exists=False, filters=filters, **mozinfo
         )
 
         active_manifests = {chunk_by_runtime.get_manifest(t) for t in active_tests}
 
-        skipped_manifests = {chunk_by_runtime.get_manifest(t) for t in tests}
-        skipped_manifests.difference_update(active_manifests)
+        skipped_manifests = self._get_all_manifests(suite) - active_manifests
         return {
             "active": list(active_manifests),
             "skipped": list(skipped_manifests),
