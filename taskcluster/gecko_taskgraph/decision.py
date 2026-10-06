@@ -161,7 +161,7 @@ PER_PROJECT_PARAMETERS = {
         "release_type": "nightly",
     },
     "staging-firefox": {
-        "target_tasks_method": "default",
+        "target_tasks_method": "firefox_pull_request_tasks",
     },
     # the default parameters are used for projects that do not match above.
     "default": {
