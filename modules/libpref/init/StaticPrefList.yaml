@@ -2114,6 +2114,13 @@
   value: false
   mirror: always
 
+# Gates about:smartpage, the viewer for pages Firefox generated on the user's
+# request. Read from C++ on the load and history paths, so it is static.
+- name: browser.smartwindow.aitab.enabled
+  type: bool
+  value: false
+  mirror: always
+
 # Whether to show an about:blank window as early as possible for quick startup feedback.
 # Held to nightly on Linux due to bug 1450626.
 # Disabled on Mac because the bouncing dock icon already provides feedback.

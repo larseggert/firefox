@@ -2439,9 +2439,6 @@ pref("browser.smartwindow.mistralRelease", true);
 // Semantic distance threshold for Smart Window history search only.
 pref("places.semanticHistory.smartwindow.distanceThreshold", "0.6");
 
-// Smart Window: AITab
-pref("browser.smartwindow.aitab.enabled", false);
-
 // Smart Window: Auto Tab Grouping (bug 2054500).
 pref("browser.smartwindow.autoTabGrouping.enabled", true);
 pref("browser.smartwindow.autoTabGrouping.preloadModels", true);
