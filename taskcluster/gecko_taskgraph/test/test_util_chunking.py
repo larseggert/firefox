@@ -83,10 +83,8 @@ def mock_manifest_runtimes_file():
 
     with patch.object(chunking, "_load_manifest_runtimes_data", return_value=mock_data):
         chunking.get_runtimes.cache_clear()
-        chunking._included_runtimes.cache_clear()
         yield
     chunking.get_runtimes.cache_clear()
-    chunking._included_runtimes.cache_clear()
 
 
 @pytest.fixture(scope="module")
@@ -303,7 +301,6 @@ def test_get_runtimes(platform, suite, mock_manifest_runtimes_file):
     """Tests that runtime information is returned for known good configurations."""
     # Clear get_runtimes cache so each parametrized test gets fresh results
     chunking.get_runtimes.cache_clear()
-    chunking._included_runtimes.cache_clear()
 
     result = chunking.get_runtimes(platform, suite)
     assert isinstance(result, dict)
