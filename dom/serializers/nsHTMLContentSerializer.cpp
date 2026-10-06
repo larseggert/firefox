@@ -10,6 +10,7 @@
 
 #include "nsHTMLContentSerializer.h"
 
+#include "mozilla/IntegerRange.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/Element.h"
 #include "nsAttrName.h"
@@ -51,13 +52,15 @@ bool nsHTMLContentSerializer::SerializeHTMLAttributes(Element* aElement,
                                                       nsAString& aStr) {
   MaybeSerializeIsValue(aElement, aStr);
 
-  int32_t count = aElement->GetAttrCount();
-  if (!count) return true;
+  const uint32_t count = aElement->GetAttrCount();
+  if (!count) {
+    return true;
+  }
 
   nsresult rv;
   nsAutoString valueStr;
 
-  for (int32_t index = 0; index < count; index++) {
+  for (const uint32_t index : IntegerRange(count)) {
     const nsAttrName* name = aElement->GetAttrNameAt(index);
     int32_t namespaceID = name->NamespaceID();
     nsAtom* attrName = name->LocalName();
