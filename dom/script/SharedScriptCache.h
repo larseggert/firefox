@@ -12,7 +12,6 @@
 #include "js/loader/ScriptKind.h"            // JS::loader::ScriptKind
 #include "js/loader/ScriptLoadRequest.h"     // JS::loader::ScriptLoadRequest
 #include "mozilla/CORSMode.h"                // mozilla::CORSMode
-#include "mozilla/Encoding.h"                // mozilla::Encoding
 #include "mozilla/HashTable.h"               // mozilla::HashMap
 #include "mozilla/MemoryReporting.h"         // MallocSizeOf
 #include "mozilla/Mutex.h"                   // Mutex, GUARDED_BY, MutexAutoLock
@@ -47,7 +46,7 @@ class ScriptHashKey : public PLDHashEntryHdr {
         mKind(aKey.mKind),
         mCORSMode(aKey.mCORSMode),
         mReferrerPolicy(aKey.mReferrerPolicy),
-        mClassicScriptHintEncoding(aKey.mClassicScriptHintEncoding) {
+        mHintCharset(aKey.mHintCharset) {
     MOZ_COUNT_CTOR(ScriptHashKey);
   }
 
@@ -61,7 +60,7 @@ class ScriptHashKey : public PLDHashEntryHdr {
         mKind(std::move(aKey.mKind)),
         mCORSMode(std::move(aKey.mCORSMode)),
         mReferrerPolicy(std::move(aKey.mReferrerPolicy)),
-        mClassicScriptHintEncoding(std::move(aKey.mClassicScriptHintEncoding)) {
+        mHintCharset(std::move(aKey.mHintCharset)) {
     MOZ_COUNT_CTOR(ScriptHashKey);
   }
 
@@ -74,14 +73,15 @@ class ScriptHashKey : public PLDHashEntryHdr {
 
   // Create a key which can be used only for lookup.
   // aKey is the result of ToStringForLookup.
-  static Maybe<ScriptHashKey> FromStringsForLookup(const nsACString& aKey,
-                                                   const nsACString& aURI);
+  static Maybe<ScriptHashKey> FromStringsForLookup(
+      const nsACString& aKey, const nsACString& aURI,
+      const nsACString& aHintCharset);
 
  private:
   ScriptHashKey(nsIURI* aURI, nsIPrincipal* aPartitionPrincipal,
                 JS::loader::ScriptKind aKind, CORSMode aCORSMode,
                 mozilla::dom::ReferrerPolicy aReferrerPolicy,
-                const mozilla::Encoding* aClassicScriptHintEncoding)
+                const nsString& aHintCharset)
       : PLDHashEntryHdr(),
         mURI(aURI),
         mPartitionPrincipal(aPartitionPrincipal),
@@ -89,7 +89,7 @@ class ScriptHashKey : public PLDHashEntryHdr {
         mKind(aKind),
         mCORSMode(aCORSMode),
         mReferrerPolicy(aReferrerPolicy),
-        mClassicScriptHintEncoding(aClassicScriptHintEncoding) {
+        mHintCharset(aHintCharset) {
     MOZ_COUNT_CTOR(ScriptHashKey);
   }
 
@@ -144,10 +144,9 @@ class ScriptHashKey : public PLDHashEntryHdr {
   const CORSMode mCORSMode;
   const mozilla::dom::ReferrerPolicy mReferrerPolicy;
 
-  // The charset attribute of the script element or the link element.
-  // This can be nullptr if there's no charset attribute, or the charset
-  // attribute has no effect (modules etc).
-  const mozilla::Encoding* mClassicScriptHintEncoding = nullptr;
+  // charset attribute for classic script.
+  // module always use UTF-8.
+  nsString mHintCharset;
 };
 
 class ScriptLoadData final
@@ -267,6 +266,7 @@ class SharedScriptCache final
 
   static bool GetCachedScriptSource(JSContext* aCx, const nsACString& aKey,
                                     const nsACString& aURI,
+                                    const nsACString& aHintCharset,
                                     JS::MutableHandle<JS::Value> aRetval);
 
   static void PrepareForLastCC();
