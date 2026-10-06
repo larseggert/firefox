@@ -5,6 +5,7 @@
 import { AITabStore } from "moz-src:///browser/components/aiwindow/ui/modules/AITabStore.sys.mjs";
 import { ConversationStore } from "moz-src:///browser/components/aiwindow/ui/modules/ConversationStore.sys.mjs";
 import { getSmartPageName } from "chrome://browser/content/aiwindow/modules/TrustedInternalURLs.mjs";
+import { A2UI } from "../modules/A2UI.mjs";
 
 const lazy = {};
 
@@ -96,14 +97,24 @@ export class AITabParent extends JSWindowActorParent {
     }
 
     try {
-      const page = await AITabStore.getBySlug(pageName);
+      const pageData = await AITabStore.getBySlug(pageName);
+      const surface = pageData?.components?.surface;
+      if (!surface) {
+        return { success: true, page: null };
+      }
+
+      const a2ui = new A2UI(surface);
+      const page = a2ui.toUI();
+
       return {
         success: true,
-        // Content renders the label as-is; it never sees the raw timestamp.
-        page: page && {
-          ...page,
-          createdAtLabel: formatCreatedAt(page.createdAt),
-        },
+        page: pageData &&
+          page && {
+            ...pageData,
+            ...page,
+            // Content renders the label as-is; it never sees the raw timestamp.
+            createdAtLabel: formatCreatedAt(pageData.createdAt),
+          },
       };
     } catch (error) {
       console.error("Failed to retrieve AI Tab page:", error);
