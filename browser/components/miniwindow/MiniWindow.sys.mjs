@@ -300,6 +300,8 @@ export class MiniWindow {
     this._state = MiniWindowState.FRAMED;
     lazy.logConsole.debug("open: state -> FRAMED");
 
+    this.#avoidOtherWindows();
+
     this.#abortController = new AbortController();
     this.#wireNavBarButtons();
     this.#wireToolbarReveal();
@@ -315,6 +317,20 @@ export class MiniWindow {
     // Now that the tab is settled in the mini window, watch for it navigating away.
     this.#attachHistoryListener();
     return this.miniWin;
+  }
+
+  /**
+   * Nudge the freshly-opened window clear of the other always-on-top windows.
+   */
+  #avoidOtherWindows() {
+    if (!this.miniWin || this.miniWin.closed) {
+      return;
+    }
+    let avoid = this.manager.windowsToAvoid(this.miniWin);
+    let pos = lazy.MiniWindowUtils.repositionToAvoid(this.miniWin, avoid);
+    if (pos) {
+      this.miniWin.moveTo(pos.left, pos.top);
+    }
   }
 
   /**
@@ -974,7 +990,6 @@ export class MiniWindow {
       return;
     }
 
-    // A throw during teardown must not strand this popup registered;
     try {
       let flavour = this.#cropped ? "fragment" : "full_tab";
       let openDuration = Math.round(ChromeUtils.now() - this.#createdAt);
@@ -986,7 +1001,12 @@ export class MiniWindow {
       Glean.miniWindow.openDuration[flavour].accumulateSingleSample(
         openDuration
       );
+    } catch (e) {
+      lazy.logConsole.error("uninit: recording telemetry failed", e);
+    }
 
+    // A throw during teardown must not strand this popup registered;
+    try {
       this.#detachHistoryListener();
       this.#abortController?.abort();
       this.#unwireToolbarReveal();
@@ -994,12 +1014,16 @@ export class MiniWindow {
       for (let ev of WINDOW_EVENTS) {
         this.miniWin?.removeEventListener(ev, this);
       }
-      if (this.miniWin && !this.miniWin.closed) {
-        this.miniWin.close();
-      }
     } catch (e) {
       lazy.logConsole.error("uninit: teardown failed", e);
     } finally {
+      try {
+        if (this.miniWin && !this.miniWin.closed) {
+          this.miniWin.close();
+        }
+      } catch (e) {
+        lazy.logConsole.error("uninit: closing the popup failed", e);
+      }
       this._state = MiniWindowState.CLOSED;
       this.manager._unregister(this);
       this.miniWin = null;
