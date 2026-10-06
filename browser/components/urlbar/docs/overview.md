@@ -152,48 +152,11 @@ user and handling their input.
 % The View is a replaceable component, as such what is described here is a
 % reference for the default View, but may not be valid for other implementations.
 
-### {searchfox}`UrlbarInput.mjs <browser/components/urlbar/content/UrlbarInput.mjs>`
+### {searchfox}`UrlbarInputBase.mjs <browser/components/urlbar/content/UrlbarInputBase.mjs>`
 
-Implements an input box *View*, owns an *UrlbarView*.
-
-```JavaScript
-UrlbarInput {
-  constructor(options = { textbox, panel });
-  // Uses UrlbarValueFormatter to highlight the base host, search aliases
-  // and to keep the host visible on overflow.
-  formatValue(val);
-  openResults();
-  // Converts an internal URI (e.g. a URI with a username or password) into
-  // one which we can expose to the user.
-  makeURIReadable(uri);
-  // Handles an event which would cause a url or text to be opened.
-  handleCommand();
-  // Called by the view when a result is selected.
-  resultsSelected();
-  // The underlying textbox
-  textbox;
-  // The results panel.
-  panel;
-  // The containing window.
-  window;
-  // The containing document.
-  document;
-  // An UrlbarChildController instance.
-  controller;
-  // An UrlbarView instance.
-  view;
-  // Whether the current value was typed by the user.
-  valueIsTyped;
-  // Whether the context is in Private Browsing mode.
-  isPrivate;
-  // Whether the input box is focused.
-  focused;
-  // The go button element.
-  goButton;
-  // The current value, can also be set.
-  value;
-}
-```
+Implements an input box *View*, owns an *UrlbarView*. Each input is a custom
+element extending *UrlbarInputBase*: *UrlbarInput* (`<moz-urlbar>`) and
+*SearchbarInput* (`<moz-searchbar>`). {doc}`UrlbarInputBase` documents its API.
 
 ### {searchfox}`UrlbarView.mjs <browser/components/urlbar/content/UrlbarView.mjs>`
 
