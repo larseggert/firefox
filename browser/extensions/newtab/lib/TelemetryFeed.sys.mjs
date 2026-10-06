@@ -5,6 +5,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/** @import {Store} from "resource://newtab/lib/Store.sys.mjs" */
+
 // We use importESModule here instead of static import so that the Karma test
 // environment won't choke on these module. This is because the Karma test
 // environment already stubs out XPCOMUtils and RemoteSettings, and overrides
@@ -208,6 +210,9 @@ const WALLPAPER_USER_EVENTS = new Set([
 ]);
 
 export class TelemetryFeed {
+  /** @type {Store} */
+  store = null;
+
   /**
    * Queue for telemetry events when in NormalGleanSession mode.
    * Events are stored here and cleared at session end based on session type.

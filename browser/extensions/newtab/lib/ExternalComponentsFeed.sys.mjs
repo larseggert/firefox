@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/** @import {Store} from "resource://newtab/lib/Store.sys.mjs" */
+
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 import {
   actionTypes as at,
@@ -94,6 +96,9 @@ const TRAIN_HOPPING_COMPONENT_CONFIGURATIONS = [
  * newtab page via the ExternalComponentWrapper React component.
  */
 export class ExternalComponentsFeed {
+  /** @type {Store} */
+  store = null;
+
   /**
    * The AboutNewTabComponentRegistry instance that tracks registered components.
    *

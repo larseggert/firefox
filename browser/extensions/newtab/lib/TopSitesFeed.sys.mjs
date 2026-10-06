@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/** @import {Store} from "resource://newtab/lib/Store.sys.mjs" */
+
 // We use importESModule here instead of static import so that
 // the Karma test environment won't choke on this module. This
 // is because the Karma test environment already stubs out
@@ -982,6 +984,9 @@ ContileIntegration.prototype.PersistentCache = (...args) => {
 };
 
 export class TopSitesFeed {
+  /** @type {Store} */
+  store = null;
+
   constructor() {
     this._telemetryUtility = new TopSitesTelemetry();
     this._contile = new ContileIntegration(this);

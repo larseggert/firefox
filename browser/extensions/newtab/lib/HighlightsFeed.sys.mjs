@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/** @import {Store} from "resource://newtab/lib/Store.sys.mjs" */
+
 import { actionTypes as at } from "resource://newtab/common/Actions.mjs";
 
 import {
@@ -35,6 +37,9 @@ export const BOOKMARKS_RESTORE_FAILED_EVENT = "bookmarks-restore-failed";
 const RECENT_DOWNLOAD_THRESHOLD = 36 * 60 * 60 * 1000;
 
 export class HighlightsFeed {
+  /** @type {Store} */
+  store = null;
+
   constructor() {
     this.dedupe = new Dedupe(this._dedupeKey);
     this.linksCache = new lazy.LinksCache(

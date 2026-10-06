@@ -23,9 +23,9 @@ export class Store {
     this._middleware = this._middleware.bind(this);
     // Bind each redux method so we can call it directly from the Store. E.g.,
     // store.dispatch() will call store._store.dispatch();
-    for (const method of ["dispatch", "getState", "subscribe"]) {
-      this[method] = (...args) => this._store[method](...args);
-    }
+    this.dispatch = (...args) => this._store.dispatch(...args);
+    this.getState = (...args) => this._store.getState(...args);
+    this.subscribe = (...args) => this._store.subscribe(...args);
     this.feeds = new Map();
     this._prefs = new Prefs();
     this._messageChannel = new ActivityStreamMessageChannel({

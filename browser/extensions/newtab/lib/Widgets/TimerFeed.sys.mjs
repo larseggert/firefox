@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/** @import {Store} from "resource://newtab/lib/Store.sys.mjs" */
+
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -34,6 +36,9 @@ const AlertNotification = Components.Constructor(
  * and syncs with PersistentCache
  */
 export class TimerFeed {
+  /** @type {Store} */
+  store = null;
+
   constructor() {
     this.initialized = false;
     this.cache = this.PersistentCache(CACHE_KEY, true);

@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+/** @import {Store} from "resource://newtab/lib/Store.sys.mjs" */
+
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   RemoteSettings: "resource://services-settings/remote-settings.sys.mjs",
@@ -69,6 +71,9 @@ const PREF_WALLPAPERS_USER_ENABLED_MIGRATED =
 const WALLPAPER_FILE_LOCK = "newtab-wallpaper-file";
 
 export class WallpaperFeed {
+  /** @type {Store} */
+  store = null;
+
   constructor() {
     this.loaded = false;
     // Applying moves several prefs, and this feed reacts to two of them. Held
