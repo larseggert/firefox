@@ -29,6 +29,9 @@ class StackingContextHelper;
 class TextureForwarder;
 class WebRenderLayerManager;
 
+typedef ThreadSafeWeakPtrHashKey<gfx::UnscaledFont> UnscaledFontHashKey;
+typedef ThreadSafeWeakPtrHashKey<gfx::ScaledFont> ScaledFontHashKey;
+
 class WebRenderBridgeChild final : public PWebRenderBridgeChild,
                                    public CompositableForwarder {
   NS_INLINE_DECL_THREADSAFE_REFCOUNTING(WebRenderBridgeChild, override)
@@ -223,11 +226,10 @@ class WebRenderBridgeChild final : public PWebRenderBridgeChild,
   bool mSentDisplayList;
 
   uint32_t mFontKeysDeleted;
-  nsTHashMap<ThreadSafeWeakPtr<gfx::UnscaledFont>, wr::FontKey> mFontKeys;
+  nsTHashMap<UnscaledFontHashKey, wr::FontKey> mFontKeys;
 
   uint32_t mFontInstanceKeysDeleted;
-  nsTHashMap<ThreadSafeWeakPtr<gfx::ScaledFont>, wr::FontInstanceKey>
-      mFontInstanceKeys;
+  nsTHashMap<ScaledFontHashKey, wr::FontInstanceKey> mFontInstanceKeys;
 
   RefCountedShmem mResourceShm;
 };
