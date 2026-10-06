@@ -79,7 +79,7 @@ const AVAILABLE_SHIMS = [
     bug: "1713726",
     file: "google-ads.js",
     matches: [
-      "*://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js",
+      "*://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js*",
       {
         patterns: [
           "*://pagead2.googlesyndication.com/pagead/*.js*fcd=true",
