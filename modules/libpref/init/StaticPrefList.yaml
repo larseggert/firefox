@@ -19793,16 +19793,17 @@
 #endif
   mirror: always
 
-# Amount of time by which it is always acceptable to delay the firing of a timer.
-# Any timer may be delayed by up to this amount in order to enable timers to be
-# bundled together for efficiency.
+# Amount of time by which it is always acceptable to delay the firing of a slack
+# or low priority timer. Such a timer may be delayed by up to this amount in
+# order to enable timers to be bundled together for efficiency.
 - name: timer.minimum_firing_delay_tolerance_ms
   type: AtomicFloat
   value: 1.0
   mirror: always
 
-# Maximum amount of time by which it is ever acceptable to delay the firing of a timer.
-# Setting this to zero will effectively disable timer coalescing.
+# Maximum amount of time by which it is ever acceptable to delay the firing of a
+# slack or low priority timer. One-shot and precise timers fire on their
+# deadline. Setting this to zero will effectively disable timer coalescing.
 - name: timer.maximum_firing_delay_tolerance_ms
   type: AtomicFloat
   value: 10000.0
