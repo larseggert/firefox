@@ -3715,6 +3715,15 @@
   value: 0
   mirror: always
 
+#if defined(XP_MACOSX)
+# If true, read the macOS child process executable path from the bundle's
+# Info.plist at runtime. If false, use compile-time branding macros.
+- name: dom.ipc.processLaunch.useMacPlists
+  type: bool
+  value: false
+  mirror: once
+#endif
+
 # Process launch delay (in milliseconds).
 - name: dom.ipc.processPrelaunch.delayMs
   type: uint32_t

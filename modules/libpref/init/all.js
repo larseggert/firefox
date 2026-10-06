@@ -4248,3 +4248,14 @@ pref("general.smoothScroll", true, sticky);
 #ifdef MOZ_ARTIFACT_BUILDS
   pref("telemetry.fog.artifact_build", true);
 #endif
+
+// For artifact builds, launch child process executables using the executable
+// names in their respective Info.plist files rather than the compile-time
+// branding macros. Artifact build branding doesn't always match the local
+// repo branding configuration leading to mismatches because some macOS
+// executable filenames are derived from the branding. The plist files could
+// always be used, but reading the executable names from the plist requires
+// extra library calls so by default we'll use compile-time brand macros.
+#if defined(MOZ_ARTIFACT_BUILDS) && defined(XP_MACOSX)
+  pref("dom.ipc.processLaunch.useMacPlists", true);
+#endif
