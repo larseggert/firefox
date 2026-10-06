@@ -34,8 +34,6 @@ add_task(async function testServiceWorkerTimings() {
     document.querySelectorAll(".request-list-item")[0]
   );
 
-  store.dispatch(Actions.toggleNetworkDetails());
-
   clickOnSidebarTab(document, "timings");
   await wait;
 
