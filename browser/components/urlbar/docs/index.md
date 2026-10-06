@@ -42,6 +42,7 @@ firefox-suggest-telemetry
 debugging
 ranking
 dynamic-result-types
+adding-a-search-bar
 preferences
 testing
 contact

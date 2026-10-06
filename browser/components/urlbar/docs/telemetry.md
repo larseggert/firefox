@@ -734,6 +734,9 @@ one event. How often this happens isn't measured, and a dropped
 `RecordEngagement` message leaves no diagnostic
 ([Bug 2066851](https://bugzilla.mozilla.org/show_bug.cgi?id=2066851)).
 
+A new search bar has to register its search access point in several places
+before its engagements record correctly; {doc}`adding-a-search-bar` lists them.
+
 ## Custom pings for Contextual Services
 
 Contextual Services currently has two features involving the address bar, top
