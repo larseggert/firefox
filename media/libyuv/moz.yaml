@@ -49,6 +49,7 @@ vendoring:
 
   exclude:
     - ".*"
+    - "vpython.*"
 
   patches:
     - 00_fix_build_errors.patch
