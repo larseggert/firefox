@@ -43,5 +43,3 @@ run-if = [
 ["browser_search_bookmarks.js"]
 
 ["browser_search_history.js"]
-
-["browser_search_tabs.js"]

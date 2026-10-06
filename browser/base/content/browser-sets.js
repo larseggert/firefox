@@ -158,11 +158,7 @@ document.addEventListener(
             PlacesCommandHook.searchBookmarks();
             break;
           case "Browser:SearchTabs":
-            PlacesCommandHook.searchTabs(
-              event.sourceEvent?.target.id == "menu_searchTabs"
-                ? "historymenu"
-                : "shortcut"
-            );
+            PlacesCommandHook.searchTabs();
             break;
           case "Browser:BookmarkAllTabs":
             PlacesCommandHook.bookmarkTabs();
