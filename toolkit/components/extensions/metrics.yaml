@@ -693,6 +693,7 @@ extensions.counters:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1994599
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       data_reviews:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1483002
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1513556
@@ -708,10 +709,11 @@ extensions.counters:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1958168
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       notification_emails:
         - addons-dev-internal@mozilla.com
         - lgreco@mozilla.com
-      expires: 161
+      expires: 181
 
     event_page_idle_result:
       type: labeled_counter
@@ -773,6 +775,7 @@ extensions.counters:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1994599
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       data_reviews:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1787940
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1817103
@@ -781,10 +784,11 @@ extensions.counters:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1958168
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       notification_emails:
         - addons-dev-internal@mozilla.com
         - lgreco@mozilla.com
-      expires: 161
+      expires: 181
 
 extensions.timing:
 
@@ -835,6 +839,7 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1994599
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       data_reviews:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1483002
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1513556
@@ -849,10 +854,11 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1912170
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       notification_emails:
         - addons-dev-internal@mozilla.com
         - lgreco@mozilla.com
-      expires: 161
+      expires: 181
 
     browser_action_popup_open:
       type: timing_distribution
@@ -910,6 +916,7 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1994599
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       data_reviews:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1483002
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1513556
@@ -924,10 +931,11 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1912170
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       notification_emails:
         - addons-dev-internal@mozilla.com
         - lgreco@mozilla.com
-      expires: 161
+      expires: 181
 
     content_script_injection:
       type: timing_distribution
@@ -974,6 +982,7 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1994599
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       data_reviews:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1483002
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1513556
@@ -988,10 +997,11 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1912170
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       notification_emails:
         - addons-dev-internal@mozilla.com
         - lgreco@mozilla.com
-      expires: 161
+      expires: 181
 
     event_page_running_time:
       type: custom_distribution
@@ -1035,6 +1045,7 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1994599
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       data_reviews:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1787940
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1817103
@@ -1042,10 +1053,11 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1912170
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       notification_emails:
         - addons-dev-internal@mozilla.com
         - lgreco@mozilla.com
-      expires: 161
+      expires: 181
 
     extension_startup:
       type: timing_distribution
@@ -1094,6 +1106,7 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1994599
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       data_reviews:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1483002
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1513556
@@ -1108,10 +1121,11 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1912170
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       notification_emails:
         - addons-dev-internal@mozilla.com
         - lgreco@mozilla.com
-      expires: 161
+      expires: 181
 
     page_action_popup_open:
       type: timing_distribution
@@ -1169,6 +1183,7 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1994599
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       data_reviews:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1483002
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1513556
@@ -1183,10 +1198,11 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1912170
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       notification_emails:
         - addons-dev-internal@mozilla.com
         - lgreco@mozilla.com
-      expires: 161
+      expires: 181
 
     storage_local_get_idb:
       type: timing_distribution
@@ -1244,6 +1260,7 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1994599
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       data_reviews:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1483002
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1513556
@@ -1258,10 +1275,11 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1912170
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       notification_emails:
         - addons-dev-internal@mozilla.com
         - lgreco@mozilla.com
-      expires: 161
+      expires: 181
 
     storage_local_set_idb:
       type: timing_distribution
@@ -1319,6 +1337,7 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1994599
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       data_reviews:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1483002
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1513556
@@ -1333,7 +1352,8 @@ extensions.timing:
         - https://bugzilla.mozilla.org/show_bug.cgi?id=1912170
         - https://bugzilla.mozilla.org/2018311/
         - https://bugzilla.mozilla.org/2041168/
+        - https://bugzilla.mozilla.org/2076966/
       notification_emails:
         - addons-dev-internal@mozilla.com
         - lgreco@mozilla.com
-      expires: 161
+      expires: 181
