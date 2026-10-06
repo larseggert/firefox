@@ -2071,6 +2071,26 @@ ScriptLoadRequest* ScriptLoader::LookupPreloadRequest(
     return nullptr;
   }
 
+  // At the point of script preload, the document's charset might be different
+  // in the following situation:
+  //   1. Document's charset is set to "uninitialied" UTF-8
+  //   2. Speculative load performs a script preload
+  //   3. Script preload uses the "uninitialied" charset as a fallback encoding
+  //      when looking up an in-memory cache entry
+  //   4. An in-memory cache entry is found for the preload
+  //   5. Document's charset is set to different one, by auto-detection etc
+  //   6. Actual script load is performed
+  //
+  // In this case, we should re-validate the fallback encoding.
+  if (request->IsRetrievedFromMemoryCache() &&
+      request->getLoadedScript()->DependsOnClassicScriptHintEncoding() &&
+      request->getLoadedScript()->ClassicScriptEncoding() !=
+          GetClassicScriptFallbackEncoding(elementEncoding)) {
+    // Drop the preload.
+    request->Cancel();
+    return nullptr;
+  }
+
   if (!aSRIMetadata.CanTrustBeDelegatedTo(request->mIntegrity)) {
     // Don't cancel link preload requests, we want to deliver onload according
     // the result of the load, cancellation would unexpectedly lead to error
@@ -4026,8 +4046,13 @@ nsCString& ScriptLoader::BytecodeMimeTypeFor(
 
 const Encoding* ScriptLoader::GetClassicScriptFallbackEncoding(
     const ScriptLoadRequest* aRequest) {
-  if (aRequest->mClassicScriptHintEncoding) {
-    return aRequest->mClassicScriptHintEncoding;
+  return GetClassicScriptFallbackEncoding(aRequest->mClassicScriptHintEncoding);
+}
+
+const Encoding* ScriptLoader::GetClassicScriptFallbackEncoding(
+    const Encoding* aClassicScriptHintEncoding) {
+  if (aClassicScriptHintEncoding) {
+    return aClassicScriptHintEncoding;
   }
 
   // Get the charset from the charset of the document.
