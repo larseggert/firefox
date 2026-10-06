@@ -4024,6 +4024,23 @@ nsCString& ScriptLoader::BytecodeMimeTypeFor(
   return nsContentUtils::JSScriptBytecodeMimeType();
 }
 
+const Encoding* ScriptLoader::GetClassicScriptFallbackEncoding(
+    const ScriptLoadRequest* aRequest) {
+  if (aRequest->mClassicScriptHintEncoding) {
+    return aRequest->mClassicScriptHintEncoding;
+  }
+
+  // Get the charset from the charset of the document.
+  if (mDocument) {
+    return mDocument->GetDocumentCharacterSet();
+  }
+
+  // Curiously, there are various callers that don't pass aDocument. The
+  // fallback in the old code was ISO-8859-1, which behaved like
+  // windows-1252.
+  return WINDOWS_1252_ENCODING;
+}
+
 nsresult ScriptLoader::MaybePrepareForDiskCacheAfterExecute(
     ScriptLoadRequest* aRequest, nsresult aRv) {
   MOZ_ASSERT(!aRequest->IsWasmBytes());
