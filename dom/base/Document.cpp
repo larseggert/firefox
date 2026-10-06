@@ -180,6 +180,7 @@
 #include "mozilla/dom/FromParser.h"
 #include "mozilla/dom/HTMLAllCollection.h"
 #include "mozilla/dom/HTMLBodyElement.h"
+#include "mozilla/dom/HTMLCanvasElement.h"
 #include "mozilla/dom/HTMLCollectionBinding.h"
 #include "mozilla/dom/HTMLDialogElement.h"
 #include "mozilla/dom/HTMLEmbedElement.h"
@@ -8505,6 +8506,9 @@ static void NotifyActivityChangedCallback(nsISupports* aSupports) {
   nsCOMPtr<nsIContent> content(do_QueryInterface(aSupports));
   if (auto* mediaElem = HTMLMediaElement::FromNodeOrNull(content)) {
     mediaElem->NotifyOwnerDocumentActivityChanged();
+  }
+  if (auto* canvasElem = HTMLCanvasElement::FromNodeOrNull(content)) {
+    canvasElem->NotifyOwnerDocumentActivityChanged();
   }
   nsCOMPtr<nsIDocumentActivity> objectDocumentActivity(
       do_QueryInterface(aSupports));
