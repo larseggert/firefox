@@ -754,6 +754,12 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
   static nsCString& BytecodeMimeTypeFor(
       const JS::loader::LoadedScript* aLoadedScript);
 
+  // Return the encoding for the classic script, which is used by the
+  // ScriptLoadHandler::TrySetDecoder method when neither the BOM or the charset
+  // is provided in the response.
+  const Encoding* GetClassicScriptFallbackEncoding(
+      const ScriptLoadRequest* aRequest);
+
   // Queue the script load request for caching if we decided to cache it, or
   // cleanup the script load request fields otherwise.
   //
