@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /** @import {Store} from "resource://newtab/lib/Store.sys.mjs" */
+/** @import {AboutNewTabComponentRegistry} from "moz-src:///browser/components/newtab/AboutNewTabComponents.sys.mjs" */
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 import {

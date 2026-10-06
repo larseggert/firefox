@@ -2,6 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/**
+ * @import {DeferredTask} from "resource://gre/modules/DeferredTask.sys.mjs"
+ * @import {RemoteSettingsClient} from "resource://services-settings/RemoteSettingsClient.sys.mjs"
+ */
+
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
 // Ideally, we'd have this be a separate JSON file that can be loaded at runtime
