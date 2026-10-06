@@ -4069,7 +4069,7 @@ nsresult ScriptLoader::MaybePrepareForDiskCacheAfterExecute(
 
   TRACE_FOR_TEST(aRequest, "diskcache:register");
   MOZ_ASSERT(aRequest->GetSerializedStencilOffset() ==
-             aRequest->SRI().length());
+             aRequest->SRI().length() + LoadedScript::EncodingHeaderSize);
   RegisterForDiskCache(aRequest);
 
   return aRv;
@@ -4422,6 +4422,19 @@ bool ScriptLoader::EncodeAndCompress(
     return false;
   }
 
+  MOZ_ASSERT(
+      JS::IsTranscodingBytecodeOffsetAligned(LoadedScript::EncodingHeaderSize));
+
+  if (!SRIAndSerializedStencil.growBy(LoadedScript::EncodingHeaderSize)) {
+    LOG(("LoadedScript (%p): Cannot allocate buffer", aLoadedScript));
+    return false;
+  }
+
+  LoadedScript::EncodingHeader header;
+  aLoadedScript->WriteIntoEncodingHeader(&header);
+  memcpy(SRIAndSerializedStencil.begin() + alignedSRILength, &header,
+         LoadedScript::EncodingHeaderSize);
+
   JS::TranscodeResult result =
       JS::EncodeStencil(aFc, aStencil, SRIAndSerializedStencil);
 
@@ -4435,8 +4448,9 @@ bool ScriptLoader::EncodeAndCompress(
   }
 
   // TODO probably need to move this to a helper thread
-  if (!ScriptBytecodeCompress(SRIAndSerializedStencil, alignedSRILength,
-                              aCompressed)) {
+  if (!ScriptBytecodeCompress(
+          SRIAndSerializedStencil,
+          alignedSRILength + LoadedScript::EncodingHeaderSize, aCompressed)) {
     return false;
   }
 
