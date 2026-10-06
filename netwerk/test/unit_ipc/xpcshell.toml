@@ -262,11 +262,6 @@ prefs = ["network.allow_raw_sockets_in_content_processes=true"]
 ["test_simple_wrap.js"]
 prefs = ["network.allow_raw_sockets_in_content_processes=true"]
 
-["test_stale-while-revalidate_redirect.js"]
-support-files = [
-  "child_stale-while-revalidate_redirect.js",
-]
-
 ["test_trackingProtection_annotateChannels_wrap1.js"]
 prefs = ["network.allow_raw_sockets_in_content_processes=true"]
 
