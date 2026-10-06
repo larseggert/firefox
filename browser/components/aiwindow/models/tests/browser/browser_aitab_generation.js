@@ -528,7 +528,9 @@ add_task(async function test_createAITab_links_to_the_stored_page() {
       purpose: lazy.MODEL_FEATURES.AITAB,
       response: JSON.stringify(GENERATED_SURFACE),
     });
-    const toolResult = await toolPromise;
+    const { success, toolResult, uiData } = await toolPromise;
+    Assert.ok(success);
+    Assert.equal(uiData.properties.state, "choose");
 
     Assert.ok(
       toolResult.aiTab.slug,
@@ -548,6 +550,7 @@ add_task(async function test_createAITab_links_to_the_stored_page() {
       conversation.seenUrls.has(viewerURL),
       "the link is seen, so the chat renders it as a trusted link"
     );
+    Assert.equal(uiData.properties.viewerURL, viewerURL);
   } finally {
     await lazy.AITabStore.destroyDatabase();
     await stopServing();
