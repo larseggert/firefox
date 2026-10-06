@@ -582,13 +582,13 @@ var PlacesCommandHook = {
     });
   },
 
-  async searchTabs() {
+  async searchTabs(searchModeEntry) {
     let win =
       BrowserWindowTracker.getTopWindow() ??
       (await BrowserWindowTracker.promiseOpenWindow());
     win.focus();
     win.gURLBar.search(UrlbarShared.RESTRICT_TOKENS.OPENPAGE, {
-      searchModeEntry: "shortcut",
+      searchModeEntry,
     });
   },
 
