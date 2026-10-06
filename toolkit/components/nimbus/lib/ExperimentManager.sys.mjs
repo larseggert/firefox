@@ -351,7 +351,7 @@ export class ExperimentManager {
 
     if (
       lazy.ExperimentAPI.labsEnabled &&
-      lazy.NimbusEnrollments.readFromDatabaseEnabled
+      lazy.NimbusEnrollments.persistenceEnabled
     ) {
       // If labs are disabled, we will immediately clear the list of opt-in
       // recipes after initialization.

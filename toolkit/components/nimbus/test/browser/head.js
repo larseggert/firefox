@@ -68,12 +68,6 @@ add_setup(async function () {
   });
 });
 
-async function setupTest() {
-  return async function cleanup() {
-    await NimbusTestUtils.removeStore(ExperimentAPI.manager.store);
-  };
-}
-
 /**
  * Wait for a message from a child process.
  *
