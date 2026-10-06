@@ -359,6 +359,15 @@ const AVAILABLE_SHIMS = [
     onlyIfBlockedByETP: true,
   },
   {
+    id: "GoogleDCMAds",
+    platform: "all",
+    name: "Google DCM Ads",
+    bug: "2071825",
+    file: "empty-script.js",
+    matches: ["*://www.googletagservices.com/dcm/dcmads.js*"],
+    onlyIfBlockedByETP: true,
+  },
+  {
     id: "GoogleIMA",
     platform: "all",
     name: "Google Interactive Media Ads",
