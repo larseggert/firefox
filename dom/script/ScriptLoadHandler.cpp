@@ -12,6 +12,7 @@
 #include "ScriptLoader.h"
 #include "ScriptTrace.h"
 #include "js/Transcoding.h"
+#include "js/loader/LoadedScript.h"
 #include "js/loader/ModuleLoadRequest.h"
 #include "js/loader/ScriptLoadRequest.h"
 #include "mozilla/Assertions.h"
@@ -252,6 +253,7 @@ bool ScriptLoadHandler::TrySetDecoder(nsIChannel* aChannel,
 
   // JavaScript modules are always UTF-8.
   if (mRequest->IsModuleRequest()) {
+    MOZ_ASSERT(!mRequest->getLoadedScript()->ClassicScriptEncoding());
     mDecoder = MakeUnique<ScriptDecoder>(UTF_8_ENCODING,
                                          ScriptDecoder::BOMHandling::Remove);
     return true;
@@ -270,6 +272,7 @@ bool ScriptLoadHandler::TrySetDecoder(nsIChannel* aChannel,
   const Encoding* encoding;
   std::tie(encoding, std::ignore) = Encoding::ForBOM(Span(aData, aDataLength));
   if (encoding) {
+    mRequest->getLoadedScript()->SetClassicScriptEncodingFromBOM(encoding);
     mDecoder =
         MakeUnique<ScriptDecoder>(encoding, ScriptDecoder::BOMHandling::Remove);
     return true;
@@ -279,12 +282,15 @@ bool ScriptLoadHandler::TrySetDecoder(nsIChannel* aChannel,
   nsAutoCString label;
   if (NS_SUCCEEDED(aChannel->GetContentCharset(label)) &&
       (encoding = Encoding::ForLabel(label))) {
+    mRequest->getLoadedScript()->SetClassicScriptEncodingFromCharsetParameter(
+        encoding);
     mDecoder =
         MakeUnique<ScriptDecoder>(encoding, ScriptDecoder::BOMHandling::Ignore);
     return true;
   }
 
   encoding = mScriptLoader->GetClassicScriptFallbackEncoding(mRequest);
+  mRequest->getLoadedScript()->SetClassicScriptEncodingFromFallback(encoding);
   mDecoder =
       MakeUnique<ScriptDecoder>(encoding, ScriptDecoder::BOMHandling::Ignore);
   return true;
@@ -548,6 +554,24 @@ nsresult ScriptLoadHandler::DoOnStreamComplete(nsIChannel* aChannel,
 
       uint32_t alignedSRILength = JS::AlignTranscodingBytecodeOffset(sriLength);
       mRequest->SetAlignedSRILength(alignedSRILength);
+
+      const JS::loader::LoadedScript::EncodingHeader* header =
+          reinterpret_cast<const JS::loader::LoadedScript::EncodingHeader*>(
+              buf.begin() + alignedSRILength);
+      if (!mRequest->getLoadedScript()->ReadFromEncodingHeader(header)) {
+        // Corrupted data.
+        return aChannel->Cancel(mScriptLoader->RestartLoad(mRequest));
+      }
+
+      if (mRequest->IsClassicScript() &&
+          mRequest->getLoadedScript()->DependsOnClassicScriptHintEncoding()) {
+        const Encoding* fallbackEncoding =
+            mScriptLoader->GetClassicScriptFallbackEncoding(mRequest);
+        if (mRequest->getLoadedScript()->ClassicScriptEncoding() !=
+            fallbackEncoding) {
+          return aChannel->Cancel(mScriptLoader->RestartLoad(mRequest));
+        }
+      }
 
       Vector<uint8_t> compressed;
       // mRequest has the compressed data, but will be filled with the
