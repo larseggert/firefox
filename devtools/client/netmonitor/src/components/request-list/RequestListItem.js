@@ -392,6 +392,8 @@ class RequestListItem extends Component {
           networkActionOpen &&
           selectedActionBarTabId === PANELS.BLOCKING,
         tabIndex: 0,
+        role: "option",
+        "aria-selected": isSelected,
         onContextMenu,
         onMouseDown,
         onDoubleClick,

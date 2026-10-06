@@ -109,6 +109,8 @@ class MessageListItem extends Component {
       {
         className: classList.join(" "),
         tabIndex: 0,
+        role: "option",
+        "aria-selected": isSelected,
         onMouseDown,
         onContextMenu,
       },

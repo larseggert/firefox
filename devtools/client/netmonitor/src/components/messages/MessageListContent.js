@@ -312,6 +312,7 @@ class MessageListContent extends Component {
         tbody(
           {
             className: "message-list-body",
+            role: "listbox",
             onKeyDown: this.onKeyDown,
           },
           tr(

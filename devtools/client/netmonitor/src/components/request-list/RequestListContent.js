@@ -425,6 +425,7 @@ class RequestListContentComponent extends Component {
             {
               ref: "rowGroupEl",
               className: "requests-list-row-group",
+              role: "listbox",
               tabIndex: 0,
               onKeyDown: this.onKeyDown,
             },
