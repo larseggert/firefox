@@ -136,6 +136,7 @@ if CONFIG["MOZ_WAYLAND"]:
     EXPORTS.mozilla.widget += [
         "MozContainerWayland.h",
         "nsWaylandDisplay.h",
+        "SHMBufSurface.h",
         "WaylandBuffer.h",
         "WaylandSurface.h",
         "WUniquePtr.h",
