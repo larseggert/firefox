@@ -813,16 +813,12 @@ RemoteTextureMap::RegisterTxnScheduler(base::ProcessId aForPid,
   const auto key = std::pair(aForPid, aType);
   auto it = mTxnSchedulers.find(key);
   if (it != mTxnSchedulers.end()) {
-    if (RefPtr<RemoteTextureTxnScheduler> scheduler = {it->second}) {
-      return scheduler.forget();
-    }
-    mTxnSchedulers.erase(it);
+    return do_AddRef(it->second);
   }
 
   RefPtr<RemoteTextureTxnScheduler> scheduler(
       new RemoteTextureTxnScheduler(aForPid, aType));
-  mTxnSchedulers.emplace(
-      key, ThreadSafeWeakPtr<RemoteTextureTxnScheduler>(scheduler));
+  mTxnSchedulers.emplace(key, scheduler.get());
   return scheduler.forget();
 }
 
@@ -1172,37 +1168,34 @@ bool RemoteTextureMap::WaitForTxn(const RemoteTextureOwnerId aOwnerId,
                                   RemoteTextureTxnType aTxnType,
                                   RemoteTextureTxnId aTxnId) {
   MonitorAutoLock lock(mMonitor);
-  auto* owner = GetTextureOwner(lock, aOwnerId, aForPid);
-  if (!owner) {
-    return false;
-  }
-  if (owner->mDeferUnregister) {
-    MOZ_ASSERT_UNREACHABLE(
-        "Texture owner must wait for txn before unregistering.");
-    return false;
-  }
-  if (owner->mWaitForTxn) {
-    MOZ_ASSERT_UNREACHABLE("Texture owner already waiting for txn.");
-    return false;
-  }
-  const auto key = std::pair(aForPid, aTxnType);
-  auto it = mTxnSchedulers.find(key);
-  if (it != mTxnSchedulers.end()) {
-    if (RefPtr<RemoteTextureTxnScheduler> scheduler = {it->second}) {
-      if (scheduler->WaitForTxn(lock, aOwnerId, aTxnId)) {
-        owner->mWaitForTxn = true;
-      }
-      return true;
+  if (auto* owner = GetTextureOwner(lock, aOwnerId, aForPid)) {
+    if (owner->mDeferUnregister) {
+      MOZ_ASSERT_UNREACHABLE(
+          "Texture owner must wait for txn before unregistering.");
+      return false;
     }
+    if (owner->mWaitForTxn) {
+      MOZ_ASSERT_UNREACHABLE("Texture owner already waiting for txn.");
+      return false;
+    }
+    const auto key = std::pair(aForPid, aTxnType);
+    auto it = mTxnSchedulers.find(key);
+    if (it == mTxnSchedulers.end()) {
+      // During shutdown, different toplevel protocols may go away in
+      // disadvantageous orders, causing us to sometimes be processing
+      // waits even though the source of transactions upon which the
+      // wait depends shut down. This is generally harmless to ignore,
+      // as it means no further transactions will be generated of that
+      // type and all such transactions have been processed before it
+      // unregistered.
+      NS_WARNING("Could not find scheduler for txn type.");
+      return false;
+    }
+    if (it->second->WaitForTxn(lock, aOwnerId, aTxnId)) {
+      owner->mWaitForTxn = true;
+    }
+    return true;
   }
-  // During shutdown, different toplevel protocols may go away in
-  // disadvantageous orders, causing us to sometimes be processing
-  // waits even though the source of transactions upon which the
-  // wait depends shut down. This is generally harmless to ignore,
-  // as it means no further transactions will be generated of that
-  // type and all such transactions have been processed before it
-  // unregistered.
-  NS_WARNING("Could not find scheduler for txn type.");
   return false;
 }
 
