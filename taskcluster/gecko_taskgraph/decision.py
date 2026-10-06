@@ -34,7 +34,7 @@ from .files_changed import get_changed_files
 from .parameters import get_app_version, get_version
 from .util.backstop import ANDROID_PERFTEST_BACKSTOP_INDEX, BACKSTOP_INDEX, is_backstop
 from .util.bugbug import push_schedules
-from .util.hg import get_hg_revision_branch, get_hg_revision_info
+from .util.hg import get_hg_revision_metadata
 from .util.partials import populate_release_history
 from .util.taskcluster import insert_index
 from .util.taskgraph import find_decision_task, find_existing_tasks_from_previous_kinds
@@ -352,28 +352,24 @@ def get_decision_parameters(graph_config, options):
     repo_path = os.getcwd()
     repo = get_repository(repo_path)
 
-    try:
-        commit_message = repo.get_commit_message()
-    except UnicodeDecodeError:
-        commit_message = ""
-
     # Set some vcs specific parameters
     if parameters["repository_type"] == "hg":
+        metadata = get_hg_revision_metadata(GECKO, parameters["head_rev"])
+        commit_message = metadata["desc"]
         parameters["head_git_repository"] = GIT_BACKING_REPO
-        if head_git_rev := get_hg_revision_info(
-            GECKO, revision=parameters["head_rev"], info="extras.git_commit"
-        ):
+        if head_git_rev := metadata["extras"].get("git_commit"):
             parameters["head_git_rev"] = head_git_rev
-
-        parameters["hg_branch"] = get_hg_revision_branch(
-            GECKO, revision=parameters["head_rev"]
-        )
+        parameters["hg_branch"] = metadata["branch"]
 
         parameters["files_changed"] = sorted(
             get_changed_files(parameters["head_repository"], parameters["head_rev"])
         )
 
     elif parameters["repository_type"] == "git":
+        try:
+            commit_message = repo.get_commit_message()
+        except UnicodeDecodeError:
+            commit_message = ""
         # `files_changed` is derived further down, once parameter overrides had a
         # chance to correct `base_rev`.
         parameters["hg_branch"] = None
