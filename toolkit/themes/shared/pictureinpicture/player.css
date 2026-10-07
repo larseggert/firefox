@@ -13,9 +13,12 @@
   --controls-bottom-distance: 15px;
   --controls-bottom-upper-height: 30px;
   --scrubber-vertical-margin: 7px;
+  --scrubber-thumb-background-color: var(--color-white);
+
   --resize-margin: 5px;
 
   background-color: var(--player-bg-color);
+  color-scheme: dark;
   overflow: hidden;
 }
 
@@ -88,8 +91,12 @@ browser {
 
 #controls button:focus-visible,
 #controls input:focus-visible {
-  outline: 3px solid #0060df;
-  box-shadow: 1px 2px 5px #000;
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-outline-offset);
+  /* Because we set a dark color scheme for the player container, display a box-shadow
+   * just below the focus outline to improve the outline's contrast in case it is rendered over
+   * a lighter video content background. */
+  box-shadow: 0 0 0 calc(var(--focus-outline-width) + var(--focus-outline-offset)) rgba(0, 0, 0, 0.5);
 }
 
 /* Styling for background gradient.
@@ -351,12 +358,11 @@ body:not(:fullscreen) #controls:hover #timestamp {
   align-self: center;
   width: 64px;
   background-color: transparent;
-  padding: 6px 2px;
   margin: 0;
 
   &::-moz-range-thumb {
     border-radius: var(--border-radius-medium);
-    background-color: white;
+    background-color: var(--scrubber-thumb-background-color);
     width: 8px;
     height: 8px;
     padding: 0;
@@ -374,7 +380,6 @@ body:not(:fullscreen) #controls:hover #timestamp {
   &::-moz-range-track,
   &::-moz-range-progress {
     height: 2px;
-    border-radius: var(--border-radius-medium);
   }
 }
 
@@ -464,7 +469,6 @@ body:not(:fullscreen) #fullscreen {
   bottom: 40px;
   user-select: none;
   right: 24px;
-  color-scheme: dark;
   color: var(--settings-panel-text-color);
   font: menu;
   font-size: unset;
@@ -527,7 +531,6 @@ body:not(:fullscreen) #fullscreen {
   appearance: none;
   background: transparent;
   margin-block: var(--space-medium);
-  padding: 6px 2px;
   cursor: pointer;
 
   &::-moz-range-track {
@@ -545,7 +548,7 @@ body:not(:fullscreen) #fullscreen {
   }
 
   &::-moz-range-thumb {
-    background-color: #ffffff;
+    background-color: var(--scrubber-thumb-background-color);
     border: none;
     width: var(--size-item-xsmall);
     height: var(--size-item-xsmall);
@@ -556,7 +559,6 @@ body:not(:fullscreen) #fullscreen {
   &::-moz-range-track,
   &::-moz-range-progress {
     height: 4px;
-    border-radius: var(--border-radius-medium);
   }
 }
 
@@ -626,13 +628,13 @@ body:not(:fullscreen) #fullscreen {
 }
 
 #scrubber {
+  --scrubber-thumb-background-color: var(--color-gray-30);
   width: 100%;
   background-color: transparent;
-  padding: 6px 2px;
 
   &::-moz-range-thumb {
     border-radius: var(--border-radius-large);
-    background-color: #bfbfc9;
+    background-color: var(--scrubber-thumb-background-color);
     width: 8px;
     height: 8px;
     border: 3px solid #ffffff;
@@ -651,7 +653,25 @@ body:not(:fullscreen) #fullscreen {
   &::-moz-range-track,
   &::-moz-range-progress {
     height: 4px;
+  }
+}
+
+#audio-scrubber,
+#scrubber,
+#playback-rate-slider {
+  padding: 6px 2px;
+
+  &,
+  &::-moz-range-track,
+  &::-moz-range-progress {
     border-radius: var(--border-radius-medium);
+  }
+
+  @media (prefers-contrast) {
+    &::-moz-range-track,
+    &::-moz-range-progress {
+      border: var(--border-width) solid var(--border-color);
+    }
   }
 }
 
