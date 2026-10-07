@@ -549,7 +549,8 @@ def test_expanded(params):
     assert scheduled == all_labels
 
 
-def test_tryselect_expanded(responses, params):
+@pytest.mark.parametrize("strategy", ["skip-unless-backstop", "skip-unless-expanded"])
+def test_tryselect_backstop_expanded(responses, params, strategy):
     params.update({"project": "try", "backstop": False, "pushlog_id": 11})
     responses.add(
         responses.GET,
@@ -563,9 +564,7 @@ def test_tryselect_expanded(responses, params):
     )
 
     tasks = list(generate_tasks({}, {}, {}))
-    opt = tryselect.bugbug_reduced_manifests_config_selection_medium[
-        "skip-unless-expanded"
-    ]
+    opt = tryselect.bugbug_reduced_manifests_config_selection_medium[strategy]
     scheduled = {t.label for t in tasks if not opt.should_remove_task(t, params, None)}
     assert scheduled == {"task-0-label"}
 
