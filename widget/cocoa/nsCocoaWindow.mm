@@ -6782,11 +6782,6 @@ void nsCocoaWindow::ProcessTransitions() {
 
       case TransitionType::Zoom:
         if (!mWindow.zoomed) {
-          // Snapshot pre-zoom bounds for GetRestoredBounds() before the
-          // zoom resizes the window to fill the screen.
-          if (mSizeMode == nsSizeMode_Normal) {
-            mRestoredBounds = Some(mBounds);
-          }
           [mWindow zoom:nil];
         }
         break;
@@ -7801,6 +7796,15 @@ void nsCocoaWindow::CocoaSendToplevelDeactivateEvents() {
   }
 }
 
+// Called before every zoom, whether we start it or the user does with a title
+// bar double-click or the zoom button, and when a live resize starts. The
+// "Fill" tiling action only reaches us through the latter.
+void nsCocoaWindow::SaveRestoredBounds() {
+  if (mSizeMode == nsSizeMode_Normal) {
+    mRestoredBounds = Some(mBounds);
+  }
+}
+
 void nsCocoaWindow::CocoaWindowDidResize() {
   // It's important to update our bounds before we trigger any listeners. This
   // ensures that our bounds are correct when GetScreenBounds is called.
@@ -8102,6 +8106,12 @@ LayoutDeviceIntPoint nsCocoaWindow::GetNativeLockedPoint() {
   RollUpPopups();
 }
 
+- (void)windowWillStartLiveResize:(NSNotification*)aNotification {
+  if (mGeckoWindow) {
+    mGeckoWindow->SaveRestoredBounds();
+  }
+}
+
 - (void)windowDidMove:(NSNotification*)aNotification {
   if (mGeckoWindow) mGeckoWindow->ReportMoveEvent();
 }
@@ -8149,6 +8159,9 @@ LayoutDeviceIntPoint nsCocoaWindow::GetNativeLockedPoint() {
     return NO;  // See bug 429954.
   }
   mHasEverBeenZoomed = YES;
+  if (mGeckoWindow) {
+    mGeckoWindow->SaveRestoredBounds();
+  }
   return YES;
 }
 
