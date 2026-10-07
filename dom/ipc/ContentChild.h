@@ -481,14 +481,6 @@ class ContentChild final : public PContentChild,
   bool DeallocPWebrtcGlobalChild(PWebrtcGlobalChild* aActor);
 #endif
 
-  PContentPermissionRequestChild* AllocPContentPermissionRequestChild(
-      Span<const PermissionRequest> aRequests, nsIPrincipal* aPrincipal,
-      nsIPrincipal* aTopLevelPrincipal, const bool& aIsHandlingUserInput,
-      const bool& aMaybeUnsafePermissionDelegate, const TabId& aTabId,
-      const bool& aIgnoreAllowSitePermission);
-  bool DeallocPContentPermissionRequestChild(
-      PContentPermissionRequestChild* actor);
-
   // GetFiles for WebKit/Blink FileSystem API and Directory API must run on the
   // parent process.
   void CreateGetFilesRequest(nsTArray<nsString>&& aDirectoryPath,

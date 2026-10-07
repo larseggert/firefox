@@ -62,7 +62,8 @@ class nsContentPermissionUtils {
 
   // @param aIsRequestDelegatedToUnsafeThirdParty see
   // ContentPermissionRequestParent.
-  static PContentPermissionRequestParent* CreateContentPermissionRequestParent(
+  static already_AddRefed<PContentPermissionRequestParent>
+  CreateContentPermissionRequestParent(
       Element* aElement, nsIPrincipal* aPrincipal,
       nsIPrincipal* aTopLevelPrincipal,
       const bool aHasValidTransientUserGestureActivation,
@@ -76,13 +77,13 @@ class nsContentPermissionUtils {
   static nsresult AskPermission(nsIContentPermissionRequest* aRequest,
                                 nsPIDOMWindowInner* aWindow);
 
-  static nsTArray<PContentPermissionRequestParent*>
+  static nsTArray<RefPtr<PContentPermissionRequestParent>>
   GetContentPermissionRequestParentById(const TabId& aTabId);
 
   static void NotifyRemoveContentPermissionRequestParent(
       PContentPermissionRequestParent* aParent);
 
-  static nsTArray<PContentPermissionRequestChild*>
+  static nsTArray<RefPtr<PContentPermissionRequestChild>>
   GetContentPermissionRequestChildById(const TabId& aTabId);
 
   static void NotifyRemoveContentPermissionRequestChild(
@@ -199,7 +200,7 @@ class nsContentPermissionRequestProxy : public nsIContentPermissionRequest {
 class RemotePermissionRequest final
     : public mozilla::dom::PContentPermissionRequestChild {
  public:
-  NS_INLINE_DECL_REFCOUNTING(RemotePermissionRequest)
+  NS_INLINE_DECL_REFCOUNTING(RemotePermissionRequest, override)
 
   RemotePermissionRequest(nsIContentPermissionRequest* aRequest,
                           nsPIDOMWindowInner* aWindow);
@@ -210,19 +211,11 @@ class RemotePermissionRequest final
   mozilla::ipc::IPCResult RecvNotifyResult(
       const bool& aAllow, nsTArray<PermissionChoice>&& aChoices);
 
-  void IPDLAddRef() {
-    mIPCOpen = true;
-    AddRef();
-  }
-
-  void IPDLRelease() {
-    mIPCOpen = false;
-    Release();
-  }
+  void ActorDestroy(ActorDestroyReason aWhy) override;
 
   void Destroy();
 
-  bool IPCOpen() const { return mIPCOpen && !mDestroyed; }
+  bool IPCOpen() const { return CanSend() && !mDestroyed; }
 
  private:
   virtual ~RemotePermissionRequest();
@@ -234,7 +227,6 @@ class RemotePermissionRequest final
 
   nsCOMPtr<nsIContentPermissionRequest> mRequest;
   nsCOMPtr<nsPIDOMWindowInner> mWindow;
-  bool mIPCOpen;
   bool mDestroyed;
 };
 
