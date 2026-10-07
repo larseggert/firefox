@@ -371,19 +371,18 @@ class TaskController {
 
 #ifdef MOZ_MEMORY
   // To be called once during startup.
-  static void SetupIdleMemoryCleanup();
+  static void SetupMemoryCleanup();
 
   // Used internally to update prefs (can't be private, though).
-  void UpdateIdleMemoryCleanupPrefs();
+  void UpdateMemoryCleanupPrefs();
 
-  // If needed, schedule a round of idle processing for moz_jemalloc's
-  // idle purge.
-  void MayScheduleIdleMemoryCleanup();
+  // If needed, schedule a round of purging for moz_jemalloc's lazy purge.
+  void MayScheduleMemoryCleanup();
 
-  // Request idle memory cleanup, e.g. after GC/CC completion.
-  // Unlike MayScheduleIdleMemoryCleanup, this does not check for pending
+  // Request a memory cleanup, e.g. after GC/CC completion.
+  // Unlike MayScheduleMemoryCleanup, this does not check for pending
   // tasks -- the caller knows cleanup is needed regardless.
-  void RequestIdleMemoryCleanup(StaticString aReason);
+  void RequestMemoryCleanup(StaticString aReason);
 #endif
 
  private:
