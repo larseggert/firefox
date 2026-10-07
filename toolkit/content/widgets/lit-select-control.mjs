@@ -246,13 +246,6 @@ export class SelectControlBaseElement extends MozLitElement {
     return NAVIGATION_DIRECTIONS.LTR;
   }
 
-  get isDocumentRTL() {
-    if (typeof Services !== "undefined") {
-      return Services.locale.isAppLocaleRTL;
-    }
-    return document.dir === "rtl";
-  }
-
   navigate(direction) {
     let currentIndex = this.focusableIndex;
     let children = this.childElements;

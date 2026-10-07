@@ -234,6 +234,8 @@ export class PanelList extends HTMLElement {
     return typeof Services !== "undefined";
   }
 
+  // FIXME: Use the MozLitElement isDocumentRTL getter in lit-utils.mjs once
+  // panel-list is a Lit element.
   isDocumentRTL() {
     if (this.hasServices()) {
       return Services.locale.isAppLocaleRTL;

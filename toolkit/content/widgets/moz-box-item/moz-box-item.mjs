@@ -153,13 +153,6 @@ export default class MozBoxItem extends MozBoxBase {
     return NAVIGATION_DIRECTIONS.LTR;
   }
 
-  get isDocumentRTL() {
-    if (typeof Services !== "undefined") {
-      return Services.locale.isAppLocaleRTL;
-    }
-    return document.dir === "rtl";
-  }
-
   get isDraggable() {
     const reorderableParent = this.closest("moz-box-group");
     return (

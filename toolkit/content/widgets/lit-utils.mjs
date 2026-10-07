@@ -233,6 +233,19 @@ export class MozLitElement extends LitElement {
     return this.#l10nObj;
   }
 
+  /**
+   * Whether the app locale is RTL. Falls back to the document direction where
+   * Services is unavailable.
+   *
+   * @returns {boolean}
+   */
+  get isDocumentRTL() {
+    if (typeof Services !== "undefined") {
+      return Services.locale.isAppLocaleRTL;
+    }
+    return document.dir === "rtl";
+  }
+
   async dispatchOnUpdateComplete(event) {
     await this.updateComplete;
     this.dispatchEvent(event);

@@ -102,10 +102,13 @@ export default class MozPageNav extends MozLitElement {
     if (hasModifierKey(e)) {
       return;
     }
-    if (e.key == "ArrowDown" || e.key == "ArrowRight") {
+    let isRTL = this.isDocumentRTL;
+    let nextKey = isRTL ? "ArrowLeft" : "ArrowRight";
+    let previousKey = isRTL ? "ArrowRight" : "ArrowLeft";
+    if (e.key == "ArrowDown" || e.key == nextKey) {
       e.preventDefault();
       this.focusNextView();
-    } else if (e.key == "ArrowUp" || e.key == "ArrowLeft") {
+    } else if (e.key == "ArrowUp" || e.key == previousKey) {
       e.preventDefault();
       this.focusPreviousView();
     }
