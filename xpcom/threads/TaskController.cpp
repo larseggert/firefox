@@ -1387,13 +1387,14 @@ bool TaskController::DoExecuteNextTaskOnlyMainThreadInternal(
 
       if (!result) {
         // Presumably this task was interrupted, leave its dependencies
-        // unresolved and reinsert into the queue.
+        // unresolved and reinsert into the queue. It is pending again, so its
+        // manager needs to count it again.
         auto insertion =
             mMainThreadTasks.insert(std::move(mCurrentTasksMT.top()));
         MOZ_ASSERT(insertion.second);
         task->mIterator = insertion.first;
         if (manager) {
-          manager->WillRunTask();
+          manager->DidQueueTask();
         }
       } else {
         task->mCompleted = true;

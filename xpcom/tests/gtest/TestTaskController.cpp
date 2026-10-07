@@ -35,6 +35,11 @@ class Logger {
   Mutex mMutex;
 };
 
+class CountingTaskManager : public TaskManager {
+ public:
+  bool IsSuspended(const MutexAutoLock& aProofOfLock) override { return false; }
+};
+
 class ReschedulingTask : public Task {
   static constexpr uint32_t LoopCount = 3;
 
@@ -93,6 +98,28 @@ TEST(TaskController, RescheduleOnMainThread)
   ASSERT_TRUE(mainThreadTask->IsDone());
 
   ASSERT_TRUE(logger.GetLog() == "111");
+}
+
+TEST(TaskController, RescheduleManagedOnMainThread)
+{
+  Logger logger;
+
+  RefPtr manager = MakeRefPtr<CountingTaskManager>();
+  RefPtr mainThreadTask =
+      MakeRefPtr<ReschedulingTask>(Task::Kind::MainThreadOnly, &logger, "1");
+  mainThreadTask->SetManager(manager);
+
+  TaskController::Get()->AddTask(do_AddRef(mainThreadTask));
+  ASSERT_EQ(manager->PendingTaskCount(), 1u);
+
+  while (NS_ProcessNextEvent(nullptr, false)) {
+  }
+
+  ASSERT_TRUE(mainThreadTask->IsDone());
+  ASSERT_TRUE(logger.GetLog() == "111");
+  // A task that reschedules itself is pending again, so the count must not run
+  // below zero on the way.
+  ASSERT_EQ(manager->PendingTaskCount(), 0u);
 }
 
 TEST(TaskController, RescheduleOffMainThread)
