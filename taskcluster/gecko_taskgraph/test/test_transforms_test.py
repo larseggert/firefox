@@ -139,6 +139,16 @@ def test_split_variants(monkeypatch, run_full_config_transform, make_test_task):
     ]
     assert tasks[1]["treeherder-symbol"] == "g-foo-bar(t)"
 
+    # test variants kept in the treeherder group
+    input_task = make_test_task(**{
+        "run-without-variant": True,
+        "treeherder-symbol": "g()",
+        "treeherder-group-variants": True,
+        "variants": ["foo", "foo+bar"],
+    })
+    tasks = list(run_split_variants(input_task))
+    assert [t["treeherder-symbol"] for t in tasks] == ["g()", "g(foo)", "g(foo-bar)"]
+
     # test 'when' filter
     input_task = make_test_task(**{
         "run-without-variant": True,
