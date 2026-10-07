@@ -500,7 +500,7 @@ export class MLEngineParent extends JSProcessActorParent {
    * the model hub root or an absolute URL.
    * @param {string} config.featureId - The engine id.
    * @param {string} config.sessionId - Shared across the same model download session.
-   * @returns {Promise<[File, object]>} The model file and headers
+   * @returns {Promise<[string, object]>} The file local path and headers
    */
   async getModelFile({
     engineId,
@@ -534,7 +534,7 @@ export class MLEngineParent extends JSProcessActorParent {
     // if this errors out, it will be caught in the worker
     const parsedUrl = this.modelHub.parseUrl(url, { rootUrl, urlTemplate });
 
-    const [filePath, headers] = await this.modelHub.getModelDataAsFile({
+    const [data, headers] = await this.modelHub.getModelDataAsFile({
       engineId,
       taskName,
       model: parsedUrl.model,
@@ -565,8 +565,7 @@ export class MLEngineParent extends JSProcessActorParent {
       `Downloaded model ${parsedUrl.file}: ${sizeMB}MB`
     );
 
-    const handle = await lazy.OPFS.getFileHandle(filePath);
-    return [await handle.getFile(), headers];
+    return [data, headers];
   }
 
   /**
@@ -799,10 +798,10 @@ export class MLEngineParent extends JSProcessActorParent {
     const fileObject = await lazy.OPFS.download({
       savePath: `${RUNTIME_ROOT_IN_OPFS}/${localRoot}/${version}/${filename}`,
       deletePreviousVersions: true,
-      useCache: true,
+      skipIfExists: true,
       source: baseURL + location,
-      expectedHash: hash,
-      expectedFileSize: size,
+      sha256Hash: hash,
+      fileSize: size,
     });
 
     return fileObject.arrayBuffer();
@@ -1119,7 +1118,6 @@ export class MLEngine {
         // Abort any pending operations for the engine
         MLEngineParent.engineCreationAbortControllers.get(engineId)?.abort();
         MLEngine.#instances.delete(id);
-        lazy.OPFS.removeLiveEngine(engineId);
         lazy.console.debug(`Removed engine ${engineId}`);
       }
     }
@@ -1152,8 +1150,6 @@ export class MLEngine {
     this.events = {};
     this.engineId = engineId;
     MLEngine.#instances.set(engineId, this);
-    // OPFS model files are read through a window that has to outlive the engine.
-    lazy.OPFS.addLiveEngine(engineId);
     /** @type {MLEngineParent} */
     this.mlEngineParent = mlEngineParent;
     /** @type {PipelineOptions} */
@@ -1266,13 +1262,7 @@ export class MLEngine {
       return mlEngine;
     } catch (err) {
       // setupPortCommunication already tries to clean up, but make this idempotent.
-      const error = hardTeardown(err);
-      await MLEngine.removeInstance(
-        mlEngine.engineId,
-        /* shutdown */ false,
-        /* replacement */ false
-      );
-      throw error;
+      throw hardTeardown(err);
     }
   }
 

@@ -22,6 +22,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   createFileUrl: "chrome://global/content/ml/Utils.sys.mjs",
   DEFAULT_ENGINE_ID: "chrome://global/content/ml/EngineProcess.sys.mjs",
   FILE_REGEX: "chrome://global/content/ml/EngineProcess.sys.mjs",
+  isPrivateBrowsing: "chrome://global/content/ml/Utils.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "console", () => {
@@ -180,34 +181,24 @@ class ModelOwner {
     }
 
     const hubRootUrl = `https://${this.hostname}/`;
+    const filePath = this.#getIconFilePath();
+    let possibleUrls;
 
-    const possibleUrls =
-      this.hostname === MOCHITESTS_HOSTNAME
-        ? ["chrome://global/content/ml/mozilla-logo.webp"]
-        : [
-            // Attempt to fetch (org first, then user, then default)
-            `${hubRootUrl}api/organizations/${this.owner}/avatar?redirect=true`,
-            `${hubRootUrl}api/users/${this.owner}/avatar?redirect=true`,
-            "chrome://global/content/ml/mozilla-logo.webp",
-          ];
-
-    for (const url of possibleUrls) {
-      try {
-        const fileObject = await lazy.OPFS.download({
-          source: url,
-          savePath: this.#getIconFilePath(),
-          deletePreviousVersions: false,
-          useCache: true,
-          ignoreCachingErrors: true,
-        });
-
-        return URL.createObjectURL(fileObject);
-      } catch (error) {
-        console.error(error);
-      }
+    if (this.hostname === MOCHITESTS_HOSTNAME) {
+      possibleUrls = ["chrome://global/content/ml/mozilla-logo.webp"];
+    } else {
+      // Attempt to fetch (org first, then user, then default)
+      possibleUrls = [
+        `${hubRootUrl}api/organizations/${this.owner}/avatar?redirect=true`,
+        `${hubRootUrl}api/users/${this.owner}/avatar?redirect=true`,
+        "chrome://global/content/ml/mozilla-logo.webp",
+      ];
     }
-
-    throw new Error("Could not fetch the icon from the provided urls");
+    const opfsFile = new lazy.OPFS.File({
+      urls: possibleUrls,
+      localPath: filePath,
+    });
+    return opfsFile.getAsObjectURL();
   }
 }
 
@@ -1240,9 +1231,7 @@ class IndexedDBCache {
       owner.pruneCache(),
       this.#deleteData(this.headersStoreName, [model, revision, file]),
       this.#deleteData(this.enginesStoreName, [model, revision, file]),
-      lazy.OPFS.remove(this.generateFilePathInOPFS({ model, revision, file }), {
-        ignoreErrors: true,
-      }),
+      lazy.OPFS.remove(this.generateFilePathInOPFS({ model, revision, file })),
     ]);
   }
 
@@ -2183,7 +2172,7 @@ export class ModelHub {
       const fileObject = await lazy.OPFS.download({
         savePath: localFilePath,
         deletePreviousVersions: false,
-        useCache: false,
+        skipIfExists: false,
         source: response,
         abortSignal,
         progressCallback: progressData => {
@@ -2287,6 +2276,12 @@ export class ModelHub {
    * @returns {Promise<Array<{name: string, revision: string}>>}
    */
   async listModels() {
+    if (lazy.isPrivateBrowsing()) {
+      lazy.console.debug(
+        "Returning an empty list of models for private windows"
+      );
+      return [];
+    }
     await this.#initCache();
     return this.cache.listModels();
   }

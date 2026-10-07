@@ -26,8 +26,6 @@ const FAKE_HUB =
   "chrome://mochitests/content/browser/toolkit/components/ml/tests/browser/data";
 const FAKE_URL_TEMPLATE = "{model}/resolve/{revision}";
 
-const OWNER_ICON_ROOT = "modelOwners";
-
 const FAKE_MODEL_ARGS = {
   model: "acme/bert",
   revision: "main",
@@ -1983,6 +1981,14 @@ add_task(async function test_getOwnerIcon_cache() {
     set: [["browser.ml.logLevel", "All"]],
   });
 
+  const originalOPFSFile = OPFS.File;
+
+  const localPaths = new Set();
+  const stub = sinon.stub(OPFS, "File").callsFake(function (args) {
+    localPaths.add(args.localPath);
+    return new originalOPFSFile(args); // preserve original behavior
+  });
+
   const hub = new ModelHub({
     rootUrl: FAKE_HUB,
     urlTemplate: FAKE_URL_TEMPLATE,
@@ -2004,12 +2010,23 @@ add_task(async function test_getOwnerIcon_cache() {
   Assert.equal(spy.called, false);
 
   spy.restore();
-  await OPFS.remove(OWNER_ICON_ROOT, { recursive: true, ignoreErrors: true });
+  stub.restore();
+  for (const path of localPaths) {
+    await OPFS.remove(path, { recursive: true });
+  }
 });
 
 add_task(async function test_getOwnerIcon_download() {
   await SpecialPowers.pushPrefEnv({
     set: [["browser.ml.logLevel", "All"]],
+  });
+
+  const originalOPFSFile = OPFS.File;
+
+  const localPaths = new Set();
+  const stub = sinon.stub(OPFS, "File").callsFake(function (args) {
+    localPaths.add(args.localPath);
+    return new originalOPFSFile(args); // preserve original behavior
   });
 
   const hub = new ModelHub({
@@ -2018,8 +2035,6 @@ add_task(async function test_getOwnerIcon_download() {
   });
 
   const fullyQualifiedModelName = `mochitests/mozilla/distilvit-${crypto.randomUUID()}`;
-
-  await OPFS.remove(OWNER_ICON_ROOT, { recursive: true, ignoreErrors: true });
 
   let spy = sinon.spy(Progress, "fetchUrl");
   // first call will get the icon from the web
@@ -2030,7 +2045,10 @@ add_task(async function test_getOwnerIcon_download() {
   Assert.notEqual(await spy.lastCall?.returnValue, null);
 
   spy.restore();
-  await OPFS.remove(OWNER_ICON_ROOT, { recursive: true, ignoreErrors: true });
+  stub.restore();
+  for (const path of localPaths) {
+    await OPFS.remove(path, { recursive: true });
+  }
 });
 
 /**
