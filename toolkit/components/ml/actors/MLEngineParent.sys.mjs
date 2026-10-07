@@ -1119,6 +1119,7 @@ export class MLEngine {
         // Abort any pending operations for the engine
         MLEngineParent.engineCreationAbortControllers.get(engineId)?.abort();
         MLEngine.#instances.delete(id);
+        lazy.OPFS.removeLiveEngine(engineId);
         lazy.console.debug(`Removed engine ${engineId}`);
       }
     }
@@ -1151,6 +1152,8 @@ export class MLEngine {
     this.events = {};
     this.engineId = engineId;
     MLEngine.#instances.set(engineId, this);
+    // OPFS model files are read through a window that has to outlive the engine.
+    lazy.OPFS.addLiveEngine(engineId);
     /** @type {MLEngineParent} */
     this.mlEngineParent = mlEngineParent;
     /** @type {PipelineOptions} */
@@ -1263,7 +1266,13 @@ export class MLEngine {
       return mlEngine;
     } catch (err) {
       // setupPortCommunication already tries to clean up, but make this idempotent.
-      throw hardTeardown(err);
+      const error = hardTeardown(err);
+      await MLEngine.removeInstance(
+        mlEngine.engineId,
+        /* shutdown */ false,
+        /* replacement */ false
+      );
+      throw error;
     }
   }
 
