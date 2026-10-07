@@ -38,7 +38,7 @@ import "chrome://global/content/elements/moz-support-link.mjs";
  * @slot [default] - Used to append moz-page-nav-button elements to the navigation.
  * @slot [subheading] - Used to append page specific search input or notification to the nav.
  */
-export default class MozPageNav extends MozLitElement {
+export class MozPageNav extends MozLitElement {
   static properties = {
     currentView: { type: String },
     heading: { type: String, fluent: true },

@@ -19,7 +19,7 @@ window.MozXULElement?.insertFTLIfNeeded("toolkit/global/mozBadge.ftl");
  * @property {string} title - The title of the badge, appears as a tooltip on hover
  * @property {MozBadgeType} type - The type of badge (e.g., "new")
  */
-export default class MozBadge extends MozLitElement {
+export class MozBadge extends MozLitElement {
   static properties = {
     label: { type: String, fluent: true },
     iconSrc: { type: String },

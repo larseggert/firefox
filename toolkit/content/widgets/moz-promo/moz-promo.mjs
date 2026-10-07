@@ -27,7 +27,7 @@ window.MozXULElement?.insertFTLIfNeeded("toolkit/global/mozPromo.ftl");
  * @fires promo:user-dismissed
  *  Custom event indicating that the promo was dismissed by the user.
  */
-export default class MozPromo extends MozLitElement {
+export class MozPromo extends MozLitElement {
   static queries = {
     actionsSlot: "slot[name=actions]",
     supportLinkSlot: "slot[name=support-link]",

@@ -244,7 +244,7 @@ class MenuController {
  * @slot default - The button's content, overrides label property.
  * @fires click - The click event.
  */
-export default class MozButton extends MozLitElement {
+export class MozButton extends MozLitElement {
   static shadowRootOptions = {
     ...MozLitElement.shadowRootOptions,
     delegatesFocus: true,

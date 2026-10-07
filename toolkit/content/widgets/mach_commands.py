@@ -24,7 +24,7 @@ import {{ MozLitElement }} from "../lit-utils.mjs";
  * @tagname {element_name}
  * @property {{string}} variant - Property description goes here
  */
-export default class {class_name} extends MozLitElement {{
+export class {class_name} extends MozLitElement {{
   static properties = {{
     variant: {{ type: String }},
   }};

@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * @import MozButton from "chrome://global/content/elements/moz-button.mjs";
+ * @import { MozButton } from "chrome://global/content/elements/moz-button.mjs";
  * @import { PartialSearchEngine } from "chrome://browser/content/urlbar/SearchEngineStore.mjs"
  * @import { OpenSearchData } from "moz-src:///browser/components/search/OpenSearchManager.sys.mjs"
  * @import { LocalSearchMode } from "chrome://browser/content/urlbar/UrlbarShared.mjs"

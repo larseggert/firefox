@@ -45,7 +45,7 @@ const NAVIGATION_VALUE = {
  * @slot actions - Slot for the actions positioned at the end of the component container.
  * @slot actions-start - Slot for the actions positioned at the start of the component container.
  */
-export default class MozBoxItem extends MozBoxBase {
+export class MozBoxItem extends MozBoxBase {
   #actionEls = [];
 
   static properties = {

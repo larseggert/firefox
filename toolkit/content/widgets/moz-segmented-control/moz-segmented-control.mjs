@@ -7,7 +7,7 @@ import {
   SelectControlBaseElement,
   SelectControlItemMixin,
 } from "../lit-select-control.mjs";
-import MozButton from "chrome://global/content/elements/moz-button.mjs";
+import { MozButton } from "chrome://global/content/elements/moz-button.mjs";
 
 /**
  * A segmented control component that can function as either a tab switcher or

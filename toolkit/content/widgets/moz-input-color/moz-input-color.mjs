@@ -11,7 +11,7 @@ import { MozLitElement } from "../lit-utils.mjs";
  * @property {string} [name] - Any name that will be associated with the component's nested `input` element. Useful when used in `form`s.
  * @property {string} label - The text of the label.
  */
-export default class MozInputColor extends MozLitElement {
+export class MozInputColor extends MozLitElement {
   static properties = {
     value: { type: String },
     name: { type: String },

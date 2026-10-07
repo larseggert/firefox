@@ -17,7 +17,7 @@ window.MozXULElement?.insertFTLIfNeeded("toolkit/global/mozBoxBase.ftl");
  * @property {string} href - The href of the link.
  * @property {string} supportPage - Whether or not the link is to a support page.
  */
-export default class MozBoxLink extends MozBoxBase {
+export class MozBoxLink extends MozBoxBase {
   static shadowRootOptions = {
     ...super.shadowRootOptions,
     delegatesFocus: true,

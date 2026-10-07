@@ -45,7 +45,7 @@ import { MozBaseInputElement, MozLitElement } from "../lit-utils.mjs";
  * @property {number} selectedIndex - The index of the currently selected option.
  * @property {boolean} usePanelList - Whether or not to render a panel. Depends on options using icons.
  */
-export default class MozSelect extends MozBaseInputElement {
+export class MozSelect extends MozBaseInputElement {
   static properties = {
     size: { type: String, reflect: true },
     options: { type: Array, state: true },

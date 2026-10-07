@@ -36,7 +36,7 @@ import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
  * @property {number} summaryTabIndex - (optional) tabindex for the accordion summary.
  * @slot content - The content to show inside of the card.
  */
-export default class MozCard extends MozLitElement {
+export class MozCard extends MozLitElement {
   static queries = {
     detailsEl: "#moz-card-details",
     headingEl: "#heading",

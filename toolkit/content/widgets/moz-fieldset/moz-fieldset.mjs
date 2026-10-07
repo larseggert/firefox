@@ -31,7 +31,7 @@ const HEADING_LEVEL_TEMPLATES = {
  * @property {string} iconSrc - The src for an optional icon.
  * @property {"beta" | "new" | undefined} badge - Include a badge of this type with matching text.
  */
-export default class MozFieldset extends MozLitElement {
+export class MozFieldset extends MozLitElement {
   static properties = {
     label: { type: String, fluent: true },
     description: { type: String, fluent: true },

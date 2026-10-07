@@ -4,7 +4,7 @@
 
 import { html, ifDefined, staticHtml, literal } from "../vendor/lit.all.mjs";
 import { MozLitElement, hasModifierKey } from "../lit-utils.mjs";
-import MozBoxItem from "chrome://global/content/elements/moz-box-item.mjs";
+import { MozBoxItem } from "chrome://global/content/elements/moz-box-item.mjs";
 
 export const GROUP_TYPES = {
   list: "list",
@@ -35,7 +35,7 @@ export const GROUP_TYPES = {
  *  cross the shadow boundary.
  */
 
-export default class MozBoxGroup extends MozLitElement {
+export class MozBoxGroup extends MozLitElement {
   #tabbable = true;
 
   static properties = {

@@ -23,7 +23,7 @@ import { MozBaseInputElement } from "../lit-utils.mjs";
  * @property {string} ariaDescription - The aria-description text when there is no visible description.
  * @property {string} title - The title attribute, mapped onto the inner input.
  */
-export default class MozInputText extends MozBaseInputElement {
+export class MozInputText extends MozBaseInputElement {
   static properties = {
     placeholder: { type: String, fluent: true },
     readonly: { type: Boolean, reflect: true },

@@ -17,7 +17,7 @@ import { MozBoxBase } from "../lit-utils.mjs";
  * @property {string} accesskey - Key used for keyboard access.
  * @property {boolean} parentDisabled - Disabled by the parent's state, see MozBaseInputElement.
  */
-export default class MozBoxButton extends MozBoxBase {
+export class MozBoxButton extends MozBoxBase {
   static shadowRootOptions = {
     ...super.shadowRootOptions,
     delegatesFocus: true,

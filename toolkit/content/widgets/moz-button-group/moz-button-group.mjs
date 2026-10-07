@@ -17,7 +17,7 @@ export const PLATFORM_WINDOWS = "win";
  * @tagname moz-button-group
  * @property {string} platform - The detected platform, set automatically.
  */
-export default class MozButtonGroup extends MozLitElement {
+export class MozButtonGroup extends MozLitElement {
   static queries = {
     defaultSlotEl: "slot:not([name])",
     primarySlotEl: "slot[name=primary]",

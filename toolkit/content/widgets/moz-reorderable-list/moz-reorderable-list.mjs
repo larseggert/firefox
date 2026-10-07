@@ -50,7 +50,7 @@ const REORDER_PROP = "__mozReorderableIndex";
  * @fires dragstarted - Fired when an item is dragged.
  * @fires dragended - Fired when an item is dropped.
  */
-export default class MozReorderableList extends MozLitElement {
+export class MozReorderableList extends MozLitElement {
   static queries = {
     slotEl: "slot",
     indicatorEl: ".indicator",
