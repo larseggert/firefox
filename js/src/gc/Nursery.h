@@ -380,7 +380,8 @@ class Nursery {
   // Number of allocated (ready to use) chunks.
   unsigned allocatedChunkCount() const { return toSpace.chunks_.length(); }
 
-  uint32_t currentChunk() const { return toSpace.currentChunk_; }
+  uint32_t activeChunkCount() const { return toSpace.activeChunkCount(); }
+  uint32_t currentChunk() const { return toSpace.currentChunk(); }
   uint32_t startChunk() const { return toSpace.startChunk_; }
   uintptr_t startPosition() const { return toSpace.startPosition_; }
 
@@ -404,11 +405,7 @@ class Nursery {
   // Must only be called if the previousGC data is initialised.
   double calcPromotionRate(bool* validForTenuring) const;
 
-  NurseryChunk& chunk(unsigned index) const { return *toSpace.chunks_[index]; }
-
-  // Set the allocation position to the start of a chunk. This sets
-  // currentChunk_, position_ and currentEnd_ values as appropriate.
-  void moveToStartOfChunk(unsigned chunkno);
+  NurseryChunk& chunk(unsigned index) const { return *toSpace.chunk(index); }
 
   bool initFirstChunk(AutoLockGCBgAlloc& lock);
   void setCapacity(size_t newCapacity);
@@ -550,8 +547,10 @@ class Nursery {
     // Vector of allocated chunks to allocate from.
     Vector<NurseryChunk*, 0, SystemAllocPolicy> chunks_;
 
-    // The index of the chunk that is currently being allocated from.
-    uint32_t currentChunk_ = 0;
+    // The number of chunks in this space that have been prepared for allocation
+    // since the last clear.  Only these chunks are guaranteed to have properly
+    // initialized headers.
+    uint32_t activeChunkCount_ = 0;
 
     // The maximum number of chunks to allocate based on capacity_.
     uint32_t maxChunkCount_ = 0;
@@ -575,6 +574,19 @@ class Nursery {
     inline bool isEmpty() const;
     inline bool isInside(const void* p) const;
 
+    uint32_t activeChunkCount() const { return activeChunkCount_; }
+
+    // The index of the chunk that is currently being allocated into.
+    uint32_t currentChunk() const {
+      MOZ_ASSERT(activeChunkCount());
+      return activeChunkCount() - 1;
+    }
+
+    NurseryChunk* chunk(unsigned index) const {
+      MOZ_ASSERT(index < activeChunkCount());
+      return chunks_[index];
+    }
+
     // Return the logical offset within the nursery of an address in a nursery
     // chunk (chunks are discontiguous in memory).
     inline size_t offsetFromAddress(uintptr_t addr) const;
@@ -583,7 +595,12 @@ class Nursery {
     void setKind(gc::ChunkKind newKind);
 
     void clear(Nursery* nursery);
-    void moveToStartOfChunk(Nursery* nursery, unsigned chunkno);
+
+    // Prepare to allocate into a chunk, setting activeChunkCount_, position_,
+    // and currentEnd_ values as appropriate.
+    void moveToStartOfFirstChunk(Nursery* nursery);
+    void moveToStartOfNextChunk(Nursery* nursery);
+
     void setCurrentEnd(Nursery* nursery);
     void setStartToCurrentPosition();
     bool commitSubChunkRegion(size_t oldCapacity, size_t newCapacity);
