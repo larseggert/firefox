@@ -16,7 +16,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +50,6 @@ import org.mozilla.fenix.components.appstate.AppAction.SearchAction.SearchEnded
 import org.mozilla.fenix.components.appstate.AppAction.SearchAction.SearchStarted
 import org.mozilla.fenix.components.appstate.VoiceSearchAction.VoiceInputRequested
 import org.mozilla.fenix.components.metrics.MetricsUtils
-import org.mozilla.fenix.components.toolbar.TopDividerColumn
 import org.mozilla.fenix.theme.FirefoxTheme
 import org.mozilla.fenix.utils.Settings
 import org.mozilla.fenix.wallpapers.WallpaperTheme
@@ -157,7 +155,6 @@ internal class HomeToolbarComposable(
                 settings.shouldShowTabStripAtTop
             }
         }
-        val isTabStripAtBottom = remember { shouldUseBottomToolbar && settings.shouldShowTabStripAtBottom }
 
         Column(
             modifier =
@@ -170,19 +167,15 @@ internal class HomeToolbarComposable(
                 searchSuggestionsContent(Modifier.weight(1f))
             }
 
-            TopDividerColumn(showDivider = isTabStripAtBottom, modifier = Modifier.fillMaxWidth()) {
-                if (shouldShowTabStrip) {
-                    tabStripContent()
-                }
-
-                AddressBar(wallpaperTextColor = wallpaperTextColor)
-
-                if (shouldUseBottomToolbar) {
-                    navigationBarContent?.invoke()
-                }
+            if (shouldShowTabStrip) {
+                tabStripContent()
             }
 
-            if (!shouldUseBottomToolbar) {
+            AddressBar(wallpaperTextColor = wallpaperTextColor)
+
+            if (shouldUseBottomToolbar) {
+                navigationBarContent?.invoke()
+            } else {
                 searchSuggestionsContent(Modifier.weight(1f))
             }
         }
@@ -191,10 +184,6 @@ internal class HomeToolbarComposable(
     @Composable
     private fun ColumnScope.AddressBar(wallpaperTextColor: Color?) {
         val isAddressBarVisible = remember { addressBarVisibility }
-        val hasBottomStrip = remember {
-            settings.shouldUseBottomToolbar &&
-                (settings.shouldShowTabStripAtBottom || settings.shouldShowTabGroupsStrip)
-        }
 
         Box {
             if (settings.enableHomepageSearchBar) {
@@ -223,7 +212,6 @@ internal class HomeToolbarComposable(
                 BrowserToolbar(
                     store = toolbarStore,
                     browserActionsColor = wallpaperTextColor,
-                    showDivider = !hasBottomStrip,
                 )
             }
         }
