@@ -7,7 +7,10 @@ import {
   when,
   ifDefined,
 } from "chrome://global/content/vendor/lit.all.mjs";
-import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
+import {
+  MozLitElement,
+  hasModifierKey,
+} from "chrome://global/content/lit-utils.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-support-link.mjs";
 
@@ -96,6 +99,9 @@ export default class MozPageNav extends MozLitElement {
   }
 
   handleFocus(e) {
+    if (hasModifierKey(e)) {
+      return;
+    }
     if (e.key == "ArrowDown" || e.key == "ArrowRight") {
       e.preventDefault();
       this.focusNextView();

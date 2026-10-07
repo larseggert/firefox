@@ -5,6 +5,7 @@
     <title>MozPageNav Tests</title>
     <script src="chrome://mochikit/content/tests/SimpleTest/SimpleTest.js"></script>
     <script src="chrome://mochikit/content/tests/SimpleTest/EventUtils.js"></script>
+    <script src="lit-test-helpers.js"></script>
     <link
       rel="stylesheet"
       href="chrome://mochikit/content/tests/SimpleTest/test.css"
@@ -113,9 +114,7 @@
         "chrome://browser/content/utilityOverlay.js",
         this
       );
-      const { BrowserTestUtils } = ChromeUtils.importESModule(
-        "resource://testing-common/BrowserTestUtils.sys.mjs"
-      );
+      const testHelpers = new LitTestHelpers();
 
       const mozPageNav = document.querySelector("moz-page-nav");
 
@@ -406,6 +405,39 @@
           "The first page nav button is still selected"
         );
       });
+
+      /**
+       * Tests that arrow keys with modifiers do not navigate
+       */
+      add_task(
+        async function test_keyboard_navigation_ignores_modified_arrows() {
+          let firstPageNavButton = mozPageNav.pageNavButtons[0];
+          let secondPageNavButton = mozPageNav.pageNavButtons[1];
+          let thirdPageNavButton = mozPageNav.pageNavButtons[2];
+
+          secondPageNavButton.activate();
+          await mozPageNav.updateComplete;
+          secondPageNavButton.buttonEl.focus();
+          ok(
+            isActiveElement(secondPageNavButton),
+            "The second page nav button is the active element"
+          );
+
+          // Starting on the second button makes every direction observable.
+          await testHelpers.verifyModifiedArrowKeysIgnored({
+            target: secondPageNavButton.buttonEl,
+            getState: () => mozPageNav.currentView,
+          });
+          is(
+            thirdPageNavButton.view,
+            mozPageNav.currentView,
+            "Bare ArrowDown selects the next page nav button"
+          );
+
+          firstPageNavButton.activate();
+          await mozPageNav.updateComplete;
+        }
+      );
 
       add_task(async function test_visibility_change_keyboard_navigation() {
         const buttonIsSelected = button => {
