@@ -2111,9 +2111,7 @@ let AppFileHandler = (function () {
      * @return {MozBoxItem}
      */
     _buildHeader() {
-      const headerElement = /** @type {MozBoxItem} */ (
-        document.createElement("moz-box-item")
-      );
+      const headerElement = document.createElement("moz-box-item");
       headerElement.slot = "header";
       this.typeColumn = document.createElement("label");
       this.typeColumn.setAttribute("data-l10n-id", "applications-type-heading");

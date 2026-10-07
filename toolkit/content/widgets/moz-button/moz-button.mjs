@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/// <reference path="./moz-button.tagmap.d.ts" />
+
 import { html, ifDefined, classMap } from "../vendor/lit.all.mjs";
 import { MozLitElement } from "../lit-utils.mjs";
 
@@ -288,6 +290,8 @@ export class MozButton extends MozLitElement {
     this.hasVisibleLabel = !!this.label;
     this.attention = false;
     this.iconPosition = "start";
+    /** @type {string | undefined} */
+    this.iconSrc = undefined;
     this.menuId = "";
     this.parentDisabled = undefined;
   }

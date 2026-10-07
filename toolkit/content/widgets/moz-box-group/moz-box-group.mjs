@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/// <reference path="./moz-box-group.tagmap.d.ts" />
+
 import { html, ifDefined, staticHtml, literal } from "../vendor/lit.all.mjs";
 import { MozLitElement, hasModifierKey } from "../lit-utils.mjs";
 import { MozBoxItem } from "chrome://global/content/elements/moz-box-item.mjs";
