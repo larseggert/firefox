@@ -429,9 +429,8 @@ bookmark-panel-remove =
 bookmark-panel-show-editor-checkbox =
     .label = Show editor when saving
     .accesskey = S
-bookmark-panel-save-button2 =
+bookmark-panel-save-button =
     .label = Save
-    .accesskey = a
 
 # Width of the bookmark panel.
 # Should be large enough to fully display the Done and
