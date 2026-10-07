@@ -1102,21 +1102,6 @@ features:
         value:
           allowed-regions: ["XX"]
 
-  native-share-sheet:
-    description: Feature to enable the Native Share Sheet for users on Firefox on Android.
-    variables:
-      enabled:
-        description: If true, Native Share Sheet is enabled.
-        type: Boolean
-        default: true
-    defaults:
-      - channel: developer
-        value:
-          enabled: true
-      - channel: nightly
-        value:
-          enabled: true
-
   show-more-shortcuts:
     description: Feature to show expand/collapse buttons for shortcuts on the homepage.
     variables:
