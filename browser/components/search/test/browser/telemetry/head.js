@@ -236,8 +236,6 @@ const DEFAULT_IMPRESSION = {
   is_shopping_page: "false",
   shopping_tab_displayed: "false",
   has_ai_summary: "false",
-  prescan: "none_found",
-  scan: "complete",
 };
 
 /**
@@ -257,16 +255,14 @@ function assertSERPTelemetry(expectedEvents) {
   expectedEvents = structuredClone(expectedEvents);
 
   for (let expectedEvent of expectedEvents) {
-    // The prescan finds ads whenever an ad component is expected, unless the
-    // test specifies otherwise.
-    let hasAds = !!expectedEvent.adImpressions?.some(adImpression =>
-      adImpression.component?.startsWith("ad_")
-    );
-    expectedEvent.impression = {
-      ...DEFAULT_IMPRESSION,
-      prescan: hasAds ? "found" : "none_found",
-      ...expectedEvent.impression,
-    };
+    if (expectedEvent.impression) {
+      expectedEvent.impression = {
+        ...DEFAULT_IMPRESSION,
+        ...expectedEvent.impression,
+      };
+    } else {
+      expectedEvent.impression = { ...DEFAULT_IMPRESSION };
+    }
   }
 
   // A single test might run assertImpressionEvents more than once

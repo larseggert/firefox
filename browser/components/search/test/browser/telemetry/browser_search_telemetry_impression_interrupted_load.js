@@ -163,20 +163,12 @@ add_task(async function test_reload_before_ad_impression() {
     "An impression is recorded for both the interrupted load and the reload."
   );
 
-  // Only the reload survived to run its load-event scan, so the detailed ad
-  // data from the interrupted load is lost even though withads counted it.
-  // The interrupted load only reports that its ads were uncategorized.
+  // Only the reload survived to run its load-event scan, so the ad data from
+  // the interrupted load is lost even though withads counted it.
   Assert.equal(
     adImpressions2.length,
-    2,
-    "The reload and the interrupted load each recorded an ad_impression."
-  );
-  Assert.deepEqual(
-    adImpressions2
-      .filter(a => a.extra.component == "ad_uncategorized")
-      .map(a => a.extra.ads_loaded),
-    [undefined],
-    "The interrupted load recorded a single uncategorized ad_impression."
+    1,
+    "Only the reload recorded ad_impression, leaving withads ahead by one."
   );
 
   // The interrupted load's impression comes from the fallback path, which is
@@ -252,25 +244,9 @@ add_task(async function test_stop_load_before_ad_impression() {
     "The impression came from the fallback path, not the page scan."
   );
   Assert.equal(
-    impressions[0].extra.prescan,
-    "found",
-    "The DOMContentLoaded prescan found ads."
-  );
-  Assert.equal(
-    impressions[0].extra.scan,
-    "not_run",
-    "The scan never ran because the load event never fired."
-  );
-  adImpressions = Glean.serp.adImpression.testGetValue() ?? [];
-  Assert.equal(
-    adImpressions.length,
-    1,
-    "The fallback impression is accompanied by one ad_impression."
-  );
-  Assert.equal(
-    adImpressions[0].extra.component,
-    "ad_uncategorized",
-    "The ads found in the prescan were never categorized."
+    (Glean.serp.adImpression.testGetValue() ?? []).length,
+    0,
+    "The fallback impression has no accompanying ad_impression."
   );
 });
 
