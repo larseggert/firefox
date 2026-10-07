@@ -9,7 +9,6 @@ DIRS += ["loader"]
 
 EXPORTS.mozilla.dom += [
     "Worklet.h",
-    "WorkletCommon.h",
     "WorkletFetchHandler.h",
     "WorkletGlobalScope.h",
     "WorkletImpl.h",
