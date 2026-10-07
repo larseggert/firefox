@@ -1266,7 +1266,7 @@ void nsJSContext::EndCycleCollectionCallback(
       StaticPrefs::
           dom_memory_foreground_content_processes_have_larger_page_cache()) {
     if (auto* tc = TaskController::Get()) {
-      tc->RequestMemoryCleanup("CC completed");
+      tc->RequestIdleMemoryCleanup("CC completed");
     } else {
       jemalloc_free_dirty_pages();
     }
@@ -1547,7 +1547,7 @@ static void DOMGCSliceCallback(JSContext* aCx, JS::GCProgress aProgress,
           StaticPrefs::
               dom_memory_foreground_content_processes_have_larger_page_cache()) {
         if (auto* tc = TaskController::Get()) {
-          tc->RequestMemoryCleanup("GC completed");
+          tc->RequestIdleMemoryCleanup("GC completed");
         } else {
           jemalloc_free_dirty_pages();
         }

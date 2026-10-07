@@ -26,7 +26,7 @@ function newTimer(name, delay, type) {
 const ignoredTimers = [
   "BackgroundHangThread_timer", // BHR is Nightly-only, just ignore it.
   "CCGCScheduler::EnsureGCRunner", // GC runner can be scheduled anytime, randomly.
-  "MemoryCleanupWantsLaterCheck", // When Worker is used, nsThread::ProcessNextEvent may call MayScheduleMemoryCleanup.
+  "IdleMemoryCleanupWantsLaterCheck", // When Worker is used, nsThread::ProcessNextEvent may call MayScheduleIdleMemoryCleanup.
   "dom::IdleGCTimerCallback", // When Worker is used.
   "dom::PeriodicGCTimerCallback", // When Worker is used.
   "IdleRunnableWrapper::SetTimer", // When Worker is used.
