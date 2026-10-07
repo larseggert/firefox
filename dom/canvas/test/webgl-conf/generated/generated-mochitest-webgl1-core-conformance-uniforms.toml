@@ -78,8 +78,6 @@ skip-if = [
 ["test_conformance__uniforms__uniform-default-values.html"]
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]
 
 ["test_conformance__uniforms__uniform-location.html"]

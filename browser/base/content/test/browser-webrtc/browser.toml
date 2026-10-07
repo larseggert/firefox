@@ -27,9 +27,6 @@ skip-if = [
 
 ["browser_devices_get_user_media.js"]
 https_first_disabled = true
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'", # linux: bug 976544, Bug 1616011
-]
 
 ["browser_devices_get_user_media_anim.js"]
 https_first_disabled = true
@@ -111,14 +108,12 @@ skip-if = [
 https_first_disabled = true
 skip-if = [
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'", # Bug 1775945
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'", # Bug 1775945
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64'", # platform migration
 ]
 
 ["browser_devices_get_user_media_unprompted_access.js"]
 skip-if = [
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland' && opt", # Bug 1712012
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1712012
 ]
 https_first_disabled = true
 

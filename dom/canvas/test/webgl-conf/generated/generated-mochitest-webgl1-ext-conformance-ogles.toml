@@ -218,10 +218,6 @@ skip-if = [
 ["test_conformance__ogles__GL__normalize__normalize_001_to_006.html"]
 
 ["test_conformance__ogles__GL__notEqual__notEqual_001_to_008.html"]
-skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
-]
 
 ["test_conformance__ogles__GL__notEqual__notEqual_009_to_012.html"]
 
@@ -248,10 +244,6 @@ skip-if = [
 ["test_conformance__ogles__GL__refract__refract_001_to_006.html"]
 
 ["test_conformance__ogles__GL__sign__sign_001_to_006.html"]
-skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
-]
 
 ["test_conformance__ogles__GL__sin__sin_001_to_006.html"]
 

@@ -85,7 +85,6 @@ support-files = [
 support-files = ["dummy_iframe_page.html"]
 skip-if = [
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland' && opt", # Bug 1607713
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1607713
 ]
 
 ["browser_backforward_userinteraction_about.js"]
@@ -97,9 +96,6 @@ skip-if = [
 ["browser_bfcache_after_auxiliary.js"]
 
 ["browser_bfcache_copycommand.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1730593
-]
 
 ["browser_bfcache_page_restored_telemetry.js"]
 
@@ -118,7 +114,6 @@ https_first_disabled = true
 ["browser_browsingContext-webProgress.js"]
 skip-if = [
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland' && opt", # Bug 1721261
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1721261
 ]
 https_first_disabled = true
 
@@ -190,11 +185,6 @@ skip-if = [
 ["browser_bug655273.js"]
 
 ["browser_bug670318.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && asan", # Bug 1717403
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && debug", # Bug 1717403
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && tsan", # Bug 1717403
-]
 
 ["browser_bug673087-1.js"]
 
@@ -374,9 +364,6 @@ support-files = ["file_replace_state_during_navigation.html"]
 ["browser_system_principal_initial_document.js"]
 
 ["browser_tab_replace_while_loading.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && tsan", # Bug 1604237
-]
 
 ["browser_tab_touch_events.js"]
 

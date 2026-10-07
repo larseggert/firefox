@@ -50,9 +50,6 @@ tags = "overflowable-toolbar"
 ["browser_873501_handle_specials.js"]
 
 ["browser_876926_customize_mode_wrapping.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'", # bug 1921617
-]
 
 ["browser_876944_customize_mode_create_destroy.js"]
 
@@ -69,9 +66,6 @@ tags = "overflowable-toolbar"
 
 ["browser_885052_customize_mode_observers_disabed.js"]
 tags = "fullscreen"
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'", # Bug 1781368
-]
 
 ["browser_885530_showInPrivateBrowsing.js"]
 
@@ -161,7 +155,6 @@ support-files = ["dummy_history_item.html"]
 ["browser_947914_button_zoomReset.js"]
 skip-if = [
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && debug && socketprocess_networking", # Bug 1775671
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt",
 ]
 
 ["browser_947987_removable_default.js"]

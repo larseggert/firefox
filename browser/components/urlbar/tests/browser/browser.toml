@@ -136,10 +136,6 @@ https_first_disabled = true
 support-files = ["slow-page.sjs"]
 
 ["browser_strip_on_share.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && asan && swgl", # Bug 1890664
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && tsan && swgl", # Bug 1890664
-]
 
 ["browser_strip_on_share_telemetry.js"]
 
@@ -148,9 +144,6 @@ skip-if = [
 ["browser_suppressFocusBorder.js"]
 
 ["browser_tabKeyBehavior.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && tsan", # Bug 1813675
-]
 
 ["browser_textruns.js"]
 

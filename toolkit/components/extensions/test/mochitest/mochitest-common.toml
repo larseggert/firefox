@@ -141,9 +141,6 @@ skip-if = [
 ]
 
 ["test_ext_browserAction_openPopup_windowId.html"]
-skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'", # Bug 1855364, https://bugzilla.mozilla.org/show_bug.cgi?id=1855364#c42
-]
 
 ["test_ext_browserAction_openPopup_without_pref.html"]
 
@@ -327,7 +324,6 @@ skip-if = [
 ["test_ext_identity.html"]
 skip-if = [
   "os == 'android'", # Bug 1475887 (API not supported on android yet)
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1777016
   "tsan", # Bug 1612707
 ]
 

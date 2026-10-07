@@ -98,9 +98,6 @@ tags = "devtools webextensions"
 ["browser_eyedropper.js"]
 
 ["browser_eyedropper_update.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && tsan",
-]
 
 ["browser_in_rdm_pane.js"]
 

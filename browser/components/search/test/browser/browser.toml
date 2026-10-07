@@ -101,7 +101,6 @@ tags = "urlbar"
 ["browser_searchbar_keyboard_navigation.js"]
 skip-if = [
   "debug", # Bug 1792718
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && asan", # Bug 1792718
   "tsan", # Bug 1792718
 ]
 

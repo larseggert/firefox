@@ -26,9 +26,6 @@ skip-if = [
 ["browser_firefoxview_paused.js"]
 
 ["browser_firefoxview_search_telemetry.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && swgl", # Bug 1880113
-]
 
 ["browser_firefoxview_tab.js"]
 

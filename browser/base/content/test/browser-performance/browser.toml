@@ -23,7 +23,6 @@ support-files = ["head.js"]
 skip-if = [
   "asan",
   "debug",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && tsan", # Bug 1969231
 ]
 
 ["browser_hidden_browser_vsync.js"]

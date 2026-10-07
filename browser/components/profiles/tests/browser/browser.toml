@@ -10,8 +10,6 @@ run-if = [
 
 ["browser_appmenu.js"]
 skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && asan", # Bug 1996375
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1996375
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64' && opt", # Bug 1996375
 ]
 
@@ -69,8 +67,5 @@ skip-if = [
 ["browser_test_profile_selector.js"]
 
 ["browser_update_profile_on_window_switch.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1948374
-]
 
 ["browser_window_title_test.js"]

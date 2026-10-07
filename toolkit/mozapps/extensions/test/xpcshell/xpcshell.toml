@@ -275,7 +275,6 @@ skip-if = [
 head = "head_addons.js head_sideload.js"
 skip-if = [
   "condprof", # Bug 1769184 - by design for now
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'", # Bug 1613268
 ]
 
 ["test_sideloads.js"]
@@ -319,7 +318,6 @@ skip-if = [
 head = "head_addons.js head_sideload.js"
 skip-if = [
   "condprof", # Bug 1769184 - by design for now
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'", # Bug 1613268
 ]
 
 ["test_startupTimeline.js"]

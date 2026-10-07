@@ -31,7 +31,6 @@ skip-if = [
 ["browser_contextmenuFillLogins.js"]
 skip-if = [
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland' && debug", # Disabling because of Bug 1974208
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && debug", # Disabling because of Bug 1974208
 ]
 
 ["browser_copyToClipboardButton.js"]
@@ -66,18 +65,12 @@ run-if = [
 ]
 
 ["browser_openImportCSV.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && asan && swgl", # Bug 1775754
-]
 
 ["browser_openPreferences.js"]
 
 ["browser_openPreferencesExternal.js"]
 
 ["browser_openSite.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1581889
-]
 
 ["browser_osAuthDialog.js"]
 skip-if = [

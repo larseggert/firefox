@@ -63,9 +63,6 @@ run-if = [
 ]
 
 ["browser_async_remove_tab.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1787024
-]
 
 ["browser_async_window_flushing.js"]
 https_first_disabled = true
@@ -363,9 +360,6 @@ skip-if = [
 ["browser_tab_groups_save_on_window_close.js"]
 
 ["browser_tab_groups_saved.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1945957
-]
 
 ["browser_tab_groups_state.js"]
 

@@ -107,9 +107,6 @@ run-if = [
 ["browser_html_linux_theme_colors_checkbox.js"]
 
 ["browser_html_list_view.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt && a11y_checks && swgl", # Bug 1781893
-]
 
 ["browser_html_list_view_recommendations.js"]
 
@@ -165,9 +162,6 @@ skip-if = [
 ["browser_page_options_updates.js"]
 
 ["browser_permission_prompt.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt && a11y_checks && swgl", # Bug 1964764
-]
 
 ["browser_permission_prompt_focus.js"]
 

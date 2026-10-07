@@ -43,7 +43,6 @@ support-files = ["../browser-general/video.webm"]
 https_first_disabled = true
 skip-if = [
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland' && debug", # Bug 1652383
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && debug", # Bug 1652383
 ]
 
 ["browser_tooltip_zoom.js"]

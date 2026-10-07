@@ -220,7 +220,6 @@ fail-if = [
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]
 
 ["generated/test_2_conformance2__misc__uninitialized-test-2.html"]
@@ -352,7 +351,6 @@ fail-if = [
 ]
 skip-if = [
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]
 # Crash in `swrast_dri.so!st_finalize_texture`
 
@@ -958,7 +956,6 @@ fail-if = [
 ["generated/test_2_conformance2__textures__misc__copy-texture-cube-map-bug.html"]
 skip-if = [
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]
 # [task 2019-12-27T02:30:35.051Z] 02:30:35     INFO - GECKO(1114) | Assertion failure: err == 0x0505, at /builds/worker/workspace/build/src/gfx/gl/SharedSurfaceGL.cpp:31
 # [task 2019-12-27T02:30:56.779Z] 02:30:56     INFO - GECKO(1114) | #01: mozilla::gl::SurfaceFactory_Basic::CreateShared(mozilla::gfx::IntSizeTyped<mozilla::gfx::UnknownUnits> const&) [gfx/gl/SharedSurfaceGL.h:82]
@@ -997,7 +994,6 @@ fail-if = [
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64' && debug",
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland' && debug",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && debug",
 ]
 
 ["generated/test_2_conformance2__textures__misc__origin-clean-conformance-offscreencanvas.html"]
@@ -1328,7 +1324,6 @@ skip-if = [
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64' && debug",
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]
 
 ["generated/test_2_conformance2__wasm__bufferdata-16gb-wasm-memory.html"]
@@ -1424,8 +1419,6 @@ fail-if = [
 # skip this test because finish() was called multiple times
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64'",
 ]
 
@@ -1558,22 +1551,8 @@ skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
 ]
 
-["generated/test_2_conformance__textures__misc__texture-size-limit.html"]
-# https://bugzilla.mozilla.org/show_bug.cgi?id=1657084
-# Really slow on ASAN (after driver update?), likely due to ASAN's perf impact on the huge allocations in this test.
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && asan",
-]
-
 ########################################################################
 # Global
-
-["generated/test_2_conformance__textures__misc__texture-size.html"]
-# https://bugzilla.mozilla.org/show_bug.cgi?id=1657084
-# Really slow on ASAN (after driver update?), likely due to ASAN's perf impact on the huge allocations in this test.
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && asan",
-]
 
 ["generated/test_2_conformance__textures__misc__texture-srgb-upload.html"]
 skip-if = [
@@ -1633,8 +1612,6 @@ skip-if = [
 ["generated/test_conformance__context__context-attributes-alpha-depth-stencil-antialias.html"]
 # Asserts on linux debug. Crashes on Android.
 skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
 ]
 # should be 0,0,0,255
@@ -1789,8 +1766,6 @@ skip-if = [
 # Crashes
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]
 
 ["generated/test_conformance__glsl__bugs__sequence-operator-evaluation-order.html"]
@@ -1809,8 +1784,6 @@ skip-if = [
 # Coincidentally enough, crashes on Linux and Android 4.0.
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]
 
 ["generated/test_conformance__glsl__bugs__uniforms-should-not-lose-values.html"]
@@ -1823,8 +1796,6 @@ skip-if = [
 # mozalloc_abort in libglsl.so
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]
 
 ["generated/test_conformance__glsl__constructors__glsl-construct-bvec3.html"]
@@ -1832,8 +1803,6 @@ skip-if = [
 # application crashed [@ jemalloc_crash] on Android
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64'",
 ]
 
@@ -1841,16 +1810,7 @@ skip-if = [
 # application crashed [@ ParseOperand::GetLogicalSize() const + 0x4]
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64'",
-]
-
-["generated/test_conformance__glsl__constructors__glsl-construct-ivec2.html"]
-# Crashes from libglsl.so
-skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]
 
 ["generated/test_conformance__glsl__constructors__glsl-construct-ivec3.html"]
@@ -1858,60 +1818,20 @@ skip-if = [
 # application crashed [@ jemalloc_crash] on Android
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64'",
 ]
 
 ["generated/test_conformance__glsl__constructors__glsl-construct-ivec4.html"]
 # Assume crashes like ivec3
 skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64'",
-]
-
-["generated/test_conformance__glsl__constructors__glsl-construct-mat2.html"]
-# Crashes on Linux ASAN
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && asan",
-]
-
-["generated/test_conformance__glsl__constructors__glsl-construct-vec-mat-corner-cases.html"]
-# mozalloc_abort in libglsl.so
-skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]
 
 ["generated/test_conformance__glsl__constructors__glsl-construct-vec-mat-index.html"]
 # skip this test because finish() was called multiple times
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64'",
-]
-
-["generated/test_conformance__glsl__constructors__glsl-construct-vec3.html"]
-# Crashes
-skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
-]
-
-["generated/test_conformance__glsl__constructors__glsl-construct-vec4.html"]
-# Inferred crash from vec3 above.
-skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
-]
-
-["generated/test_conformance__glsl__functions__glsl-function-atan.html"]
-# Crashes
-skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]
 
 ["generated/test_conformance__glsl__functions__glsl-function-step-gentype.html"]
@@ -1938,8 +1858,6 @@ fail-if = [
 # Frequent timeout on win7 and linux debug.
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland' && debug",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && debug",
 ]
 
 ["generated/test_conformance__glsl__samplers__glsl-function-texture2dproj.html"]
@@ -1966,19 +1884,10 @@ skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
 ]
 
-["generated/test_conformance__limits__gl-min-textures.html"]
-# mesa upgrade issues or task cluster issues- we just need it green; bug 1220658
-skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
-]
-
 ["generated/test_conformance__misc__bad-arguments-test.html"]
 # skip because some result logged after SimpleTest.finish()
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64'",
 ]
 
@@ -2042,27 +1951,11 @@ skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64' && debug",
 ]
 
-["generated/test_conformance__ogles__GL__notEqual__notEqual_001_to_008.html"]
-# Crashes
-skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
-]
-
-["generated/test_conformance__ogles__GL__sign__sign_001_to_006.html"]
-# Crashes
-skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
-]
-
 ["generated/test_conformance__reading__read-pixels-test.html"]
 # Causes consistent *blues*: "DMError: Remote Device Error: unable to
 # connect to 127.0.0.1 after 5 attempts" on 'Android 2.3 Opt'.
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]
 
 ["generated/test_conformance__renderbuffers__framebuffer-object-attachment.html"]
@@ -2135,7 +2028,6 @@ fail-if = [
 # 02:53:02     INFO -  GECKO(1000) | #05: mozilla::layers::ShareableCanvasRenderer::UpdateCompositableClient() [gfx/layers/ShareableCanvasRenderer.cpp:237]
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
 ]
 
 ["generated/test_conformance__rendering__texture-switch-performance.html"]
@@ -2359,11 +2251,6 @@ skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
 ]
 
-["generated/test_conformance__textures__misc__texture-size-limit.html"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && asan",
-]
-
 ["generated/test_conformance__textures__misc__texture-size.html"]
 # application crashed [@ mozilla::gl::GLContext::AfterGLCall]
 skip-if = [
@@ -2453,6 +2340,4 @@ skip-if = [
 # Timeout on Windows, crash on Android/Linux.
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'aarch64'",
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'",
 ]

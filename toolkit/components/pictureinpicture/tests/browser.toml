@@ -104,11 +104,6 @@ skip-if = [
 ]
 
 ["browser_fontSize_change.js"]
-skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && asan && swgl", # Bug 1775867
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1775867
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && tsan && swgl", # Bug 1775867
-]
 
 ["browser_fullscreen.js"]
 
