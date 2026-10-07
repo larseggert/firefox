@@ -1198,8 +1198,6 @@ bool TaskController::ExecuteNextTaskOnlyMainThreadInternal(
         for (TaskManager* manager : mTaskManagers) {
           if (manager->IsSuspended(aProofOfLock)) {
             activeTasks -= manager->mTaskCount;
-          } else {
-            break;
           }
         }
 
