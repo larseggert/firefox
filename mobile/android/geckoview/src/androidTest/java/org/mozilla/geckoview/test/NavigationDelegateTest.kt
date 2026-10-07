@@ -596,9 +596,6 @@ class NavigationDelegateTest : BaseSessionTest() {
 
     @Test
     fun bypassHTTPSOnlyError() {
-        // Bug 1849060. Hit debug assertion with fission
-        assumeThat(sessionRule.env.isFission and sessionRule.env.isDebugBuild, equalTo(false))
-
         sessionRule.runtime.settings.setAllowInsecureConnections(GeckoRuntimeSettings.HTTPS_ONLY)
 
         val host =
