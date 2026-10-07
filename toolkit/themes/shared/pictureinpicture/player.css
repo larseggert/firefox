@@ -436,7 +436,7 @@ body:not(:fullscreen) #fullscreen {
   flex-direction: column;
   padding: var(--space-medium);
   margin: 0;
-  width: 186px;
+  min-width: 186px;
   -moz-window-dragging: no-drag;
   background-color: var(--settings-panel-background-color);
   text-align: start;
@@ -520,33 +520,43 @@ body:not(:fullscreen) #fullscreen {
 
 #playback-rate-value {
   font-variant-numeric: tabular-nums;
-  color: #00ddff;
+  color: var(--color-accent-primary);
 }
 
 #playback-rate-slider {
   appearance: none;
   background: transparent;
   margin-block: var(--space-medium);
+  padding: 6px 2px;
   cursor: pointer;
 
   &::-moz-range-track {
-    background-color: #55545f;
-    height: 4px;
-    border-radius: var(--border-radius-medium);
+    /* stylelint-disable-next-line stylelint-plugin-mozilla/no-base-design-tokens */
+    background-color: var(--color-gray-55);
+
+    @media not -moz-pref("browser.nova.enabled") {
+      /* stylelint-disable-next-line stylelint-plugin-mozilla/no-base-design-tokens */
+      background-color: var(--color-gray-70);
+    }
   }
 
   &::-moz-range-progress {
-    background-color: #00ddff;
-    height: 4px;
-    border-radius: var(--border-radius-medium);
+    background-color: var(--color-accent-primary);
   }
 
   &::-moz-range-thumb {
     background-color: #ffffff;
     border: none;
-    width: 12px;
-    height: 12px;
+    width: var(--size-item-xsmall);
+    height: var(--size-item-xsmall);
     border-radius: var(--border-radius-circle);
+  }
+
+  &,
+  &::-moz-range-track,
+  &::-moz-range-progress {
+    height: 4px;
+    border-radius: var(--border-radius-medium);
   }
 }
 
@@ -557,20 +567,44 @@ body:not(:fullscreen) #fullscreen {
 
 .playback-rate-preset {
   flex: 1;
-  background-color: #55545f;
+  min-width: var(--size-item-xlarge);
+  min-height: var(--size-item-medium);
   border: none;
-  border-radius: var(--border-radius-small);
-  font-variant-numeric: tabular-nums;
-  padding: var(--space-small);
+  border-radius: var(--border-radius-large);
   cursor: pointer;
+  background-color: var(--button-background-color-muted);
+  color: var(--button-text-color-muted);
+
+  @media not -moz-pref("browser.nova.enabled") {
+    border-radius: var(--border-radius-small);
+    min-width: auto;
+    min-height: auto;
+    padding: var(--space-small);
+  }
 
   &:hover {
-    background-color: #6b6a78;
+    background-color: var(--button-background-color-muted-hover);
+    color: var(--button-text-color-muted-hover);
+  }
+
+  &:active {
+    background-color: var(--button-background-color-muted-active);
+    color: var(--button-text-color-muted-active);
   }
 
   &[aria-pressed="true"] {
-    background-color: #00ddff;
-    color: var(--settings-panel-background-color);
+    color: var(--button-text-color-primary);
+    background-color: var(--button-background-color-primary);
+  }
+
+  &[aria-pressed="true"]:hover {
+    background-color: var(--button-background-color-primary-hover);
+    color: var(--button-text-color-primary-hover);
+  }
+
+  &[aria-pressed="true"]:active {
+    background-color: var(--button-background-color-primary-active);
+    color: var(--button-text-color-primary-active);
   }
 }
 
