@@ -142,6 +142,8 @@ class JS_PUBLIC_API Value;
 // 6. The low two bits of the String, Object and BigInt tags are their
 //    JS::TraceKind, and the PrivateGCThing and Symbol tags are adjacent, so
 //    Value::traceKind needs a single branch. (See Value::traceKind)
+// 7. Undefined has an even type code, so on PUNBOX64 its shifted tag occupies
+//    only the top 16 bits and AArch64 materializes it with a single movz.
 //
 // [1]:
 // https://wingolog.org/archives/2011/05/18/value-representation-in-javascript-implementations#969f63bbe4eb912778c9da85feb0f5763e7a7862
@@ -164,9 +166,9 @@ enum JSValueType : uint8_t {
   JSVAL_TYPE_DOUBLE = 0x00,
   JSVAL_TYPE_INT32 = 0x01,
   JSVAL_TYPE_BOOLEAN = 0x02,
-  JSVAL_TYPE_UNDEFINED = 0x03,
   JSVAL_TYPE_NULL = 0x04,
   JSVAL_TYPE_MAGIC = 0x05,
+  JSVAL_TYPE_UNDEFINED = 0x06,
   JSVAL_TYPE_PRIVATE_GCTHING = 0x07,
   JSVAL_TYPE_SYMBOL = 0x08,
   JSVAL_TYPE_BIGINT = 0x09,
