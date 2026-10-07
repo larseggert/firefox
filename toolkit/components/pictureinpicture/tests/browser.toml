@@ -140,6 +140,8 @@ support-files = ["test-page-with-nan-video-duration.html"]
 
 ["browser_noToggleOnAudio.js"]
 
+["browser_occludedSelectedTab.js"]
+
 ["browser_occluded_window.js"]
 
 ["browser_playbackRate.js"]
