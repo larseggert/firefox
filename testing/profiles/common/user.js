@@ -91,6 +91,8 @@ user_pref("browser.topsites.contile.enabled", false);
 user_pref("browser.newtabpage.activity-stream.system.showWeather", false);
 // Don't pull picture of the day content from the network
 user_pref("browser.newtabpage.activity-stream.widgets.system.pictureOfTheDay.enabled", false);
+// Don't load the crossword game from the network
+user_pref("browser.newtabpage.activity-stream.widgets.system.crossword.enabled", false);
 // Don't pull wallpaper content from the network
 user_pref("browser.newtabpage.activity-stream.newtabWallpapers.enabled", false);
 // Don't pull sponsored Top Sites content from the network
