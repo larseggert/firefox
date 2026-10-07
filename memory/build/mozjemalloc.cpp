@@ -4123,7 +4123,7 @@ may_purge_now_result_t ArenaCollection::MayPurgeSteps(
   // Even if there is no other arena that needs work, let the caller just call
   // us again and we will do the above checks then and return their result.
   // Note that in the current surrounding setting this may (rarely) cause a
-  // new slice of our idle task runner if we are exceeding idle budget.
+  // new slice of the purge task if it has to yield.
   return may_purge_now_result_t::NeedsMore;
 }
 
