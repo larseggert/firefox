@@ -27,9 +27,6 @@ skip-if = [
 ["browser_passwords_policy_disable_reveal.js"]
 
 ["browser_passwords_primary_password.js"]
-skip-if = [
-  "tsan", # Bug 1949014
-]
 
 ["browser_passwords_remove_all_notification.js"]
 

@@ -27,9 +27,6 @@ support-files = [
 ]
 
 ["browser_aboutHomeLoading.js"]
-skip-if = [
-  "tsan", # Intermittently times out, see 1622698 (frequent on TSan).
-]
 
 ["browser_autoOpen.js"]
 

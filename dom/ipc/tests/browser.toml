@@ -62,7 +62,6 @@ skip-if = [
   "arch == 'x86'",
   "debug",
   "os != 'linux'",
-  "tsan",
 ]
 
 ["browser_hide_tooltip.js"]
@@ -97,7 +96,6 @@ run-if = [
 ]
 skip-if = [
   "asan", # appears to hang the machine
-  "tsan", # appears to hang the machine
 ]
 
 ["browser_wpi_isolate_everything.js"]

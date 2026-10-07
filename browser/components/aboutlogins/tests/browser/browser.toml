@@ -87,7 +87,6 @@ skip-if = [
 ["browser_sessionRestore.js"]
 skip-if = [
   "debug", # Bug 1576876
-  "tsan",
 ]
 
 ["browser_tabKeyNav.js"]

@@ -763,14 +763,9 @@ skip-if = [
 # See bug 775227 for android
 skip-if = [
   "os == 'android'",
-  "tsan",
 ]
 
 ["test_value_computation.html"]
-# This test requires too much memory on TSan (bug 1612707)
-skip-if = [
-  "tsan",
-]
 
 ["test_value_storage.html"]
 

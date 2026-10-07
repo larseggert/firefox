@@ -393,7 +393,6 @@ run-if = [
 ["browser_upgrade_backup.js"]
 skip-if = [
   "asan",
-  "tsan",
 ]
 
 ["browser_urlbarSearchMode.js"]

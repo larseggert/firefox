@@ -29,7 +29,6 @@ support-files = [
 ]
 skip-if = [
   "asan",
-  "tsan",
   "verify", # bug 1997129
 ]
 

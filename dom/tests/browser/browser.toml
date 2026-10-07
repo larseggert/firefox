@@ -103,15 +103,9 @@ https_first_disabled = true
 fail-if = [
   "true",
 ]
-skip-if = [
-  "tsan", # Times out on TSan intermittently.
-]
 
 ["browser_localStorage_fis.js"]
 tags = "dom-storage"
-skip-if = [
-  "tsan",
-]
 
 ["browser_localStorage_privatestorageevent.js"]
 tags = "dom-storage"

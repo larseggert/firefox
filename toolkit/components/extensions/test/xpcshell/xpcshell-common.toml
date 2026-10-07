@@ -161,14 +161,8 @@ skip-if = [
 ]
 
 ["test_ext_contentscript_context.js"]
-skip-if = [
-  "tsan", # Bug 1683730
-]
 
 ["test_ext_contentscript_context_isolation.js"]
-skip-if = [
-  "tsan", # Bug 1683730
-]
 
 ["test_ext_contentscript_create_document.js"]
 
@@ -205,9 +199,6 @@ skip-if = [
 ["test_ext_contentscript_structured_clone.js"]
 
 ["test_ext_contentscript_teardown.js"]
-skip-if = [
-  "tsan", # Bug 1683730
-]
 
 ["test_ext_contentscript_trustedtypes.js"]
 
@@ -237,9 +228,6 @@ skip-if = [
 run-if = [
   "appname != 'thunderbird'",
 ]
-skip-if = [
-  "tsan", # Bug 1683730
-]
 
 ["test_ext_cookies_errors.js"]
 
@@ -248,9 +236,6 @@ skip-if = [
 ["test_ext_cookies_firstParty.js"]
 run-if = [
   "appname != 'thunderbird'",
-]
-skip-if = [
-  "tsan", # Bug 1683730
 ]
 
 ["test_ext_cookies_onChanged.js"]
@@ -361,7 +346,6 @@ run-if = [
 ]
 skip-if = [
   "os == 'android'",
-  "tsan", # Bug 1683730
 ]
 
 ["test_ext_downloads_eventpage.js"]
@@ -372,7 +356,6 @@ skip-if = [
 ["test_ext_downloads_misc.js"]
 skip-if = [
   "os == 'android'",
-  "tsan", # Bug 1683730
 ]
 
 ["test_ext_downloads_partitionKey.js"]
@@ -393,7 +376,6 @@ skip-if = [
 ["test_ext_downloads_search.js"]
 skip-if = [
   "os == 'android'",
-  "tsan", # tsan: bug 1612707
 ]
 
 ["test_ext_downloads_urlencoded.js"]
@@ -440,7 +422,6 @@ skip-if = [
 requesttimeoutfactor = 9  # Slow on Windows (replaces manifest 2x)
 skip-if = [
   "os == 'android'", # Not shipped on Android.
-  "tsan", # tsan: bug 1612707
 ]
 
 ["test_ext_geturl.js"]
@@ -863,9 +844,6 @@ skip-if = [
 ]
 
 ["test_ext_webRequest_mergecsp.js"]
-skip-if = [
-  "tsan", # Bug 1683730
-]
 
 ["test_ext_webRequest_permission.js"]
 skip-if = [

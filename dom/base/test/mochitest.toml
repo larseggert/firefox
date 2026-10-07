@@ -632,9 +632,6 @@ skip-if = [
 ["test_processing_instruction_update_stylesheet.xhtml"]
 
 ["test_progress_events_for_gzip_data.html"]
-skip-if = [
-  "tsan", # Bug 1621323
-]
 
 ["test_pushState_structuredclone.html"]
 scheme = "https"
@@ -718,7 +715,6 @@ skip-if = [
   "asan",
   "debug",
   "os == 'android'", # The test needs to run reasonably fast.
-  "tsan",
 ]
 
 ["test_text-fragments-create-text-directive-no-reveal.html"]
