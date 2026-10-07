@@ -31,7 +31,9 @@ body:fullscreen {
 
   #fullscreen {
     background-image: url("chrome://global/skin/media/picture-in-picture-exit-fullscreen-button.svg");
-    background-size: auto;
+    @media not -moz-pref("browser.nova.enabled") {
+      background-size: contain;
+    }
   }
 
   #controls {
@@ -405,7 +407,9 @@ body:not(:fullscreen) #controls:hover #timestamp {
 
 body:not(:fullscreen) #fullscreen {
   background-image: url("chrome://global/skin/media/picture-in-picture-enter-fullscreen-button.svg");
-  background-size: auto;
+  @media not -moz-pref("browser.nova.enabled") {
+    background-size: contain;
+  }
 }
 
 #seekBackward {
