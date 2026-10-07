@@ -63,6 +63,7 @@ class ShortcutsFragment : Fragment(), SystemInsetsPaddedFragment {
                 appStore = requireComponents.appStore,
                 navControllerRef = WeakReference(findNavController()),
                 settings = requireComponents.settings,
+                defaultTopSitesProvider = requireComponents.core.defaultTopSitesProvider,
                 addTabUseCase = requireComponents.useCases.tabsUseCases.addTab,
                 selectTabUseCase = requireComponents.useCases.tabsUseCases.selectTab,
                 fenixBrowserUseCases = requireComponents.useCases.fenixBrowserUseCases,
