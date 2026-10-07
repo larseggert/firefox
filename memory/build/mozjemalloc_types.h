@@ -282,6 +282,10 @@ enum may_purge_now_result_t {
   WantsLater,
 };
 
+// Asked whether a deferred purge should carry on. Gets the closure that was
+// passed to moz_may_purge_now().
+typedef bool (*purge_keep_going_t)(void* aClosure);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

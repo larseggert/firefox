@@ -518,9 +518,9 @@ class ArenaCollection {
   //  - There are more requests but aKeepGoing() returned false. (returns true)
   //  - One arena is completely purged, (returns true).
   //
-  may_purge_now_result_t MayPurgeSteps(
-      bool aPeekOnly, uint32_t aReuseGraceMS,
-      const Maybe<std::function<bool()>>& aKeepGoing);
+  may_purge_now_result_t MayPurgeSteps(bool aPeekOnly, uint32_t aReuseGraceMS,
+                                       purge_keep_going_t aKeepGoing,
+                                       void* aClosure);
 
  private:
   const static arena_id_t MAIN_THREAD_ARENA_BIT = 0x1;
@@ -1290,7 +1290,7 @@ size_t arena_t::ExtraCommitPages(size_t aReqPages, size_t aRemainingPages) {
 #endif
 
 ArenaPurgeResult arena_t::Purge(PurgeCondition aCond, PurgeStats& aStats,
-                                const Maybe<std::function<bool()>>& aKeepGoing)
+                                purge_keep_going_t aKeepGoing, void* aClosure)
     MOZ_EXCLUDES(mLock) {
   mLock.Lock();
 
@@ -1318,7 +1318,7 @@ ArenaPurgeResult arena_t::Purge(PurgeCondition aCond, PurgeStats& aStats,
   chunk = PurgeGetDirtyChunk(aCond, aStats);
   mLock.Unlock();
   if (chunk) {
-    return PurgeDirtyPages(chunk, aCond, aStats, aKeepGoing);
+    return PurgeDirtyPages(chunk, aCond, aStats, aKeepGoing, aClosure);
   }
 
   return ReachedThresholdOrBusy;
@@ -1403,9 +1403,11 @@ arena_chunk_t* arena_t::PurgeGetDirtyChunk(PurgeCondition aCond,
   return chunk;
 }
 
-ArenaPurgeResult arena_t::PurgeDirtyPages(
-    arena_chunk_t* aChunk, PurgeCondition aCond, PurgeStats& aStats,
-    const Maybe<std::function<bool()>>& aKeepGoing) MOZ_EXCLUDES(mLock) {
+ArenaPurgeResult arena_t::PurgeDirtyPages(arena_chunk_t* aChunk,
+                                          PurgeCondition aCond,
+                                          PurgeStats& aStats,
+                                          purge_keep_going_t aKeepGoing,
+                                          void* aClosure) MOZ_EXCLUDES(mLock) {
   // True if we should continue purging memory from this arena.
   bool continue_purge_arena = true;
 
@@ -1467,7 +1469,7 @@ ArenaPurgeResult arena_t::PurgeDirtyPages(
 
     // Check budget outside any lock, after the madvise/decommit which is the
     // potentially expensive operation.
-    keep_going = aKeepGoing ? (*aKeepGoing)() : true;
+    keep_going = aKeepGoing ? aKeepGoing(aClosure) : true;
 
     bool arena_is_dying;
     {
@@ -1507,7 +1509,8 @@ ArenaPurgeResult arena_t::PurgeDirtyPages(
 
 ArenaPurgeResult arena_t::PurgeLoop(PurgeCondition aCond, const char* aCaller,
                                     uint32_t aReuseGraceMS,
-                                    Maybe<std::function<bool()>> aKeepGoing) {
+                                    purge_keep_going_t aKeepGoing,
+                                    void* aClosure) {
   PurgeStats purge_stats(mId, mLabel, aCaller);
 
 #ifdef MOZJEMALLOC_PROFILING_CALLBACKS
@@ -1524,11 +1527,11 @@ ArenaPurgeResult arena_t::PurgeLoop(PurgeCondition aCond, const char* aCaller,
   uint64_t now;
   ArenaPurgeResult pr;
   do {
-    pr = Purge(aCond, purge_stats, aKeepGoing);
+    pr = Purge(aCond, purge_stats, aKeepGoing, aClosure);
     now = aReuseGraceMS ? GetTimestampNS() : 0;
   } while (pr == NotDone &&
            (!aReuseGraceMS || (now - mLastPageReuseNS >= reuseGraceNS)) &&
-           (!aKeepGoing || (*aKeepGoing)()));
+           (!aKeepGoing || aKeepGoing(aClosure)));
 
 #ifdef MOZJEMALLOC_PROFILING_CALLBACKS
   if (callbacks) {
@@ -4029,9 +4032,9 @@ inline bool MozJemalloc::moz_enable_deferred_purge(bool aEnabled) {
 }
 
 inline may_purge_now_result_t MozJemalloc::moz_may_purge_now(
-    bool aPeekOnly, uint32_t aReuseGraceMS,
-    const Maybe<std::function<bool()>>& aKeepGoing) {
-  return gArenas.MayPurgeSteps(aPeekOnly, aReuseGraceMS, aKeepGoing);
+    bool aPeekOnly, uint32_t aReuseGraceMS, purge_keep_going_t aKeepGoing,
+    void* aClosure) {
+  return gArenas.MayPurgeSteps(aPeekOnly, aReuseGraceMS, aKeepGoing, aClosure);
 }
 
 inline void ArenaCollection::AddToOutstandingPurges(arena_t* aArena) {
@@ -4059,8 +4062,8 @@ inline bool ArenaCollection::RemoveFromOutstandingPurges(arena_t* aArena) {
 }
 
 may_purge_now_result_t ArenaCollection::MayPurgeSteps(
-    bool aPeekOnly, uint32_t aReuseGraceMS,
-    const Maybe<std::function<bool()>>& aKeepGoing) {
+    bool aPeekOnly, uint32_t aReuseGraceMS, purge_keep_going_t aKeepGoing,
+    void* aClosure) {
   // This only works on the main thread because it may process main-thread-only
   // arenas.
   MOZ_ASSERT(IsOnMainThreadWeak());
@@ -4093,8 +4096,8 @@ may_purge_now_result_t ArenaCollection::MayPurgeSteps(
     mOutstandingPurges.remove(found);
   }
 
-  ArenaPurgeResult pr =
-      found->PurgeLoop(PurgeIfThreshold, __func__, aReuseGraceMS, aKeepGoing);
+  ArenaPurgeResult pr = found->PurgeLoop(PurgeIfThreshold, __func__,
+                                         aReuseGraceMS, aKeepGoing, aClosure);
 
   if (pr == ArenaPurgeResult::NotDone) {
     // If there's more work to do we re-insert the arena into the purge queue.
