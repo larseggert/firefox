@@ -1113,14 +1113,6 @@ features:
         value:
           enabled: true
 
-  add-shortcuts-improvement:
-    description: Feature to enable Add Shortcuts improvement for users on Firefox on Android.
-    variables:
-      enabled:
-        description: If true, Add Shortcuts improvement is enabled.
-        type: Boolean
-        default: true
-
   show-more-shortcuts:
     description: Feature to show expand/collapse buttons for shortcuts on the homepage.
     variables:

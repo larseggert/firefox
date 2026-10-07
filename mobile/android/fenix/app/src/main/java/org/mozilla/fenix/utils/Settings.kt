@@ -2625,13 +2625,6 @@ class Settings(
             default = { FxNimbus.features.adsClientForStories.value().enabled },
         )
 
-    /** Indicates if Add Shortcuts improvement is enabled. */
-    var enableAddShortcutsImprovement by
-        booleanPreference(
-            key = appContext.getPreferenceKey(R.string.pref_key_enable_add_shortcuts_improvement),
-            default = { FxNimbus.features.addShortcutsImprovement.value().enabled },
-        )
-
     /** Indicates if more shortcuts should be shown. */
     var showMoreShortcuts by
         booleanPreference(

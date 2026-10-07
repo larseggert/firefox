@@ -47,7 +47,6 @@ class ShortcutsFragment : Fragment(), SystemInsetsPaddedFragment {
                             appStore = requireComponents.appStore,
                             topSitesUseCases = requireComponents.useCases.topSitesUseCase,
                             merinoManifestProvider = requireComponents.core.merinoManifestProvider,
-                            settings = requireComponents.settings,
                             scope = viewLifecycleOwner.lifecycleScope,
                         )
                     ),
