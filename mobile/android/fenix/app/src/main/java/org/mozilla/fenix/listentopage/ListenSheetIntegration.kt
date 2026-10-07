@@ -201,7 +201,7 @@ private fun ListenSheetContent(
     ListenSheet(
         article = ArticleDetails(title = state.value.title, site = state.value.site, url = state.value.url),
         articleProgressState = articleProgressState,
-        playing = playback.phase == PlaybackPhase.Playing,
+        playing = playback.phase == PlaybackPhase.Playing || playback.phase == PlaybackPhase.Buffering,
         voiceState = state.value.voiceState,
         onAction = onAction,
         onExpandClicked = { onAction(ListenAction.ModeChanged(PlayerMode.Expanded)) },
