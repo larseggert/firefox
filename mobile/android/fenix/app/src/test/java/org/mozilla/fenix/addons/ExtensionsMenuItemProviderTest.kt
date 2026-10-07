@@ -143,7 +143,7 @@ class ExtensionsMenuItemProviderTest {
         )
         assertEquals(MenuAction.Navigate.ManageExtensions, item.onClickEvent)
         // The icon warning about this is multicolored, which only a drawable is shown as it is, without a tint.
-        assertTrue(item.icon is MenuItemIconDrawable)
+        assertIs<MenuItemIconDrawable>(item.icon)
         // Only that icon warns about it, the item itself is not colored as a warning.
         assertEquals(MenuItemState.DEFAULT, item.state)
     }

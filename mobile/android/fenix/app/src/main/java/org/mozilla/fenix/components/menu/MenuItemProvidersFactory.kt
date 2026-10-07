@@ -22,6 +22,7 @@ import org.mozilla.fenix.addons.ExtensionsMenuItemProvider
 import org.mozilla.fenix.bookmarks.BookmarkMenuItemProvider
 import org.mozilla.fenix.bookmarks.BookmarksScreenMenuItemProvider
 import org.mozilla.fenix.browser.BackMenuItemProvider
+import org.mozilla.fenix.browser.DefaultBrowserMenuItemProvider
 import org.mozilla.fenix.browser.DesktopSiteMenuItemProvider
 import org.mozilla.fenix.browser.ForwardMenuItemProvider
 import org.mozilla.fenix.browser.RefreshMenuItemProvider
@@ -88,6 +89,7 @@ class MenuItemProvidersFactory(
     private val isAndroidAutomotiveAvailable: Boolean,
     private val materialAlertDialogBuilder: MaterialAlertDialogBuilder,
     private val quitApplicationDelegate: () -> Unit,
+    private val setAsDefaultBrowserDelegate: () -> Unit,
     private val menuViewScope: CoroutineScope,
     private val applicationScope: CoroutineScope,
 ) {
@@ -95,6 +97,13 @@ class MenuItemProvidersFactory(
     @Suppress("LongMethod", "CyclomaticComplexMethod")
     fun buildProviderFor(item: FenixMenuItem): MenuItemProvider =
         when (item) {
+            FenixMenuItem.DefaultBrowserBanner ->
+                DefaultBrowserMenuItemProvider(
+                    settings = settings,
+                    appName = context.getString(R.string.app_name),
+                    setAsDefaultBrowser = setAsDefaultBrowserDelegate,
+                )
+
             FenixMenuItem.CustomizeReaderView ->
                 ReaderViewMenuItemProvider(
                     browserStore = browserStore,

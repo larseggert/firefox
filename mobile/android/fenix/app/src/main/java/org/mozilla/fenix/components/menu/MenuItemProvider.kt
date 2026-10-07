@@ -28,7 +28,7 @@ interface MenuItemProvider {
     val itemFlow: StateFlow<MenuItem?>
 
     /** Get if the given [event] is one this knows how to handle. */
-    fun handles(event: MenuEvent): Boolean = false
+    fun handles(event: MenuEvent): Boolean
 
     /**
      * Reacts to an [event] this provider [handles].
@@ -40,5 +40,5 @@ interface MenuItemProvider {
      * @param event The event to react to.
      * @param menu [MenuHost] for integrating with the current menu.
      */
-    fun onEvent(event: MenuEvent, menu: MenuHost) = Unit
+    fun onEvent(event: MenuEvent, menu: MenuHost)
 }

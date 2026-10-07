@@ -52,6 +52,7 @@ import org.mozilla.fenix.components.menu.compose.MenuHandleState
 import org.mozilla.fenix.components.menu.middleware.MenuMiddleware
 import org.mozilla.fenix.components.menu.middleware.MenuTelemetryMiddleware
 import org.mozilla.fenix.ext.isToolbarAtBottom
+import org.mozilla.fenix.ext.openSetDefaultBrowserOption
 import org.mozilla.fenix.ext.requireComponents
 import org.mozilla.fenix.theme.FirefoxTheme
 import org.mozilla.fenix.translations.TranslationsEnabledSettings
@@ -198,6 +199,7 @@ class MenuFragment : BottomSheetDialogFragment() {
     private fun buildMenuItemProvidersFactory(): MenuItemProvidersFactory {
         val components = requireComponents
         val context = requireContext()
+        val activity = requireActivity()
 
         return MenuItemProvidersFactory(
             context = context,
@@ -222,7 +224,8 @@ class MenuFragment : BottomSheetDialogFragment() {
             translationsSettings = TranslationsEnabledSettings.dataStore(context),
             isAndroidAutomotiveAvailable = context.isAndroidAutomotiveAvailable(),
             materialAlertDialogBuilder = MaterialAlertDialogBuilder(context),
-            quitApplicationDelegate = requireActivity()::finishAndRemoveTask,
+            quitApplicationDelegate = activity::finishAndRemoveTask,
+            setAsDefaultBrowserDelegate = activity::openSetDefaultBrowserOption,
             menuViewScope = viewLifecycleOwner.lifecycle.coroutineScope,
             applicationScope = components.applicationScope,
         )

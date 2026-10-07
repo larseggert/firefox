@@ -10,6 +10,7 @@ import org.mozilla.fenix.components.menu.FenixMenuItem.Back
 import org.mozilla.fenix.components.menu.FenixMenuItem.Bookmark
 import org.mozilla.fenix.components.menu.FenixMenuItem.Bookmarks
 import org.mozilla.fenix.components.menu.FenixMenuItem.CustomizeReaderView
+import org.mozilla.fenix.components.menu.FenixMenuItem.DefaultBrowserBanner
 import org.mozilla.fenix.components.menu.FenixMenuItem.DesktopSite
 import org.mozilla.fenix.components.menu.FenixMenuItem.Downloads
 import org.mozilla.fenix.components.menu.FenixMenuItem.Extensions
@@ -45,6 +46,7 @@ object MenuConfigurations {
     @VisibleForTesting internal val BROWSER_MENU_GROUP_4_ID = "browser_group_4"
     @VisibleForTesting internal val BROWSER_MENU_GROUP_5_ID = "browser_group_5"
     @VisibleForTesting internal val BROWSER_MENU_GROUP_6_ID = "browser_group_6"
+    @VisibleForTesting internal val HOME_MENU_GROUP_1_ID = "home_group_1"
 
     /** The menu shown while browsing. */
     fun browser(
@@ -115,7 +117,14 @@ object MenuConfigurations {
     }
 
     /** The menu shown on the home screen. */
-    fun home(): List<MenuSectionConfiguration> = emptyList()
+    fun home(): List<MenuSectionConfiguration> =
+        listOf(
+            MenuSectionConfiguration(
+                id = HOME_MENU_GROUP_1_ID,
+                presentationMode = Row,
+                items = listOf(DefaultBrowserBanner),
+            )
+        )
 
     /** The menu shown in custom tabs. */
     fun customTab(): List<MenuSectionConfiguration> = emptyList()

@@ -22,6 +22,7 @@ import org.mozilla.fenix.addons.ExtensionsMenuItemProvider
 import org.mozilla.fenix.bookmarks.BookmarkMenuItemProvider
 import org.mozilla.fenix.bookmarks.BookmarksScreenMenuItemProvider
 import org.mozilla.fenix.browser.BackMenuItemProvider
+import org.mozilla.fenix.browser.DefaultBrowserMenuItemProvider
 import org.mozilla.fenix.browser.DesktopSiteMenuItemProvider
 import org.mozilla.fenix.browser.ForwardMenuItemProvider
 import org.mozilla.fenix.browser.RefreshMenuItemProvider
@@ -100,12 +101,14 @@ class MenuItemProvidersFactoryTest {
             isAndroidAutomotiveAvailable = false,
             materialAlertDialogBuilder = mockk(relaxed = true),
             quitApplicationDelegate = {},
+            setAsDefaultBrowserDelegate = {},
             menuViewScope = scope,
             applicationScope = scope,
         )
 
     private val expectedProviders: Map<KClass<out FenixMenuItem>, KClass<out MenuItemProvider>> =
         mapOf(
+            FenixMenuItem.DefaultBrowserBanner::class to DefaultBrowserMenuItemProvider::class,
             FenixMenuItem.CustomizeReaderView::class to ReaderViewMenuItemProvider::class,
             FenixMenuItem.IPProtection::class to VpnMenuItemProvider::class,
             FenixMenuItem.Bookmark::class to BookmarkMenuItemProvider::class,
