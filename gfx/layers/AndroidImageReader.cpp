@@ -766,7 +766,7 @@ void GpuProcessAndroidImageReaderMap::UnregisterImageConsumer(
 
 GpuProcessAndroidImageReaderMap::ImageReaderHolder::ImageReaderHolder(
     AndroidImageReader* aImageReader)
-    : mImageReader(RefPtr<AndroidImageReader>(aImageReader)) {}
+    : mImageReader(aImageReader) {}
 
 GpuProcessAndroidImageReaderMap::ImageReaderHolder::~ImageReaderHolder() {}
 
