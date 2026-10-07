@@ -6,6 +6,7 @@
 #define nsContentPermissionHelper_h
 
 #include "mozilla/PermissionDelegateHandler.h"
+#include "mozilla/WeakPtr.h"
 #include "mozilla/dom/PContentPermissionRequestChild.h"
 #include "mozilla/dom/PContentPermissionRequestParent.h"
 #include "mozilla/dom/ipc/IdType.h"
@@ -166,7 +167,8 @@ class ContentPermissionRequestBase : public nsIContentPermissionRequest {
 };
 
 class ContentPermissionRequestParent final
-    : public PContentPermissionRequestParent {
+    : public PContentPermissionRequestParent,
+      public SupportsWeakPtr {
   friend class PContentPermissionRequestParent;
 
  public:
@@ -225,9 +227,8 @@ class nsContentPermissionRequestProxy : public nsIContentPermissionRequest {
  private:
   virtual ~nsContentPermissionRequestProxy();
 
-  // Non-owning pointer to the ContentPermissionRequestParent object which owns
-  // this proxy.
-  ContentPermissionRequestParent* mParent;
+  // The ContentPermissionRequestParent object which owns this proxy.
+  mozilla::WeakPtr<ContentPermissionRequestParent> mParent;
   nsTArray<mozilla::dom::PermissionRequest> mPermissionRequests;
 };
 

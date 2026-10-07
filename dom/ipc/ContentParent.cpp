@@ -5301,10 +5301,9 @@ ContentParent::AllocPContentPermissionRequestParent(
     return nullptr;
   }
 
-  nsIPrincipal* topPrincipal = aTopLevelPrincipal;
+  nsCOMPtr<nsIPrincipal> topPrincipal = aTopLevelPrincipal;
   if (!topPrincipal) {
-    nsCOMPtr<nsIPrincipal> principal = tp->GetContentPrincipal();
-    topPrincipal = principal;
+    topPrincipal = tp->GetContentPrincipal();
   }
   return nsContentPermissionUtils::CreateContentPermissionRequestParent(
       tp->GetOwnerElement(), aPrincipal, topPrincipal, aIsHandlingUserInput,
