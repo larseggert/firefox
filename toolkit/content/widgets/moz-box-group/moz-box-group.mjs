@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { html, ifDefined, staticHtml, literal } from "../vendor/lit.all.mjs";
-import { MozLitElement } from "../lit-utils.mjs";
+import { MozLitElement, hasModifierKey } from "../lit-utils.mjs";
 
 export const GROUP_TYPES = {
   list: "list",
@@ -262,7 +262,7 @@ export default class MozBoxGroup extends MozLitElement {
 
     // Plain arrows are for navigation between rows. Any modifier
     // means this isn't a navigation key.
-    if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) {
+    if (hasModifierKey(event)) {
       return;
     }
 

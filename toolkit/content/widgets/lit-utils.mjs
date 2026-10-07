@@ -31,6 +31,18 @@ function queryAll(el, selector) {
 }
 
 /**
+ * Checks whether a modifier key is held during a keyboard event. Arrow key
+ * navigation ignores these, since modified arrows belong to browser, OS, and
+ * assistive technology shortcuts, e.g. Alt+Left or Cmd+Option+Left.
+ *
+ * @param {KeyboardEvent} event
+ * @returns {boolean}
+ */
+export function hasModifierKey(event) {
+  return event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
+}
+
+/**
  * MozLitElement provides extensions to the lit-provided LitElement class.
  *
  * ---------
