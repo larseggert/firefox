@@ -169,7 +169,6 @@ const LOCALE_SECTIONS_CONFIG =
 
 const ACTIVITY_STREAM_PREF_BRANCH = "browser.newtabpage.activity-stream.";
 const PREF_MARKET_GATE_ENABLED = `${ACTIVITY_STREAM_PREF_BRANCH}widgets.marketGate.enabled`;
-const PREF_MARKET_GATE_ENFORCE_ON_NIGHTLY = `${ACTIVITY_STREAM_PREF_BRANCH}widgets.marketGate.enforceOnNightly`;
 
 const PREF_SHOULD_AS_INITIALIZE_FEEDS =
   "browser.newtabpage.activity-stream.testing.shouldInitializeFeeds";
@@ -528,30 +527,8 @@ function skipsNightlyDefault(prefKey) {
   );
 }
 
-// These read their defaults from PREFS_CONFIG, which exists by the time they run.
 function marketGateEnabled() {
-  return Services.prefs.getBoolPref(
-    PREF_MARKET_GATE_ENABLED,
-    // eslint-disable-next-line no-use-before-define
-    PREFS_CONFIG.get("widgets.marketGate.enabled").value
-  );
-}
-
-function showsEveryWidgetOnNightly(prefKey) {
-  return (
-    AppConstants.NIGHTLY_BUILD &&
-    !skipsNightlyDefault(prefKey) &&
-    !Services.prefs.getBoolPref(
-      PREF_MARKET_GATE_ENFORCE_ON_NIGHTLY,
-      // eslint-disable-next-line no-use-before-define
-      PREFS_CONFIG.get("widgets.marketGate.enforceOnNightly").value
-    )
-  );
-}
-
-// Off by default once gating is on, except on Nightly, which shows every widget.
-function offByDefault(prefKey) {
-  return () => !marketGateEnabled() || showsEveryWidgetOnNightly(prefKey);
+  return Services.prefs.getBoolPref(PREF_MARKET_GATE_ENABLED, false);
 }
 
 /**
@@ -571,7 +548,14 @@ function marketGate(prefKey) {
     }
     // Nightly gets every widget in every market so the team sees the whole
     // feature, which is why no widget pref carries an #ifdef in firefox.js.
-    if (showsEveryWidgetOnNightly(prefKey)) {
+    if (
+      AppConstants.NIGHTLY_BUILD &&
+      !skipsNightlyDefault(prefKey) &&
+      !Services.prefs.getBoolPref(
+        `${ACTIVITY_STREAM_PREF_BRANCH}widgets.marketGate.enforceOnNightly`,
+        false
+      )
+    ) {
       return true;
     }
     // With nothing restricting the region, geo cannot change the answer, so a
@@ -1557,7 +1541,7 @@ export const PREFS_CONFIG = new Map([
     {
       title:
         "Applies widget region and locale gating. When false, widgets keep the defaults from before gating",
-      value: true,
+      value: false,
     },
   ],
   [
@@ -1588,7 +1572,8 @@ export const PREFS_CONFIG = new Map([
     "widgets.lists.enabled",
     {
       title: "Enables the to-do lists widget",
-      getValue: offByDefault("widgets.lists.enabled"),
+      // pref is dynamic
+      getValue: marketGate("widgets.lists.enabled"),
     },
   ],
   [
@@ -1672,7 +1657,8 @@ export const PREFS_CONFIG = new Map([
     "widgets.focusTimer.enabled",
     {
       title: "Enables the focus timer widget",
-      getValue: offByDefault("widgets.focusTimer.enabled"),
+      // pref is dynamic
+      getValue: marketGate("widgets.focusTimer.enabled"),
     },
   ],
   [
@@ -1745,7 +1731,8 @@ export const PREFS_CONFIG = new Map([
     "widgets.clocks.enabled",
     {
       title: "Enables the clock widget",
-      getValue: offByDefault("widgets.clocks.enabled"),
+      // pref is dynamic
+      getValue: marketGate("widgets.clocks.enabled"),
     },
   ],
   [
@@ -1819,7 +1806,7 @@ export const PREFS_CONFIG = new Map([
     "widgets.crossword.enabled",
     {
       title: "Enables the crossword widget",
-      getValue: offByDefault("widgets.crossword.enabled"),
+      getValue: () => !marketGateEnabled(),
     },
   ],
   [
@@ -1866,7 +1853,8 @@ export const PREFS_CONFIG = new Map([
     "widgets.pictureOfTheDay.enabled",
     {
       title: "Enables the picture of the day widget",
-      getValue: offByDefault("widgets.pictureOfTheDay.enabled"),
+      // pref is dynamic
+      getValue: marketGate("widgets.pictureOfTheDay.enabled"),
     },
   ],
   [
