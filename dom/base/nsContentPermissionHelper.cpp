@@ -4,8 +4,6 @@
 
 #include "nsContentPermissionHelper.h"
 
-#include <map>
-
 #include "js/PropertyAndElement.h"  // JS_GetProperty, JS_SetProperty
 #include "mozilla/Attributes.h"
 #include "mozilla/Preferences.h"
@@ -30,6 +28,7 @@
 #include "nsJSUtils.h"
 #include "nsPIDOMWindowInlines.h"
 #include "nsServiceManagerUtils.h"
+#include "nsTHashMap.h"
 
 using namespace mozilla::dom;
 using namespace mozilla;
@@ -173,18 +172,19 @@ void nsContentPermissionUtils::ConvertArrayToPermissionRequest(
   }
 }
 
-static std::map<ContentPermissionRequestParent*, TabId>&
+static nsTHashMap<nsRefPtrHashKey<ContentPermissionRequestParent>, TabId>&
 ContentPermissionRequestParentMap() {
   MOZ_ASSERT(NS_IsMainThread());
-  static std::map<ContentPermissionRequestParent*, TabId>
+  static nsTHashMap<nsRefPtrHashKey<ContentPermissionRequestParent>, TabId>
       sPermissionRequestParentMap;
   return sPermissionRequestParentMap;
 }
 
-static std::map<RemotePermissionRequest*, TabId>&
+static nsTHashMap<nsRefPtrHashKey<RemotePermissionRequest>, TabId>&
 ContentPermissionRequestChildMap() {
   MOZ_ASSERT(NS_IsMainThread());
-  static std::map<RemotePermissionRequest*, TabId> sPermissionRequestChildMap;
+  static nsTHashMap<nsRefPtrHashKey<RemotePermissionRequest>, TabId>
+      sPermissionRequestChildMap;
   return sPermissionRequestChildMap;
 }
 
@@ -214,7 +214,7 @@ nsContentPermissionUtils::CreateContentPermissionRequestParent(
           aElement, aPrincipal, aTopLevelPrincipal,
           aHasValidTransientUserGestureActivation,
           aIsRequestDelegatedToUnsafeThirdParty, aIgnoreAllowSitePermission);
-  ContentPermissionRequestParentMap()[parent] = aTabId;
+  ContentPermissionRequestParentMap().InsertOrUpdate(parent, aTabId);
 
   return parent.forget();
 }
@@ -263,7 +263,7 @@ nsresult nsContentPermissionUtils::AskPermission(
     rv = aRequest->GetIgnoreAllowSitePermission(&ignoreAllowSitePermission);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    ContentPermissionRequestChildMap()[req.get()] = child->GetTabId();
+    ContentPermissionRequestChildMap().InsertOrUpdate(req, child->GetTabId());
     if (!ContentChild::GetSingleton()->SendPContentPermissionRequestConstructor(
             req, permArray, principal, topLevelPrincipal,
             hasValidTransientUserGestureActivation,
@@ -291,9 +291,9 @@ nsTArray<RefPtr<ContentPermissionRequestParent>>
 nsContentPermissionUtils::GetContentPermissionRequestParentById(
     const TabId& aTabId) {
   nsTArray<RefPtr<ContentPermissionRequestParent>> parentArray;
-  for (auto& it : ContentPermissionRequestParentMap()) {
-    if (it.second == aTabId) {
-      parentArray.AppendElement(it.first);
+  for (const auto& entry : ContentPermissionRequestParentMap()) {
+    if (entry.GetData() == aTabId) {
+      parentArray.AppendElement(entry.GetKey());
     }
   }
 
@@ -303,10 +303,7 @@ nsContentPermissionUtils::GetContentPermissionRequestParentById(
 /* static */
 void nsContentPermissionUtils::NotifyRemoveContentPermissionRequestParent(
     ContentPermissionRequestParent* aParent) {
-  auto it = ContentPermissionRequestParentMap().find(aParent);
-  MOZ_ASSERT(it != ContentPermissionRequestParentMap().end());
-
-  ContentPermissionRequestParentMap().erase(it);
+  MOZ_ALWAYS_TRUE(ContentPermissionRequestParentMap().Remove(aParent));
 }
 
 /* static */
@@ -314,9 +311,9 @@ nsTArray<RefPtr<RemotePermissionRequest>>
 nsContentPermissionUtils::GetContentPermissionRequestChildById(
     const TabId& aTabId) {
   nsTArray<RefPtr<RemotePermissionRequest>> childArray;
-  for (auto& it : ContentPermissionRequestChildMap()) {
-    if (it.second == aTabId) {
-      childArray.AppendElement(it.first);
+  for (const auto& entry : ContentPermissionRequestChildMap()) {
+    if (entry.GetData() == aTabId) {
+      childArray.AppendElement(entry.GetKey());
     }
   }
 
@@ -326,10 +323,7 @@ nsContentPermissionUtils::GetContentPermissionRequestChildById(
 /* static */
 void nsContentPermissionUtils::NotifyRemoveContentPermissionRequestChild(
     RemotePermissionRequest* aChild) {
-  auto it = ContentPermissionRequestChildMap().find(aChild);
-  MOZ_ASSERT(it != ContentPermissionRequestChildMap().end());
-
-  ContentPermissionRequestChildMap().erase(it);
+  MOZ_ALWAYS_TRUE(ContentPermissionRequestChildMap().Remove(aChild));
 }
 
 static nsIPrincipal* GetTopLevelPrincipal(nsPIDOMWindowInner* aWindow) {
