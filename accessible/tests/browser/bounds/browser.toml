@@ -27,9 +27,6 @@ prefs = [
 ["browser_test_iframe_transform.js"]
 
 ["browser_test_resolution.js"]
-skip-if = [
-  "os == 'win'", # bug 1372296
-]
 
 ["browser_test_scroll_display_contents.js"]
 
@@ -45,8 +42,5 @@ skip-if = [
 
 ["browser_test_zoom_text.js"]
 https_first_disabled = true
-skip-if = [
-  "os == 'win'", # bug 1372296
-]
 
 ["browser_zero_area.js"]

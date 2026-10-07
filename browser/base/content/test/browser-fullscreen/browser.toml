@@ -52,7 +52,6 @@ skip-if = [
 skip-if = [
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'", # Bug 1818795
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'", # Bug 1818795
-  "os == 'win'", # Bug 1818796
 ]
 
 ["browser_fullscreen_keyboard_lock.js"]
@@ -70,9 +69,6 @@ skip-if = [
 ["browser_fullscreen_newtab.js"]
 
 ["browser_fullscreen_newwindow.js"]
-skip-if = [
-  "os == 'win' && arch == 'x86_64' && asan", # Bug 2012615
-]
 
 ["browser_fullscreen_notification.js"]
 
@@ -97,9 +93,6 @@ skip-if = [
 support-files = ["fullscreen.html"]
 
 ["browser_fullscreen_window_focus.js"]
-skip-if = [
-  "os == 'win' && os_version == '11.26200' && asan", # Bug 2019745
-]
 
 ["browser_fullscreen_window_open.js"]
 skip-if = [

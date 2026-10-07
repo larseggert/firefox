@@ -39,7 +39,6 @@ skip-if = [
 https_first_disabled = true
 skip-if = [
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && socketprocess_networking",
-  "os == 'win'", # Bug 1719856
 ]
 
 ["browser_contextmenu_blocked_image_protocols.js"]

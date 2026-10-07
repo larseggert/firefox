@@ -40,7 +40,6 @@ support-files = [
 ]
 skip-if = [
   "ccov",
-  "os == 'win'",
   "tsan", # Bug 1429950, Bug 1583315, Bug 1696109, Bug 1701449
 ]
 tags = "os_integration"
@@ -52,7 +51,6 @@ support-files = [
 ]
 skip-if = [
   "ccov",
-  "os == 'win'",
   "tsan", # Bug 1429950, Bug 1583315, Bug 1696109, Bug 1701449
 ]
 
@@ -63,7 +61,6 @@ support-files = [
 ]
 skip-if = [
   "ccov",
-  "os == 'win'",
   "tsan", # Bug 1429950, Bug 1583315, Bug 1696109, Bug 1701449
 ]
 
@@ -74,7 +71,6 @@ support-files = [
 ]
 skip-if = [
   "ccov",
-  "os == 'win'",
   "tsan", # Bug 1429950, Bug 1583315, Bug 1696109, Bug 1701449
 ]
 
@@ -86,7 +82,6 @@ support-files = [
 ]
 skip-if = [
   "ccov",
-  "os == 'win'",
   "tsan", # Bug 1429950, Bug 1583315, Bug 1696109, Bug 1701449
 ]
 
@@ -99,7 +94,6 @@ support-files = [
 ]
 skip-if = [
   "ccov",
-  "os == 'win'",
   "tsan", # Bug 1429950, Bug 1583315, Bug 1696109, Bug 1701449
 ]
 

@@ -108,7 +108,6 @@ skip-if = [
 ["test_nsIProcess_stress.js"]
 skip-if = [
   "ccov", # bug 1394989
-  "os == 'win'", # bug 676412, test isn't needed on windows and runs really slowly
 ]
 
 ["test_pipe.js"]

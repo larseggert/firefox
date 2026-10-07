@@ -557,7 +557,6 @@ skip-if = [
 support-files = ["mq_changes_child.html"]
 skip-if = [
   "headless",
-  "os == 'win'",
 ]
 
 ["test_mq_hover_and_pointer.html"]
@@ -565,13 +564,11 @@ skip-if = [
 ["test_mq_prefers_contrast_dynamic.html"]
 skip-if = [
   "headless",
-  "os == 'win'",
 ]
 
 ["test_mq_prefers_reduced_motion_dynamic.html"]
 skip-if = [
   "headless",
-  "os == 'win'",
 ]
 
 ["test_mql_event_listener_leaks.html"]

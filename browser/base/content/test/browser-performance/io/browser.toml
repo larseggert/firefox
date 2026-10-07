@@ -27,7 +27,6 @@ environment = [
 
 ["../browser_startup_mainthreadio.js"]
 skip-if = [
-  "os == 'win' && msix", # Bug 1833639
   "socketprocess_networking", # bug 1707724
 ]
 

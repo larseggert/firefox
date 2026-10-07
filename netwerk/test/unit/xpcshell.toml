@@ -700,7 +700,6 @@ skip-if = [
 ["test_dns_negative_grace.js"]
 skip-if = [
   "os == 'android'",
-  "os == 'win' && msix",
 ]
 
 ["test_dns_negative_refresh_on_use.js"]
@@ -839,7 +838,6 @@ skip-if = [
 ["test_happy_eyeballs_cancel_and_reuse.js"]
 skip-if = [
   "os == 'android'",
-  "os == 'win' && msix",
 ]
 
 ["test_happy_eyeballs_concurrent_channels.js"]
@@ -871,7 +869,6 @@ skip-if = [
 run-sequentially = ["true"] # node server exceptions dont replay well
 skip-if = [
   "os == 'android'",
-  "os == 'win' && msix",
 ]
 
 ["test_happy_eyeballs_h3_0rtt.js"]
@@ -917,7 +914,6 @@ run-sequentially = ["true"] # node server exceptions dont replay well
 ["test_happy_eyeballs_local_addr_retry.js"]
 skip-if = [
   "os == 'android'",
-  "os == 'win' && msix",
 ]
 
 ["test_happy_eyeballs_negative_optimistic_dns.js"]
@@ -926,14 +922,12 @@ skip-if = [
 run-sequentially = ["true"] # node server exceptions dont replay well
 skip-if = [
   "os == 'android'",
-  "os == 'win' && msix",
 ]
 
 ["test_happy_eyeballs_tcp_fallback.js"]
 run-sequentially = ["true"] # node server exceptions dont replay well
 skip-if = [
   "os == 'android'",
-  "os == 'win' && msix",
 ]
 
 ["test_happy_eyeballs_timings.js"]
@@ -946,7 +940,6 @@ skip-if = [
 ["test_happy_eyeballs_trr_connect_fallback.js"]
 skip-if = [
   "os == 'android'",
-  "os == 'win' && msix",
 ]
 
 ["test_happy_eyeballs_websocket_https_rr.js"]
@@ -1287,7 +1280,6 @@ skip-if = [
 run-sequentially = ["true"] # node server exceptions dont replay well
 skip-if = [
   "os == 'android'",
-  "os == 'win' && msix", # Bug 1808049
 ]
 
 ["test_http3_proxy_no_speculative.js"]
@@ -1515,13 +1507,6 @@ skip-if = [
 ["test_nestedabout_serialize.js"]
 
 ["test_net_addr.js"]
-skip-if = [
-  "os == 'win' && os_version == '10.2009' && arch == 'x86_64'", # Bug 732363: test fails on windows for unknown reasons.
-  "os == 'win' && os_version == '11.26100' && arch == 'x86'", # Bug 732363: test fails on windows for unknown reasons.
-  "os == 'win' && os_version == '11.26100' && arch == 'x86_64'", # Bug 732363: test fails on windows for unknown reasons.
-  "os == 'win' && os_version == '11.26200' && arch == 'x86'", # Bug 732363: test fails on windows for unknown reasons.
-  "os == 'win' && os_version == '11.26200' && arch == 'x86_64'", # Bug 732363: test fails on windows for unknown reasons.
-]
 
 ["test_network_connectivity_service.js"]
 

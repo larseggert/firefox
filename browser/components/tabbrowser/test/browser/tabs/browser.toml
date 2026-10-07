@@ -23,9 +23,6 @@ tags = "vertical-tabs"
 tags = "vertical-tabs"
 
 ["browser_adoptTab_failure.js"]
-skip-if = [
-  "os == 'win' && os_version == '11.26200' && asan", # Bug 2019745
-]
 
 ["browser_allow_process_switches_despite_related_browser.js"]
 
@@ -108,18 +105,11 @@ tags = "vertical-tabs"
 
 ["browser_file_to_http_script_closable.js"]
 support-files = ["tab_that_closes.html"]
-skip-if = [
-  "os == 'win' && os_version == '11.26100' && arch == 'x86_64' && debug && msix", # Bug 1775640
-  "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && debug && msix", # Bug 1775640
-]
 
 ["browser_hiddentab_contextmenu.js"]
 tags = "vertical-tabs"
 
 ["browser_lastAccessedTab.js"]
-skip-if = [
-  "os == 'win'", # Disabled on Windows due to frequent failures (bug 969405)
-]
 tags = "vertical-tabs"
 
 ["browser_lastSeenActive.js"]
@@ -259,9 +249,6 @@ tags = "vertical-tabs"
 
 ["browser_multiselect_tabs_move_to_another_window_drag.js"]
 tags = "vertical-tabs"
-skip-if = [
-  "os == 'win' && os_version == '11.26200' && asan", # Bug 2019745
-]
 
 ["browser_multiselect_tabs_move_to_new_window_contextmenu.js"]
 https_first_disabled = true
@@ -288,7 +275,6 @@ tags = "vertical-tabs"
 ["browser_multiselect_tabs_reorder.js"]
 skip-if = [
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'", # Bug 1972003, only fails on try, not locally or when tested manually
-  "os == 'win'",
 ]
 tags = "vertical-tabs"
 
@@ -469,10 +455,6 @@ run-if = [
 tags = "vertical-tabs"
 
 ["browser_scroll_size_determination.js"]
-skip-if = [
-  "os == 'win' && os_version == '11.26100' && arch == 'x86_64' && debug", # Bug 1932653
-  "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && debug", # Bug 1932653
-]
 
 ["browser_selectMRUOnClose.js"]
 
@@ -612,7 +594,6 @@ tags = "vertical-tabs"
 tags = "vertical-tabs"
 skip-if = [
   "opt && standalone", # Bug 2028649
-  "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && asan", # Bug 2028660
 ]
 
 ["browser_tab_manager_keyboard_access.js"]
@@ -722,10 +703,6 @@ support-files = ["open_window_in_new_tab.html"]
 tags = "vertical-tabs"
 
 ["browser_tabswitch_updatecommands.js"]
-skip-if = [
-  "os == 'win' && os_version == '11.26100' && arch == 'x86_64' && debug && msix", # high frequency;
-  "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && debug && msix", # high frequency;
-]
 
 ["browser_tabswitch_window_focus.js"]
 
@@ -756,9 +733,6 @@ tags = "vertical-tabs"
 tags = "vertical-tabs"
 
 ["browser_visibleTabs_tabPreview.js"]
-skip-if = [
-  "os == 'win' && opt",
-]
 
 ["browser_window_open_modifiers.js"]
 support-files = ["file_window_open.html"]

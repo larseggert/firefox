@@ -702,9 +702,6 @@ prefs = ["media.recorder.video.frame_drops=false"]
 ["test_mediacapabilities_resistfingerprinting.html"]
 
 ["test_mediarecorder_avoid_recursion.html"]
-skip-if = [
-  "os == 'win' && opt",
-]
 scheme = "https"
 
 ["test_mediarecorder_bitrate.html"]

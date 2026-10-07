@@ -344,5 +344,4 @@ scheme = "https"
 skip-if = [
   "os == 'android'", # Bug 1404995, no loopback devices on some platforms
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64'",
-  "os == 'win'",
 ]

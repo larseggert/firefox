@@ -150,9 +150,6 @@ run-if = [
 ["test_embedderDisabled.js"]
 
 ["test_error.js"]
-skip-if = [
-  "os == 'win'", # Bug 1508482
-]
 
 ["test_ext_management.js"]
 tags = "webextensions"
@@ -410,9 +407,6 @@ skip-if = [
 head = "head_addons.js head_system_addons.js"
 
 ["test_temporary.js"]
-skip-if = [
-  "os == 'win'", # Bug 1469904
-]
 tags = "webextensions"
 
 ["test_trash_directory.js"]
@@ -423,9 +417,6 @@ run-if = [
 ["test_types.js"]
 
 ["test_undouninstall.js"]
-skip-if = [
-  "os == 'win'", # Bug 1358846
-]
 
 ["test_update.js"]
 

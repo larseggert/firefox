@@ -110,9 +110,6 @@ skip-if = [
 ["browser_popupNotification_replace_while_opening.js"]
 
 ["browser_popupNotification_security_delay.js"]
-skip-if = [
-  "os == 'win' && arch == 'x86'", # Bug 1882452
-]
 
 ["browser_popupNotification_security_delay_cap.js"]
 
