@@ -353,14 +353,14 @@ struct arena_t : public BaseAllocClass {
   // (but not arena_t.mLock !) through gArenas.mOutstandingPurges.
   mozilla::DoublyLinkedListElement<arena_t> mPurgeListElem;
 
-  // A "significant reuse" is when a dirty page is used for a new allocation,
-  // it has the CHUNK_MAP_DIRTY bit cleared and CHUNK_MAP_ALLOCATED set.
+  // A page reuse is when a dirty page is used for a new allocation, it has the
+  // CHUNK_MAP_DIRTY bit cleared and CHUNK_MAP_ALLOCATED set.
   //
-  // Timestamp of the last time we saw a significant reuse (in ns).
+  // Timestamp of the last time we saw a page reuse (in ns).
   // Note that this variable is written very often from many threads and read
   // only sparsely on the main thread, but when we read it we need to see the
   // chronologically latest write asap (so we cannot use Relaxed).
-  mozilla::Atomic<uint64_t> mLastSignificantReuseNS;
+  mozilla::Atomic<uint64_t> mLastPageReuseNS;
 
  public:
   // A flag that indicates if arena will be Purge()'d.
@@ -682,8 +682,8 @@ struct arena_t : public BaseAllocClass {
     return (mNumDirty > ((aCond == PurgeUnconditional) ? 0 : mMaxDirty >> 1));
   }
 
-  // Update the last significant reuse timestamp.
-  void NotifySignificantReuse() MOZ_EXCLUDES(mLock);
+  // Update the last page reuse timestamp.
+  void NotifyPageReuse() MOZ_EXCLUDES(mLock);
 
   bool IsMainThreadOnly() const { return !mLock.LockIsEnabled(); }
 

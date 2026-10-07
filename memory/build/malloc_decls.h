@@ -150,8 +150,8 @@ MALLOC_DECL(moz_enable_deferred_purge, bool, bool)
 // Parameters:
 // aPeekOnly:     If true, it won't process any purge but just return if some is
 //                needed now or wanted later.
-// aReuseGraceMS: The time to wait after a significant re-use happened before
-//                purging memory in an arena.
+// aReuseGraceMS: The time to wait after a dirty page was reused before purging
+//                memory in an arena.
 // aKeepGoing:    Used to determine if it should continue processing purge
 //                requests and may be used to implement a work budget.  It will
 //                exit if there's no more requests, if it finishes processing an

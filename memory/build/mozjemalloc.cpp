@@ -509,8 +509,8 @@ class ArenaCollection {
   //
   // Parameters:
   // aPeekOnly:     If true, check only if there is work to do without doing it.
-  // aReuseGraceMS: The time to wait with purge after a
-  //                significant re-use happened for an arena.
+  // aReuseGraceMS: The time to wait with purge after a page reuse happened
+  //                for an arena.
   // aKeepGoing:    If this returns false purging will cease.
   //
   // This could exit for 3 different reasons.
@@ -1526,10 +1526,9 @@ ArenaPurgeResult arena_t::PurgeLoop(PurgeCondition aCond, const char* aCaller,
   do {
     pr = Purge(aCond, purge_stats, aKeepGoing);
     now = aReuseGraceMS ? GetTimestampNS() : 0;
-  } while (
-      pr == NotDone &&
-      (!aReuseGraceMS || (now - mLastSignificantReuseNS >= reuseGraceNS)) &&
-      (!aKeepGoing || (*aKeepGoing)()));
+  } while (pr == NotDone &&
+           (!aReuseGraceMS || (now - mLastPageReuseNS >= reuseGraceNS)) &&
+           (!aKeepGoing || (*aKeepGoing)()));
 
 #ifdef MOZJEMALLOC_PROFILING_CALLBACKS
   if (callbacks) {
@@ -2207,7 +2206,7 @@ void* arena_t::MallocSmall(size_t aSize, bool aZero) {
     mStats.operations++;
   }
   if (num_dirty_after < num_dirty_before) {
-    NotifySignificantReuse();
+    NotifyPageReuse();
   }
   if (!aZero) {
     ApplyZeroOrJunk(ret, aSize);
@@ -2237,7 +2236,7 @@ void* arena_t::MallocLarge(size_t aSize, bool aZero) {
     mStats.operations++;
   }
   if (num_dirty_after < num_dirty_before) {
-    NotifySignificantReuse();
+    NotifyPageReuse();
   }
 
   if (!aZero) {
@@ -2308,7 +2307,7 @@ void* arena_t::PallocLarge(size_t aAlignment, size_t aSize, size_t aAllocSize) {
     mStats.operations++;
   }
   if (num_dirty_after < num_dirty_before) {
-    NotifySignificantReuse();
+    NotifyPageReuse();
   }
   // Note that since Bug 1488780we don't attempt purge dirty memory on this code
   // path. In general there won't be dirty memory above the threshold after an
@@ -2778,13 +2777,13 @@ inline void arena_t::MayDoOrQueuePurge(purge_action_t aAction,
   }
 }
 
-inline void arena_t::NotifySignificantReuse() {
+inline void arena_t::NotifyPageReuse() {
   // Note that there is a chance here for a race between threads calling
   // GetTimeStampNS in a different order than writing it to the Atomic,
-  // resulting in mLastSignificantReuseNS going potentially backwards.
+  // resulting in mLastPageReuseNS going potentially backwards.
   // Our use case is not sensitive to small deviations, the worse that can
   // happen is a slightly earlier purge.
-  mLastSignificantReuseNS = GetTimestampNS();
+  mLastPageReuseNS = GetTimestampNS();
 }
 
 void arena_t::RallocShrinkLarge(arena_chunk_t* aChunk, void* aPtr, size_t aSize,
@@ -2850,7 +2849,7 @@ bool arena_t::RallocGrowLarge(arena_chunk_t* aChunk, void* aPtr, size_t aSize,
     }
   }
   if (num_dirty_after < num_dirty_before) {
-    NotifySignificantReuse();
+    NotifyPageReuse();
   }
   return true;
 }
@@ -2944,7 +2943,7 @@ arena_t::arena_t(arena_params_t* aParams, bool aIsPrivate)
       // fraction of opt_dirty_max.
       mMaxDirtyBase((aParams && aParams->mMaxDirty) ? aParams->mMaxDirty
                                                     : (opt_dirty_max / 8)),
-      mLastSignificantReuseNS(GetTimestampNS()),
+      mLastPageReuseNS(GetTimestampNS()),
       mChunkAllocator(&gSystemChunkAllocator) {
   MaybeMutex::DoLock doLock = MaybeMutex::MUST_LOCK;
   if (aParams) {
@@ -4075,7 +4074,7 @@ may_purge_now_result_t ArenaCollection::MayPurgeSteps(
       return may_purge_now_result_t::Done;
     }
     for (arena_t& arena : mOutstandingPurges) {
-      if (now - arena.mLastSignificantReuseNS >= reuseGraceNS) {
+      if (now - arena.mLastPageReuseNS >= reuseGraceNS) {
         found = &arena;
         break;
       }
