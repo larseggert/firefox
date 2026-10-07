@@ -624,8 +624,7 @@ SECItem* CreateEDPointForXCoordinate(const CryptoBuffer& aX,
   return point;
 }
 
-UniqueSECKEYPrivateKey CryptoKey::PrivateKeyFromJwk(const JsonWebKey& aJwk,
-                                                    const nsString aAlgName) {
+UniqueSECKEYPrivateKey CryptoKey::PrivateKeyFromJwk(const JsonWebKey& aJwk) {
   CK_OBJECT_CLASS privateKeyValue = CKO_PRIVATE_KEY;
   CK_BBOOL falseValue = CK_FALSE;
 
@@ -736,18 +735,6 @@ UniqueSECKEYPrivateKey CryptoKey::PrivateKeyFromJwk(const JsonWebKey& aJwk,
 
     if (!namedCurve.EqualsLiteral(WEBCRYPTO_NAMED_CURVE_ED25519) &&
         !namedCurve.EqualsLiteral(WEBCRYPTO_NAMED_CURVE_CURVE25519)) {
-      return nullptr;
-    }
-
-    MOZ_ASSERT(!aAlgName.IsEmpty());
-
-    if (namedCurve.EqualsLiteral(WEBCRYPTO_NAMED_CURVE_ED25519) &&
-        !aAlgName.EqualsLiteral(WEBCRYPTO_ALG_ED25519)) {
-      return nullptr;
-    }
-
-    if (namedCurve.EqualsLiteral(WEBCRYPTO_NAMED_CURVE_CURVE25519) &&
-        !aAlgName.EqualsLiteral(WEBCRYPTO_ALG_X25519)) {
       return nullptr;
     }
 
@@ -1098,8 +1085,7 @@ UniqueSECKEYPublicKey CreateECPublicKey(const SECItem* aKeyData,
   return key;
 }
 
-UniqueSECKEYPublicKey CryptoKey::PublicKeyFromJwk(const JsonWebKey& aJwk,
-                                                  const nsString aAlgName) {
+UniqueSECKEYPublicKey CryptoKey::PublicKeyFromJwk(const JsonWebKey& aJwk) {
   if (aJwk.mKty.EqualsLiteral(JWK_TYPE_RSA)) {
     // Verify that all of the required parameters are present
     CryptoBuffer n, e;
@@ -1194,17 +1180,6 @@ UniqueSECKEYPublicKey CryptoKey::PublicKeyFromJwk(const JsonWebKey& aJwk,
 
     if (!namedCurve.EqualsLiteral(WEBCRYPTO_NAMED_CURVE_ED25519) &&
         !namedCurve.EqualsLiteral(WEBCRYPTO_NAMED_CURVE_CURVE25519)) {
-      return nullptr;
-    }
-
-    MOZ_ASSERT(!aAlgName.IsEmpty());
-    if (namedCurve.EqualsLiteral(WEBCRYPTO_NAMED_CURVE_ED25519) &&
-        !aAlgName.EqualsLiteral(WEBCRYPTO_ALG_ED25519)) {
-      return nullptr;
-    }
-
-    if (namedCurve.EqualsLiteral(WEBCRYPTO_NAMED_CURVE_CURVE25519) &&
-        !aAlgName.EqualsLiteral(WEBCRYPTO_ALG_X25519)) {
       return nullptr;
     }
 

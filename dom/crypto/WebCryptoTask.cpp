@@ -1955,7 +1955,7 @@ class ImportOKPKeyTask : public ImportKeyTask {
         mFormat.EqualsLiteral(WEBCRYPTO_KEY_FORMAT_PKCS8)) {
       // Private key import
       if (mFormat.EqualsLiteral(WEBCRYPTO_KEY_FORMAT_JWK)) {
-        privKey = CryptoKey::PrivateKeyFromJwk(mJwk, mAlgName);
+        privKey = CryptoKey::PrivateKeyFromJwk(mJwk);
         if (!privKey) {
           return NS_ERROR_DOM_DATA_ERR;
         }
@@ -1997,7 +1997,7 @@ class ImportOKPKeyTask : public ImportKeyTask {
       } else if (mFormat.EqualsLiteral(WEBCRYPTO_KEY_FORMAT_SPKI)) {
         pubKey = CryptoKey::PublicKeyFromSpki(mKeyData);
       } else if (mFormat.EqualsLiteral(WEBCRYPTO_KEY_FORMAT_JWK)) {
-        pubKey = CryptoKey::PublicKeyFromJwk(mJwk, mAlgName);
+        pubKey = CryptoKey::PublicKeyFromJwk(mJwk);
       } else {
         MOZ_ASSERT(false);
       }

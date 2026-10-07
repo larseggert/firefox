@@ -162,13 +162,11 @@ class CryptoKey final : public nsISupports, public nsWrapperCache {
   static nsresult PublicKeyToSpki(SECKEYPublicKey* aPubKey,
                                   CryptoBuffer& aRetVal);
 
-  static UniqueSECKEYPrivateKey PrivateKeyFromJwk(
-      const JsonWebKey& aJwk, const nsString aAlgName = EmptyString());
+  static UniqueSECKEYPrivateKey PrivateKeyFromJwk(const JsonWebKey& aJwk);
   static nsresult PrivateKeyToJwk(SECKEYPrivateKey* aPrivKey,
                                   JsonWebKey& aRetVal);
 
-  static UniqueSECKEYPublicKey PublicKeyFromJwk(
-      const JsonWebKey& aKeyData, const nsString aAlgName = EmptyString());
+  static UniqueSECKEYPublicKey PublicKeyFromJwk(const JsonWebKey& aKeyData);
   static nsresult PublicKeyToJwk(SECKEYPublicKey* aPubKey, JsonWebKey& aRetVal);
 
   static UniqueSECKEYPublicKey PublicECKeyFromRaw(CryptoBuffer& aKeyData,
