@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.view.isVisible
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.abs
 import kotlinx.coroutines.flow.Flow
@@ -53,7 +54,7 @@ private val ListenState.isArticleReady: Boolean
 internal const val LISTEN_SHEET_TEST_TAG = "listenSheet"
 
 /**
- * This integration is responsible for adding or removing the reader mode panel and the Listen to page media player, and
+ * This integration is responsible for showing or hiding the reader mode panel and the Listen to page media player, and
  * properly anchoring them to the browser.
  *
  * @param container The [CoordinatorLayout] the panel and the player are added to.
@@ -77,7 +78,13 @@ class ListenSheetIntegration(
     private var listenFeature: ComposeView? = null
 
     override fun start() {
-        if (listenFeature != null) return
+        listenFeature?.let {
+            // Set again because stop() disposes the composition while the view keeps its place in the container.
+            it.setContent { ListenFeatureHost() }
+            it.isVisible = true
+            return
+        }
+
         val view =
             ComposeView(container.context).apply {
                 id = R.id.listenSheet
@@ -99,8 +106,12 @@ class ListenSheetIntegration(
     }
 
     override fun stop() {
-        container.removeView(listenFeature)
-        listenFeature = null
+        listenFeature?.apply {
+            isVisible = false
+            // The view stays so that a snackbar anchored to it still resolves. The composition does not, so nothing
+            // it holds outlives the stop.
+            disposeComposition()
+        }
     }
 
     @Composable
