@@ -106,8 +106,6 @@ support-files = [
 
 ["browser_ml_pipeline.js"]
 
-["browser_ml_privatebrowsing.js"]
-
 ["browser_ml_static_embeddings.js"]
 
 ["browser_ml_telemetry.js"]
