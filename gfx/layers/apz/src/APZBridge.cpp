@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "mozilla/layers/APZInputBridge.h"
+#include "mozilla/layers/APZBridge.h"
 
 #include "AsyncPanZoomController.h"
 #include "InputBlockState.h"         // for InputBlockState
@@ -235,8 +235,7 @@ static bool WillHandleMouseEvent(const WidgetMouseEventBase& aEvent) {
 }
 
 /* static */
-Maybe<APZWheelAction> APZInputBridge::ActionForWheelEvent(
-    WidgetWheelEvent* aEvent) {
+Maybe<APZWheelAction> APZBridge::ActionForWheelEvent(WidgetWheelEvent* aEvent) {
   if (!(aEvent->mDeltaMode == dom::WheelEvent_Binding::DOM_DELTA_LINE ||
         aEvent->mDeltaMode == dom::WheelEvent_Binding::DOM_DELTA_PIXEL ||
         aEvent->mDeltaMode == dom::WheelEvent_Binding::DOM_DELTA_PAGE)) {
@@ -245,8 +244,8 @@ Maybe<APZWheelAction> APZInputBridge::ActionForWheelEvent(
   return EventStateManager::APZWheelActionFor(aEvent);
 }
 
-APZEventResult APZInputBridge::ReceiveInputEvent(
-    WidgetInputEvent& aEvent, InputBlockCallback&& aCallback) {
+APZEventResult APZBridge::ReceiveInputEvent(WidgetInputEvent& aEvent,
+                                            InputBlockCallback&& aCallback) {
   APZThreadUtils::AssertOnControllerThread();
 
   APZEventResult result;

@@ -2,26 +2,25 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef mozilla_layers_APZInputBridgeChild_h
-#define mozilla_layers_APZInputBridgeChild_h
+#ifndef mozilla_layers_APZBridgeChild_h
+#define mozilla_layers_APZBridgeChild_h
 
-#include "mozilla/layers/APZInputBridge.h"
+#include "mozilla/layers/APZBridge.h"
 #include "mozilla/layers/GeckoContentControllerTypes.h"
-#include "mozilla/layers/PAPZInputBridgeChild.h"
+#include "mozilla/layers/PAPZBridgeChild.h"
 
 namespace mozilla {
 namespace layers {
 
 class RemoteCompositorSession;
 
-class APZInputBridgeChild : public PAPZInputBridgeChild, public APZInputBridge {
-  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(APZInputBridgeChild, final)
+class APZBridgeChild : public PAPZBridgeChild, public APZBridge {
+  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(APZBridgeChild, final)
   using TapType = GeckoContentController_TapType;
 
  public:
-  static RefPtr<APZInputBridgeChild> Create(
-      const uint64_t& aProcessToken,
-      Endpoint<PAPZInputBridgeChild>&& aEndpoint);
+  static RefPtr<APZBridgeChild> Create(const uint64_t& aProcessToken,
+                                       Endpoint<PAPZBridgeChild>&& aEndpoint);
 
   void Destroy();
 
@@ -91,11 +90,11 @@ class APZInputBridgeChild : public PAPZInputBridgeChild, public APZInputBridge {
 
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
-  explicit APZInputBridgeChild(const uint64_t& aProcessToken);
-  virtual ~APZInputBridgeChild();
+  explicit APZBridgeChild(const uint64_t& aProcessToken);
+  virtual ~APZBridgeChild();
 
  private:
-  void Open(Endpoint<PAPZInputBridgeChild>&& aEndpoint);
+  void Open(Endpoint<PAPZBridgeChild>&& aEndpoint);
 
   MOZ_CAN_RUN_SCRIPT_BOUNDARY
   void HandleTapOnMainThread(
@@ -139,4 +138,4 @@ class APZInputBridgeChild : public PAPZInputBridgeChild, public APZInputBridge {
 }  // namespace layers
 }  // namespace mozilla
 
-#endif  // mozilla_layers_APZInputBridgeChild_h
+#endif  // mozilla_layers_APZBridgeChild_h

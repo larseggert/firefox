@@ -23,7 +23,7 @@
 #include "mozilla/dom/WheelEventBinding.h"
 #include "mozilla/dom/XULPopupElement.h"
 #include "mozilla/gfx/GPUProcessManager.h"
-#include "mozilla/layers/APZInputBridge.h"
+#include "mozilla/layers/APZBridge.h"
 #include "mozilla/layers/APZThreadUtils.h"
 #include "mozilla/layers/CompositorThread.h"
 #include "mozilla/layers/IAPZCTreeManager.h"
@@ -1454,7 +1454,7 @@ nsEventStatus nsCocoaWindow::DispatchAPZInputEvent(InputData& aEvent) {
   APZEventResult result;
 
   if (mAPZC) {
-    result = mAPZC->InputBridge()->ReceiveInputEvent(aEvent);
+    result = mAPZC->Bridge()->ReceiveInputEvent(aEvent);
   }
 
   if (result.GetStatus() == nsEventStatus_eConsumeNoDefault) {
@@ -1495,7 +1495,7 @@ void nsCocoaWindow::DispatchAPZWheelInputEvent(InputData& aEvent) {
 
     switch (aEvent.mInputType) {
       case PANGESTURE_INPUT: {
-        result = mAPZC->InputBridge()->ReceiveInputEvent(aEvent);
+        result = mAPZC->Bridge()->ReceiveInputEvent(aEvent);
         if (result.GetStatus() == nsEventStatus_eConsumeNoDefault) {
           return;
         }
@@ -1505,12 +1505,12 @@ void nsCocoaWindow::DispatchAPZWheelInputEvent(InputData& aEvent) {
       }
       case SCROLLWHEEL_INPUT: {
         // For wheel events on macOS, send it to APZ using the WidgetInputEvent
-        // variant of ReceiveInputEvent, because the APZInputBridge version of
+        // variant of ReceiveInputEvent, because the APZBridge version of
         // that function has special handling (for delta multipliers etc.) that
         // we need to run. Using the InputData variant would bypass that and
         // go straight to the APZCTreeManager subclass.
         event = aEvent.AsScrollWheelInput().ToWidgetEvent(this);
-        result = mAPZC->InputBridge()->ReceiveInputEvent(event);
+        result = mAPZC->Bridge()->ReceiveInputEvent(event);
         if (result.GetStatus() == nsEventStatus_eConsumeNoDefault) {
           return;
         }
@@ -2911,7 +2911,7 @@ static gfx::IntPoint GetIntegerDeltaForEvent(NSEvent* aEvent) {
                                 // DispatchAPZWheelInputEvent, which turns this
                                 // ScrollWheelInput back into a WidgetWheelEvent
                                 // and then it goes through the regular handling
-                                // in APZInputBridge. So passing |eNone| won't
+                                // in APZBridge. So passing |eNone| won't
                                 // pass up the necessary wheel delta adjustment.
                                 WheelDeltaAdjustmentStrategy::eNone);
     wheelEvent.mLineOrPageDeltaX = lineOrPageDelta.x;
@@ -2935,7 +2935,7 @@ static gfx::IntPoint GetIntegerDeltaForEvent(NSEvent* aEvent) {
                                 // DispatchAPZWheelInputEvent, which turns this
                                 // ScrollWheelInput back into a WidgetWheelEvent
                                 // and then it goes through the regular handling
-                                // in APZInputBridge. So passing |eNone| won't
+                                // in APZBridge. So passing |eNone| won't
                                 // pass up the necessary wheel delta adjustment.
                                 WheelDeltaAdjustmentStrategy::eNone);
     wheelEvent.mLineOrPageDeltaX = lineOrPageDelta.x;

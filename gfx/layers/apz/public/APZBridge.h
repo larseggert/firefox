@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef mozilla_layers_APZInputBridge_h
-#define mozilla_layers_APZInputBridge_h
+#ifndef mozilla_layers_APZBridge_h
+#define mozilla_layers_APZBridge_h
 
 #include "Units.h"                  // for LayoutDeviceIntPoint
 #include "mozilla/EventForwards.h"  // for WidgetInputEvent, nsEventStatus
@@ -17,7 +17,7 @@ class InputData;
 
 namespace layers {
 
-class APZInputBridgeParent;
+class APZBridgeParent;
 class AsyncPanZoomController;
 class InputBlockState;
 class KeyboardMap;
@@ -101,7 +101,7 @@ struct APZHandledResult {
 
 /**
  * Represents the outcome of APZ receiving and processing an input event.
- * This is returned from APZInputBridge::ReceiveInputEvent() and related APIs.
+ * This is returned from APZBridge::ReceiveInputEvent() and related APIs.
  */
 struct APZEventResult {
   /**
@@ -224,13 +224,13 @@ struct APZEventResult {
 /**
  * This class lives in the main process, and is accessed via the controller
  * thread (which is the process main thread for desktop, and the Java UI
- * thread for Android). This class exposes a synchronous API to deliver
+ * thread for Android). This class exposes some synchronous APIs to deliver
  * incoming input events to APZ and modify them in-place to unapply the APZ
  * async transform. If there is a GPU process, then this class does sync IPC
  * calls over to the GPU process in order to accomplish this. Otherwise,
  * APZCTreeManager overrides and implements these methods directly.
  */
-class APZInputBridge {
+class APZBridge {
  public:
   using InputBlockCallback = std::function<void(
       uint64_t aInputBlockId, const APZHandledResult& aHandledResult)>;
@@ -308,7 +308,7 @@ class APZInputBridge {
   virtual void SetLongTapEnabled(bool aTapGestureEnabled) = 0;
 
  protected:
-  friend class APZInputBridgeParent;
+  friend class APZBridgeParent;
 
   // Methods to help process WidgetInputEvents (or manage conversion to/from
   // InputData)
@@ -322,7 +322,7 @@ class APZInputBridge {
       LayoutDeviceIntPoint aRefPoint, EventMessage aEventMessage,
       const Maybe<ScrollableLayerGuid>& aTargetGuid) = 0;
 
-  virtual ~APZInputBridge() = default;
+  virtual ~APZBridge() = default;
 };
 
 std::ostream& operator<<(std::ostream& aOut,
@@ -331,4 +331,4 @@ std::ostream& operator<<(std::ostream& aOut,
 }  // namespace layers
 }  // namespace mozilla
 
-#endif  // mozilla_layers_APZInputBridge_h
+#endif  // mozilla_layers_APZBridge_h

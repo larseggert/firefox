@@ -2,24 +2,24 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef mozilla_layers_APZInputBridgeParent_h
-#define mozilla_layers_APZInputBridgeParent_h
+#ifndef mozilla_layers_APZBridgeParent_h
+#define mozilla_layers_APZBridgeParent_h
 
-#include "mozilla/layers/PAPZInputBridgeParent.h"
+#include "mozilla/layers/PAPZBridgeParent.h"
 
 namespace mozilla {
 namespace layers {
 
 class IAPZCTreeManager;
 
-class APZInputBridgeParent final : public PAPZInputBridgeParent {
-  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(APZInputBridgeParent, final)
+class APZBridgeParent final : public PAPZBridgeParent {
+  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(APZBridgeParent, final)
 
  public:
-  explicit APZInputBridgeParent(const LayersId& aLayersId);
+  explicit APZBridgeParent(const LayersId& aLayersId);
 
   static void Create(const LayersId& aLayersId,
-                     Endpoint<PAPZInputBridgeParent>&& aEndpoint);
+                     Endpoint<PAPZBridgeParent>&& aEndpoint);
 
   mozilla::ipc::IPCResult RecvReceiveMultiTouchInputEvent(
       const MultiTouchInput& aEvent, bool aWantsCallback,
@@ -76,7 +76,7 @@ class APZInputBridgeParent final : public PAPZInputBridgeParent {
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
  protected:
-  virtual ~APZInputBridgeParent();
+  virtual ~APZBridgeParent();
 
  private:
   RefPtr<IAPZCTreeManager> mTreeManager;
@@ -86,4 +86,4 @@ class APZInputBridgeParent final : public PAPZInputBridgeParent {
 }  // namespace layers
 }  // namespace mozilla
 
-#endif  // mozilla_layers_APZInputBridgeParent_h
+#endif  // mozilla_layers_APZBridgeParent_h

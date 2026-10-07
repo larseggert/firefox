@@ -2,11 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "mozilla/layers/APZInputBridgeParent.h"
+#include "mozilla/layers/APZBridgeParent.h"
 
 #include "InputData.h"
 #include "mozilla/ipc/Endpoint.h"
-#include "mozilla/layers/APZInputBridge.h"
+#include "mozilla/layers/APZBridge.h"
 #include "mozilla/layers/APZThreadUtils.h"
 #include "mozilla/layers/CompositorBridgeParent.h"
 #include "mozilla/layers/IAPZCTreeManager.h"
@@ -15,18 +15,18 @@ namespace mozilla {
 namespace layers {
 
 /* static */
-void APZInputBridgeParent::Create(const LayersId& aLayersId,
-                                  Endpoint<PAPZInputBridgeParent>&& aEndpoint) {
-  auto parent = MakeRefPtr<APZInputBridgeParent>(aLayersId);
+void APZBridgeParent::Create(const LayersId& aLayersId,
+                             Endpoint<PAPZBridgeParent>&& aEndpoint) {
+  auto parent = MakeRefPtr<APZBridgeParent>(aLayersId);
   if (!aEndpoint.Bind(parent)) {
     // We can't recover from this.
-    MOZ_CRASH("Failed to bind APZInputBridgeParent to endpoint");
+    MOZ_CRASH("Failed to bind APZBridgeParent to endpoint");
   }
 
-  CompositorBridgeParent::SetAPZInputBridgeParent(aLayersId, std::move(parent));
+  CompositorBridgeParent::SetAPZBridgeParent(aLayersId, std::move(parent));
 }
 
-APZInputBridgeParent::APZInputBridgeParent(const LayersId& aLayersId) {
+APZBridgeParent::APZBridgeParent(const LayersId& aLayersId) {
   MOZ_ASSERT(XRE_IsGPUProcess());
   MOZ_ASSERT(NS_IsMainThread());
 
@@ -35,226 +35,224 @@ APZInputBridgeParent::APZInputBridgeParent(const LayersId& aLayersId) {
   MOZ_ASSERT(mTreeManager);
 }
 
-APZInputBridgeParent::~APZInputBridgeParent() = default;
+APZBridgeParent::~APZBridgeParent() = default;
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvReceiveMultiTouchInputEvent(
+mozilla::ipc::IPCResult APZBridgeParent::RecvReceiveMultiTouchInputEvent(
     const MultiTouchInput& aEvent, bool aWantsCallback,
     APZEventResult* aOutResult, MultiTouchInput* aOutEvent) {
   MultiTouchInput event = aEvent;
 
-  APZInputBridge::InputBlockCallback callback;
+  APZBridge::InputBlockCallback callback;
   if (aWantsCallback) {
-    callback = [self = RefPtr<APZInputBridgeParent>(this)](
+    callback = [self = RefPtr<APZBridgeParent>(this)](
                    uint64_t aInputBlockId,
                    const APZHandledResult& aHandledResult) {
       (void)self->SendCallInputBlockCallback(aInputBlockId, aHandledResult);
     };
   }
 
-  *aOutResult = mTreeManager->InputBridge()->ReceiveInputEvent(
-      event, std::move(callback));
+  *aOutResult =
+      mTreeManager->Bridge()->ReceiveInputEvent(event, std::move(callback));
   *aOutEvent = std::move(event);
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvReceiveMouseInputEvent(
+mozilla::ipc::IPCResult APZBridgeParent::RecvReceiveMouseInputEvent(
     const MouseInput& aEvent, bool aWantsCallback, APZEventResult* aOutResult,
     MouseInput* aOutEvent) {
   MouseInput event = aEvent;
 
-  APZInputBridge::InputBlockCallback callback;
+  APZBridge::InputBlockCallback callback;
   if (aWantsCallback) {
-    callback = [self = RefPtr<APZInputBridgeParent>(this)](
+    callback = [self = RefPtr<APZBridgeParent>(this)](
                    uint64_t aInputBlockId,
                    const APZHandledResult& aHandledResult) {
       (void)self->SendCallInputBlockCallback(aInputBlockId, aHandledResult);
     };
   }
 
-  *aOutResult = mTreeManager->InputBridge()->ReceiveInputEvent(
-      event, std::move(callback));
+  *aOutResult =
+      mTreeManager->Bridge()->ReceiveInputEvent(event, std::move(callback));
   *aOutEvent = std::move(event);
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvReceivePanGestureInputEvent(
+mozilla::ipc::IPCResult APZBridgeParent::RecvReceivePanGestureInputEvent(
     const PanGestureInput& aEvent, bool aWantsCallback,
     APZEventResult* aOutResult, PanGestureInput* aOutEvent) {
   PanGestureInput event = aEvent;
 
-  APZInputBridge::InputBlockCallback callback;
+  APZBridge::InputBlockCallback callback;
   if (aWantsCallback) {
-    callback = [self = RefPtr<APZInputBridgeParent>(this)](
+    callback = [self = RefPtr<APZBridgeParent>(this)](
                    uint64_t aInputBlockId,
                    const APZHandledResult& aHandledResult) {
       (void)self->SendCallInputBlockCallback(aInputBlockId, aHandledResult);
     };
   }
 
-  *aOutResult = mTreeManager->InputBridge()->ReceiveInputEvent(
-      event, std::move(callback));
+  *aOutResult =
+      mTreeManager->Bridge()->ReceiveInputEvent(event, std::move(callback));
   *aOutEvent = std::move(event);
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvReceivePinchGestureInputEvent(
+mozilla::ipc::IPCResult APZBridgeParent::RecvReceivePinchGestureInputEvent(
     const PinchGestureInput& aEvent, bool aWantsCallback,
     APZEventResult* aOutResult, PinchGestureInput* aOutEvent) {
   PinchGestureInput event = aEvent;
 
-  APZInputBridge::InputBlockCallback callback;
+  APZBridge::InputBlockCallback callback;
   if (aWantsCallback) {
-    callback = [self = RefPtr<APZInputBridgeParent>(this)](
+    callback = [self = RefPtr<APZBridgeParent>(this)](
                    uint64_t aInputBlockId,
                    const APZHandledResult& aHandledResult) {
       (void)self->SendCallInputBlockCallback(aInputBlockId, aHandledResult);
     };
   }
 
-  *aOutResult = mTreeManager->InputBridge()->ReceiveInputEvent(
-      event, std::move(callback));
+  *aOutResult =
+      mTreeManager->Bridge()->ReceiveInputEvent(event, std::move(callback));
   *aOutEvent = std::move(event);
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvReceiveTapGestureInputEvent(
+mozilla::ipc::IPCResult APZBridgeParent::RecvReceiveTapGestureInputEvent(
     const TapGestureInput& aEvent, bool aWantsCallback,
     APZEventResult* aOutResult, TapGestureInput* aOutEvent) {
   TapGestureInput event = aEvent;
 
-  APZInputBridge::InputBlockCallback callback;
+  APZBridge::InputBlockCallback callback;
   if (aWantsCallback) {
-    callback = [self = RefPtr<APZInputBridgeParent>(this)](
+    callback = [self = RefPtr<APZBridgeParent>(this)](
                    uint64_t aInputBlockId,
                    const APZHandledResult& aHandledResult) {
       (void)self->SendCallInputBlockCallback(aInputBlockId, aHandledResult);
     };
   }
 
-  *aOutResult = mTreeManager->InputBridge()->ReceiveInputEvent(
-      event, std::move(callback));
+  *aOutResult =
+      mTreeManager->Bridge()->ReceiveInputEvent(event, std::move(callback));
   *aOutEvent = std::move(event);
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvReceiveScrollWheelInputEvent(
+mozilla::ipc::IPCResult APZBridgeParent::RecvReceiveScrollWheelInputEvent(
     const ScrollWheelInput& aEvent, bool aWantsCallback,
     APZEventResult* aOutResult, ScrollWheelInput* aOutEvent) {
   ScrollWheelInput event = aEvent;
 
-  APZInputBridge::InputBlockCallback callback;
+  APZBridge::InputBlockCallback callback;
   if (aWantsCallback) {
-    callback = [self = RefPtr<APZInputBridgeParent>(this)](
+    callback = [self = RefPtr<APZBridgeParent>(this)](
                    uint64_t aInputBlockId,
                    const APZHandledResult& aHandledResult) {
       (void)self->SendCallInputBlockCallback(aInputBlockId, aHandledResult);
     };
   }
 
-  *aOutResult = mTreeManager->InputBridge()->ReceiveInputEvent(
-      event, std::move(callback));
+  *aOutResult =
+      mTreeManager->Bridge()->ReceiveInputEvent(event, std::move(callback));
   *aOutEvent = std::move(event);
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvReceiveKeyboardInputEvent(
+mozilla::ipc::IPCResult APZBridgeParent::RecvReceiveKeyboardInputEvent(
     const KeyboardInput& aEvent, bool aWantsCallback,
     APZEventResult* aOutResult, KeyboardInput* aOutEvent) {
   KeyboardInput event = aEvent;
 
-  APZInputBridge::InputBlockCallback callback;
+  APZBridge::InputBlockCallback callback;
   if (aWantsCallback) {
-    callback = [self = RefPtr<APZInputBridgeParent>(this)](
+    callback = [self = RefPtr<APZBridgeParent>(this)](
                    uint64_t aInputBlockId,
                    const APZHandledResult& aHandledResult) {
       (void)self->SendCallInputBlockCallback(aInputBlockId, aHandledResult);
     };
   }
 
-  *aOutResult = mTreeManager->InputBridge()->ReceiveInputEvent(
-      event, std::move(callback));
+  *aOutResult =
+      mTreeManager->Bridge()->ReceiveInputEvent(event, std::move(callback));
   *aOutEvent = std::move(event);
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvUpdateWheelTransaction(
+mozilla::ipc::IPCResult APZBridgeParent::RecvUpdateWheelTransaction(
     const LayoutDeviceIntPoint& aRefPoint, const EventMessage& aEventMessage,
     const Maybe<ScrollableLayerGuid>& aTargetGuid) {
-  mTreeManager->InputBridge()->UpdateWheelTransaction(aRefPoint, aEventMessage,
-                                                      aTargetGuid);
+  mTreeManager->Bridge()->UpdateWheelTransaction(aRefPoint, aEventMessage,
+                                                 aTargetGuid);
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvProcessUnhandledEvent(
+mozilla::ipc::IPCResult APZBridgeParent::RecvProcessUnhandledEvent(
     const LayoutDeviceIntPoint& aRefPoint, LayoutDeviceIntPoint* aOutRefPoint,
     ScrollableLayerGuid* aOutTargetGuid, uint64_t* aOutFocusSequenceNumber,
     LayersId* aOutLayersId) {
   LayoutDeviceIntPoint refPoint = aRefPoint;
-  mTreeManager->InputBridge()->ProcessUnhandledEvent(
+  mTreeManager->Bridge()->ProcessUnhandledEvent(
       &refPoint, aOutTargetGuid, aOutFocusSequenceNumber, aOutLayersId);
   *aOutRefPoint = refPoint;
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvSetKeyboardMap(
+mozilla::ipc::IPCResult APZBridgeParent::RecvSetKeyboardMap(
     const KeyboardMap& aKeyboardMap) {
-  mTreeManager->InputBridge()->SetKeyboardMap(aKeyboardMap);
+  mTreeManager->Bridge()->SetKeyboardMap(aKeyboardMap);
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvSetDPI(
-    const float& aDpiValue) {
-  mTreeManager->InputBridge()->SetDPI(aDpiValue);
+mozilla::ipc::IPCResult APZBridgeParent::RecvSetDPI(const float& aDpiValue) {
+  mTreeManager->Bridge()->SetDPI(aDpiValue);
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvSetBrowserGestureResponse(
+mozilla::ipc::IPCResult APZBridgeParent::RecvSetBrowserGestureResponse(
     const uint64_t& aInputBlockId, const BrowserGestureResponse& aResponse) {
-  mTreeManager->InputBridge()->SetBrowserGestureResponse(aInputBlockId,
-                                                         aResponse);
+  mTreeManager->Bridge()->SetBrowserGestureResponse(aInputBlockId, aResponse);
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvStartAutoscroll(
+mozilla::ipc::IPCResult APZBridgeParent::RecvStartAutoscroll(
     const ScrollableLayerGuid& aGuid, const ScreenPoint& aAnchorLocation) {
-  mTreeManager->InputBridge()->StartAutoscroll(aGuid, aAnchorLocation);
+  mTreeManager->Bridge()->StartAutoscroll(aGuid, aAnchorLocation);
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvStopAutoscroll(
+mozilla::ipc::IPCResult APZBridgeParent::RecvStopAutoscroll(
     const ScrollableLayerGuid& aGuid) {
-  mTreeManager->InputBridge()->StopAutoscroll(aGuid);
+  mTreeManager->Bridge()->StopAutoscroll(aGuid);
 
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult APZInputBridgeParent::RecvSetLongTapEnabled(
+mozilla::ipc::IPCResult APZBridgeParent::RecvSetLongTapEnabled(
     const bool& aTapGestureEnabled) {
-  mTreeManager->InputBridge()->SetLongTapEnabled(aTapGestureEnabled);
+  mTreeManager->Bridge()->SetLongTapEnabled(aTapGestureEnabled);
 
   return IPC_OK();
 }
 
-void APZInputBridgeParent::ActorDestroy(ActorDestroyReason aWhy) {
+void APZBridgeParent::ActorDestroy(ActorDestroyReason aWhy) {
   // EnsureLayerTreeStateUnderLock mirrors the previous sIndirectLayerTrees[]
   // access (insert-or-get), so this stays a behavior-preserving translation.
   CompositorBridgeParent::WithIndirectLayerTreesLock(
       [&](const StaticMonitorAutoLock& aProofOfLock) {
         CompositorBridgeParent::EnsureLayerTreeStateUnderLock(mLayersId,
                                                               aProofOfLock)
-            .mApzInputBridgeParent = nullptr;
+            .mApzBridgeParent = nullptr;
       });
   // We shouldn't need it after this
   mTreeManager = nullptr;

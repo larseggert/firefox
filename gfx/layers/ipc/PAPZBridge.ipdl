@@ -12,9 +12,9 @@ using mozilla::layers::GeckoContentController_TapType from "mozilla/layers/Gecko
 using mozilla::layers::DoubleTapToZoomMetrics from "mozilla/layers/DoubleTapToZoom.h";
 using struct mozilla::layers::ScrollableLayerGuid from "mozilla/layers/ScrollableLayerGuid.h";
 using mozilla::layers::ScrollableLayerGuid::ViewID from "mozilla/layers/ScrollableLayerGuid.h";
-using struct mozilla::layers::APZEventResult from "mozilla/layers/APZInputBridge.h";
-using struct mozilla::layers::APZHandledResult from "mozilla/layers/APZInputBridge.h";
-using mozilla::layers::BrowserGestureResponse from "mozilla/layers/APZInputBridge.h";
+using struct mozilla::layers::APZEventResult from "mozilla/layers/APZBridge.h";
+using struct mozilla::layers::APZHandledResult from "mozilla/layers/APZBridge.h";
+using mozilla::layers::BrowserGestureResponse from "mozilla/layers/APZBridge.h";
 
 using mozilla::EventMessage from "mozilla/EventForwards.h";
 using mozilla::Modifiers from "mozilla/EventForwards.h";
@@ -37,8 +37,10 @@ namespace mozilla {
 namespace layers {
 
 /**
- * This protocol is used to send input events from the UI process to the
- * GPU process for handling by APZ. There is one instance per top-level
+ * This protocol is used for APZ communication between the UI process and the
+ * GPU process. The UI process uses it to send input events and other requests
+ * to APZ, and the GPU process uses it to notify the UI process of things like
+ * taps and layer transforms. There is one instance per top-level
  * compositor, or in other words, one instance per concrete APZCTreeManager
  * instance. The child side lives on the controller thread in the UI process,
  * ie the main thread on most platforms, but the Android UI thread on Android.
@@ -46,7 +48,7 @@ namespace layers {
  * GPU process, then this protocol is not instantiated.
  */
 [ParentProc=GPU, ChildProc=Parent]
-sync protocol PAPZInputBridge
+sync protocol PAPZBridge
 {
 parent:
   // The following messages are used to
