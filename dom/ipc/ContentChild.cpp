@@ -240,6 +240,7 @@
 
 #ifdef XP_WIN
 #  include <process.h>
+#  include <windows.h>
 #  define getpid _getpid
 #  include "mozilla/WinDllServices.h"
 #endif
@@ -2890,6 +2891,19 @@ mozilla::ipc::IPCResult ContentChild::RecvNotifyProcessPriorityChanged(
   }
 
   ConfigureThreadPerformanceHints(aPriority);
+
+#ifdef XP_WIN
+  bool raiseMainThreadPriority =
+      aPriority >= hal::PROCESS_PRIORITY_FOREGROUND &&
+      StaticPrefs::
+          dom_ipc_processPriorityManager_foregroundRaisesMainThreadPriority();
+  if (raiseMainThreadPriority != mMainThreadPriorityRaised &&
+      ::SetThreadPriority(::GetCurrentThread(),
+                          raiseMainThreadPriority ? THREAD_PRIORITY_ABOVE_NORMAL
+                                                  : THREAD_PRIORITY_NORMAL)) {
+    mMainThreadPriorityRaised = raiseMainThreadPriority;
+  }
+#endif
 
   mProcessPriority = aPriority;
 

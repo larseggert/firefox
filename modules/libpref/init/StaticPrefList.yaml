@@ -3784,6 +3784,13 @@
   type: bool
   value: false
   mirror: always
+
+# Whether the main threads of the parent process and of foreground content
+# processes run at THREAD_PRIORITY_ABOVE_NORMAL.
+- name: dom.ipc.processPriorityManager.foregroundRaisesMainThreadPriority
+  type: bool
+  value: false
+  mirror: always
 #endif
 
 # This is a temporary preference intended to allow relaxing the new
