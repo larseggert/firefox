@@ -117,8 +117,7 @@ class JS_PUBLIC_API Value;
 //    unboxing and tag tests for these GC things need no instruction to
 //    materialize the tag.
 // 2. Numbers (Double and Int32) are the lowest tags, to simplify isNumber
-//    checks, and Boolean follows Int32. (See ValueUpperInclNumberTag and
-//    ValueUpperExclShiftedNumberTag)
+//    checks. (See ValueUpperInclNumberTag)
 // 3. Non-GC tags are ordered before GC-tags, to simplify isGCThing checks. (See
 //    ValueLowerInclGCThingTag)
 // 4. The tags for Object and Null differ by a single flipped bit, to simplify
@@ -143,9 +142,6 @@ class JS_PUBLIC_API Value;
 // 6. The low two bits of the String, Object and BigInt tags are their
 //    JS::TraceKind, and the PrivateGCThing and Symbol tags are adjacent, so
 //    Value::traceKind needs a single branch. (See Value::traceKind)
-// 7. Int32 and Undefined have even type codes, so on PUNBOX64 their shifted
-//    tags occupy only the top 16 bits and AArch64 materializes them with a
-//    single movz. Type code 0x01 is unused so that Int32 can be even.
 //
 // [1]:
 // https://wingolog.org/archives/2011/05/18/value-representation-in-javascript-implementations#969f63bbe4eb912778c9da85feb0f5763e7a7862
@@ -166,11 +162,11 @@ class JS_PUBLIC_API Value;
 
 enum JSValueType : uint8_t {
   JSVAL_TYPE_DOUBLE = 0x00,
-  JSVAL_TYPE_INT32 = 0x02,
-  JSVAL_TYPE_BOOLEAN = 0x03,
+  JSVAL_TYPE_INT32 = 0x01,
+  JSVAL_TYPE_BOOLEAN = 0x02,
+  JSVAL_TYPE_UNDEFINED = 0x03,
   JSVAL_TYPE_NULL = 0x04,
   JSVAL_TYPE_MAGIC = 0x05,
-  JSVAL_TYPE_UNDEFINED = 0x06,
   JSVAL_TYPE_PRIVATE_GCTHING = 0x07,
   JSVAL_TYPE_SYMBOL = 0x08,
   JSVAL_TYPE_BIGINT = 0x09,
@@ -310,8 +306,6 @@ constexpr JSValueTag ValueUpperInclNumberTag = JSVAL_TAG_INT32;
 constexpr JSValueTag ValueLowerInclGCThingTag = JSVAL_TAG_PRIVATE_GCTHING;
 
 constexpr uint64_t ValueUpperExclShiftedNumberTag = JSVAL_SHIFTED_TAG_BOOLEAN;
-static_assert(JSVAL_TYPE_BOOLEAN == JSVAL_TYPE_INT32 + 1,
-              "Boolean must be the tag after the number tags");
 constexpr uint64_t ValueLowerInclShiftedGCThingTag =
     JSVAL_SHIFTED_TAG_PRIVATE_GCTHING;
 
