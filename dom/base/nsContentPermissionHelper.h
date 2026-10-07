@@ -22,11 +22,13 @@
 
 class nsPIDOMWindowInner;
 class nsContentPermissionRequestProxy;
+class RemotePermissionRequest;
 
 namespace mozilla::dom {
 
 class Element;
 class PermissionRequest;
+class ContentPermissionRequestParent;
 
 class ContentPermissionType : public nsIContentPermissionType {
  public:
@@ -61,7 +63,7 @@ class nsContentPermissionUtils {
 
   // @param aIsRequestDelegatedToUnsafeThirdParty see
   // ContentPermissionRequestParent.
-  static already_AddRefed<PContentPermissionRequestParent>
+  static already_AddRefed<ContentPermissionRequestParent>
   CreateContentPermissionRequestParent(
       Element* aElement, nsIPrincipal* aPrincipal,
       nsIPrincipal* aTopLevelPrincipal,
@@ -69,24 +71,20 @@ class nsContentPermissionUtils {
       const bool aIsRequestDelegatedToUnsafeThirdParty, const TabId& aTabId,
       const bool aIgnoreAllowSitePermission);
 
-  static void InitContentPermissionRequestParent(
-      PContentPermissionRequestParent* aActor,
-      nsTArray<PermissionRequest>&& aRequests);
-
   static nsresult AskPermission(nsIContentPermissionRequest* aRequest,
                                 nsPIDOMWindowInner* aWindow);
 
-  static nsTArray<RefPtr<PContentPermissionRequestParent>>
+  static nsTArray<RefPtr<ContentPermissionRequestParent>>
   GetContentPermissionRequestParentById(const TabId& aTabId);
 
   static void NotifyRemoveContentPermissionRequestParent(
-      PContentPermissionRequestParent* aParent);
+      ContentPermissionRequestParent* aParent);
 
-  static nsTArray<RefPtr<PContentPermissionRequestChild>>
+  static nsTArray<RefPtr<RemotePermissionRequest>>
   GetContentPermissionRequestChildById(const TabId& aTabId);
 
   static void NotifyRemoveContentPermissionRequestChild(
-      PContentPermissionRequestChild* aChild);
+      RemotePermissionRequest* aChild);
 };
 
 nsresult TranslateChoices(

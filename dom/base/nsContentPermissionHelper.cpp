@@ -173,19 +173,18 @@ void nsContentPermissionUtils::ConvertArrayToPermissionRequest(
   }
 }
 
-static std::map<PContentPermissionRequestParent*, TabId>&
+static std::map<ContentPermissionRequestParent*, TabId>&
 ContentPermissionRequestParentMap() {
   MOZ_ASSERT(NS_IsMainThread());
-  static std::map<PContentPermissionRequestParent*, TabId>
+  static std::map<ContentPermissionRequestParent*, TabId>
       sPermissionRequestParentMap;
   return sPermissionRequestParentMap;
 }
 
-static std::map<PContentPermissionRequestChild*, TabId>&
+static std::map<RemotePermissionRequest*, TabId>&
 ContentPermissionRequestChildMap() {
   MOZ_ASSERT(NS_IsMainThread());
-  static std::map<PContentPermissionRequestChild*, TabId>
-      sPermissionRequestChildMap;
+  static std::map<RemotePermissionRequest*, TabId> sPermissionRequestChildMap;
   return sPermissionRequestChildMap;
 }
 
@@ -203,14 +202,14 @@ nsresult nsContentPermissionUtils::CreatePermissionArray(
 }
 
 /* static */
-already_AddRefed<PContentPermissionRequestParent>
+already_AddRefed<ContentPermissionRequestParent>
 nsContentPermissionUtils::CreateContentPermissionRequestParent(
     Element* aElement, nsIPrincipal* aPrincipal,
     nsIPrincipal* aTopLevelPrincipal,
     const bool aHasValidTransientUserGestureActivation,
     const bool aIsRequestDelegatedToUnsafeThirdParty, const TabId& aTabId,
     const bool aIgnoreAllowSitePermission) {
-  RefPtr<PContentPermissionRequestParent> parent =
+  RefPtr<ContentPermissionRequestParent> parent =
       new ContentPermissionRequestParent(
           aElement, aPrincipal, aTopLevelPrincipal,
           aHasValidTransientUserGestureActivation,
@@ -218,14 +217,6 @@ nsContentPermissionUtils::CreateContentPermissionRequestParent(
   ContentPermissionRequestParentMap()[parent] = aTabId;
 
   return parent.forget();
-}
-
-/* static */
-void nsContentPermissionUtils::InitContentPermissionRequestParent(
-    PContentPermissionRequestParent* aActor,
-    nsTArray<PermissionRequest>&& aRequests) {
-  static_cast<ContentPermissionRequestParent*>(aActor)->Init(
-      std::move(aRequests));
 }
 
 /* static */
@@ -296,10 +287,10 @@ nsresult nsContentPermissionUtils::AskPermission(
 }
 
 /* static */
-nsTArray<RefPtr<PContentPermissionRequestParent>>
+nsTArray<RefPtr<ContentPermissionRequestParent>>
 nsContentPermissionUtils::GetContentPermissionRequestParentById(
     const TabId& aTabId) {
-  nsTArray<RefPtr<PContentPermissionRequestParent>> parentArray;
+  nsTArray<RefPtr<ContentPermissionRequestParent>> parentArray;
   for (auto& it : ContentPermissionRequestParentMap()) {
     if (it.second == aTabId) {
       parentArray.AppendElement(it.first);
@@ -311,7 +302,7 @@ nsContentPermissionUtils::GetContentPermissionRequestParentById(
 
 /* static */
 void nsContentPermissionUtils::NotifyRemoveContentPermissionRequestParent(
-    PContentPermissionRequestParent* aParent) {
+    ContentPermissionRequestParent* aParent) {
   auto it = ContentPermissionRequestParentMap().find(aParent);
   MOZ_ASSERT(it != ContentPermissionRequestParentMap().end());
 
@@ -319,10 +310,10 @@ void nsContentPermissionUtils::NotifyRemoveContentPermissionRequestParent(
 }
 
 /* static */
-nsTArray<RefPtr<PContentPermissionRequestChild>>
+nsTArray<RefPtr<RemotePermissionRequest>>
 nsContentPermissionUtils::GetContentPermissionRequestChildById(
     const TabId& aTabId) {
-  nsTArray<RefPtr<PContentPermissionRequestChild>> childArray;
+  nsTArray<RefPtr<RemotePermissionRequest>> childArray;
   for (auto& it : ContentPermissionRequestChildMap()) {
     if (it.second == aTabId) {
       childArray.AppendElement(it.first);
@@ -334,7 +325,7 @@ nsContentPermissionUtils::GetContentPermissionRequestChildById(
 
 /* static */
 void nsContentPermissionUtils::NotifyRemoveContentPermissionRequestChild(
-    PContentPermissionRequestChild* aChild) {
+    RemotePermissionRequest* aChild) {
   auto it = ContentPermissionRequestChildMap().find(aChild);
   MOZ_ASSERT(it != ContentPermissionRequestChildMap().end());
 
@@ -829,7 +820,6 @@ void RemotePermissionRequest::DoAllow(JS::Handle<JS::Value> aChoices) {
   request->Allow(aChoices);
 }
 
-// PContentPermissionRequestChild
 mozilla::ipc::IPCResult RemotePermissionRequest::RecvNotifyResult(
     const bool& aAllow, nsTArray<PermissionChoice>&& aChoices) {
   Destroy();
