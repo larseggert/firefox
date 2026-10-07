@@ -58,6 +58,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   AboutNewTab: "resource:///modules/AboutNewTab.sys.mjs",
   AppProvidedConfigEngine:
     "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
+  ASRouter: "resource:///modules/asrouter/ASRouter.sys.mjs",
   ASRouterPreferences:
     "resource:///modules/asrouter/ASRouterPreferences.sys.mjs",
   AttributionCode:
@@ -1640,6 +1641,35 @@ const TargetingGetters = {
 
   get canRestoreLastSession() {
     return lazy.SessionStore.canRestoreLastSession;
+  },
+
+  // "previousSessionEnd", "messageImpressions", and "screenImpressions" are
+  // stored in ASRouter state and merged into the targeting context after init.
+  // Exposing them here also makes them available to consumers that import and
+  // use ASRouterTargeting directly without that extra context, such as
+  // RemoteSettingsExperimentLoader when it evaluates Nimbus enrollment
+  // targeting. These getters intentionally read state synchronously rather than
+  // awaiting ASRouter.waitForInitialized: ASRouter.init() itself reads
+  // ASRouterTargeting.Environment, so awaiting initialization here could
+  // deadlock. Until init has loaded the persisted values they return
+  // undefined, so targeting expressions treat them as absent rather than
+  // matching against the INITIAL_STATE defaults.
+  get previousSessionEnd() {
+    return lazy.ASRouter.initialized
+      ? lazy.ASRouter.state.previousSessionEnd
+      : undefined;
+  },
+
+  get messageImpressions() {
+    return lazy.ASRouter.initialized
+      ? lazy.ASRouter.state.messageImpressions
+      : undefined;
+  },
+
+  get screenImpressions() {
+    return lazy.ASRouter.initialized
+      ? lazy.ASRouter.state.screenImpressions
+      : undefined;
   },
 
   // This is implemented as a targeting attribute because it is needed for
