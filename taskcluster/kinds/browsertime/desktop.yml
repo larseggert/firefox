@@ -1322,7 +1322,12 @@ browsertime-webcodecs:
             - --extra-profiler-run
     run-on-projects:
         by-app:
-            firefox: [autoland, mozilla-central]
+            firefox:
+                by-test-platform:
+                    linux.*shippable.*: [autoland, mozilla-central]
+                    windows.*shippable.*: [autoland, mozilla-central]
+                    macosx1470.*shippable.*: [autoland, mozilla-central]
+                    default: []
             default: []
     tier:
         by-app:
