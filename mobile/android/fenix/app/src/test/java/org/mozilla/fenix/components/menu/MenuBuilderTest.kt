@@ -23,10 +23,10 @@ import org.mozilla.fenix.components.menu.FenixMenuItem.More
 import org.mozilla.fenix.components.menu.MenuPresentationMode.Grid
 import org.mozilla.fenix.components.menu.MenuPresentationMode.Row
 
-class BrowserMenuBuilderTest {
+class MenuBuilderTest {
     @Test
     fun `WHEN a provider offers an item THEN show it in the section it is configured in`() = runTest {
-        val builder = createBrowserMenuBuilder(Row, providing = readerViewItem)
+        val builder = createSingleSectionMenuBuilder(Row, providing = readerViewItem)
 
         assertEquals(
             listOf(MenuItemsGroup.Row(id = MENU_GROUP_ID, items = listOf(readerViewItem))),
@@ -36,7 +36,7 @@ class BrowserMenuBuilderTest {
 
     @Test
     fun `GIVEN a section is configured as a list WHEN building the menu THEN show its items in a list`() = runTest {
-        val builder = createBrowserMenuBuilder(Row, providing = readerViewItem)
+        val builder = createSingleSectionMenuBuilder(Row, providing = readerViewItem)
 
         assertEquals(
             listOf(MenuItemsGroup.Row(id = MENU_GROUP_ID, items = listOf(readerViewItem))),
@@ -46,7 +46,7 @@ class BrowserMenuBuilderTest {
 
     @Test
     fun `GIVEN a section is configured as a grid WHEN building the menu THEN show its items in a grid`() = runTest {
-        val builder = createBrowserMenuBuilder(Grid, providing = readerViewItem)
+        val builder = createSingleSectionMenuBuilder(Grid, providing = readerViewItem)
 
         assertEquals(
             listOf(MenuItemsGroup.Grid(id = MENU_GROUP_ID, items = listOf(readerViewItem))),
@@ -57,7 +57,7 @@ class BrowserMenuBuilderTest {
     @Test
     fun `GIVEN a provider offers no items WHEN building the menu THEN don't show the section it would be in`() =
         runTest {
-            val builder = createBrowserMenuBuilder(Row, providing = null)
+            val builder = createSingleSectionMenuBuilder(Row, providing = null)
 
             assertTrue(builder.menuStructure.first().isEmpty())
         }
@@ -80,9 +80,14 @@ class BrowserMenuBuilderTest {
 
     @Test
     fun `WHEN building the default menu THEN keep the sections in the configured order`() = runTest {
-        val builder = createDefaultMenuBuilder()
+        val configuration = MenuConfigurations.browser(isToolbarAtBottom = false, isExpandedToolbarEnabled = false)
+        val builder =
+            createMenuBuilder(
+                resolver = { FakeMenuItemProvider(MutableStateFlow(readerViewItem)) },
+                configuration = configuration,
+            )
 
-        assertEquals(BrowserMenuBuilder.DEFAULT.map { it.id }, builder.menuStructure.first().map { it.id })
+        assertEquals(configuration.map { it.id }, builder.menuStructure.first().map { it.id })
     }
 
     @Test
@@ -105,29 +110,6 @@ class BrowserMenuBuilderTest {
         assertEquals(true, builder.menuStructure.first().isNotEmpty())
         assertEquals(true, configuration.first().isSticky)
     }
-
-    @Test
-    fun `GIVEN toolbar is at bottom WHEN building default layout THEN navigation block appears at the bottom`() =
-        runTest {
-            val builder = createDefaultMenuBuilder(isToolbarAtBottom = true)
-
-            assertEquals(BrowserMenuBuilder.BROWSER_MENU_NAVIGATION_ID, builder.menuStructure.first().last().id)
-        }
-
-    @Test
-    fun `GIVEN toolbar is at top WHEN building default layout THEN navigation block appears at the top`() = runTest {
-        val builder = createDefaultMenuBuilder(isToolbarAtBottom = false)
-
-        assertEquals(BrowserMenuBuilder.BROWSER_MENU_NAVIGATION_ID, builder.menuStructure.first().first().id)
-    }
-
-    @Test
-    fun `GIVEN toolbar is expanded WHEN building default layout THEN navigation block appears at the bottom`() =
-        runTest {
-            val builder = createDefaultMenuBuilder(isToolbarAtBottom = false, isExpandedToolbarEnabled = true)
-
-            assertEquals(BrowserMenuBuilder.BROWSER_MENU_NAVIGATION_ID, builder.menuStructure.first().last().id)
-        }
 
     @Test
     fun `GIVEN an item expanding to others WHEN building the menu THEN show inside it what their providers offer`() =
@@ -180,7 +162,7 @@ class BrowserMenuBuilderTest {
                 ),
         )
 
-    private fun createBrowserMenuBuilder(
+    private fun createSingleSectionMenuBuilder(
         presentationMode: MenuPresentationMode,
         providing: MenuItem?,
     ) =
@@ -192,16 +174,7 @@ class BrowserMenuBuilderTest {
     private fun createMenuBuilder(
         resolver: (FenixMenuItem) -> MenuItemProvider,
         configuration: List<MenuSectionConfiguration>,
-    ) = BrowserMenuBuilder(MenuItemsRegistry(configuration = configuration, resolver = resolver))
-
-    private fun createDefaultMenuBuilder(
-        isToolbarAtBottom: Boolean = false,
-        isExpandedToolbarEnabled: Boolean = false,
-    ) =
-        createMenuBuilder(
-            resolver = { FakeMenuItemProvider(MutableStateFlow(readerViewItem)) },
-            configuration = BrowserMenuBuilder.buildDefaultConfiguration(isToolbarAtBottom, isExpandedToolbarEnabled),
-        )
+    ) = MenuBuilder(MenuItemsRegistry(configuration = configuration, resolver = resolver))
 
     private fun sectionOf(presentationMode: MenuPresentationMode) =
         listOf(
@@ -218,6 +191,10 @@ class BrowserMenuBuilderTest {
         val provider =
             object : ExpandableMenuItemProvider {
                 override val itemFlow = MutableStateFlow<MenuItem?>(moreItem)
+
+                override fun handles(event: MenuEvent) = false
+
+                override fun onEvent(event: MenuEvent, menu: MenuHost) = Unit
 
                 override fun updateWithSubMenuItems(
                     item: ExpandableMenuItem,
@@ -340,11 +317,19 @@ class BrowserMenuBuilderTest {
         assertEquals(listOf(More(subMenuItems = listOf(FindInPage)), FindInPage), resolved)
     }
 
-    private class FakeMenuItemProvider(override val itemFlow: StateFlow<MenuItem?>) : MenuItemProvider
+    private class FakeMenuItemProvider(override val itemFlow: StateFlow<MenuItem?>) : MenuItemProvider {
+        override fun handles(event: MenuEvent) = false
+
+        override fun onEvent(event: MenuEvent, menu: MenuHost) = Unit
+    }
 
     /** Configures its item with whatever it expands to, which is all an expanding item needs by default. */
     private class FakeExpandableMenuItemProvider(override val itemFlow: StateFlow<MenuItem?>) :
-        ExpandableMenuItemProvider
+        ExpandableMenuItemProvider {
+        override fun handles(event: MenuEvent) = false
+
+        override fun onEvent(event: MenuEvent, menu: MenuHost) = Unit
+    }
 
     private data object TestMenuEvent : MenuEvent
 

@@ -236,7 +236,7 @@ class MenuFragment : BottomSheetDialogFragment() {
             middleware =
                 listOf(
                     MenuMiddleware(
-                        browserMenuBuilder = BrowserMenuBuilder(menuItemsRegistry),
+                        menuBuilder = MenuBuilder(menuItemsRegistry),
                         eventRouter =
                             MenuItemEventRouter(
                                 registry = menuItemsRegistry,
@@ -258,10 +258,11 @@ class MenuFragment : BottomSheetDialogFragment() {
     private fun buildMenuConfigurationFor(menuAccessPoint: MenuAccessPoint) =
         when (menuAccessPoint) {
             MenuAccessPoint.Browser ->
-                BrowserMenuBuilder.buildDefaultConfiguration(
+                MenuConfigurations.browser(
                     isToolbarAtBottom = requireContext().isToolbarAtBottom(),
                     isExpandedToolbarEnabled = requireComponents.settings.shouldUseExpandedToolbar,
                 )
-            else -> emptyList()
+            MenuAccessPoint.Home -> MenuConfigurations.home()
+            MenuAccessPoint.External -> MenuConfigurations.customTab()
         }
 }

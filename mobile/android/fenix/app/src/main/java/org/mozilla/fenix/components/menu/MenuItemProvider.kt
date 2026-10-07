@@ -11,9 +11,9 @@ import mozilla.components.compose.menu.store.MenuEvent
 /**
  * Provides the configuration of one menu item, owned by the feature that item belongs to.
  *
- * This is meant to be used with [BrowserMenuBuilder] which knows which items exist and in what order to show them while
- * the details for each menu item - what it looks like in each state, and where that state comes from - stay with the
- * code that owns the feature that the menu item relates to.
+ * This is meant to be used with a [MenuBuilder] which knows which items exist and in what order to show them while the
+ * details for each menu item - what it looks like in each state, and where that state comes from - stay with the code
+ * that owns the feature that the menu item relates to.
  */
 interface MenuItemProvider {
     /**
