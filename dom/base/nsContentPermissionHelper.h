@@ -7,6 +7,7 @@
 
 #include "mozilla/PermissionDelegateHandler.h"
 #include "mozilla/dom/PContentPermissionRequestChild.h"
+#include "mozilla/dom/PContentPermissionRequestParent.h"
 #include "mozilla/dom/ipc/IdType.h"
 #include "nsIContentPermissionPrompt.h"
 #include "nsIMutableArray.h"
@@ -26,8 +27,6 @@ namespace mozilla::dom {
 
 class Element;
 class PermissionRequest;
-class ContentPermissionRequestParent;
-class PContentPermissionRequestParent;
 
 class ContentPermissionType : public nsIContentPermissionType {
  public:
@@ -166,6 +165,47 @@ class ContentPermissionRequestBase : public nsIContentPermissionRequest {
 
   // See nsIPermissionDelegateHandler.maybeUnsafePermissionDelegate`.
   bool mIsRequestDelegatedToUnsafeThirdParty;
+};
+
+class ContentPermissionRequestParent final
+    : public PContentPermissionRequestParent {
+  friend class PContentPermissionRequestParent;
+
+ public:
+  NS_INLINE_DECL_REFCOUNTING(ContentPermissionRequestParent, override)
+
+  // @param aIsRequestDelegatedToUnsafeThirdParty see
+  // mIsRequestDelegatedToUnsafeThirdParty.
+  ContentPermissionRequestParent(
+      Element* aElement, nsIPrincipal* aPrincipal,
+      nsIPrincipal* aTopLevelPrincipal,
+      const bool aHasValidTransientUserGestureActivation,
+      const bool aIsRequestDelegatedToUnsafeThirdParty,
+      const bool aIgnoreAllowSitePermission = false);
+
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY
+  void Init(nsTArray<PermissionRequest>&& aRequests);
+
+  bool IsBeingDestroyed();
+
+  nsCOMPtr<nsIPrincipal> mPrincipal;
+  nsCOMPtr<nsIPrincipal> mTopLevelPrincipal;
+  nsCOMPtr<Element> mElement;
+  bool mHasValidTransientUserGestureActivation;
+
+  // See nsIPermissionDelegateHandler.maybeUnsafePermissionDelegate.
+  bool mIsRequestDelegatedToUnsafeThirdParty;
+
+  bool mIgnoreAllowSitePermission;
+
+  RefPtr<nsContentPermissionRequestProxy> mProxy;
+  nsTArray<PermissionRequest> mRequests;
+
+ private:
+  ~ContentPermissionRequestParent();
+
+  mozilla::ipc::IPCResult RecvDestroy();
+  void ActorDestroy(ActorDestroyReason why) override;
 };
 
 }  // namespace mozilla::dom
