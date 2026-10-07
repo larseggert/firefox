@@ -67,6 +67,7 @@ import org.mozilla.fenix.webcompat.middleware.DefaultWebCompatReporterRetrievalS
 class MenuItemProvidersFactory(
     private val context: Context,
     private val accessPoint: MenuAccessPoint,
+    private val target: MenuTarget,
     private val browserStore: BrowserStore,
     private val appStore: AppStore,
     private val ipProtectionStore: IPProtectionStore,
@@ -97,6 +98,7 @@ class MenuItemProvidersFactory(
             FenixMenuItem.CustomizeReaderView ->
                 ReaderViewMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     appStore = appStore,
                     scope = menuViewScope,
                 )
@@ -110,6 +112,7 @@ class MenuItemProvidersFactory(
             FenixMenuItem.Bookmark ->
                 BookmarkMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     bookmarksStorage = bookmarksStorage,
                     addBookmark = useCases.bookmarksUseCases.addBookmark,
                     appStore = appStore,
@@ -122,6 +125,7 @@ class MenuItemProvidersFactory(
             FenixMenuItem.DesktopSite ->
                 DesktopSiteMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     requestDesktopSite = useCases.sessionUseCases.requestDesktopSite,
                     scope = menuViewScope,
                 )
@@ -129,6 +133,7 @@ class MenuItemProvidersFactory(
                 ExtensionsMenuItemProvider(
                     context = context.applicationContext,
                     browserStore = browserStore,
+                    target = target,
                     addonManager = addonManager,
                     viewLifecycleScope = menuViewScope,
                     applicationScope = applicationScope,
@@ -138,6 +143,7 @@ class MenuItemProvidersFactory(
             is FenixMenuItem.More ->
                 MoreMenuItemsProvider(
                     browserStore = browserStore,
+                    target = target,
                     summarizationSettings = summarizeFeatureSettings,
                     scope = menuViewScope,
                 )
@@ -145,6 +151,7 @@ class MenuItemProvidersFactory(
             FenixMenuItem.Translate ->
                 TranslationsMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     translationsSettings = translationsSettings,
                     scope = menuViewScope,
                 )
@@ -152,6 +159,7 @@ class MenuItemProvidersFactory(
             FenixMenuItem.SummarizePage ->
                 SummarizePageMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     summarizationSettings = summarizeFeatureSettings,
                     eligibilityChecker = summarizeEligibilityChecker,
                     scope = menuViewScope,
@@ -160,6 +168,7 @@ class MenuItemProvidersFactory(
             FenixMenuItem.Back ->
                 BackMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     goBack = useCases.sessionUseCases.goBack,
                     scope = menuViewScope,
                 )
@@ -167,6 +176,7 @@ class MenuItemProvidersFactory(
             FenixMenuItem.Forward ->
                 ForwardMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     goForward = useCases.sessionUseCases.goForward,
                     scope = menuViewScope,
                 )
@@ -174,12 +184,14 @@ class MenuItemProvidersFactory(
             FenixMenuItem.Share ->
                 ShareMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     shareUseCases = useCases.shareUseCases,
                 )
 
             FenixMenuItem.Refresh ->
                 RefreshMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     reload = useCases.sessionUseCases.reload,
                     stopLoading = useCases.sessionUseCases.stopLoading,
                     scope = menuViewScope,
@@ -188,12 +200,14 @@ class MenuItemProvidersFactory(
             FenixMenuItem.MoveToNormalTabs ->
                 MoveToNormalTabsMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     migratePrivateTab = useCases.tabsUseCases.migratePrivateTabUseCase,
                 )
 
             FenixMenuItem.ReportBrokenSite ->
                 ReportBrokenSiteMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     settings = settings,
                     webCompatReporterMoreInfoSender =
                         DefaultWebCompatReporterMoreInfoSender(DefaultWebCompatReporterRetrievalService(browserStore)),
@@ -205,6 +219,7 @@ class MenuItemProvidersFactory(
             FenixMenuItem.Shortcut ->
                 ShortcutMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     pinnedSiteStorage = pinnedSiteStorage,
                     areShortcutsEnabled = settings.showTopSitesFeature,
                     topSitesUseCases = useCases.topSitesUseCase,
@@ -218,6 +233,7 @@ class MenuItemProvidersFactory(
             FenixMenuItem.AddToHomeScreen ->
                 AddToHomeScreenMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     webAppUseCases = useCases.webAppUseCases,
                     settings = settings,
                     scope = menuViewScope,
@@ -228,11 +244,13 @@ class MenuItemProvidersFactory(
                     settings = settings,
                     tabCollectionStorage = tabCollectionStorage,
                     browserStore = browserStore,
+                    target = target,
                 )
 
             FenixMenuItem.OpenInApp ->
                 OpenInAppMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     appStore = appStore,
                     appLinksUseCases = useCases.appLinksUseCases,
                     settings = settings,
@@ -242,6 +260,7 @@ class MenuItemProvidersFactory(
             FenixMenuItem.SaveAsPdf ->
                 SaveAsPdfMenuItemProvider(
                     browserStore = browserStore,
+                    target = target,
                     saveToPdf = useCases.sessionUseCases.saveToPdf,
                 )
 
@@ -249,6 +268,7 @@ class MenuItemProvidersFactory(
                 PrintMenuItemProvider(
                     isAndroidAutomotiveAvailable = isAndroidAutomotiveAvailable,
                     browserStore = browserStore,
+                    target = target,
                     printContent = useCases.sessionUseCases.printContent,
                 )
 

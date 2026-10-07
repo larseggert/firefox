@@ -202,6 +202,7 @@ class MenuFragment : BottomSheetDialogFragment() {
         return MenuItemProvidersFactory(
             context = context,
             accessPoint = args.accessPoint,
+            target = if (args.accessPoint == MenuAccessPoint.Home) MenuTarget.Home else MenuTarget.BrowserTab,
             browserStore = components.core.store,
             appStore = components.appStore,
             ipProtectionStore = components.ipProtection.store,

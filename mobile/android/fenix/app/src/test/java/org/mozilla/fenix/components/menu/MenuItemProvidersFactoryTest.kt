@@ -79,6 +79,7 @@ class MenuItemProvidersFactoryTest {
         MenuItemProvidersFactory(
             context = testContext,
             accessPoint = MenuAccessPoint.Browser,
+            target = MenuTarget.BrowserTab,
             browserStore = BrowserStore(),
             appStore = AppStore(),
             ipProtectionStore = IPProtectionStore(),

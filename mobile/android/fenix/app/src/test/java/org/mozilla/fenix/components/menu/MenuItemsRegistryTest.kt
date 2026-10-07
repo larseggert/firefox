@@ -56,16 +56,18 @@ class MenuItemsRegistryTest {
     @Test
     fun `WHEN building the default menu THEN each navigation event is handled by exactly one provider`() = runTest {
         val browserStore = BrowserStore()
+        val session = MenuTarget.BrowserTab
         val registry =
             MenuItemsRegistry(
                 configuration = BrowserMenuBuilder.buildDefaultConfiguration(false, false),
                 resolver = { item ->
                     when (item) {
-                        FenixMenuItem.Back -> BackMenuItemProvider(browserStore, mockk(), backgroundScope)
-                        FenixMenuItem.Forward -> ForwardMenuItemProvider(browserStore, mockk(), backgroundScope)
-                        FenixMenuItem.Share -> ShareMenuItemProvider(browserStore, mockk())
+                        FenixMenuItem.Back -> BackMenuItemProvider(browserStore, session, mockk(), backgroundScope)
+                        FenixMenuItem.Forward ->
+                            ForwardMenuItemProvider(browserStore, session, mockk(), backgroundScope)
+                        FenixMenuItem.Share -> ShareMenuItemProvider(browserStore, session, mockk())
                         FenixMenuItem.Refresh ->
-                            RefreshMenuItemProvider(browserStore, mockk(), mockk(), backgroundScope)
+                            RefreshMenuItemProvider(browserStore, session, mockk(), mockk(), backgroundScope)
                         else -> FakeMenuItemProvider()
                     }
                 },
