@@ -753,7 +753,7 @@ no-nova:
 urlbar-ipc:
     description: "{description} with the urlbar actor message-passing path forced on"
     component: "Firefox::Address Bar"
-    expiration: "2027-06-01"
+    expiration: "never"
     suffix: "uipc"
     mozinfo: "urlbar_ipc"
     merge:
