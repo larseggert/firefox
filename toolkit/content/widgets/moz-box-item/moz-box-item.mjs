@@ -174,30 +174,41 @@ export default class MozBoxItem extends MozBoxBase {
   }
 
   /**
-   * Focuses the item, or delegates to an action element when the item
-   * isn't directly focusable.
+   * Focuses the item, or its first action when the item isn't directly
+   * focusable.
    *
-   * @param {KeyboardEvent} [event]
+   * @param {FocusOptions} [options]
    */
-  focus(event) {
+  focus(options) {
     if (this.isFocusable) {
-      super.focus();
+      super.focus(options);
       return;
     }
 
-    if (event?.key == "Up" || event?.key == "ArrowUp") {
-      let actionEls = this.actionsSlotEl.assignedElements();
-      let lastActions = actionEls.length
-        ? actionEls
-        : this.actionsStartSlotEl?.assignedElements();
-      let lastAction = lastActions?.[lastActions.length - 1];
-      lastAction?.focus();
-    } else {
-      let firstAction =
-        this.actionsStartSlotEl?.assignedElements()?.[0] ??
-        this.actionsSlotEl.assignedElements()?.[0];
-      firstAction?.focus();
+    let firstAction =
+      this.actionsStartSlotEl?.assignedElements()?.[0] ??
+      this.actionsSlotEl.assignedElements()?.[0];
+    firstAction?.focus(options);
+  }
+
+  /**
+   * Focuses the item in response to arrow key navigation. Moving up into an
+   * item that isn't directly focusable lands on its last action.
+   *
+   * @param {KeyboardEvent} event
+   */
+  focusFromEvent(event) {
+    if (this.isFocusable || (event.key != "Up" && event.key != "ArrowUp")) {
+      this.focus();
+      return;
     }
+
+    let actionEls = this.actionsSlotEl.assignedElements();
+    let lastActions = actionEls.length
+      ? actionEls
+      : this.actionsStartSlotEl?.assignedElements();
+    let lastAction = lastActions?.[lastActions.length - 1];
+    lastAction?.focus();
   }
 
   getActionEls() {

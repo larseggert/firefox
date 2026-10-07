@@ -4,6 +4,7 @@
 
 import { html, ifDefined, staticHtml, literal } from "../vendor/lit.all.mjs";
 import { MozLitElement, hasModifierKey } from "../lit-utils.mjs";
+import MozBoxItem from "chrome://global/content/elements/moz-box-item.mjs";
 
 export const GROUP_TYPES = {
   list: "list",
@@ -283,16 +284,28 @@ export default class MozBoxGroup extends MozLitElement {
       case "ArrowDown": {
         event.preventDefault();
         let nextItem = allItems[currentPosition + 1];
-        nextItem?.focus(event);
+        this.#focusItem(nextItem, event);
         break;
       }
       case "Up":
       case "ArrowUp": {
         event.preventDefault();
         let prevItem = allItems[currentPosition - 1];
-        prevItem?.focus(event);
+        this.#focusItem(prevItem, event);
         break;
       }
+    }
+  }
+
+  /**
+   * @param {Element | undefined} item
+   * @param {KeyboardEvent} event
+   */
+  #focusItem(item, event) {
+    if (item instanceof MozBoxItem) {
+      item.focusFromEvent(event);
+    } else if (item instanceof HTMLElement) {
+      item.focus();
     }
   }
 
