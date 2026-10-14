@@ -6,7 +6,7 @@
   "license": "MPL-2.0",
   "devDependencies": {
     "@eslint/json": "2.0.1",
-    "@stylistic/stylelint-plugin": "3.1.1",
+    "@stylistic/stylelint-plugin": "5.3.1",
     "@types/node": "26.1.2",
     "@typescript/lib-dom": "file:tools/@types",
     "eslint": "9.39.1",
